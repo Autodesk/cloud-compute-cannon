@@ -1,0 +1,7 @@
+etc/hxml/server-build.hxml
+
+-debug
+
+-D PromhxExposeErrors
+
+-cmd node build/cloud-compute-cannon-server.js | bunyan

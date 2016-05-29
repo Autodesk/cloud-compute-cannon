@@ -1,0 +1,41 @@
+server:
+  storage:
+    type: "cloud"
+    rootPath: "/"
+    defaultContainer: "cloud-cannon-test"
+    httpAccessUrl: "https://s3-us-west-1.amazonaws.com"
+    credentials:
+      provider: "amazon"
+      keyId: "AKIAJ5SY3TMGZUOPLL7Q"
+      key: "6J3o2gCaplZws1WYR"
+      region: "us-west-1"
+
+providers:
+  - type: "PkgCloud"
+    priority: 1
+    maxWorkers: 2
+    minWorkers: 0
+    #billingIncrement is measured in minutes
+    #amazon provider automatically defaults to 60m
+    billingIncrement: 60
+    credentials:
+      provider: "amazon"
+      keyId: "AKIAIWJON3HDJNRFHCQQ"
+      key: "SLV3lNIPbGwv6oS"
+      region: "us-west-1"
+    worker:
+      Tags:
+        - Key: "Name"
+          Value: "Test_CloudComputeCannon_Worker"
+      InstanceType: "m4.large"
+      ImageId: "ami-c2e490a2"
+      usePublicIp: true
+      SubnetId: "subnet-a5f3c2e3"
+      SecurityGroupId: "sg-a3eae4e7"
+      KeyName: "platform-test-keypair2"
+      Key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+        JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+        777Y36xUaerefktaNSOhmdKEuZJ+ZJx5LVU478YFgq8XEh3zdYRq6UH9YK2HOOGjVuu57kMHMpk4
+        -----END RSA PRIVATE KEY-----

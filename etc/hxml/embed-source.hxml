@@ -1,0 +1,3 @@
+-resource package.json@package.json
+-resource build/cloud-compute-cannon-server.js@cloud-compute-cannon-server.js
+-resource build/cloud-compute-cannon-server.js.map@cloud-compute-cannon-server.js.map

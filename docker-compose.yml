@@ -1,0 +1,18 @@
+compute:
+  extends:
+    file: docker-compose.core.yml
+    service: compute
+  links:
+    - redis
+    - registry
+
+redis:
+  extends:
+    file: docker-compose.core.yml
+    service: redis
+
+registry:
+  extends:
+    file: docker-compose.core.yml
+    service: registry
+

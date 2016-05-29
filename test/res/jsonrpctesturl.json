@@ -1,0 +1,16 @@
+{
+  "jsonrpc":"2.0",
+  "method":"cloudcomputecannon.run",
+  "params":{
+    "image":"ubuntu:14.10",
+    "cmd": ["cat", "/inputs/actung"],
+    "parameters": {"cpus":1, "maxDuration":6000000},
+    "inputs":[
+       {
+       	"type":"url",
+          "value": "http://textfiles.com/100/actung.hum",
+          "name": "actung"
+       }
+    ]
+   }
+}

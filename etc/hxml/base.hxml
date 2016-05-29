@@ -1,0 +1,13 @@
+-cp lib/janicek-core-haxe/src
+-cp lib/haxe-json-rpc/src/haxe
+
+-lib version
+-lib abstracts-core:0.1.0
+-lib yaml:1.2.1
+-lib minject:2.0.0-rc.1
+-lib logshim:0.0.3
+-lib msgpack-haxe:1.15.1
+
+-cp lib/promhx/src/main
+
+-cp src/haxe

@@ -1,0 +1,13 @@
+[submodule "lib/janicek-core-haxe"]
+	path = lib/janicek-core-haxe
+	url = git@github.com:rjanicek/janicek-core-haxe.git
+[submodule "lib/hxnodelibs"]
+	path = lib/hxnodelibs
+	url = git@github.com:dionjwa/hxnodelibs.git
+	branch = new_externs
+[submodule "lib/haxe-json-rpc"]
+	path = lib/haxe-json-rpc
+	url = git@github.com:dionjwa/haxe-json-rpc.git
+[submodule "lib/promhx"]
+	path = lib/promhx
+	url = git@github.com:jdonaldson/promhx.git

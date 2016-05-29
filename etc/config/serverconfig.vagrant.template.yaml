@@ -1,0 +1,13 @@
+server:
+  storage:
+    type: "local"
+    rootPath: "data/ServiceStorageLocalFileSystem"
+
+providers:
+  - type: "Vagrant"
+    priority: 1
+    maxWorkers: 4
+    minWorkers: 0
+    #billingIncrement is measured in minutes
+    billingIncrementMs: 0
+    vagrantRootPath: ./tmp/vagrantWorkerProvider

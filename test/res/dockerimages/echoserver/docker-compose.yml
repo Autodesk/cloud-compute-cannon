@@ -1,0 +1,4 @@
+echoserver:
+  build: .
+  ports:
+    - "9050:9000"

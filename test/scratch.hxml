@@ -1,0 +1,11 @@
+etc/hxml/base-nodejs.hxml
+
+-D nodejs
+
+-cp test/src
+
+-main Scratch
+
+-js build/test/scratch.js
+
+-cmd node build/test/scratch.js

@@ -1,0 +1,68 @@
+compute:
+  build: "./"
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    #Mount local storage, even though it might use S3, we don't know at this point.
+    - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
+  links:
+    - redis
+    - registry
+    - fluentd
+  environment:
+    HOST_PWD: "$PWD"
+  log_driver: "fluentd"
+  log_opt:
+    tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+
+redis:
+  log_driver: "fluentd"
+  #This config disables persistance to disk since we do not need it for development
+  command: redis-server /usr/local/etc/redis/redis.conf
+  volumes:
+    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
+    - /data
+  ports:
+    #Don't expose this port to the host, only linked containers.
+    - "6379"
+
+registry:
+  volumes:
+    #Always persist the registry locally. This makes it easier to clean.
+    - ./data/registry:/var/lib/registry
+  #TODO: use a more sophisticated cleanup mechanism, and use redis?
+  environment:
+    SETTINGS_FLAVOR: local
+    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+  links:
+    - fluentd
+  #It's hard to find a use case for logging this.
+  log_driver: "none"
+
+fluentd:
+  extends:
+    file: docker-compose.core.yml
+    service: fluentd
+  build: ./etc/log/
+  volumes:
+    - ./etc/log/fluent.conf:/fluentd/etc/fluent.conf
+    - ./etc/log/plugins:/fluentd/plugins
+  links:
+    - elasticsearch
+
+#The elasticsearch part of the stack needs to be moved to the actual separate
+#elasticsearch API end point. Leaving this in here for now.
+
+elasticsearch:
+  extends:
+    file: docker-compose.core.yml
+    service: elasticsearch
+
+kibana:
+  extends:
+    file: docker-compose.core.yml
+    service: kibana
+  log_driver: "none"
+  links:
+    - elasticsearch
+    - fluentd

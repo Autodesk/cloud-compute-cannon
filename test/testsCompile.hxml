@@ -1,0 +1,5 @@
+test/testbase.hxml
+
+-main TestsIntegration
+
+-js build/test/compute_tests.js

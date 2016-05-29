@@ -1,0 +1,52 @@
+compute:
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  ports:
+    - "9000:9000"
+  environment:
+    PORT: "9000"
+    # OPTIONAL: Path to the mounted configuration file
+    # CONFIG_PATH: "/app/serverconfig.yml"
+    #If the REGISTRY field is set, it will override REGISTRY_PORT
+    # REGISTRY_ADDRESS: "5001"
+    # OPTIONAL
+    # REGISTRY: "registry:5001"
+    # OPTIONAL text flattened yaml of the server configuration.
+    COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
+    #This is used to get the correct host working directory to pass into the
+    #worker containers to map the local file system to /inputs+/outputs within
+    #the container. Only used for local docker providers (not cloud)
+    HOST_PWD: "$PWD"
+
+redis:
+  image: redis:3.2.0-alpine
+  #No ports are specified here because the prod version must not expose the
+  #port outside the machine, whereas the development case exposes the port
+  #because sometimes the dev server is run outside a container context
+  #docker-compose doesn't like mixing "6379:6379" and "6379" type port entries
+
+registry:
+  image: registry:2.4.0
+  ports:
+    - "5001:5000"
+
+fluentd:
+  command: ["fluentd", "-v-v", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
+  ports:
+      - "24224:24224"
+      - "9880:9880"
+      - "24444:24444"
+
+elasticsearch:
+  image: elasticsearch:2.3
+  ports:
+    - "9200:9200"
+    - "9300:9300"
+
+kibana:
+  image: kibana:4.4.2
+  ports:
+    - "5601:5601"
+  environment:
+    ELASTICSEARCH_URL: "http://elasticsearch:9200"
+

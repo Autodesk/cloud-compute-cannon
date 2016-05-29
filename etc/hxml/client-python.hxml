@@ -1,0 +1,16 @@
+etc/hxml/base.hxml
+
+-cp lib/janicek-core-haxe/src
+
+-lib yaml
+-lib json-rpc
+
+-cp common/src
+-cp src/haxe
+-cp ../lib/haxe-json-rpc/src
+
+-main ccc.compute.client.ClientHelperPython
+
+-python bin/client.py
+
+-cmd echo '#!/usr/bin/env python3' | cat - bin/client.py > temp && mv temp bin/client.py && chmod 755 bin/client.py

@@ -1,0 +1,58 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Stmt1445461802000",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:Describe*"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+
+
+{
+  "Version": "2015-10-21",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "ec2:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances",
+        "ec2:RebootInstances",
+        "ec2:TerminateInstances"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/platformtest":"true"
+        }
+      },
+      "Resource": [
+        "arn:aws:ec2:us-west-1a:AKIAIWJON3HDJNRFHCQQ:instance/*"
+      ],
+      "Effect": "Allow"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:RunInstances",
+      "Resource": [
+        "arn:aws:ec2:us-west-1::image/ami-2b29ee6f",
+        "arn:aws:ec2:us-west-1:763896067184:instance/*",
+        "arn:aws:ec2:us-west-1:763896067184:volume/*",
+        "arn:aws:ec2:us-west-1:763896067184:key-pair/*",
+        "arn:aws:ec2:us-west-1:763896067184:security-group/*"
+      ]
+    }
+  ]
+}
+
+aws ec2 run-instances --image-id ami-2b29ee6f --count 1 --instance-type t1.micro --key-name platform-test-keypair --security-groups sg-a3eae4e7
+{

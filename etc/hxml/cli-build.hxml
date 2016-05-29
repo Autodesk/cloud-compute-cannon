@@ -1,0 +1,22 @@
+#The server must be built first because the compiled output is added as a resource to the cli tool.
+
+etc/hxml/server-build.hxml
+
+--next
+
+etc/hxml/base-nodejs.hxml
+etc/hxml/embed-source.hxml
+
+# -dce full
+
+-D nodejs
+-D PromhxExposeErrors
+-debug
+
+-cp test/src
+
+-main ccc.compute.cli.CliMain
+
+-js build/cli/cloudcomputecannon.js
+
+-cmd echo "#!/usr/bin/env node" | cat - build/cli/cloudcomputecannon.js > /tmp/out && mv /tmp/out build/cli/cloudcomputecannon.js && chmod 755 build/cli/cloudcomputecannon.js

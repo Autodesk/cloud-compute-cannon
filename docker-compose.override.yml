@@ -1,0 +1,67 @@
+compute:
+  build: "."
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./data/computejobs:/computejobs
+    - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
+  links:
+    - redis
+    - registry
+    - fluentd
+    - elasticsearch
+  environment:
+    #This is used to get the correct host working directory to pass into the
+    #worker containers to map the local file system to /inputs+/outputs within
+    #the container
+    HOST_PWD: "$PWD"
+  log_driver: "fluentd"
+  log_opt:
+    tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+
+redis:
+  log_driver: "fluentd"
+  #This config disables persistance to disk since we do not need it for development
+  command: redis-server /usr/local/etc/redis/redis.conf
+  volumes:
+    - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+  ports:
+    - "6379:6379"
+  links:
+    - fluentd
+
+registry:
+  volumes:
+    - ./data/registry:/var/lib/registry
+  environment:
+    SETTINGS_FLAVOR: local
+    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+  links:
+    - fluentd
+  #Pretty sure I don't care about listening to you ever in the dev context.
+  log_driver: "none"
+
+fluentd:
+  extends:
+    file: docker-compose.core.yml
+    service: fluentd
+  build: ./etc/log/
+  volumes:
+    - ./etc/log/fluent.conf:/fluentd/etc/fluent.conf
+    - ./etc/log/plugins:/fluentd/plugins
+  links:
+    - elasticsearch
+
+elasticsearch:
+  extends:
+    file: docker-compose.core.yml
+    service: elasticsearch
+
+kibana:
+  extends:
+    file: docker-compose.core.yml
+    service: kibana
+  #Pretty sure I don't care about listening to you ever in the dev context.
+  log_driver: "none"
+  links:
+    - elasticsearch
+    - fluentd

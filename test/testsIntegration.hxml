@@ -1,0 +1,3 @@
+test/testsCompile.hxml
+
+-cmd node build/test/compute_tests.js

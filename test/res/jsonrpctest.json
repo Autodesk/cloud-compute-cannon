@@ -1,0 +1,9 @@
+{
+  "jsonrpc":"2.0",
+  "method":"cloudcomputecannon.run",
+  "params":{
+    "image":"elyase/staticpython",
+    "cmd": ["python", "-c", "print('Hello World!')"],
+    "parameters": {"cpus":1, "maxDuration":6000000}
+   }
+}

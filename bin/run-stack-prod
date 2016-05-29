@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+docker-compose rm -fv && docker-compose build && COMPUTE_CONFIG=`cat serverconfig.yml` docker-compose up

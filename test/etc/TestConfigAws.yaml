@@ -1,0 +1,52 @@
+server:
+  storage:
+    type: "local"
+    rootPath: "data/ServiceStorageLocalFileSystem"
+
+providers:
+  - type: "PkgCloud"
+    priority: 1
+    maxWorkers: 2
+    minWorkers: 0
+    billingIncrement: 60
+    credentials:
+      provider: "amazon"
+      keyId: "AKIAIWJON3HDJNRFHCQQ"
+      key: "SLV3lNIPbGwv6oSyqXHoA5aIE7AyzwY7+72MWaLe"
+      region: "us-west-1"
+      SecurityGroupId: "vpc-46e57d23"
+    worker:
+      Tags:
+        - Key: "Name"
+          Value: "Platform Functional Test Worker"
+      InstanceType: "t2.small"
+      ImageId: "ami-c2e490a2"
+      UserData:
+      usePublicIp: true
+      SubnetId: "subnet-a5f3c2e3"
+      KeyName: "platform-test-keypair2"
+      SecurityGroupId: "sg-9cd1c5f9"
+      Key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+        JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+        777Y36xUaerefktaNSOhmdKEuZJ+ZJx5LVU478YFgq8XEh3zdYRq6UH9YK2HOOGjVuu57kMHMpk4
+        F5In8zAZaFksXvU72Q8696U4bTGq79oceHr38DjF5DsBFrVSLAPA1miBy0CXtaWlW7twrEAqe3mA
+        8pyEnwBIhpldNKPJD3snxYYlHCDxytlLvPU/JKxYMhvx+wFPsdDNiwIDAQABAoIBAArj2IKiEDpD
+        hYYL7GaW2VLDTxwOWvsigcaHDpXK5EkzgtR1dXWHeSmdyQn+MjLVSTU7d1I+wra/U16d49LaKe4I
+        6BZHOKM6adW61UwjhJtBk8Hvc4TV3aMOyz/ZNIDAwWn3W0yGcdJm+vJaK5YlVGWDk9GnIM7T29jP
+        vsWW9KRviYT262s92Je4ZL/73YcbSLlhxowKN83vvdMbb56vr8rniW3naTs0+b+Br1+IGy39Uyz9
+        R1cKxlIKdAAXDs6Th2yJzFhtyNGajgyk52ANWWOnZEXYttxBaTnSP7DWvRqFFWVSG0aEUslAtqZ6
+        yf/Vr3bGp6TVvgVw0kJbz+cuNMkCgYEA5xf6zHf3CqzpJERoDRbbukA/b++CyGPH3tzW8x4mQVVt
+        wVbCRSkoJh9dnrCDbvFzi9XZn27v2hNA3IXREGDF1yIX8/p57FJFezB+b4mh75WbYGTjOe+xwYea
+        7kg9NsDV0x1MHhlNbTsZC/jMefRlzMhOTTtziZJAq+9NfVqExJ8CgYEA3+hv6qgr2BTN0wHLtWee
+        m4d9ZM2g/LlRQizO/Tu45HIBSUnvTjiBpgFIYRyxlzybAXd7sP/bAgc1wQpWY4qu8mpEawJ53K47
+        jmJIpPLnZxxFn9AZriM27c010rnETl1G2CUnVtDMHumVV9ZNZpwcZqJtfnRSoLfdnYqAQTHzg5UC
+        gYBKy/wlCf8vuV+MmYeEFQ3xbrIZrNALxCABBkGcVvnS06++kDI46GVSUXyfzEn+MrBPZlwVunZv
+        gyPPPJC6WFgwlZxjH4Mu9kH+6WdC+q0rOqUbwgu5yNcj6JxA26jUe/25YxYr98yTujkVIuYr4urA
+        KWUOolt2/5tnCwFtvUqTyQKBgBft42gUqPri3kxauMaeWFkO1dvcDgR0WbbUyxpNM6lWdcS7XhPh
+        /hkbsfyO8HvVQkuZ1WJJNcK1uozy6eChhajqqn01OojXJg5FerYGL6zZXKeDufreUJSBhesLZ2to
+        lJWtAtNIZUg4dnl4sbTxoidl3IXTMLF0dP7NOn+9MuUxAoGAHkkwTl6+3sfy/ZDblbN7P1YnlhaL
+        D7eIl9EZ2Fom2A0JZJrnk0GM2TCD/YRvC/PPYpRpWhmnsmsX0Hs6gNejZCLo3ZFuH96mqgwILo7A
+        wCQUTe03m0mOkwKX+s+z4jhcaj0nOGOvltXmdE9pmq6Iq4XyhsbB5aNkY4zAx/WkdPA=
+        -----END RSA PRIVATE KEY-----

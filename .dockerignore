@@ -1,0 +1,14 @@
+*.sublime-*
+.aws
+.DS_Store
+#.git
+.haxelib
+/build.hxml
+build
+node_modules/
+serverconfig.yaml
+tmp/
+data/
+
+#REMOVE THIS WHEN WORKING
+#./etc/log

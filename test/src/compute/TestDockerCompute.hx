@@ -1,0 +1,524 @@
+package compute;
+
+import haxe.Json;
+
+import js.Node;
+import js.node.Http;
+import js.node.Path;
+import js.node.Fs;
+import js.node.stream.Readable;
+import js.npm.Docker;
+import js.npm.FsExtended;
+import js.npm.FsPromises;
+import js.npm.RedisClient;
+import js.npm.HttpPromises;
+import js.npm.Ssh;
+import js.npm.TarFs;
+
+import promhx.Promise;
+import promhx.Deferred;
+import promhx.Stream;
+import promhx.StreamPromises;
+import promhx.DockerPromises;
+import promhx.CallbackPromise;
+import promhx.deferred.DeferredPromise;
+
+import ccc.storage.ServiceStorage;
+import ccc.storage.ServiceStorageLocalFileSystem;
+import ccc.storage.StorageTools;
+import ccc.storage.StorageSourceType;
+import ccc.compute.ComputeQueue;
+import ccc.compute.ServiceBatchCompute;
+import ccc.compute.ComputeTools;
+import ccc.compute.Definitions;
+import ccc.compute.Definitions.Constants.*;
+import ccc.compute.execution.BatchComputeDocker;
+import ccc.compute.execution.DockerJobTools;
+import ccc.compute.workers.WorkerProviderBoot2Docker;
+
+import util.RedisTools;
+import util.SshTools;
+import util.DockerTools;
+import utils.TestTools;
+
+using StringTools;
+using Lambda;
+using DateTools;
+using promhx.PromiseTools;
+using ccc.compute.workers.WorkerTools;
+using ccc.compute.JobTools;
+
+class TestDockerCompute extends TestComputeBase
+{
+	public static var ROOT_PATH = 'tmp/TestDockerCompute/';
+	static var IMAGE_ID = 'testimage';
+	var _worker :WorkerDefinition;
+
+	public function new() {}
+
+	override public function setup() :Null<Promise<Bool>>
+	{
+		_worker = WorkerProviderBoot2Docker.getLocalDockerWorker();
+		return super.setup();
+	}
+
+	@timeout(500)
+	public function testSshConnectivity()
+	{
+		var workerDef = _worker;
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return SshTools.execute(workerDef.ssh, 'echo "Hello"');
+			})
+			.then(function(result) {
+				assertEquals('Hello', result.stdout.trim());
+				return true;
+			});
+	}
+
+	@timeout(500)
+	public function testDockerConnectivity()
+	{
+		var workerDef = _worker;
+		return Promise.promise(true)
+			.pipe(function(_) {
+				var docker = new Docker(workerDef.docker);
+				var promise = new promhx.CallbackPromise();
+				docker.info(promise.cb2);
+				return promise;
+			})
+			.then(function(info :DockerInfo) {
+				assertNotNull(Reflect.field(info, 'ID'));
+				assertNotNull(Reflect.field(info, 'Containers'));
+				return true;
+			})
+			.errorPipe(function(err) {
+				Log.error(err);
+				Log.error('Is the docker protocol set correctly? (http vs https)');
+				throw err;
+			})
+			.thenTrue();
+	}
+
+	@timeout(500)
+	public function testDockerCopyInputsLocal()
+	{
+		var dateString = TestTools.getDateString();
+		var baseDir = '/tmp/testDockerCopyInputsLocal/$dateString';
+		var sourceDir = '$baseDir/source';
+		var destDir = '$baseDir/dest';
+
+		FsExtended.ensureDirSync(sourceDir);
+		FsExtended.ensureDirSync(destDir);
+
+		var inputFileNameBase = 'input';
+		var inputContentBase = 'This is some input';
+		var inputFileCount = 3;
+		for (i in 0...inputFileCount) {
+			Fs.writeFileSync(Path.join(sourceDir, inputFileNameBase + i), inputContentBase + i);
+		}
+
+		var source = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:sourceDir});
+		var dest = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:destDir});
+
+		return DockerJobTools.copyInternal(source, dest)
+			.pipe(function(_) {
+				return dest.listDir();
+			})
+			.pipe(function(files) {
+				for (i in 0...inputFileCount) {
+					assertTrue(files.exists(function(f) return f == inputFileNameBase + i));
+					var fullPath = Path.join(destDir, inputFileNameBase + i);
+					assertEquals(Fs.readFileSync(fullPath, {encoding:'utf8'}), inputContentBase + i);
+				}
+				assertEquals(files.length, inputFileCount);
+				FsExtended.deleteDirSync(Path.dirname(baseDir));
+				return Promise.promise(true);
+			});
+	}
+
+	@timeout(1000)
+	public function testDockerCopyInputsSftp()
+	{
+		var workerDef = _worker;
+		var dateString = TestTools.getDateString();
+		var baseDir = '/tmp/testDockerCopyInputsSftp/$dateString';
+		var sourceDir = '$baseDir/source';
+		var destDir = '$baseDir/dest';
+
+		FsExtended.ensureDirSync(sourceDir);
+		FsExtended.ensureDirSync(destDir);
+
+		var inputFileNameBase = 'input';
+		var inputContentBase = 'This is some input';
+		var inputFileCount = 3;
+		for (i in 0...inputFileCount) {
+			Fs.writeFileSync(Path.join(sourceDir, inputFileNameBase + i), inputContentBase + i);
+		}
+
+		var source = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:sourceDir});
+		var dest = StorageTools.getStorage({type:StorageSourceType.Sftp, rootPath:destDir, sshConfig:workerDef.ssh});
+
+		return DockerJobTools.copyInternal(source, dest)
+			.pipe(function(_) {
+				return dest.listDir();
+			})
+			.then(function(files) {
+				for (i in 0...inputFileCount) {
+					assertTrue(files.exists(function(f) return f == inputFileNameBase + i));
+				}
+				assertEquals(files.length, inputFileCount);
+				return files;
+			})
+			.pipe(function(files) {
+				files.sort(Reflect.compare);
+				files.reverse();
+				return Promise.whenAll(files.map(function(f) {
+					return dest.readFile(f)
+						.pipe(function(contentStream) {
+							return StreamPromises.streamToString(contentStream);
+						})
+						.then(function(content) {
+							var index = f.substr(f.length - 1);
+							assertEquals(content, inputContentBase + index);
+							return true;
+						})
+						.thenTrue()
+						;
+				}));
+			})
+			.then(function(_) {
+				FsExtended.deleteDirSync(Path.dirname(baseDir));
+				return true;
+			})
+			.thenTrue();
+	}
+
+	@timeout(240000)
+	public function testBuildDockerJob()
+	{
+		var workerDef = _worker;
+
+		var tarStream = js.npm.TarFs.pack('test/res/testDockerImage1');
+
+		var workerDef = _worker;
+		var ssh;
+		return Promise.promise(true)
+			.pipe(function(_) {
+				var docker = workerDef.getInstance().docker();
+				return DockerTools.buildDockerImage(docker, IMAGE_ID, tarStream, null);
+			})
+			.thenTrue();
+	}
+
+	@timeout(240000)
+	public function testRunDockerJob()
+	{
+		var workerDef = _worker;
+
+		return Promise.promise(true)
+			.pipe(function(_) {
+				var docker = workerDef.getInstance().docker();
+				var deferred = new DeferredPromise();
+				docker.createContainer({
+					Image: IMAGE_ID,
+					AttachStdout: true,
+					AttachStderr: true,
+					Tty: false,
+				}, function(err, container) {
+					if (err != null) {
+						deferred.boundPromise.reject(err);
+						return;
+					}
+
+					container.attach({ logs:true, stream:true, stdout:true, stderr:true}, function(err, stream) {
+						if (err != null) {
+							deferred.boundPromise.reject(err);
+							return;
+						}
+						untyped __js__('container.modem.demuxStream(stream, process.stdout, process.stdout)');
+						container.start(function(err, data) {
+							if (err != null) {
+								deferred.boundPromise.reject(err);
+								return;
+							}
+						});
+						stream.once('end', function() {
+							deferred.resolve(true);
+						});
+					});
+				});
+				return deferred.boundPromise;
+			})
+			.thenTrue();
+	}
+
+	@timeout(240000)
+	public function testCompleteDockerJobRun()
+	{
+		var dateString = TestTools.getDateString();
+		var exampleBaseDir = 'test/res/exampleDockerBatchCompute';
+		var sourceDockerContext = '$exampleBaseDir/dockerContext/';
+		var inputDir = '$exampleBaseDir/inputs';
+		var outputDir = 'tmp/testCompleteDockerJobRun/$dateString';
+		var workerBaseDir = '/tmp/testCompleteDockerJobRun/$dateString';
+
+		var jobId :JobId = 'jobid1';
+		var computeJobId :ComputeJobId = 'computeidjob1';
+
+		var worker = WorkerProviderBoot2Docker.getLocalDockerWorker();
+
+		var jobFsPath = 'tmp/testCompleteDockerJobRun/$dateString';
+		var fs = new ServiceStorageLocalFileSystem().setRootPath(jobFsPath);
+		var workerStorage = ServiceStorageLocalFileSystem.getService('$jobFsPath/workerStorage');
+
+		var redis :RedisClient = _injector.getValue(js.npm.RedisClient);
+
+		var dockerJob :DockerJobDefinition = {
+			jobId: jobId,
+			computeJobId: computeJobId,
+			worker: worker,
+			image: {type:DockerImageSourceType.Context, value:sourceDockerContext, options:{t:computeJobId}},
+			inputs: FsExtended.listFilesSync(inputDir),
+		};
+
+		var job :QueueJobDefinitionDocker = {
+			id: jobId,
+			computeJobId: computeJobId,
+			item: dockerJob,
+			parameters: {cpus:1, maxDuration:1000},
+			worker: worker
+		}
+
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return DockerJobTools.deleteWorkerInputs(job)
+					.pipe(function(_) {
+						return DockerJobTools.deleteWorkerOutputs(job);
+					});
+			})
+			.pipe(function(_) {
+				//Make sure to put the inputs in the properly defined job path
+				//TODO: this needs to be better documented or automated.
+				var fsInputs = new ServiceStorageLocalFileSystem().setRootPath(exampleBaseDir + '/inputs');
+				var fsExampleInputs :ServiceStorage = new ServiceStorageLocalFileSystem().setRootPath(jobFsPath);
+				fsExampleInputs = fsExampleInputs.appendToRootPath(job.item.inputDir());
+				return DockerJobTools.copyInternal(fsInputs, fsExampleInputs);
+			})
+			.pipe(function(_) {
+				return BatchComputeDocker.executeJob(redis, job, fs, workerStorage, Log.log).promise;
+			})
+			.then(function(batchResults) {
+				assertEquals(0, batchResults.exitCode);
+				assertEquals(null, batchResults.error);
+				return true;
+			})
+			.pipe(function(_) {
+				return DockerJobTools.removeJobContainer(job);
+			})
+			.pipe(function(_) {
+				var outputStorage = fs.appendToRootPath(job.item.outputDir());
+				return outputStorage.listDir()
+					.then(function(files) {
+						return true;
+					});
+			})
+			.thenTrue();
+	}
+
+	@timeout(60000)
+	public function testDataInOutDataVolumeContainer()
+	{
+		var worker = WorkerProviderBoot2Docker.getLocalDockerWorker();
+		var docker = new Docker(worker.docker);
+
+		//Craete the local directory of files to copy
+		var dateString = TestTools.getDateString();
+		var baseInputsDir = '/tmp/testDataInOutDataVolumeContainer/$dateString/inputs/';
+		var baseOutputsDir = '/tmp/testDataInOutDataVolumeContainer/$dateString/outputs/';
+		FsExtended.ensureDirSync(baseInputsDir);
+		FsExtended.ensureDirSync(baseOutputsDir);
+
+		var input1Content = 'input1Content';
+		var input2Content = 'input2Content';
+		Fs.writeFileSync(baseInputsDir + 'input1', input1Content, {encoding:'utf8'});
+		Fs.writeFileSync(baseInputsDir + 'input2', input2Content, {encoding:'utf8'});
+
+		var name = 'testcontainer';
+		var nameInputs = '${name}inputs';
+		var nameOutputs = '${name}outputs';
+		var image = 'tianon/true';//https://hub.docker.com/r/tianon/true/
+		var label = 'testDataInOutDataVolumeContainer';
+		var labels = {'testDataInOutDataVolumeContainer':'1'};
+
+		var container1;
+		var container2;
+
+		function validateDirectory(dir) {
+			var files = FsExtended.listFilesSync(dir);
+			assertTrue(files.has('input1'));
+			assertTrue(files.has('input2'));
+			try {
+				assertTrue(Fs.readFileSync(Path.join(dir, 'input1'), {encoding:'utf8'}) == input1Content);
+				assertTrue(Fs.readFileSync(Path.join(dir, 'input2'), {encoding:'utf8'}) == input2Content);
+			} catch(err :Dynamic) {
+				assertTrue(false);
+			}
+		}
+
+		return Promise.promise(true)
+			//First cleanup existing
+			.pipe(function(_) {
+				return DockerTools.getContainersByLabel(docker, label)
+					.pipe(function(containersData) {
+						return Promise.whenAll(containersData.map(function(containerData) {
+							return DockerPromises.removeContainer(docker.getContainer(containerData.Id), {v:true, force:true});
+						}));
+					});
+			})
+			.pipe(function(_) {
+				assertNotNull(docker);
+				assertNotNull(image);
+				return DockerPromises.pull(docker, image);
+			})
+			//Create container inputs
+			.pipe(function(_) {
+				return DockerTools.createDataVolumeContainer(docker, nameInputs, image, ['/inputs'], labels)
+					.then(function(container) {
+						container1 = container;
+						return true;
+					});
+			})
+			//Create container outputs
+			.pipe(function(_) {
+				return DockerTools.createDataVolumeContainer(docker, nameOutputs, image, ['/outputs'], labels)
+					.then(function(container) {
+						container2 = container;
+						return true;
+					});
+			})
+			//Send created data to inputs container
+			//and validate it by streaming it back
+			.pipe(function(_) {
+				return DockerTools.sendStreamToDataVolumeContainer(TarFs.pack(baseInputsDir), container1, '/inputs')
+					.pipe(function(_) {
+						//Now pipe it back out
+						var tempDir = '/tmp/delete/' + TestTools.getDateString();
+						FsExtended.ensureDirSync(tempDir);
+						return DockerTools.getStreamFromDataVolumeContainer(container1, '/inputs')
+							.pipe(function(stream) {
+								return StreamPromises.pipe(stream, TarFs.extract(tempDir));
+							})
+							.then(function(_) {
+								validateDirectory(tempDir + '/inputs');
+								FsExtended.deleteDirSync(tempDir);
+								FsExtended.deleteDirSync(baseInputsDir);
+								FsExtended.deleteDirSync(baseOutputsDir);
+								return true;
+							});
+					});
+			})
+			.thenTrue();
+	}
+
+	/**
+	 * Jobs can specify a custom output path, rather than the default
+	 * <ROOT>job/<JOB_ID>/inputs etc.
+	 */
+	@timeout(60000)
+	public function testCustomOutputsPath()
+	{
+		var dateString = TestTools.getDateString();
+		var basedir = 'tmp/testCustomOutputsPath/$dateString/';
+
+		//This is the custom location where inputs and outputs will be stored
+		//By default, jobs create a directory like:
+		//<ROOT>/<JOB_ID>/...job data e.g. inputs/ and outputs/
+		//However, you can also specify a custom input and output abstract FS
+		var inputDir = 'inputsCUSTOM';
+		var outputDir = 'outputsCUSTOM';
+		var resultsDir = 'resultsCUSTOM';
+		var inputDirLocalFull = Path.join(basedir, inputDir);
+		var outputDirLocalFull = Path.join(basedir, outputDir);
+		var resultsDirLocalFull = Path.join(basedir, resultsDir);
+		FsExtended.ensureDirSync(inputDirLocalFull);
+		FsExtended.ensureDirSync(outputDirLocalFull);
+
+		var input1Name = 'foo';
+		var input1Content = "sdfsdf";
+		FsExtended.writeFileSync(Path.join(inputDirLocalFull, input1Name), input1Content);
+		var output1Name = 'bar';
+		var scriptName = 'script.sh';
+		FsExtended.writeFileSync(Path.join(inputDirLocalFull, scriptName), '#!/usr/bin/env bash\ncat /${DIRECTORY_INPUTS}/foo > /${DIRECTORY_OUTPUTS}/bar');
+
+		var jobId :JobId = 'jobid1';
+		var computeJobId :ComputeJobId = 'computeidjob1';
+
+		var worker = WorkerProviderBoot2Docker.getLocalDockerWorker();
+
+		var fs = new ServiceStorageLocalFileSystem().setRootPath(basedir);
+		var workerStorage = ServiceStorageLocalFileSystem.getService('$basedir/workerStorage');
+
+		var redis :RedisClient = _injector.getValue(js.npm.RedisClient);
+
+		var command = ['/bin/bash', '/${DIRECTORY_INPUTS}/$scriptName'];
+
+		var dockerJob :DockerJobDefinition = {
+			jobId: jobId,
+			computeJobId: computeJobId,
+			worker: worker,
+			image: {type:DockerImageSourceType.Image, value:'ubuntu:14.10'},
+			inputs: FsExtended.listFilesSync(inputDirLocalFull),
+			command: command,
+			inputsPath: inputDir,
+			outputsPath: outputDir,
+			resultsPath: resultsDir
+		};
+
+		var job :QueueJobDefinitionDocker = {
+			id: jobId,
+			computeJobId: computeJobId,
+			item: dockerJob,
+			parameters: {cpus:1, maxDuration:1000},
+			worker: worker
+		}
+
+		_streams = {out:js.Node.process.stdout, err:js.Node.process.stderr};
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return DockerJobTools.deleteWorkerInputs(job)
+					.pipe(function(_) {
+						return DockerJobTools.deleteWorkerOutputs(job);
+					});
+			})
+			.pipe(function(_) {
+				return BatchComputeDocker.executeJob(redis, job, fs, workerStorage, Log.log).promise;
+			})
+			.errorPipe(function(err) {
+				Log.error(err);
+				return Promise.promise({exitCode:0, outputFiles:[]});
+			})
+			.pipe(function(_) {
+				return DockerJobTools.removeJobContainer(job);
+			})
+			.pipe(function(_) {
+				var outputStorage = new ServiceStorageLocalFileSystem().setRootPath(outputDirLocalFull);
+				return outputStorage.listDir()
+					.then(function(files) {
+						assertTrue(files.has(output1Name));
+						assertEquals(FsExtended.readFileSync(Path.join(outputDirLocalFull, output1Name), {}), input1Content);
+						return true;
+					});
+			})
+			.pipe(function(_) {
+				var resultsStorage = new ServiceStorageLocalFileSystem().setRootPath(resultsDirLocalFull);
+				return resultsStorage.listDir()
+					.then(function(files) {
+						assertTrue(files.has('stdout'));
+						assertTrue(files.has('stderr'));
+						return true;
+					});
+			})
+			.thenTrue();
+	}
+}
