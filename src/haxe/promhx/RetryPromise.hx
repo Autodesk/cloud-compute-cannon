@@ -29,14 +29,14 @@ class RetryPromise
 			Assert.notNull(p, 'RetryPromise.pollRegular f() returned a null promise');
 			p.then(function(val) {
 				if (attempts > 1 && !supressLogs) {
-					Log.info('$logPrefix Success after $attempts');
+					Log.debug('$logPrefix Success after $attempts');
 				}
 				deferred.resolve(val);
 			});
 			p.catchError(function(err) {
 				if (attempts < maxRetryAttempts) {
 					if (!supressLogs) {
-						Log.error('$logPrefix Failed attempt $attempts err=$err');
+						Log.debug('$logPrefix Failed attempt $attempts err=$err');
 					}
 					js.Node.setTimeout(retry, intervalMilliseconds);
 				} else {
@@ -63,14 +63,14 @@ class RetryPromise
 			var p = f();
 			p.then(function(val) {
 				if (attempts > 1 && !supressLogs) {
-					Log.info('$logPrefix Success after $attempts');
+					Log.debug('$logPrefix Success after $attempts');
 				}
 				deferred.resolve(val);
 			});
 			p.catchError(function(err) {
 				if (attempts < maxRetryAttempts) {
 					if (!supressLogs) {
-						Log.error('$logPrefix Failed attempt $attempts err=$err');
+						Log.debug('$logPrefix Failed attempt $attempts err=$err');
 					}
 					js.Node.setTimeout(retry, currentDelay);
 					currentDelay *= 2;
