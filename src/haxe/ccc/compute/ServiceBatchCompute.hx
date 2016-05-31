@@ -393,13 +393,13 @@ class ServiceBatchCompute
 			return;
 		}
 
-		res.writeHead(200);
 		res.on('error', function(err) {
 			Log.error({error:err});
 		});
 		ServerCommands.buildImageIntoRegistry(req, repository, res)
 			.then(function(imageUrl) {
 				js.Node.setTimeout(function() {
+					res.writeHead(200);
 					res.end(imageUrl);
 				}, 5000);
 			})
