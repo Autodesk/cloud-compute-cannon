@@ -147,6 +147,11 @@ class ComputeQueue
 			});
 	}
 
+	public static function isJob(redis :RedisClient, jobId :JobId) :Promise<Bool>
+	{
+		return RedisPromises.hexists(redis, REDIS_KEY_STATUS, jobId);
+	}
+
 	public static function getJob<T>(redis :RedisClient, jobId :JobId) :Promise<T>
 	{
 		var deferred = new promhx.deferred.DeferredPromise();

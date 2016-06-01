@@ -9,9 +9,10 @@ etc/hxml/embed-source.hxml
 
 # -dce full
 
+-debug
+
 -D nodejs
 -D PromhxExposeErrors
--debug
 
 -cp test/src
 

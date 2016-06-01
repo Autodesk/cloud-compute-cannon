@@ -74,6 +74,10 @@ class ClientCompute
 	@:expose
 	public static function getJobResult(host :Host, jobId :JobId) :Promise<JobResult>
 	{
+		if (jobId == null) {
+			Log.warn('Null jobId passed');
+			return Promise.promise(null);
+		}
 		function listenWebsocket() {
 			var promise = new DeferredPromise();
 			if (jobId != null) {
@@ -139,13 +143,18 @@ class ClientCompute
 
 	public static function getJobResultData(host :Host, jobId :JobId) :Promise<JobResult>
 	{
-		var clientProxy = getProxy(host.rpcUrl());
-		return clientProxy.doJobCommand(JobCLICommand.Result, [jobId])
-			.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
-				var result :JobResult = Reflect.field(out, jobId);
-				JobTools.prependJobResultsUrls(result, host + '/');
-				return result;
-			});
+		if (jobId == null) {
+			Log.warn('Null jobId passed');
+			return Promise.promise(null);
+		} else {
+			var clientProxy = getProxy(host.rpcUrl());
+			return clientProxy.doJobCommand(JobCLICommand.Result, [jobId])
+				.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
+					var result :JobResult = Reflect.field(out, jobId);
+					JobTools.prependJobResultsUrls(result, host + '/');
+					return result;
+				});
+		}
 	}
 
 	public static function getJobData(host :Host, jobId :JobId) :Promise<JobDescriptionComplete>

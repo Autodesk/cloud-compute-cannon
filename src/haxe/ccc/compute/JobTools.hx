@@ -40,6 +40,7 @@ class JobTools
 
 	public static function prependJobResultsUrls(jobResult :JobResult, urlPrefix :String)
 	{
+		Assert.notNull(jobResult);
 		if (jobResult.stdout != null && jobResult.stdout.indexOf('://') == -1) {
 			jobResult.stdout = Path.join(urlPrefix, jobResult.stdout);
 			jobResult.stderr = Path.join(urlPrefix, jobResult.stderr);

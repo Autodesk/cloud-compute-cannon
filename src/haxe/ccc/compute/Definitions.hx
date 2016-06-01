@@ -529,6 +529,7 @@ class Constants
 
 	/* CLI */
 	inline public static var SUBMITTED_JOB_RECORD_FILE = 'job.json';
+	inline public static var RESULT_INVALID_JOB_ID = 'invalid_job_id';
 	/**
 	 * Look for this folder in the working directory all the way down
 	 * to the root dir.

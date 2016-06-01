@@ -178,11 +178,9 @@ class ClientCommands
 		}
 		if (inputurl != null) {
 			for (url in inputurl) {
-				// trace('url=${url}');
 				var tokens = url.split('=');
 				var inputName = tokens.shift();
 				var inputUrl = tokens.join('=');
-				// trace('Requesting $inputUrl');
 				inputs.push({
 					type: InputSource.InputUrl,
 					value: inputUrl,
@@ -203,17 +201,14 @@ class ClientCommands
 				if (!stat.isFile()) {
 					throw('ERROR no file $inputPath');
 				}
-				// trace('Streaming local $inputPath');
 				Reflect.setField(inputStreams, inputName, Fs.createReadStream(inputPath, {encoding:'binary'}));
 			}
 		}
 
-		// trace('jobParams=${jobParams}');
 		return getServerAddress()
 			.pipe(function(address) {
 				return ClientCompute.postJob(address, jobParams, inputStreams)
 					.then(function(result) {
-						// trace('result=${result}');
 						//Write the client job file
 						var clientJobFileDirPath = Path.join(resultsBaseDir, '${dateString}__${result.jobId}');
 						FsExtended.ensureDirSync(clientJobFileDirPath);
@@ -276,19 +271,22 @@ class ClientCommands
 		var clientProxy = getProxy(host.rpcUrl());
 		return Promise.promise(true)
 			.pipe(function(_) {
-				if (job == null) {
+				if (job == null || job.length == 0) {
 					return clientProxy.jobs();
 				} else {
 					return Promise.promise(job);
 				}
 			})
 			.pipe(function(jobIds) {
-				var promises = jobIds.map(function(jobId) {
-					return function() return ClientCompute.getJobResult(host, jobId);
-				});
+				var promises = if (jobIds != null) {
+						jobIds.map(function(jobId) {
+							return function() return ClientCompute.getJobResult(host, jobId);
+						});
+					} else {
+						[];
+					}
 				return PromiseTools.chainPipePromises(promises)
 					.then(function(jobResults) {
-						trace('jobResults=${jobResults}');
 						return CLIResult.Success;
 					});
 			});
