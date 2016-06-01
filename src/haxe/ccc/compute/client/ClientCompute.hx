@@ -47,11 +47,9 @@ class ClientCompute
 				Reflect.setField(formData, f, Reflect.field(forms, f));
 			}
 		}
-		// trace('formData=${formData}');
 		js.npm.Request.post({url:host.rpcUrl(), formData:formData},
 			function(err :js.Error, httpResponse :js.npm.Request.HttpResponse, body:js.npm.Request.Body) {
 				if (err != null) {
-					// trace('body=${body}');
 					Log.error(err);
 					promise.boundPromise.reject(err);
 					return;
@@ -74,6 +72,10 @@ class ClientCompute
 	@:expose
 	public static function getJobResult(host :Host, jobId :JobId) :Promise<JobResult>
 	{
+		if (jobId == null) {
+			Log.warn('Null jobId passed');
+			return Promise.promise(null);
+		}
 		function listenWebsocket() {
 			var promise = new DeferredPromise();
 			if (jobId != null) {
@@ -95,7 +97,6 @@ class ClientCompute
 						ws.close();
 					} catch(err :Dynamic) {
 						Log.error(err);
-						// trace(err);
 						ws.close();
 					}
 				});
@@ -109,12 +110,10 @@ class ClientCompute
 						})
 						.catchError(function(err) {
 							//Do nothing, file isn't there, wait for the websocket notification
-							// trace('Ignore error from poll of job results since it may not be finished');
 						});
 				});
 				ws.registerOnClose(function(_) {
 					if (!promise.isResolved()) {
-						trace('Rejecting promise bc ws closed first');
 						promise.boundPromise.reject('Websocket closed prematurely');
 					}
 				});
@@ -139,24 +138,27 @@ class ClientCompute
 
 	public static function getJobResultData(host :Host, jobId :JobId) :Promise<JobResult>
 	{
-		var clientProxy = getProxy(host.rpcUrl());
-		return clientProxy.doJobCommand(JobCLICommand.Result, [jobId])
-			.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
-				var result :JobResult = Reflect.field(out, jobId);
-				JobTools.prependJobResultsUrls(result, host + '/');
-				return result;
-			});
+		if (jobId == null) {
+			Log.warn('Null jobId passed');
+			return Promise.promise(null);
+		} else {
+			var clientProxy = getProxy(host.rpcUrl());
+			return clientProxy.doJobCommand(JobCLICommand.Result, [jobId])
+				.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
+					var result :JobResult = Reflect.field(out, jobId);
+					JobTools.prependJobResultsUrls(result, host + '/');
+					return result;
+				});
+		}
 	}
 
 	public static function getJobData(host :Host, jobId :JobId) :Promise<JobDescriptionComplete>
 	{
-		// trace('getJobData host=${host.rpcUrl()} job=$jobId');
 		var clientProxy = getProxy(host.rpcUrl());
 
 		return clientProxy.doJobCommand(JobCLICommand.Result, [jobId])
 			.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
 				var result :JobDescriptionComplete = Reflect.field(out, jobId);
-				// trace('getJobData resultsPath=${Json.stringify(resultsPath, null, "  ")}');
 				return result;
 			});
 

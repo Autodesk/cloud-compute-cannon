@@ -76,8 +76,8 @@ class Job
 			id: job.id,
 			status: finishedStatus,
 			exitCode: batchJobResult.exitCode,
-			stdout: externalBaseUrl + job.item.resultDir() + 'stdout',
-			stderr: externalBaseUrl + job.item.resultDir() + 'stderr',
+			stdout: externalBaseUrl + job.item.resultDir() + STDOUT_FILE,
+			stderr: externalBaseUrl + job.item.resultDir() + STDERR_FILE,
 			resultJson: externalBaseUrl + job.item.resultJsonPath(),
 			inputsBaseUrl: externalBaseUrl + job.item.inputDir(),
 			outputsBaseUrl: externalBaseUrl + job.item.outputDir(),
@@ -86,7 +86,31 @@ class Job
 			error: batchJobResult.error,
 		};
 		jobStorage = jobStorage.appendToRootPath(job.item.resultDir());
-		return jobStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)))
+		return Promise.promise(true)
+			.pipe(function(_) {
+				if (batchJobResult.copiedLogs) {
+					return jobStorage.exists(STDOUT_FILE)
+						.pipe(function(exists) {
+							if (!exists) {
+								jobResult.stdout = null;
+							}
+							return jobStorage.exists(STDERR_FILE);
+						})
+						.then(function(exists) {
+							if (!exists) {
+								jobResult.stderr = null;
+							}
+							return true;
+						});
+				} else {
+					jobResult.stdout = null;
+					jobResult.stderr = null;
+					return Promise.promise(true);
+				}
+			})
+			.pipe(function(_) {
+				return jobStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
+			})
 			.pipe(function(_) {
 				if (externalBaseUrl != '') {
 					return promhx.RetryPromise.pollRegular(function() {
@@ -255,7 +279,7 @@ class Job
 						var executecallResult = executeJob();
 						executecallResult.promise.catchError(function(err) {
 							_cancelWorkingJob = null;
-							var batchJobResult = {exitCode:-1, error:err};
+							var batchJobResult = {exitCode:-1, error:err, copiedLogs:false};
 							log.error({exitCode:-1, error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
 							if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
 								writeJobResults(_job, _fs, batchJobResult, JobFinishedStatus.Failed)
@@ -292,7 +316,7 @@ class Job
 				p.catchError(function(err) {
 					// This is no longer needed
 					_cancelWorkingJob = null;
-					var batchJobResult = {exitCode:-1, error:err};
+					var batchJobResult = {exitCode:-1, copiedLogs:false, error:err};
 					log.error({exitCode:-1, error:err, state:_currentInternalState});
 					if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
 						var finishedStatus = batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success;
@@ -314,7 +338,8 @@ class Job
 							_cancelWorkingJob();
 							_cancelWorkingJob = null;
 						}
-						var batchJobResult = {exitCode:-1, error:_currentInternalState.JobFinishedStatus};
+						//Making copiedLogs:true because check if they're there
+						var batchJobResult = {exitCode:-1, copiedLogs:true, error:_currentInternalState.JobFinishedStatus};
 						writeJobResults(_job, _fs, batchJobResult, _currentInternalState.JobFinishedStatus)
 							.thenTrue();
 					case None:

@@ -49,6 +49,16 @@ class RedisPromises
 		return promise;
 	}
 
+	inline public static function hexists(redis :RedisClient, hashkey :String, hashField :String) :Promise<Bool>
+	{
+		var promise = new promhx.CallbackPromise<Int>();
+		redis.hexists(hashkey, hashField, promise.cb2);
+		return promise
+			.then(function(out :haxe.extern.EitherType<Int, Bool>) {
+				return out == 1 || out == true;
+			});
+	}
+
 	inline public static function hdel(redis :RedisClient, hashkey :String, hashField :String) :Promise<Int>
 	{
 		var promise = new promhx.CallbackPromise<Int>();

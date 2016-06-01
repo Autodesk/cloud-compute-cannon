@@ -40,6 +40,7 @@ class CliMain
 
 	public static function main()
 	{
+		js.npm.SourceMapSupport;
 		ErrorToJson;
 
 		//Embed various files

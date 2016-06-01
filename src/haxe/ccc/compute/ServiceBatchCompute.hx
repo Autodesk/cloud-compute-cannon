@@ -149,7 +149,27 @@ class ServiceBatchCompute
 					return __doJobCommandInternal(command, jobId, json);
 				});
 		} else {
-			return __doJobCommandInternal(command, jobId, json);
+			var validJobPromises = jobId.map(function(j) return ComputeQueue.isJob(_redis, j));
+			var invalidJobIds = [];
+			return Promise.whenAll(validJobPromises)
+				.pipe(function(jobChecks) {
+					var validJobIds = [];
+					for (i in 0...jobId.length) {
+						var jid = jobId[i];
+						if (jobChecks[i]) {
+							validJobIds.push(jid);
+						} else {
+							invalidJobIds.push(jid);
+						}
+					}
+					return __doJobCommandInternal(command, validJobIds, json);
+				})
+				.then(function(results) {
+					for (invalidJobId in invalidJobIds) {
+						Reflect.setField(results, invalidJobId, RESULT_INVALID_JOB_ID);
+					}
+					return results;
+				});
 		}
 	}
 
@@ -610,8 +630,6 @@ class ServiceBatchCompute
 								resultsPath: jsonrpc.params.resultsPath
 							};
 
-							trace('dockerJob=${dockerJob}');
-
 							var job :QueueJobDefinitionDocker = {
 								id: jobId,
 								item: dockerJob,
@@ -660,7 +678,6 @@ class ServiceBatchCompute
 	 */
 	function writeInputFiles(inputDescriptions :Array<ComputeInputSource>, inputsPath :String) :{cancel:Void->Promise<Bool>, inputs:Array<String>, promise:Promise<Dynamic>}
 	{
-		trace('writeInputFiles inputDescriptions=$inputDescriptions inputsPath=$inputsPath _fs=$_fs');
 		var promises = [];
 		var inputNames = [];
 		if (inputDescriptions != null) {

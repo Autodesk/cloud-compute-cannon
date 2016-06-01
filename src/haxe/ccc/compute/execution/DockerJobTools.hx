@@ -255,7 +255,7 @@ class DockerJobTools
 					Log.error('Cannot find container with tag: "computeId=$computeJobId"');
 					return Promise.promise(false);
 				} else {
-					return Promise.whenAll([fs.getFileWritable('stdout'), fs.getFileWritable('stderr')])
+					return Promise.whenAll([fs.getFileWritable(STDOUT_FILE), fs.getFileWritable(STDERR_FILE)])
 						.pipe(function(pipes) {
 							var out = pipes[0];
 							var err = pipes[1];

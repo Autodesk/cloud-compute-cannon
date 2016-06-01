@@ -81,6 +81,7 @@ class BatchComputeDocker
 		var exitCode = -1;
 		var outputFiles = [];
 		var error :Dynamic;
+		var copiedLogs = false;
 
 		function cancel() {
 			if (jobWorkingStatus == JobWorkingStatus.Cancelled) {
@@ -342,6 +343,7 @@ class BatchComputeDocker
 					log.info('Copying logs from to $resultsStorageRemote');
 					return DockerJobTools.copyLogs(docker, job.computeJobId, resultsStorageRemote)
 						.pipe(function(_) {
+							copiedLogs = true;
 							return setStatus(JobWorkingStatus.FinishedWorking);
 						});
 				} else {
@@ -361,7 +363,7 @@ class BatchComputeDocker
 					});
 			})
 			.then(function(_) {
-				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, JobWorkingStatus:jobWorkingStatus, error:error};
+				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
 				return jobResult;
 			});
 
