@@ -630,8 +630,6 @@ class ServiceBatchCompute
 								resultsPath: jsonrpc.params.resultsPath
 							};
 
-							trace('dockerJob=${dockerJob}');
-
 							var job :QueueJobDefinitionDocker = {
 								id: jobId,
 								item: dockerJob,
@@ -680,7 +678,6 @@ class ServiceBatchCompute
 	 */
 	function writeInputFiles(inputDescriptions :Array<ComputeInputSource>, inputsPath :String) :{cancel:Void->Promise<Bool>, inputs:Array<String>, promise:Promise<Dynamic>}
 	{
-		trace('writeInputFiles inputDescriptions=$inputDescriptions inputsPath=$inputsPath _fs=$_fs');
 		var promises = [];
 		var inputNames = [];
 		if (inputDescriptions != null) {
