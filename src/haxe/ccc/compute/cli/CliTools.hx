@@ -52,21 +52,21 @@ class CliTools
 	 * @param  ?path :String       [description]
 	 * @return       [description]
 	 */
-	public static function findExistingServerConfigPath(?path :String) :String
+	public static function findExistingServerConfigPath(?path :CLIServerPathRoot) :CLIServerPathRoot
 	{
 		path = path == null ? Node.process.cwd() : path;
-		if (!path.startsWith(ROOT)) {
-			path = Path.join(Node.process.cwd(), path);
+		var pathString = path.toString();
+		if (!pathString.startsWith(ROOT)) {
+			path = Path.join(Node.process.cwd(), pathString);
 		}
-		var serverJsonPath = Path.join(path, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE);
-		if (FsExtended.existsSync(serverJsonPath)) {
+		if (FsExtended.existsSync(path.getServerJsonConfigPath())) {
 			return path;
 		} else {
 			if (path == ROOT) {
 				return null;
 			} else {
-				if (Path.dirname(path) != null) {
-					return findExistingServerConfigPath(Path.dirname(path));
+				if (Path.dirname(pathString) != null) {
+					return findExistingServerConfigPath(Path.dirname(pathString));
 				} else {
 					return null;
 				}
@@ -79,38 +79,30 @@ class CliTools
 	 * @param  ?path :String       [description]
 	 * @return       [description]
 	 */
-	public static function readServerConnection(configPath :String) :ServerConnectionBlob
+	public static function readServerConnection(configPath :CLIServerPathRoot) :ServerConnectionBlob
 	{
-		var serverJsonPath = buildServerConnectionPath(configPath);
-		var serverDef :ServerConnectionBlob = Json.parse(FsExtended.readFileSync(serverJsonPath, {}));
+		var serverDef :ServerConnectionBlob = Json.parse(FsExtended.readFileSync(configPath.getServerJsonConfigPath(), {}));
 		return serverDef;
 	}
 
-	public static function buildServerConnectionPath(configPath :String) :String
+	public static function isServerConnection(configPath :CLIServerPathRoot) :Bool
 	{
-		return Path.join(configPath, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE);
+		return FsExtended.existsSync(configPath.getServerJsonConfigPath());
 	}
 
-	public static function isServerConnection(configPath :String) :Bool
-	{
-		var serverJsonPath = buildServerConnectionPath(configPath);
-		return FsExtended.existsSync(serverJsonPath);
-	}
-
-	public static function writeServerConnection(config :ServerConnectionBlob, ?path :String)
+	public static function writeServerConnection(config :ServerConnectionBlob, ?path :CLIServerPathRoot)
 	{
 		if (path == null) {
 			path = js.Node.process.cwd();
 		}
 		var configString = Json.stringify(config, null, '\t');
-		FsExtended.ensureDirSync(Path.join(path, LOCAL_CONFIG_DIR));
-		FsExtended.writeFileSync(Path.join(path, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE), configString);
+		FsExtended.ensureDirSync(path.getServerJsonConfigPathDir());
+		FsExtended.writeFileSync(path.getServerJsonConfigPath(), configString);
 	}
 
-	public static function deleteServerConnection(path :String)
+	public static function deleteServerConnection(path :CLIServerPathRoot)
 	{
-		var configPath = buildServerConnectionPath(path);
-		FsExtended.unlinkSync(configPath);
+		FsExtended.unlinkSync(path.getServerJsonConfigPath());
 	}
 
 	public static function hasServerHostInCLI() :Bool
@@ -179,7 +171,13 @@ class CliTools
 
 	inline public static function getHostFromServerConfig(config :ServerConnectionBlob) :Host
 	{
-		return config.server.ssh.host + ':' + SERVER_DEFAULT_PORT;
+		if (config.host != null) {
+			return config.host + ':' + SERVER_DEFAULT_PORT;
+		} else if (config.server != null && config.server.ssh != null) {
+			return config.server.ssh.host + ':' + SERVER_DEFAULT_PORT;
+		} else {
+			return null;
+		}
 	}
 
 	// public static function isLocalServer() :Promise<Bool>

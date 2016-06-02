@@ -6,10 +6,12 @@ compute:
     - redis
     - registry
 
+
 redis:
   extends:
     file: docker-compose.core.yml
     service: redis
+
 
 registry:
   extends:

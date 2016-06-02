@@ -5,7 +5,14 @@ etc/hxml/server-build.hxml
 --next
 
 etc/hxml/base-nodejs.hxml
-etc/hxml/embed-source.hxml
+
+-resource package.json@package.json
+-resource build/cloud-compute-cannon-server.js@cloud-compute-cannon-server.js
+-resource build/cloud-compute-cannon-server.js.map@cloud-compute-cannon-server.js.map
+
+-resource docker-compose.yml@docker-compose.yml
+-resource docker-compose.core.yml@docker-compose.core.yml
+-resource docker-compose.override.yml@docker-compose.override.yml
 
 # -dce full
 

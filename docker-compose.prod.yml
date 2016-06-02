@@ -14,6 +14,7 @@ compute:
   log_opt:
     tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
 
+
 redis:
   log_driver: "fluentd"
   #This config disables persistance to disk since we do not need it for development
@@ -25,6 +26,7 @@ redis:
   ports:
     #Don't expose this port to the host, only linked containers.
     - "6379"
+
 
 registry:
   volumes:
@@ -39,6 +41,7 @@ registry:
   #It's hard to find a use case for logging this.
   log_driver: "none"
 
+
 fluentd:
   extends:
     file: docker-compose.core.yml
@@ -50,13 +53,14 @@ fluentd:
   links:
     - elasticsearch
 
+
 #The elasticsearch part of the stack needs to be moved to the actual separate
 #elasticsearch API end point. Leaving this in here for now.
-
 elasticsearch:
   extends:
     file: docker-compose.core.yml
     service: elasticsearch
+
 
 kibana:
   extends:
