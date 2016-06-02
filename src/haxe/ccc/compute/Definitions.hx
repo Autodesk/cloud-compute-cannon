@@ -378,6 +378,7 @@ typedef BasicBatchProcessResponseFull = {>BasicBatchProcessResponse,
  */
 
 typedef ServerConnectionBlob = {
+	var host :Host;
 	var server :InstanceDefinition;
 	var provider: ServiceConfiguration;
 }
@@ -399,6 +400,45 @@ enum CLIResult {
 	PrintHelpExit1;
 	ExitCode(code :Int);
 	Success;
+}
+
+abstract CLIServerPathRoot(String) from String
+{
+	inline public function new(s :String)
+		this = s;
+
+	inline public function getServerJsonConfigPath() :String
+	{
+		return js.node.Path.join(this, Constants.LOCAL_CONFIG_DIR, Constants.SERVER_CONNECTION_FILE);
+	}
+
+	inline public function getServerJsonConfigPathDir() :String
+	{
+		return js.node.Path.join(this, Constants.LOCAL_CONFIG_DIR);
+	}
+
+	inline public function getLocalServerPath() :String
+	{
+		return js.node.Path.join(this, Constants.SERVER_LOCAL_DOCKER_DIR);
+	}
+
+	inline public function localServerPathExists() :Bool
+	{
+		var p = getLocalServerPath();
+		try {
+			var stats = js.node.Fs.statSync(p);
+			return true;
+		} catch (err :Dynamic) {
+			return false;
+		}
+	}
+
+	
+
+	public function toString() :String
+	{
+		return this;
+	}
 }
 
 typedef ServerCheckResult = {
@@ -489,6 +529,7 @@ class Constants
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
 
 	/* Server */
+	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
 	inline public static var SERVER_DEFAULT_PORT = 9000;
 	inline public static var REGISTRY_DEFAULT_PORT = 5001;
 	inline public static var REDIS_PORT = 6379;
@@ -539,6 +580,7 @@ class Constants
 	inline public static var SERVER_CONNECTION_FILE = 'server_connection.json';
 	inline public static var SERVER_CONFIGURATION_FILE = 'server_configuration.yml';
 	public static var SERVER_VAGRANT_DIR = '$LOCAL_CONFIG_DIR/vagrant';
+	public static var SERVER_LOCAL_DOCKER_DIR = '$LOCAL_CONFIG_DIR/local';
 
 	/* Workers */
 	inline public static var LOCAL_DOCKER_SSH_CONFIG_PATH = '/usr/local/etc/ssh/sshd_config';

@@ -8,6 +8,8 @@ import ccc.compute.workers.WorkerProviderBoot2Docker;
 import ccc.compute.workers.WorkerProviderVagrantTools;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 import ccc.compute.workers.WorkerProviderTools;
+import ccc.storage.ServiceStorage;
+import ccc.storage.ServiceStorageLocalFileSystem;
 
 import haxe.Json;
 import haxe.Resource;
@@ -18,7 +20,6 @@ import js.node.Path;
 import js.npm.FsExtended;
 import js.npm.Docker;
 import js.npm.Ssh;
-import js.npm.HttpPromises;
 
 import promhx.Promise;
 import promhx.RequestPromises;
@@ -278,7 +279,7 @@ class ProviderTools
 	{
 		var host = getServerHost(new HostName(instance.ssh.host));
 		var url = 'http://$host/checks';
-		return HttpPromises.get(url)
+		return RequestPromises.get(url)
 			.then(function(out) {
 				return out.trim() == SERVER_PATH_CHECKS_OK;
 			})
@@ -290,9 +291,10 @@ class ProviderTools
 			});
 	}
 
-	public static function serverCheck(instance :InstanceDefinition) :Promise<ServerCheckResult>
+	public static function serverCheck(serverBlob :ServerConnectionBlob) :Promise<ServerCheckResult>
 	{
-		var host = getServerHost(new HostName(instance.ssh.host));
+		var host = serverBlob.host;
+		var instance = serverBlob.server;
 		var result :ServerCheckResult = {
 			ok: false,
 			connection_file_path: null,
@@ -310,7 +312,7 @@ class ProviderTools
 		return Promise.promise(true)
 			.pipe(function(_) {
 				if (instance != null) {
-					return SshTools.getSsh(instance.ssh)
+					return SshTools.getSsh(instance.ssh, 1, 0, null, null, true)
 						.pipe(function(sshclient) {
 							result.status_check_success.ssh = true;
 							sshclient.end();
@@ -331,8 +333,8 @@ class ProviderTools
 			.pipe(function(_) {
 				if (host != null) {
 					var url = 'http://$host/checks';
-					result.http_api_url = url;
-					return HttpPromises.get(url)
+					result.http_api_url = 'http://${host}${SERVER_RPC_URL}';
+					return RequestPromises.get(url, 200)
 						.then(function(out) {
 							result.status_check_success.http_api = out.trim() == SERVER_PATH_CHECKS_OK;
 							return true;
@@ -347,7 +349,13 @@ class ProviderTools
 				}
 			})
 			.then(function(_) {
-				result.ok = result.status_check_success.ssh && result.status_check_success.http_api && result.status_check_success.docker_compose;
+				if (serverBlob.server != null) {
+					result.ok = result.status_check_success.ssh && result.status_check_success.http_api && result.status_check_success.docker_compose;
+				} else {
+					result.ok = result.status_check_success.http_api;
+					Reflect.deleteField(result.status_check_success, 'ssh');
+					Reflect.deleteField(result.status_check_success, 'docker_compose');
+				}
 				if (result.error == null) {
 					Reflect.deleteField(result, 'error');
 				}
@@ -550,17 +558,49 @@ class ProviderTools
 
 	public static function copyFilesForRemoteServer(serverBlob :ServerConnectionBlob) :Promise<Bool>
 	{
-		js.Node.process.stdout.write('Copying files to ${serverBlob.server.ssh.host}...');
 		//Ensure the hostname
 		Constants.SERVER_HOSTNAME_PUBLIC = serverBlob.server.hostPublic;
 		Constants.SERVER_HOSTNAME_PRIVATE = serverBlob.server.hostPrivate;
 		var instance = serverBlob.server;
-		var storage = ccc.storage.ServiceStorageSftp.fromInstance(instance);
+		var storage = ccc.storage.ServiceStorageSftp.fromInstance(instance).appendToRootPath(Constants.APP_NAME_COMPACT);
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return storage.writeFile('$SERVER_MOUNTED_CONFIG_FILE', StreamTools.stringToStream(Json.stringify(serverBlob.provider, null, '\t')));
+			})
+			.pipe(function(_) {
+				return copyServerFiles(storage);
+			});
+	}
+
+	public static function copyFilesForLocalServer(path :String) :Promise<Bool>
+	{
+		var localStorage = ServiceStorageLocalFileSystem.getService(path);
+		return ProviderTools.copyServerFiles(localStorage)
+			.pipe(function(_) {
+				var defaultServerConfigString = Json.stringify(InitConfigTools.getDefaultConfig(), null, '\t');
+				return localStorage.writeFile('serverconfig.json', StreamTools.stringToStream(defaultServerConfigString));
+			})
+			.pipe(function(_) {
+				var promises = [
+					'docker-compose.yml',
+					'docker-compose.core.yml',
+					'docker-compose.override.yml',
+				].map(function(f) {
+					return localStorage.writeFile(f, StreamTools.stringToStream(Resource.getString(f)));
+				});
+				return Promise.whenAll(promises);
+			})
+			.thenTrue();
+	}
+
+	static function copyServerFiles(storage :ServiceStorage) :Promise<Bool>
+	{
+		js.Node.process.stdout.write('...copying files to ${storage.toString()}...');
 
 		return Promise.promise(true)
 			//Copy non-template files first. Don't copy files that also have a template version
 			.pipe(function(_) {
-				var promises = [storage.writeFile(Constants.APP_NAME_COMPACT + '/$SERVER_MOUNTED_CONFIG_FILE', StreamTools.stringToStream(Json.stringify(serverBlob.provider, null, '\t')))];
+				var promises = [];
 				var templates = Resource.listNames().filter(function(e) return e.endsWith('.template'));
 				var nonTemplates = Resource.listNames().filter(function(e) return !e.endsWith('.template'));
 				nonTemplates = nonTemplates.filter(function(e) {
@@ -569,7 +609,7 @@ class ProviderTools
 				for (resourceName in nonTemplates) {
 					var content = Resource.getString(resourceName);
 					var name = resourceName.startsWith('etc/server/') ? resourceName.replace('etc/server/', '') : resourceName;
-					var path = Constants.APP_NAME_COMPACT + '/' + name;
+					var path = name;
 					promises.push(storage.writeFile(path, StreamTools.stringToStream(content)));
 				}
 				return Promise.whenAll(promises);
@@ -582,13 +622,12 @@ class ProviderTools
 					var content = new haxe.Template(Resource.getString(resourceName)).execute(Constants);
 					var name = resourceName.startsWith('etc/server/') ? resourceName.replace('etc/server/', '') : resourceName;
 					name = name.substr(0, name.length - '.template'.length);
-					var path = Constants.APP_NAME_COMPACT + '/' + name;
+					var path = name;
 					promises.push(storage.writeFile(path, StreamTools.stringToStream(content)));
 				}
 				return Promise.whenAll(promises);
 			})
 			.then(function(_) {
-				js.Node.process.stdout.write('finished\n');
 				return true;
 			})
 			.thenTrue();

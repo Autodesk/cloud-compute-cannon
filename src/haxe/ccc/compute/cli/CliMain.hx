@@ -5,6 +5,7 @@ import ccc.compute.Definitions.Constants.*;
 
 import haxe.Json;
 import haxe.remoting.JsonRpc;
+import t9.remoting.jsonrpc.RemoteMethodDefinition;
 
 import js.Node;
 import js.node.ChildProcess;
@@ -22,26 +23,12 @@ using Lambda;
  */
 class CliMain
 {
-	public static function main2()
-	{
-		var docker = new js.npm.Docker(null);
-
-		promhx.Promise.whenAll(
-			[
-				util.DockerTools.ensureContainer(docker, 'redis:3', 'name', 'redis'),
-				util.DockerTools.ensureContainer(docker, 'registry:2', 'name', 'registry', null, [ccc.compute.Definitions.Constants.REGISTRY_DEFAULT_PORT=>5000])
-			])
-		.then(function(_) {
-			trace('done');
-		});
-
-		js.Node.setTimeout(function() {}, 3000);
-	}
-
 	public static function main()
 	{
 		js.npm.SourceMapSupport;
 		ErrorToJson;
+		var bunyanLogger = Logger.log;
+		untyped bunyanLogger.level(40);
 
 		//Embed various files
 		util.EmbedMacros.embedFiles('etc');
@@ -62,21 +49,43 @@ class CliMain
 			}
 		}
 
-		//Add the client methods. These are handled the same as the remote JsonRpc
-		//methods, except that they are local, so the command JsonRpc is just sent
-		//to the local context.
 		var context = new t9.remoting.jsonrpc.Context();
 		context.registerService(ccc.compute.cli.ClientCommands);
-		var clientRpcDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.cli.ClientCommands);
-		// trace('clientRpcDefinitions=${clientRpcDefinitions}');
-		var clientMethods :Set<String> = Set.createString(clientRpcDefinitions.map(function(d) return d.alias));
-		CommanderTools.addCommands(program, clientRpcDefinitions, function(requestDef) {
+
+		//The following functions are broken out so that the CLI commands can be listed
+		//in alphabetical order when the help command is called.
+		function serverRequest(requestDef) {
+			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
+			CliTools.getServerHost()
+				.then(function(hostport) {
+					address = 'http://$hostport${SERVER_RPC_URL}';
+					printRpcRequest(requestDef);
+					var clientConnection = new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(address);
+					clientConnection.request(requestDef.method, requestDef.params)
+						.then(function(result) {
+							var msg = Json.stringify(result, null, '\t');
+#if nodejs
+							js.Node.console.log(msg);
+#else
+							trace(msg);
+#end
+							js.Node.process.exit(0);
+						});
+				})
+				.catchError(function(err) {
+					trace('ERROR from $requestDef\nError:\n$err');
+					js.Node.process.exit(1);
+				});
+		}
+
+		function addServerMethod(serverMethodDefinition :RemoteMethodDefinition) {
+			CommanderTools.addCommand(program, serverMethodDefinition, serverRequest);
+		}
+
+		function clientRequest(requestDef) {
 			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
 			printRpcRequest(requestDef);
-			// trace('program.commands=${program.commands}');
 			var command = program.commands.find(function(e) return untyped e._name == requestDef.method);
-			// trace('command=${command}');
-			// trace(untyped program.commands[0]._name);
 			context.handleRpcRequest(requestDef)
 				.then(function(result :ResponseDefSuccess<CLIResult>) {
 					if (result.error != null) {
@@ -101,36 +110,40 @@ class CliMain
 					Log.error('ERROR from $requestDef\nError:\n$err');
 					js.Node.process.exit(1);
 				});
-		});
+		}
 
-		//The actual remote server method definitions
+		function addClientMethod(clientMethodDefinition :RemoteMethodDefinition) {
+			CommanderTools.addCommand(program, clientMethodDefinition, clientRequest);
+		}
+
+		//Add the client methods. These are handled the same as the remote JsonRpc
+		//methods, except that they are local, so the command JsonRpc is just sent
+		//to the local context.
+		var clientRpcDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.cli.ClientCommands);
+
+		var rpcDefinitionMap = new Map<String, {isClient:Bool, def:RemoteMethodDefinition}>();
+		var rpcAlias :Array<String> = [];
+		for (def in clientRpcDefinitions) {
+			rpcDefinitionMap.set(def.alias, {isClient:true, def:def});
+			rpcAlias.push(def.alias);
+		}
+
+		//Server methods
 		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.server.ServerCommands, ccc.compute.ServiceBatchCompute);
-		serverMethodDefinitions = serverMethodDefinitions.filter(function(d) {
-			return !clientMethods.has(d.alias);
-		});
-		CommanderTools.addCommands(program, serverMethodDefinitions, function(requestDef) {
-			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
-			CliTools.getServerHost()
-				.then(function(hostport) {
-					address = 'http://$hostport${SERVER_RPC_URL}';
-					printRpcRequest(requestDef);
-					var clientConnection = new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(address);
-					clientConnection.request(requestDef.method, requestDef.params)
-						.then(function(result) {
-							var msg = Json.stringify(result, null, '\t');
-#if nodejs
-							js.Node.console.log(msg);
-#else
-							trace(msg);
-#end
-							js.Node.process.exit(0);
-						});
-				})
-				.catchError(function(err) {
-					trace('ERROR from $requestDef\nError:\n$err');
-					js.Node.process.exit(1);
-				});
-		});
+		for (def in serverMethodDefinitions) {
+			rpcDefinitionMap.set(def.alias, {isClient:false, def:def});
+			rpcAlias.push(def.alias);
+		}
+		rpcAlias.sort(Reflect.compare);
+
+		for (alias in rpcAlias) {
+			var defBlob = rpcDefinitionMap[alias];
+			if (defBlob.isClient) {
+				addClientMethod(defBlob.def);
+			} else {
+				addServerMethod(defBlob.def);
+			}
+		}
 
 		program
 			.command('*')

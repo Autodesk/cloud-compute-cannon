@@ -10,6 +10,9 @@ import ccc.compute.workers.WorkerProviderTools;
 import ccc.compute.server.ProviderTools;
 import ccc.compute.server.ProviderTools.*;
 import ccc.compute.cli.CliTools.*;
+import ccc.storage.ServiceStorageLocalFileSystem;
+
+import haxe.Resource;
 
 import js.Node;
 import js.node.http.*;
@@ -17,7 +20,6 @@ import js.node.ChildProcess;
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.Fs;
-import js.npm.HttpPromises;
 import js.npm.FsExtended;
 import js.npm.Request;
 
@@ -32,6 +34,7 @@ import t9.abstracts.net.*;
 import yaml.Yaml;
 
 import util.SshTools;
+import util.streams.StreamTools;
 
 using ccc.compute.ComputeTools;
 using promhx.PromiseTools;
@@ -91,7 +94,7 @@ class ClientCommands
 
 	@rpc({
 		alias:'run',
-		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'\nReturns the jobId',
+		doc:'Run docker job(s) on the compute provider.',
 		args:{
 			command: {doc:'Command to run in the docker container, specified as a JSON String Array, e.g. \'["echo", "foo"]\''},
 			directory: {doc: 'Path to directory containing the job definition', short:'d'},
@@ -101,8 +104,8 @@ class ClientCommands
 			inputfile: {doc:'Input files [inputfile]. E.g. --inputfile foo1=/home/user1/Desktop/test.jpg" --input foo2=/home/me/myserver/myfile.txt ', short:'f'},
 			inputurl: {doc:'Input urls (downloaded from the server) [inputurl]. E.g. --input foo1=http://someserver/test.jpg --input foo2=http://myserver/myfile', short:'u'},
 			results: {doc: 'Results directory [./<results_dir>/<date string>__<jobId>/]. The contents of that folder will have an inputs/ and outputs/ directories. '},
-			// json: {doc: 'Output in JSON.'}
-		}
+		},
+		docCustom: 'Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'\nReturns the jobId'
 	})
 	public static function runclient(
 		command :Array<String>,
@@ -113,8 +116,6 @@ class ClientCommands
 		?inputurl :Array<String>,
 		?count :Int = 1,
 		?results :String
-		// ?json :Bool = true
-		// ) :Promise<ClientJobRecord>
 		)
 	{
 		var jobParams :BasicBatchProcessRequest = {
@@ -128,15 +129,15 @@ class ClientCommands
 
 	@rpc({
 		alias:'runjson',
-		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
+		doc:'Run docker job(s) on the compute provider.',
 		args:{
 			jsonfile: {doc: 'Path to json file with the job spec'},
 			count: {doc: 'Number of job repeats [1]', short: 'n'},
 			input: {doc:'Input files/values/urls [input]. Formats: --input "foo1=@/home/user1/Desktop/test.jpg" --input "foo2=@http://myserver/myfile --input "foo3=4". ', short:'i'},
 			inputfile: {doc:'Input files/values/urls [input]. Formats: --input "foo1=@/home/user1/Desktop/test.jpg" --input "foo2=@http://myserver/myfile --input "foo3=4". ', short:'i'},
 			results: {doc: 'Results directory [./<results_dir>/<date string>__<jobId>/]. The contents of that folder will have an inputs/ and outputs/ directories. '},
-			// json: {doc: 'Output in JSON [true].'}
-		}
+		},
+		docCustom: 'Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\''
 	})
 	public static function runJson(
 		jsonfile: String,
@@ -382,37 +383,74 @@ class ClientCommands
 	// }
 
 	@rpc({
-		alias:'shutdown',
-		doc:'Shut down the remote server',
+		alias:'server-shutdown',
+		doc:'Shut down the remote server, delete server files locally',
 	})
-	public static function shutdown() :Promise<CLIResult>
+	public static function serverShutdown() :Promise<CLIResult>
 	{
-		var path = Node.process.cwd();
+		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
-			log('No server configuration @${buildServerConnectionPath(path)}. Nothing to shut down.');
+			log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
-		var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
-		trace('shutting down server ${serverBlob.server.id}');
-		Log.warn('TODO: properly clean up workers');
-		return provider.destroyInstance(serverBlob.server.id)
-			.then(function(_) {
-				trace('deleting connection file');
-				deleteServerConnection(path);
-				return CLIResult.Success;
+		var localServerPath = path.getLocalServerPath();
+		if (path.localServerPathExists() && serverBlob.provider == null) {
+			var promise = new DeferredPromise();
+			js.node.ChildProcess.exec('docker-compose stop', {cwd:localServerPath}, function(err, stdout, stderr) {
+				if (err != null) {
+					log(err);
+				}
+				if (stdout != null) {
+					Node.process.stdout.write(stdout);
+				}
+				if (stderr != null) {
+					Node.process.stderr.write(stderr);
+				}
+				js.node.ChildProcess.exec('docker-compose rm -fv', {cwd:localServerPath}, function(err, stdout, stderr) {
+					if (err != null) {
+						log(err);
+					}
+					if (stdout != null) {
+						Node.process.stdout.write(stdout);
+					}
+					if (stderr != null) {
+						Node.process.stderr.write(stderr);
+					}
+					promise.resolve(CLIResult.Success);
+				});
 			});
+			return promise.boundPromise
+				.then(function(_) {
+					trace('deleting connection file');
+					deleteServerConnection(path);
+					FsExtended.deleteDirSync(path.getServerJsonConfigPathDir());
+					return CLIResult.Success;
+				});
+		} else {
+			var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
+			trace('shutting down server ${serverBlob.server.id}');
+			Log.warn('TODO: properly clean up workers');
+			return provider.destroyInstance(serverBlob.server.id)
+				.then(function(_) {
+					trace('deleting connection file');
+					deleteServerConnection(path);
+					return CLIResult.Success;
+				});
+		}
+		
 	}
 
 	@rpc({
 		alias:'server-stop',
-		doc:'Stop down the remote server',
+		doc:'Stop down the server',
+		docCustom: 'Stop, uninstall the server, and shut down workers and the server instance (if remote)'
 	})
 	public static function stopServer() :Promise<CLIResult>
 	{
-		var path = Node.process.cwd();
+		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
-			log('No server configuration @${buildServerConnectionPath(path)}. Nothing to shut down.');
+			log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
@@ -421,7 +459,7 @@ class ClientCommands
 	}
 
 	@rpc({
-		alias:'update-config',
+		alias:'server-update',
 		doc:'Update the server configuration json file.',
 		args:{
 			'config':{doc: '<Path to server config yaml/json file>'}
@@ -429,14 +467,14 @@ class ClientCommands
 	})
 	public static function updateServerConfig(config :String) :Promise<CLIResult>
 	{
-		var path = Node.process.cwd();
+		var path :CLIServerPathRoot = Node.process.cwd();
 		if (config != null && !FsExtended.existsSync(config)) {
 			log('Missing configuration file: $config');
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 
 		if (!isServerConnection(path)) {
-			log('No existing installation @${buildServerConnectionPath(path)}. Have you run "$CLI_COMMAND install"?');
+			log('No existing installation @${path.getServerJsonConfigPath()}. Have you run "$CLI_COMMAND install"?');
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 
@@ -450,118 +488,154 @@ class ClientCommands
 	}
 
 	@rpc({
-		alias:'install',
-		doc:'Install the cloudcomputecannon server on a provider:\n  cloudcannon install <vagrant | Path to server config yaml file>',
+		alias:'server-install',
+		doc:'Install the cloudcomputecannon server locally or on a remote provider',
 		args:{
-			'config':{doc: '<Path to server config yaml file>'}
-		}
+			'config':{doc: '<Path to server config yaml file>', short:'c'},
+			'force':{doc: 'Even if a server exists, rebuild and restart', short:'f'},
+			'uploadonly':{doc: 'DEBUG/DEVELOPER: Only upload server files to remote server.'}
+		},
+		docCustom: 'Examples:\n  server-install          (installs a local cloud-cannon-compute on your machine, via docker)\n  server-install [path to server config yaml file]    (installs a remote server)'
 	})
-	public static function install(config :String, ?force :Bool = false, ?uploadOnly :Bool = false) :Promise<CLIResult>
+	public static function install(?config :String, ?force :Bool = false, ?uploadonly :Bool = false) :Promise<CLIResult>
 	{
-		var path = Node.process.cwd();
-		// var existingServerConnectionJsonPath = Path.join(path, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE);
-		// trace('existingServerConnectionJsonPath=${existingServerConnectionJsonPath}');
-		// var existingServerConnectionJsonFileExists = FsExtended.existsSync(existingServerConnectionJsonPath);
-		// trace('existingServerConnectionJsonFileExists=${existingServerConnectionJsonFileExists}');
+		var path :CLIServerPathRoot = Node.process.cwd();
+		if (config != null) {
+			//Missing config file check
+			if (!FsExtended.existsSync(config)) {
+				log('Missing configuration file: $config');
+				return Promise.promise(CLIResult.PrintHelpExit1);
+			}
 
-		//Missing config file check
-		if (config != null && !FsExtended.existsSync(config)) {
-			log('Missing configuration file: $config');
-			return Promise.promise(CLIResult.PrintHelpExit1);
-		}
+			if (isServerConnection(path)) {
+				log('Existing installation @${path.getServerJsonConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
+				return Promise.promise(CLIResult.PrintHelpExit1);
+			}
 
-		if (config != null && isServerConnection(path)) {
-			log('Existing installation @${buildServerConnectionPath(path)}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
-			return Promise.promise(CLIResult.PrintHelpExit1);
-		}
-
-		// //We cannot have two configurations override.
-		// if (config != null && FsExtended.existsSync(config) && existingServerConnectionJsonFileExists) {
-		// 	log('Existing config, cannot override. Shut down the existing server. File=${Path.join(path, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE)}');
-		// 	return Promise.promise(false);
-		// }
-
-		// var serverConfig :ServiceConfiguration = null;
-
-		return Promise.promise(true)
-			.pipe(function(_) {
-				if (isServerConnection(path)) {
-					//Perform tests on the existing server
-					var serverBlob :ServerConnectionBlob = readServerConnection(path);
-					return Promise.promise(serverBlob);
-				} else {
-					//Just create the server instance.
-					//It doesn't validate or check the running containers, that is the next step
-					var serverConfig = InitConfigTools.getConfigFromFile(config);
-					var providerConfig = serverConfig.providers[0];
-					return ProviderTools.createServerInstance(providerConfig)
-						.then(function(instanceDef) {
-							var serverBlob :ServerConnectionBlob = {server:instanceDef, provider:serverConfig};
-							writeServerConnection(serverBlob, path);
-							return serverBlob;
+			return Promise.promise(true)
+				.pipe(function(_) {
+					if (isServerConnection(path)) {
+						//Perform tests on the existing server
+						var serverBlob :ServerConnectionBlob = readServerConnection(path);
+						return Promise.promise(serverBlob);
+					} else {
+						//Just create the server instance.
+						//It doesn't validate or check the running containers, that is the next step
+						var serverConfig = InitConfigTools.getConfigFromFile(config);
+						var providerConfig = serverConfig.providers[0];
+						return ProviderTools.createServerInstance(providerConfig)
+							.then(function(instanceDef) {
+								var serverBlob :ServerConnectionBlob = {
+									host: new Host(new HostName(instanceDef.ssh.host), new Port(SERVER_DEFAULT_PORT)),
+									server: instanceDef,
+									provider: serverConfig
+								};
+								writeServerConnection(serverBlob, path);
+								return serverBlob;
+							});
+					}
+				})
+				//Don't assume anything is working except ssh/docker connections.
+				.pipe(function(serverBlob) {
+					// trace('serverBlob=${serverBlob}');
+					return ProviderTools.installServer(serverBlob, force, uploadonly);
+					// return ProviderTools.copyFilesForRemoteServer(serverBlob);
+				})
+				// .pipe(function(_) {
+				// 	// trace('checking server now');
+				// 	return servercheck();
+				// })
+				.thenVal(CLIResult.Success);
+		} else {
+			//Install and run via docker
+			//First check if there is a local instance running
+			var hostName :HostName = null;
+			var host :String = null;
+			return Promise.promise(true)
+				.then(function(_) {
+					try {
+						hostName = ConnectionToolsDocker.getDockerHost();
+						return hostName;
+					} catch(err :Dynamic) {
+						return new HostName('localhost');
+					}
+				})
+				.pipe(function(hostname :HostName) {
+					host = '$SERVER_DEFAULT_PROTOCOL://$hostname:$SERVER_DEFAULT_PORT';
+					var url = '${host}$SERVER_PATH_CHECKS';
+					return RequestPromises.get(url)
+						.then(function(_) {
+							return true;
+						})
+						.errorPipe(function(err) {
+							//Ignore
+							return Promise.promise(false);
 						});
-				}
-			})
-			//Don't assume anything is working except ssh/docker connections.
-			.pipe(function(serverBlob) {
-				// trace('serverBlob=${serverBlob}');
-				return ProviderTools.installServer(serverBlob, force, uploadOnly);
-				// return ProviderTools.copyFilesForRemoteServer(serverBlob);
-			})
-			// .pipe(function(_) {
-			// 	// trace('checking server now');
-			// 	return servercheck();
-			// })
-			.thenVal(CLIResult.Success);
-
-
-		// return Promise.promise(true)
-		// 	.pipe(function(_) {
-		// 		if (vagrant) {
-		// 			var serverConfig :ServiceConfiguration = InitConfigTools.parseConfig(Resource.getString('ServerConfigVagrant'));
-		// 			return Promise.promise(null);
-		// 		} else {
-		// 			//Some more complex checking here in case previous installs failed or containers have gone down.
-		// 		}
-		// 	})
-		// 	//We have a bare CoreOS instance now
-		
-
-
-		
-		// var serverConfig :ServiceConfiguration = if (vagrant) {
-		// 	trace('haxe.Resource.getString("ServerConfigVagrant")=${haxe.Resource.getString("ServerConfigVagrant")}');
-		// 	InitConfigTools.parseConfig(haxe.Resource.getString('ServerConfigVagrant'));
-		// } else if (config == null) {
-		// 	InitConfigTools.getDefaultConfig();
-		// } else {
-		// 	InitConfigTools.getConfigFromFile(config);
-		// }
-		// trace('serverConfig=${serverConfig}');
-		// return ProviderTools.buildRemoteServer(serverConfig.providers[0])
-		// 	.then(function(serverBlob) {
-		// 		trace('serverBlob=${serverBlob}');
-		// 		// var serverblob :ServerConnectionBlob = {server:instanceDef};
-		// 		// CliTools.writeServerConnection(serverblob);
-		// 		return true;
-		// 	});
-		// return Promise.promise(true);
+				})
+				.pipe(function(isExistingServer) {
+					if (isExistingServer && !force) {
+						log('A local server already exists and is listening at $host');
+						return Promise.promise(CLIResult.Success);
+					} else {
+						Node.process.stdout.write('...building');
+						var localPath = path.getLocalServerPath();
+						return ProviderTools.copyFilesForLocalServer(localPath)
+							.pipe(function(_) {
+								var promise = new DeferredPromise();
+								var startScript = 'start.sh';
+								Node.process.stdout.write('...starting');
+								Fs.chmodSync(Path.join(localPath, startScript), '755');
+								js.node.ChildProcess.execFile(startScript, {cwd:localPath}, function(err, stdout, stderr) {
+									if (err != null) {
+										Node.process.stdout.write('...failed\n');
+										if (stdout != null) {
+											Node.process.stdout.write(stdout);
+										}
+										if (stderr != null) {
+											Node.process.stderr.write(stderr);
+										}
+									}
+									if (err != null) {
+										promise.resolve(CLIResult.ExitCode(-1));
+									} else {
+										Node.process.stdout.write('...success\n');
+										var defaultServerConfig = InitConfigTools.getDefaultConfig();
+										var serverBlob :ServerConnectionBlob = {
+											host: new Host(new HostName(hostName), new Port(SERVER_DEFAULT_PORT)),
+											server: null,
+											provider: null
+										};
+										writeServerConnection(serverBlob, path);
+										promise.resolve(CLIResult.Success);
+									}
+								});
+								return promise.boundPromise;
+							});
+					}
+				});
+		}
 	}
 
 	@rpc({
-		alias:'config',
-		doc:'Print out the current configuration. Defaults to YAML output.',
+		alias:'server-config',
+		doc:'Print out the current server configuration. Defaults to JSON output.',
 		args:{
 			'json':{doc: 'Output is JSON', short: 'j'}
 		}
 	})
-	public static function config(?json :Bool = false) :Promise<CLIResult>
+	public static function serverConfig(?json :Bool = true) :Promise<CLIResult>
 	{
-		var config = getConfiguration();
+		var configPath :CLIServerPathRoot = findExistingServerConfigPath();
+		var serverBlob :ServerConnectionBlob = configPath != null ? readServerConnection(configPath) : null;
+
+		var result = {
+			config: serverBlob,
+			path: configPath != null ? configPath.getServerJsonConfigPath() : null
+		}
 		if (json) {
-			log(jsonString(config));
+			log(jsonString(result));
 		} else {
-			log(Yaml.render(config));
+			log(Yaml.render(result));
 		}
 		return Promise.promise(CLIResult.Success);
 	}
@@ -582,9 +656,9 @@ class ClientCommands
 			log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
-		return ProviderTools.serverCheck(connection.server)
+		return ProviderTools.serverCheck(connection)
 			.then(function(result) {
-				result.connection_file_path = buildServerConnectionPath(configPath);
+				result.connection_file_path = configPath.getServerJsonConfigPath();
 				return result;
 			})
 			.then(function(result) {
@@ -601,7 +675,7 @@ class ClientCommands
 	{
 		var host = getHost();
 		var url = 'http://$host/checks';
-		return HttpPromises.get(url)
+		return RequestPromises.get(url)
 			.then(function(out) {
 				var ok = out.trim() == SERVER_PATH_CHECKS_OK;
 				log(ok ? 'OK' : 'FAIL');
@@ -748,7 +822,7 @@ class ClientCommands
 								if (jobResult != null && jobResult.exitCode == 0) {
 									return getServerAddress()
 										.pipe(function(address) {
-											return HttpPromises.get('http://' + jobResult.stdout)
+											return RequestPromises.get('http://' + jobResult.stdout)
 												.then(function(stdout) {
 													log('stdout=${stdout.trim()}');
 													Assert.that(stdout.trim() == stdoutText);

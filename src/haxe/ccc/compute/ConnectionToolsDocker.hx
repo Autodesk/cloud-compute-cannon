@@ -29,15 +29,15 @@ class ConnectionToolsDocker
 	 * otherwise it's localhost.
 	 * @return [description]
 	 */
-	public static function getLocalDockerHost() :Host
+	public static function getLocalDockerHost() :HostName
 	{
 		return getContainerAddress('localhost');
 	}
 
-	public static function getContainerAddress(linkName :String) :Host
+	public static function getContainerAddress(linkName :String) :HostName
 	{
 		if (isInsideContainer()) {
-			return linkName;
+			return new HostName(linkName);
 		} else {
 			return getDockerHost();
 		}
@@ -48,7 +48,7 @@ class ConnectionToolsDocker
 		if (isInsideContainer()) {
 			return 'registry:5000';
 		} else {
-			return getDockerHost() + ':5001;';
+			return new Host(getDockerHost(), new Port(5001));
 		}
 	}
 
@@ -57,22 +57,22 @@ class ConnectionToolsDocker
 	 * This might not be available, usually you have to pass in --net='host'
 	 * @return The ip address of the host system.
 	 */
-	public static function getDockerHost() :String
+	public static function getDockerHost() :HostName
 	{
 		if (Reflect.field(js.Node.process.env, DOCKER_HOST) != null) {
 			var host :String = Reflect.field(js.Node.process.env, DOCKER_HOST);//Looks like: tcp://192.168.59.103:2376
 			host = host.replace('tcp://', '');
-			return host.split(':')[0];
+			return new HostName(host.split(':')[0]);
 		} else if (isDockerMachineAvailable()) {
 			var stdout :String = js.node.ChildProcess.execSync("docker-machine ip default", {stdio:['ignore','pipe','ignore']});
-			return Std.string(stdout).trim();
+			return new HostName(Std.string(stdout).trim());
 		} else {
 			//Nothing defined, last guess: are we in a container?
 			try {
 				//https://github.com/docker/docker/issues/1143
 				// var stdout :String = js.node.ChildProcess.execSync("/sbin/ifconfig docker0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'", {stdio:['ignore','pipe','ignore']});
 				var stdout :String = js.node.ChildProcess.execSync("netstat -nr | grep '^0\\.0\\.0\\.0' | awk '{print $2}'", {stdio:['ignore','pipe','ignore']});
-				return Std.string(stdout).trim();
+				return new HostName(Std.string(stdout).trim());
 			} catch (ignored :Dynamic) {
 				throw 'Exhausted all methods to determine the docker server host. "$DOCKER_HOST" is not defined in the env vars, "docker0" is not defined in /etc/hosts, and "docker-machine" is either not installed or a machine called "default" is not running (where a redis container might be running).';
 				return null;

@@ -134,12 +134,13 @@ class ServiceBatchCompute
 
 	@rpc({
 		alias: 'job',
-		doc: 'Commands to query jobs [remove | kill | result | status | exitcode | stats | definition | time]:\n\n\tcloudcannon job [remove | kill | result | status | exitcode | stats | definition | time] <jobId1> <jobId2> ... (With no jobId arguments, all jobs are returned)',
+		doc: 'Commands to query jobs [remove | kill | result | status | exitcode | stats | definition | time]',
 		args: {
 			'command': {'doc':'Command to run in the docker container [remove | kill | result | status | exitcode | stats | definition | time]'},
 			'jobId': {'doc': 'Job Id(s)'},
 			'json': {'doc': 'Output is JSON instead of human readable [true]'},
-		}
+		},
+		docCustom:'With no jobId arguments, all jobs are returned'
 	})
 	public function doJobCommand(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = true) :Promise<TypedDynamicObject<JobId,Dynamic>>
 	{
