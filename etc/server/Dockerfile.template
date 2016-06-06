@@ -1,32 +1,21 @@
-FROM ubuntu:14.04
+FROM alpine:3.4
 MAINTAINER Dion Whitehead Amago
-
-RUN apt-get update
-
-# Dependencies
-# RUN apt-get update && \
-RUN	apt-get install -y wget curl g++ g++-multilib libgc-dev git python build-essential
-RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
-RUN apt-get -y install nodejs
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-
-# FROM mhart/alpine-node:5.11.0
-# MAINTAINER Dion Whitehead Amago
 
 ENV APP /app
 RUN mkdir -p $APP
 WORKDIR $APP
 
-#Only install npm packages if the package.json changes
 ADD ./package.json $APP/package.json
-RUN npm install
 
-COPY ./::APP_SERVER_FILE:: $APP/
-COPY ./::APP_SERVER_FILE::.map $APP/
-COPY ./serverconfig.json $APP/serverconfig.json
+RUN apk add --no-cache nodejs && \
+	apk add --no-cache make gcc g++ python linux-headers udev && \
+	npm install && \
+	apk del make gcc g++ python linux-headers udev
 
-ENV PORT ::SERVER_DEFAULT_PORT::
+COPY build/::APP_SERVER_FILE:: $APP/
+COPY build/::APP_SERVER_FILE::.map $APP/
+
+ENV PORT 9000
 EXPOSE $PORT
 
-CMD node ::APP_SERVER_FILE::
+CMD node cloud-compute-cannon-server.js

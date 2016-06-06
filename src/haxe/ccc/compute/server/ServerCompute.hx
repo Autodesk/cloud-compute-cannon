@@ -120,6 +120,13 @@ class ServerCompute
 		Log.warn({log_check:'warn'});
 		Log.error({log_check:'error'});
 
+
+		//Sanity checks
+		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
+			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
+			js.Node.process.exit(-1);
+		}
+
 		var CONFIG_PATH :String = Reflect.hasField(js.Node.process.env, 'CONFIG_PATH') ? Reflect.field(js.Node.process.env, 'CONFIG_PATH') : SERVER_MOUNTED_CONFIG_FILE;
 		Log.debug({'CONFIG_PATH':CONFIG_PATH});
 		var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
