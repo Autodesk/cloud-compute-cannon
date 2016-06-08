@@ -524,7 +524,7 @@ class Constants
 	public static inline var STDERR_FILE = 'stderr';
 
 	/* Env vars */
-	inline public static var ENV_VAR_ADDRESS_REGISTRY = 'REGISTRY_ADDRESS';
+	inline public static var ENV_VAR_ADDRESS_REGISTRY = 'REGISTRY';
 	inline public static var ENV_VAR_AWS_PROVIDER_CONFIG = 'AWS_PROVIDER_CONFIG';
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
 
