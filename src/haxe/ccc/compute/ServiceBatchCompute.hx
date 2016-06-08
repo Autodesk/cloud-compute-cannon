@@ -375,7 +375,7 @@ class ServiceBatchCompute
 		serverContext.registerService(this);
 		serverContext.registerService(ccc.compute.server.ServerCommands);
 		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext));
-		router.get(SERVER_API_RPC_URL_FRAGMENT, Routes.generateGetRequestHandler(serverContext, Constants.SERVER_RPC_URL));
+		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT));
 
 		router.post('/build/*', buildDockerImageRouter);
 		return router;
