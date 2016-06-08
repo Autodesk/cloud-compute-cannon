@@ -3,6 +3,7 @@ package util;
 import haxe.Json;
 
 import js.Node;
+import js.node.Buffer;
 import js.node.Fs;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
@@ -44,6 +45,16 @@ abstract DockerUrl(String) to String from String
 	public var username(get, set) :String;
 	public var name(get, set) :String;
 	public var repository(get, never) :String;
+
+	inline public function toJson() :DockerUrlBlob
+	{
+		return {
+			username: username,
+			tag: tag,
+			registryhost: registryhost,
+			name: name,
+		}
+	}
 
 	inline public function noTag() :DockerUrl
 	{
@@ -138,7 +149,7 @@ class DockerTools
 	public static function parseDockerUrl(s :String) :DockerUrlBlob
 	{
 		s = s.trim();
-		var r = ~/(.*\/)?([a-z0-9]+)(:[a-z0-9]+)?/i;
+		var r = ~/(.*\/)?([a-z0-9_]+)(:[a-z0-9_]+)?/i;
 		r.match(s);
 		var registryAndUsername = r.matched(1);
 		var name = r.matched(2);
@@ -378,7 +389,7 @@ class DockerTools
 		log = Logger.ensureLog(log, {image:imageName, tag:tag, dockerhost:docker.modem.host});
 		var promise = new DeferredPromise();
 		var image = docker.getImage(imageName);
-		image.push({tag:tag}, function(err, stream :IWritable) {
+		image.push({tag:tag}, function(err, stream :IReadable) {
 			if (err != null) {
 				log.error({log:'error pushing $imageName', error:err});
 				promise.boundPromise.reject(err);
@@ -390,12 +401,12 @@ class DockerTools
 			stream.on(ReadableEvent.Error, function(err) {
 				promise.boundPromise.reject(err);
 			});
-			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
+			stream.on(ReadableEvent.Data, function(buf :Buffer) {
 				if (resultStream != null && buf != null) {
 					resultStream.write(buf);
 				}
-				var bufferString = buf.toString();
-				log.trace({log:bufferString});
+				// var bufferString = buf.toString();
+				// log.trace({log:bufferString});
 			});
 		});
 		return promise.boundPromise;

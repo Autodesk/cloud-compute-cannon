@@ -1,5 +1,7 @@
 package ccc.compute;
 
+import ccc.compute.Definitions.Constants.*;
+
 import js.Node;
 import js.node.Fs;
 import js.node.Path;
@@ -46,9 +48,9 @@ class ConnectionToolsDocker
 	public static function getLocalRegistryHost() :Host
 	{
 		if (isInsideContainer()) {
-			return 'registry:5000';
+			return '$REGISTRY_HOST_IN_ETC:$REGISTRY_DEFAULT_PORT';
 		} else {
-			return new Host(getDockerHost(), new Port(5001));
+			return new Host(getDockerHost(), new Port(REGISTRY_DEFAULT_PORT));
 		}
 	}
 

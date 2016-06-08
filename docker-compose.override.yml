@@ -6,7 +6,7 @@ compute:
     - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
   links:
     - redis
-    - registry
+    - registry:registry.host
     - fluentd
     - elasticsearch
   environment:
@@ -31,14 +31,13 @@ redis:
 
 registry:
   volumes:
-    - ./data/registry:/var/lib/registry
-  environment:
-    SETTINGS_FLAVOR: local
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    - ./data/registry:/opt/registry/data
+    - ./etc/registry/certs:/opt/registry/ssl
+  env_file: ./etc/registry/registry.env
   links:
     - fluentd
   #Pretty sure I don't care about listening to you ever in the dev context.
-  log_driver: "none"
+  # log_driver: "none"
 
 fluentd:
   extends:

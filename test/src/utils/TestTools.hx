@@ -7,7 +7,6 @@ import js.node.Path;
 import js.node.Fs;
 import js.node.Http;
 import js.npm.FsPromises;
-import js.npm.HttpPromises;
 import js.npm.FsExtended;
 import js.npm.RedisClient;
 
@@ -58,7 +57,7 @@ class TestTools
 		return promise.boundPromise;
 	}
 
-	public static function killForkedServer(serverProcess: js.node.child_process.ChildProcess) :Promise<Bool>
+	public static function killChildProcess(serverProcess: js.node.child_process.ChildProcess) :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
 		serverProcess.once('exit', function(e) {

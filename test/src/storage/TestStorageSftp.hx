@@ -23,6 +23,7 @@ import promhx.deferred.DeferredPromise;
 
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
+import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
 import ccc.storage.ServiceStorageSftp;
 import ccc.compute.ConnectionToolsDocker;
@@ -111,13 +112,15 @@ class TestStorageSftp extends TestStorageBase
 	}
 
 	//TODO: this is way too long!!!
-	//There's a problem with the SFTP ServiceStorage
+	// There's a problem with the SFTP ServiceStorage
 	@timeout(120000)
 	public function testSftpStorage()
 	{
 		return Promise.promise(true)
 			.then(function(_) {
-				var config = {type:StorageSourceType.Sftp, sshConfig:{host:ConnectionToolsDocker.getDockerHost(), port:_sshPort, username:'root', password:'screencast'}, rootPath:'/tmp'};
+				var host :String = ConnectionToolsDocker.getDockerHost();
+				var sshConfig :ConnectOptions = {host:host, port:_sshPort, username:'root', password:'screencast'};
+				var config :StorageDefinition = {type:StorageSourceType.Sftp, sshConfig:sshConfig, rootPath:'/tmp'};
 				_sftpFs = new ServiceStorageSftp()
 					.setConfig(config);
 				return _sftpFs;
@@ -132,7 +135,8 @@ class TestStorageSftp extends TestStorageBase
 	{
 		return Promise.promise(true)
 			.pipe(function(storage) {
-				var sshConfig = {host:ConnectionToolsDocker.getDockerHost(), port:_sshPort, username:'root', password:'screencast'};
+				var host :String = ConnectionToolsDocker.getDockerHost();
+				var sshConfig :ConnectOptions = {host:host, port:_sshPort, username:'root', password:'screencast'};
 				return SshTools.execute(sshConfig, 'find /some/made/up/path -type f', 10, 20)
 					.then(function(result) {
 						assertEquals(result.code, 1);

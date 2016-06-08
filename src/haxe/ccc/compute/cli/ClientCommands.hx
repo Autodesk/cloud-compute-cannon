@@ -13,12 +13,17 @@ import ccc.compute.cli.CliTools.*;
 import ccc.storage.ServiceStorageLocalFileSystem;
 
 import haxe.Resource;
+import haxe.extern.EitherType;
 
+import js.Error;
 import js.Node;
+import js.node.Buffer;
 import js.node.http.*;
 import js.node.ChildProcess;
 import js.node.Path;
 import js.node.stream.Readable;
+import js.node.stream.Writable;
+import js.node.stream.Transform;
 import js.node.Fs;
 import js.npm.FsExtended;
 import js.npm.Request;
@@ -87,7 +92,7 @@ class ClientCommands
 				runclient(['sleep', '500'], 'ubuntu')
 					.thenVal(CLIResult.Success);
 			default:
-				log('Unknown command=$command');
+				console.log('Unknown command=$command');
 				Promise.promise(CLIResult.PrintHelpExit1);
 		}
 	}
@@ -96,35 +101,89 @@ class ClientCommands
 		alias:'run',
 		doc:'Run docker job(s) on the compute provider.',
 		args:{
-			command: {doc:'Command to run in the docker container, specified as a JSON String Array, e.g. \'["echo", "foo"]\''},
-			directory: {doc: 'Path to directory containing the job definition', short:'d'},
-			image: {doc: 'Docker image name [ubuntu:14.04]', short: 'm'},
-			count: {doc: 'Number of job repeats [1]', short: 'n'},
+			command: {doc:'Command to run in the docker container. If the command is hard to parse with bash, consider using a script.'},
+			context: {doc: 'Path to directory containing a docker context. Cannot be combined with --image.', short:'d'},
+			repository: {doc: 'Docker repository url. E.g. "myname/myimage:sometag". Requires --context .', short:'r'},
+			cpus: {'doc': 'Minimum number of CPUs required for this process [1].'},
+			maxDuration: {'doc': 'Maximum time (in seconds) this job will be allowed to run before being terminated.'},
+			image: {doc: 'Docker image name [busybox:latest]. Cannot be combined with --context.', short: 'm'},
 			input: {doc:'Input values (decoded into JSON values) [input]. E.g.: --input foo1=SomeString --input foo2=2 --input foo3="[1,2,3,4]". ', short:'i'},
 			inputfile: {doc:'Input files [inputfile]. E.g. --inputfile foo1=/home/user1/Desktop/test.jpg" --input foo2=/home/me/myserver/myfile.txt ', short:'f'},
 			inputurl: {doc:'Input urls (downloaded from the server) [inputurl]. E.g. --input foo1=http://someserver/test.jpg --input foo2=http://myserver/myfile', short:'u'},
 			results: {doc: 'Results directory [./<results_dir>/<date string>__<jobId>/]. The contents of that folder will have an inputs/ and outputs/ directories. '},
+			wait: {doc: 'Wait until the job is finished, then output results as json, then deletes the job. Mostly useful for quick testing and debugging'}
 		},
-		docCustom: 'Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'\nReturns the jobId'
+		docCustom: 'Example:\n run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'\nReturns the jobId'
 	})
 	public static function runclient(
 		command :Array<String>,
 		?image :String,
-		?directory :String,
+		?context :String,
+		?repository :String,
+		?cpus :Int = 1,
+		?maxDuration :Int = 600000,
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?count :Int = 1,
-		?results :String
+		?results :String,
+		?wait :Bool
 		)
 	{
-		var jobParams :BasicBatchProcessRequest = {
-			image: image != null ? image : Constants.DOCKER_IMAGE_DEFAULT,
-			cmd: command,//command != null ? Json.parse(command) : null,
-			parameters: {cpus:1, maxDuration:60*1000*10},
-			inputs: [],
-		};
-		return runInternal(jobParams, input, inputfile, inputurl, count, results);
+		if (image != null && context != null) {
+			throw 'You cannot have both the --context and --image options at the same time';
+		}
+
+		if (context == null && repository != null) {
+			throw '--repository requires the --context parameter';
+		}
+
+		if (cpus < 1) {
+			throw 'Invalid number of cpus, must be >= 1';
+		}
+
+		if (wait && results != null) {
+			throw '--wait is incompatible with --results, with wait, the results are output to stdout as JSON, the job is deleted';
+		}
+
+		if (command.length == 0) {
+			//Avoid issues of arrays [] being converted to objects {} in Lua
+			command = null;
+		}
+
+		return Promise.promise(true)
+			.pipe(function(_) {
+				if (context != null) {
+					var uniqueId = ComputeTools.createUniqueId();
+					repository = repository == null ? 'temp_job_image:$uniqueId': repository;
+					trace('repository=${repository}');
+					return buildDockerImageInternal(context, repository, Node.process.stdout);
+				} else {
+					return Promise.promise(image);
+				}
+			})
+			.pipe(function(dockerImageUrl) {
+				trace('job built, now submitting');
+				var jobParams :BasicBatchProcessRequest = {
+					image: dockerImageUrl != null ? dockerImageUrl : Constants.DOCKER_IMAGE_DEFAULT,
+					cmd: command,
+					parameters: {cpus:cpus, maxDuration:maxDuration},
+					inputs: [],
+				};
+				return runInternal(jobParams, input, inputfile, inputurl, results);
+			})
+			.pipe(function(submissionData :SubmissionDataBlob) {
+				if (wait) {
+					var host = getHost();
+					return ClientCompute.getJobResultFull(host, submissionData.jobId)
+						.pipe(function(result) {
+							console.log(Json.stringify(result, null, '\t'));
+							return Promise.promise(CLIResult.Success);
+						});
+				} else {
+					console.log(Json.stringify(submissionData, null, '\t'));
+					return Promise.promise(CLIResult.Success);
+				}
+			});
 	}
 
 	@rpc({
@@ -132,7 +191,6 @@ class ClientCommands
 		doc:'Run docker job(s) on the compute provider.',
 		args:{
 			jsonfile: {doc: 'Path to json file with the job spec'},
-			count: {doc: 'Number of job repeats [1]', short: 'n'},
 			input: {doc:'Input files/values/urls [input]. Formats: --input "foo1=@/home/user1/Desktop/test.jpg" --input "foo2=@http://myserver/myfile --input "foo3=4". ', short:'i'},
 			inputfile: {doc:'Input files/values/urls [input]. Formats: --input "foo1=@/home/user1/Desktop/test.jpg" --input "foo2=@http://myserver/myfile --input "foo3=4". ', short:'i'},
 			results: {doc: 'Results directory [./<results_dir>/<date string>__<jobId>/]. The contents of that folder will have an inputs/ and outputs/ directories. '},
@@ -144,12 +202,11 @@ class ClientCommands
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?count :Int = 1,
 		?results: String
 		)
 	{
 		var jobParams :BasicBatchProcessRequest = Json.parse(Fs.readFileSync(jsonfile, 'utf8'));
-		return runInternal(jobParams, input, inputfile, inputurl, count, results);
+		return runInternal(jobParams, input, inputfile, inputurl, results);
 	}
 
 	static function runInternal(
@@ -157,7 +214,6 @@ class ClientCommands
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?count :Int = 1,
 		?results: String,
 		?json :Bool = true) :Promise<SubmissionDataBlob>
 	{
@@ -216,11 +272,10 @@ class ClientCommands
 						var clientJobFilePath = Path.join(clientJobFileDirPath, Constants.SUBMITTED_JOB_RECORD_FILE);
 						var submissionData :SubmissionDataBlob = {
 							jobId: result.jobId,
-							// jobRequest: jobParams
 						}
 						FsExtended.writeFileSync(clientJobFilePath, Json.stringify(submissionData, null, '\t'));
 						var stdout = json ? Json.stringify(submissionData, null, '\t') : result.jobId;
-						log(stdout);
+						// console.log(stdout);
 						return submissionData;
 					})
 					.errorPipe(function(err) {
@@ -233,30 +288,23 @@ class ClientCommands
 	@rpc({
 		alias:'image-build',
 		doc:'Build a docker image from a context (directory containing a Dockerfile).',
-	})
-	public static function buildDockerImage(path :String, repository :String) :Promise<CLIResult>
-	{
-		trace('buildDockerImage path=$path repository=$repository');
-		var host = getHost();
-		var tarStream = js.npm.TarFs.pack(path);
-		var url = 'http://${host}$SERVER_URL_API_DOCKER_IMAGE_BUILD/$repository';
-		function onError(err) {
-			Log.error(err);
-			trace(err);
+		args:{
+			path: {doc: 'Path to the directory containing a Dockerfile'},
+			repository: {doc: 'Docker repository name and tag. E.g. myname/myimage:myversion.'},
+			output: {doc: 'Show the docker build output stream'}
 		}
-		tarStream.on(ReadableEvent.Error, onError);
-		return RequestPromises.postStreams(url, tarStream)
-			.pipe(function(response) {
-				var responsePromise = new DeferredPromise<CLIResult>();
-				response.on(ReadableEvent.Error, onError);
-				response.once(ReadableEvent.End, function() {
-					responsePromise.resolve(CLIResult.Success);
-				});
-				response.pipe(Node.process.stdout);
-				return responsePromise.boundPromise;
+	})
+	public static function buildDockerImage(path :String, repository :String, ?output :Bool = false) :Promise<CLIResult>
+	{
+		return buildDockerImageInternal(path, repository, output ? Node.process.stdout : null)
+			.then(function(response) {
+				if (!output) {
+					console.log(Json.stringify({image:response}, null, '\t'));
+				}
+				return CLIResult.Success;
 			})
 			.errorPipe(function(err) {
-				trace(err);
+				console.error(err);
 				return Promise.promise(CLIResult.ExitCode(-1));
 			});
 	}
@@ -281,7 +329,7 @@ class ClientCommands
 			.pipe(function(jobIds) {
 				var promises = if (jobIds != null) {
 						jobIds.map(function(jobId) {
-							return function() return ClientCompute.getJobResult(host, jobId);
+							return function() return waitInternal(jobId);
 						});
 					} else {
 						[];
@@ -293,56 +341,14 @@ class ClientCommands
 			});
 	}
 
-	static function waitInternal(?job :Array<JobId>) :Promise<Array<JobWaitingStatus>>
+	static function waitInternal(jobId :JobId) :Promise<JobResult>
 	{
-		trace('waitInternal is not yet implemented');
-		return Promise.promise([]);
-		//Gather all job.json files in the base dir
-		// var jobFiles = FsExtended.listFilesSync(js.Node.process.cwd(), {recursive:true, filter:function(itemPath :String, stat) return itemPath.endsWith(Constants.SUBMITTED_JOB_RECORD_FILE)});
-		// return getServerAddress()
-		// 	.pipe(function(address) {
-		// 		var promises :Array<Promise<JobWaitingStatus>>= [];
-		// 		for (jobFile in jobFiles) {
-		// 			var submissionData :ClientJobRecord = null;
-		// 			try {
-		// 				submissionData = Json.parse(FsExtended.readFileSync(jobFile, {}));
-		// 			} catch(err :Dynamic) {
-		// 				trace(err);
-		// 				continue;
-		// 			}
-
-		// 			var jobId :JobId = submissionData.jobId;
-		// 			if (job != null && !job.has(jobId)) {
-		// 				continue;
-		// 			}
-		// 			var baseResultsDir = Path.dirname(jobFile);
-		// 			var resultsJsonFile = Path.join(baseResultsDir, JobTools.RESULTS_JSON_FILE);
-
-		// 			var resultsJsonFileExists = FsExtended.existsSync(resultsJsonFile);
-		// 			if (resultsJsonFileExists) {
-		// 				var result :JobWaitingStatus = {jobId:jobId, status:'finished', job:null};
-		// 				promises.push(Promise.promise(result));
-		// 			} else {
-		// 				//Check if the results have been downloaded locally
-		// 				var outputsPath = submissionData.jobRequest.outputsPath;
-
-		// 				var p = ClientCompute.getJobResult(address, jobId)
-		// 					.then(function(jobResult) {
-		// 						FsExtended.writeFileSync(resultsJsonFile, jsonString(jobResult));
-		// 						//TODO: download output/input files
-		// 						var result :JobWaitingStatus = {jobId:jobId, status:'finished just now', job:jobResult};
-		// 						return result;
-		// 					})
-		// 					.errorPipe(function(err) {
-		// 						trace('err=${err}');
-		// 						var result :JobWaitingStatus = {jobId:jobId, status:'error', error:err, job:null};
-		// 						return Promise.promise(result);
-		// 					});
-		// 				promises.push(p);
-		// 			}
-		// 		}
-		// 		return Promise.whenAll(promises);
-		// 	});
+		var host = getHost();
+		var clientProxy = getProxy(host.rpcUrl());
+		return Promise.promise(true)
+			.pipe(function(jobIds) {
+				return ClientCompute.getJobResult(host, jobId);
+			});
 	}
 
 	// @rpc({
@@ -377,7 +383,7 @@ class ClientCommands
 	// 			}
 	// 		})
 	// 		.then(function(_) {
-	// 			log(Json.stringify(result, null, '\t'));
+	// 			console.log(Json.stringify(result, null, '\t'));
 	// 			return true;
 	// 		});
 	// }
@@ -390,7 +396,7 @@ class ClientCommands
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
-			log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
+			console.log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
@@ -399,7 +405,7 @@ class ClientCommands
 			var promise = new DeferredPromise();
 			js.node.ChildProcess.exec('docker-compose stop', {cwd:localServerPath}, function(err, stdout, stderr) {
 				if (err != null) {
-					log(err);
+					console.error(err);
 				}
 				if (stdout != null) {
 					Node.process.stdout.write(stdout);
@@ -407,9 +413,9 @@ class ClientCommands
 				if (stderr != null) {
 					Node.process.stderr.write(stderr);
 				}
-				js.node.ChildProcess.exec('docker-compose rm -fv', {cwd:localServerPath}, function(err, stdout, stderr) {
+				js.node.ChildProcess.exec('docker-compose rm -fv', {cwd:localServerPath}, function(err :Dynamic, stdout, stderr) {
 					if (err != null) {
-						log(err);
+						console.error(err);
 					}
 					if (stdout != null) {
 						Node.process.stdout.write(stdout);
@@ -430,7 +436,7 @@ class ClientCommands
 		} else {
 			var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
 			trace('shutting down server ${serverBlob.server.id}');
-			Log.warn('TODO: properly clean up workers');
+			console.warn('TODO: properly clean up workers');
 			return provider.destroyInstance(serverBlob.server.id)
 				.then(function(_) {
 					trace('deleting connection file');
@@ -450,7 +456,7 @@ class ClientCommands
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
-			log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
+			console.log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
@@ -469,12 +475,12 @@ class ClientCommands
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (config != null && !FsExtended.existsSync(config)) {
-			log('Missing configuration file: $config');
+			console.log('Missing configuration file: $config');
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 
 		if (!isServerConnection(path)) {
-			log('No existing installation @${path.getServerJsonConfigPath()}. Have you run "$CLI_COMMAND install"?');
+			console.log('No existing installation @${path.getServerJsonConfigPath()}. Have you run "$CLI_COMMAND install"?');
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 
@@ -503,12 +509,12 @@ class ClientCommands
 		if (config != null) {
 			//Missing config file check
 			if (!FsExtended.existsSync(config)) {
-				log('Missing configuration file: $config');
+				console.log('Missing configuration file: $config');
 				return Promise.promise(CLIResult.PrintHelpExit1);
 			}
 
 			if (isServerConnection(path)) {
-				log('Existing installation @${path.getServerJsonConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
+				console.log('Existing installation @${path.getServerJsonConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
 				return Promise.promise(CLIResult.PrintHelpExit1);
 			}
 
@@ -574,7 +580,7 @@ class ClientCommands
 				})
 				.pipe(function(isExistingServer) {
 					if (isExistingServer && !force) {
-						log('A local server already exists and is listening at $host');
+						console.log('A local server already exists and is listening at $host');
 						return Promise.promise(CLIResult.Success);
 					} else {
 						Node.process.stdout.write('...building');
@@ -633,9 +639,9 @@ class ClientCommands
 			path: configPath != null ? configPath.getServerJsonConfigPath() : null
 		}
 		if (json) {
-			log(jsonString(result));
+			console.log(jsonString(result));
 		} else {
-			log(Yaml.render(result));
+			console.log(Yaml.render(result));
 		}
 		return Promise.promise(CLIResult.Success);
 	}
@@ -648,12 +654,12 @@ class ClientCommands
 	{
 		var configPath = findExistingServerConfigPath();
 		if (configPath == null) {
-			log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
+			console.log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 		var connection = readServerConnection(configPath);
 		if (connection == null) {
-			log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
+			console.log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 		return ProviderTools.serverCheck(connection)
@@ -662,7 +668,7 @@ class ClientCommands
 				return result;
 			})
 			.then(function(result) {
-				log(Json.stringify(result, null, '\t'));
+				console.log(Json.stringify(result, null, '\t'));
 				return CLIResult.Success;
 			});
 	}
@@ -678,11 +684,11 @@ class ClientCommands
 		return RequestPromises.get(url)
 			.then(function(out) {
 				var ok = out.trim() == SERVER_PATH_CHECKS_OK;
-				log(ok ? 'OK' : 'FAIL');
+				console.log(ok ? 'OK' : 'FAIL');
 				return ok ? CLIResult.Success : CLIResult.ExitCode(1);
 			})
 			.errorPipe(function(err) {
-				log(Json.stringify({error:err}));
+				console.log(Json.stringify({error:err}));
 				return Promise.promise(CLIResult.ExitCode(1));
 			});
 	}
@@ -698,7 +704,7 @@ class ClientCommands
 	public static function jobDownload(job :JobId, ?path :String = null, ?includeInputs :Bool = false) :Promise<CLIResult>
 	{
 		if (job == null) {
-			warn('Missing job argument');
+			console.warn('Missing job argument');
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 		// trace('jobDownload job=${job} path=${path} includeInputs=${includeInputs}');
@@ -712,7 +718,7 @@ class ClientCommands
 		return doJobCommand(job, JobCLICommand.Result)
 			.pipe(function(jobResult :JobResult) {
 				if (jobResult == null) {
-					warn('No job id: $job');
+					console.warn('No job id: $job');
 					return Promise.promise(CLIResult.ExitCode(1));
 				}
 				var localStorage = ccc.storage.ServiceStorageLocalFileSystem.getService(downloadPath);
@@ -724,7 +730,7 @@ class ClientCommands
 						sourceUrl = 'http://$host/$sourceUrl';
 					}
 					var fp = function() {
-						log('Downloading $sourceUrl => $downloadPath/$localPath');
+						console.log('Downloading $sourceUrl => $downloadPath/$localPath');
 						return localStorage.writeFile(localPath, Request.get(sourceUrl))
 							.errorPipe(function(err) {
 								try {
@@ -745,7 +751,7 @@ class ClientCommands
 						remotePath = 'http://$host/$remotePath';
 					}
 					var p = function() {
-						log('Downloading $remotePath => $outputsPath/$localPath');
+						console.log('Downloading $remotePath => $outputsPath/$localPath');
 						return outputStorage.writeFile(localPath, Request.get(remotePath))
 							.errorPipe(function(err) {
 								try {
@@ -767,7 +773,7 @@ class ClientCommands
 							remotePath = 'http://$host/$remotePath';
 						}
 						var p = function() {
-							log('Downloading $remotePath => $inputsPath/$localPath');
+							console.log('Downloading $remotePath => $inputsPath/$localPath');
 							return inputStorage.writeFile(localPath, Request.get(remotePath))
 								.errorPipe(function(err) {
 									try {
@@ -790,7 +796,7 @@ class ClientCommands
 
 	@rpc({
 		alias:'test',
-		doc:'Test a simple job with a cloud-compute-cannon server'
+		doc:'Test a build->run->output with a cloud-compute-cannon server'
 	})
 	public static function test() :Promise<CLIResult>
 	{
@@ -810,31 +816,30 @@ class ClientCommands
 			outputsPath: 'someTestOutputPath/outputs',
 			inputsPath: 'someTestInputPath/inputs'
 		};
-		return runInternal(jobParams, ['$inputFile=input1$rand'], [], [], 1, './tmp/results')
+		return runInternal(jobParams, ['$inputFile=input1$rand'], [], [], './tmp/results')
 		// return runclient(command, image, null, ['input1=input1$rand'], 1, './tmp/results')
 			.pipe(function(submissionData :SubmissionDataBlob) {
 				if (submissionData != null) {
 					var jobId = submissionData.jobId;
-					return waitInternal([jobId])
-						.pipe(function(out) {
-							if (out.length > 0) {
-								var jobResult = out[0].job;
+					return waitInternal(jobId)
+						.pipe(function(jobResult) {
+							if (jobResult != null) {
 								if (jobResult != null && jobResult.exitCode == 0) {
 									return getServerAddress()
 										.pipe(function(address) {
 											return RequestPromises.get('http://' + jobResult.stdout)
 												.then(function(stdout) {
-													log('stdout=${stdout.trim()}');
+													console.log('stdout=${stdout.trim()}');
 													Assert.that(stdout.trim() == stdoutText);
 													return true;
 												});
 										});
 								} else {
-									log('jobResult is null ');
+									console.log('jobResult is null ');
 									return Promise.promise(false);
 								}
 							} else {
-								log('No waiting jobs');
+								console.log('No waiting jobs');
 								return Promise.promise(false);
 							}
 						});
@@ -845,12 +850,12 @@ class ClientCommands
 			.then(function(success) {
 				if (!success) {
 					//Until waiting is implemented
-					// log('Failure');
+					// console.log('Failure');
 				}
 				return success ? CLIResult.Success : CLIResult.ExitCode(1);
 			})
 			.errorPipe(function(err) {
-				log(err);
+				console.error(err);
 				return Promise.promise(CLIResult.ExitCode(1));
 			});
 	}
@@ -973,6 +978,44 @@ class ClientCommands
 		// return Promise.promise(true);
 	}
 
+	public static function buildDockerImageInternal(path :String, repository :String, stdoutStream :IWritable) :Promise<String>
+	{
+		var host = getHost();
+		var tarStream = js.npm.TarFs.pack(path);
+		var url = 'http://${host}$SERVER_URL_API_DOCKER_IMAGE_BUILD/$repository';
+		function onError(err :Error) {
+			console.error(err);
+		}
+		trace('buildDockerImageInternal path=$path repository=$repository');
+		trace('url=${url}');
+		tarStream.on(ReadableEvent.Error, onError);
+		return RequestPromises.postStreams(url, tarStream)
+			.pipe(function(response) {
+				var imageUrl = null;
+				var responsePromise = new DeferredPromise();
+				response.on(ReadableEvent.Error, onError);
+				response.once(ReadableEvent.End, function() {
+					responsePromise.resolve(imageUrl);
+				});
+
+				var t = function(chunk :String, encoding :String, cb :Error->EitherType<Buffer,String>->Void) :Void {
+					if (stdoutStream != null) {
+						stdoutStream.write(chunk);
+					}
+					if (chunk != null) {
+						var decoded :{image :String} = Json.parse(chunk);
+						if (decoded.image != null) {
+							imageUrl = decoded.image;
+						}
+					}
+					cb(null, chunk);
+				}
+				var transform = StreamTools.createTransformStream(t);
+				response.pipe(transform);
+				return responsePromise.boundPromise;
+			});
+	}
+
 	static function doJobCommand<T>(job :JobId, command :JobCLICommand) :Promise<T>
 	{
 		var host = getHost();
@@ -1031,29 +1074,32 @@ class ClientCommands
 		}
 	}
 
-	inline static function log(message :Dynamic)
-	{
-#if nodejs
-		js.Node.console.log(message);
-#else
-		trace(message);
-#end
-	}
+// 	inline static function log(message :Dynamic)
+// 	{
+// #if nodejs
+// 		js.Node.console.log(message);
+// #else
+// 		trace(message);
+// #end
+// 	}
 
-	inline static function warn(message :Dynamic)
-	{
-#if nodejs
-		js.Node.console.log(js.npm.CliColor.bold(js.npm.CliColor.red(message)));
-#else
-		trace(message);
-#end
-	}
+// 	inline static function warn(message :Dynamic)
+// 	{
+// #if nodejs
+// 		js.Node.console.log(js.npm.CliColor.bold(js.npm.CliColor.red(message)));
+// #else
+// 		trace(message);
+// #end
+// 	}
 
 	static var console = {
-		log: function(s) {
+		log: function(s :Dynamic) {
 			js.Node.process.stdout.write(s + '\n');
 		},
-		error: function(s) {
+		warn: function(s :Dynamic) {
+			js.Node.process.stdout.write(s + '\n');
+		},
+		error: function(s :Dynamic) {
 			js.Node.process.stderr.write(s + '\n');
 		},
 	}

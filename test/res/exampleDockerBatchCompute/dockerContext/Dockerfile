@@ -1,5 +1,4 @@
-# Python Dockerfile
-FROM python:2.7.10
+FROM python:2.7.11-alpine
 
 # Define working directory.
 ENV app /app

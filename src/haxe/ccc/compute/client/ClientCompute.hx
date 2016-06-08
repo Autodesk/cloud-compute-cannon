@@ -1,9 +1,11 @@
 package ccc.compute.client;
 
 import haxe.Json;
+import haxe.extern.EitherType;
 import haxe.remoting.JsonRpc;
 
 import ccc.compute.Definitions;
+import ccc.compute.Definitions.Constants.*;
 import ccc.compute.JobTools;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.cli.CliTools.*;
@@ -72,10 +74,22 @@ class ClientCompute
 	@:expose
 	public static function getJobResult(host :Host, jobId :JobId) :Promise<JobResult>
 	{
+		return getJobResultInternal(host, jobId, getJobResultData.bind(host, jobId));
+	}
+
+	@:expose
+	public static function getJobResultFull(host :Host, jobId :JobId) :Promise<JobResultFull>
+	{
+		return getJobResultInternal(host, jobId, getJobResultFullData.bind(host, jobId));
+	}
+
+	static function getJobResultInternal<T>(host :Host, jobId :JobId, jobDataGetter :Void->Promise<T>) :Promise<T>
+	{
 		if (jobId == null) {
 			Log.warn('Null jobId passed');
 			return Promise.promise(null);
 		}
+
 		function listenWebsocket() {
 			var promise = new DeferredPromise();
 			if (jobId != null) {
@@ -84,12 +98,13 @@ class ClientCompute
 					try {
 						var result :ResponseDef = Json.parse(data + '');
 						if (result.error == null) {
-							// var jobData :JobDataBlob = result.result;
-							// JobTools.prependJobResultsUrls(jobData, hostport + '/');
-							// promise.resolve(jobData);
-							getJobResultData(host, jobId)
+							jobDataGetter()
 								.then(function(result) {
-									promise.resolve(result);
+									if (!promise.isResolved()) {
+										promise.resolve(result);
+									} else {
+										Log.warn('Resolved, ignoring result=$result');
+									}
 								});
 						} else {
 							promise.boundPromise.reject(result.error);
@@ -102,9 +117,9 @@ class ClientCompute
 				});
 				ws.registerOnOpen(function () {
 					ws.send(Json.stringify({method:Constants.RPC_METHOD_JOB_NOTIFY, params:{jobId:jobId}}));//, {binary: false}
-					getJobResultData(host, jobId)
+					jobDataGetter()
 						.then(function(result) {
-							if (!promise.isResolved()) {
+							if (result != null && !promise.isResolved()) {
 								promise.resolve(result);
 							}
 						})
@@ -122,7 +137,7 @@ class ClientCompute
 			}
 			return promise.boundPromise;
 		}
-		return getJobResultData(host, jobId)
+		return jobDataGetter()
 			.pipe(function(result) {
 				if (result == null) {
 					return listenWebsocket();
@@ -131,7 +146,7 @@ class ClientCompute
 				}
 			})
 			.errorPipe(function(err) {
-				// Log.error('Got error from getJobData($resultsBaseUrl) err=$err');
+				Log.error('Got error from getJobData($host) err=$err');
 				return listenWebsocket();
 			});
 	}
@@ -146,7 +161,24 @@ class ClientCompute
 			return clientProxy.doJobCommand(JobCLICommand.Result, [jobId])
 				.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
 					var result :JobResult = Reflect.field(out, jobId);
-					JobTools.prependJobResultsUrls(result, host + '/');
+					if (result != null) {
+						JobTools.prependJobResultsUrls(result, '${SERVER_DEFAULT_PROTOCOL}://$host/');
+					}
+					return result;
+				});
+		}
+	}
+
+	public static function getJobResultFullData(host :Host, jobId :JobId) :Promise<JobResultFull>
+	{
+		if (jobId == null) {
+			Log.warn('Null jobId passed');
+			return Promise.promise(null);
+		} else {
+			var clientProxy = getProxy(host.rpcUrl());
+			return clientProxy.doJobCommand(JobCLICommand.ResultFull, [jobId])
+				.then(function(out :TypedDynamicObject<JobId,Dynamic>) {
+					var result :JobResultFull = Reflect.field(out, jobId);
 					return result;
 				});
 		}
@@ -161,45 +193,6 @@ class ClientCompute
 				var result :JobDescriptionComplete = Reflect.field(out, jobId);
 				return result;
 			});
-
-		// var resultJson :JobDataBlob = null;
-		// var url = '$baseUrl/${JobTools.RESULTS_JSON_FILE}';
-		// // trace('curl $url');
-		// return promhx.RequestPromises.get(url)
-		// 	.pipe(function(result) {
-		// 		if (result == null || result.trim() == '') {
-		// 			throw 'No ${JobTools.RESULTS_JSON_FILE}';
-		// 		}
-		// 		resultJson = Json.parse(result);
-		// 		resultJson.url = '$baseUrl/outputs/';
-		// 		return Promise.promise(true)
-		// 			.pipe(function(_) {
-		// 				return promhx.RequestPromises.get('$baseUrl/stderr')
-		// 					.then(function(result) {
-		// 						resultJson.stderr = result;
-		// 						return true;
-		// 					})
-		// 					.errorPipe(function(err) {
-		// 						//No stderr, swallow error and keep going
-		// 						return Promise.promise(true);
-		// 					});
-		// 			})
-		// 			.pipe(function(_) {
-		// 				return promhx.RequestPromises.get('$baseUrl/stdout')
-		// 					.then(function(result) {
-		// 						resultJson.stdout = result;
-		// 						return true;
-		// 					})
-		// 					.errorPipe(function(err) {
-		// 						//No stdout, swallow error and keep going
-		// 						return Promise.promise(true);
-		// 					});
-		// 			})
-		// 			.then(function(_) {
-		// 				// trace(Json.stringify(resultJson, null, '\t'));
-		// 				return resultJson;
-		// 			});
-		// 	});
 	}
 
 	public static function pollJobResult(host :Host, jobId :JobId, ?maxAttempts :Int = 10, intervalMs :Int = 200) :Promise<JobDescriptionComplete>

@@ -1,5 +1,6 @@
 package util;
 
+import haxe.DynamicAccess;
 import haxe.Json;
 
 import promhx.Promise;
@@ -11,9 +12,29 @@ using Lambda;
 
 class DockerRegistryTools
 {
+	public static function getRegistryImagesAndTags(registry :Host):Promise<DynamicAccess<Array<String>>>
+	{
+		var result = new DynamicAccess<Array<String>>();
+		return getRegistryImages(registry)
+			.pipe(function(images) {
+				var promises = [];
+				for (image in images) {
+					promises.push(
+						getRepositoryTags(registry, image)
+							.then(function(tags) {
+								result.set(image, tags);
+							}));
+				}
+				return Promise.whenAll(promises)
+					.then(function(_) {
+						return result;
+					});
+			});
+	}
+
 	public static function getRegistryImages(registry :Host):Promise<Array<String>>
 	{
-		var url = 'http://$registry/v2/_catalog';
+		var url = 'https://$registry/v2/_catalog';
 		return RequestPromises.get(url)
 			.then(function(out) {
 				var data :{repositories:Array<String>} = Json.parse(out);
@@ -23,7 +44,7 @@ class DockerRegistryTools
 
 	public static function getRepositoryTags(registry :Host, repository :String):Promise<Array<String>>
 	{
-		var url = 'http://$registry/v2/$repository/tags/list';
+		var url = 'https://$registry/v2/$repository/tags/list';
 		return RequestPromises.get(url)
 			.then(function(out) {
 				var data :{name :String, tags:Array<String>} = Json.parse(out);

@@ -175,6 +175,7 @@ class DockerJobTools
 
 	public static function runDockerContainer(docker :Docker, computeJobId :ComputeJobId, imageId :String, cmd :Array<String>, mounts :Array<Mount>, workingDir :String, labels :Dynamic<String>, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
 	{
+		trace('runDockerContainer cmd=$cmd');
 		log = Logger.ensureLog(log, {image:imageId, computejobid:computeJobId, dockerhost:docker.modem.host});
 		log.info({log:'run_docker_container', cmd:'[${cmd != null ? cmd.join(",") : ''}]', mounts:'[${mounts != null ? mounts.join(",") : ''}]', workingDir:workingDir, labels:labels});
 		var promise = new DeferredPromise();

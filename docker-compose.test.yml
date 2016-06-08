@@ -4,6 +4,8 @@ compute:
     AWS: "true"
     DOCKER: "false"
     VAGRANT: "false"
+  log_driver: "json-file"
+  log_opt: {}
 
 elasticsearch:
   log_driver: "none"

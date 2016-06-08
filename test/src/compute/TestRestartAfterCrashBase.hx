@@ -77,7 +77,7 @@ class TestRestartAfterCrashBase extends TestBase
 			})
 			//Kill the server
 			.pipe(function(_) {
-				return TestTools.killForkedServer(childProcess);
+				return TestTools.killChildProcess(childProcess);
 			})
 			//Restart the server
 			.pipe(function(_) {
@@ -87,7 +87,7 @@ class TestRestartAfterCrashBase extends TestBase
 			.pipe(function(_) {
 				return ClientCompute.pollJobResult(hostport, jobId, 200, 2000)
 					.pipe(function(jobResult) {
-						return TestTools.killForkedServer(childProcess);
+						return TestTools.killChildProcess(childProcess);
 					});
 			});
 	}

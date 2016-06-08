@@ -1,3 +1,2 @@
-# Python Dockerfile
-FROM python:2.7.10
+FROM busybox:latest
 CMD echo "foobar" > /outputs/output1

@@ -44,7 +44,8 @@ class ServerCommands
 				return DockerTools.__buildDockerImage(docker, repositoryTag, imageStream, resultStream);
 			})
 			.pipe(function(_) {
-				return pushImageIntoRegistryInternal(repositoryTag, resultStream);
+				trace('built docker image, pushing');
+				return pushImageIntoRegistryInternal(repositoryTag, null, resultStream);
 			});
 	}
 
@@ -125,33 +126,31 @@ class ServerCommands
 	 */
 	public static function pushImageIntoRegistryInternal(image :String, ?tag :String, ?resultStream :IWritable) :Promise<DockerUrl>
 	{
-		var log = Logger.child({f:'pushImageIntoRegistry', image:image, tag:tag});
 		var docker = ConnectionToolsDocker.getDocker();
 		var remoteImageUrl :DockerUrl = image;
 		if (remoteImageUrl.tag == null) {
 			remoteImageUrl.tag = 'latest';
 		}
-		trace('remoteImageUrl=${remoteImageUrl}');
 		var localImageUrl :DockerUrl = remoteImageUrl;
-		trace('localImageUrl=${localImageUrl}');
 		if (tag != null) {
 			localImageUrl.tag = tag;
 		}
-		trace('localImageUrl=${localImageUrl}');
 		var registryAddress :Host = ConnectionToolsDocker.getLocalRegistryHost();
+		var log = Logger.child({f:'pushImageIntoRegistry', image:image, tag:tag, resultStream:(resultStream != null), registryAddress:registryAddress, localImageUrl:localImageUrl, remoteImageUrl:remoteImageUrl});
+		log.debug({step:'start'});
 
 		return Promise.promise(true)
 			//Tag image
 			.pipe(function(_) {
 				//Then tag it
 				var dockerImage = docker.getImage(image);
-				trace('fffff');
-				trace('localImageUrl=${localImageUrl}');
-				trace('Host.fromString("localhost:$REGISTRY_DEFAULT_PORT")=${Host.fromString('localhost:$REGISTRY_DEFAULT_PORT')}');
+				// trace('fffff');
+				// trace('localImageUrl=${localImageUrl}');
+				// trace('Host.fromString("localhost:$REGISTRY_DEFAULT_PORT")=${Host.fromString('localhost:$REGISTRY_DEFAULT_PORT')}');
 				localImageUrl.registryhost = Host.fromString('localhost:$REGISTRY_DEFAULT_PORT');
-				trace('localImageUrl=${localImageUrl}');
+				// trace('localImageUrl=${localImageUrl}');
 				var newImageName = localImageUrl.noTag();
-				trace('newImageName=${newImageName}');
+				// trace('newImageName=${newImageName}');
 				var promise = new CallbackPromise();
 				log.debug({step:'pulled_success_tagging', repo:newImageName, tag:localImageUrl.tag});
 				dockerImage.tag({repo:newImageName, tag:localImageUrl.tag}, promise.cb2);
@@ -170,8 +169,8 @@ class ServerCommands
 				log.debug({step:'pushed_now_verifying', repository:remoteImageUrl.repository, tag:localImageUrl.tag});
 				return DockerRegistryTools.isImageIsRegistry(registryAddress, remoteImageUrl.repository, localImageUrl.tag)
 					.then(function(exists) {
-						log.debug({step:'verified', exists:exists, repository:remoteImageUrl.repository, tag:localImageUrl.tag});
 						localImageUrl.registryhost = ConnectionToolsRegistry.getRegistryAddress();
+						log.debug({step:'verified', exists:exists, repository:remoteImageUrl.repository, tag:localImageUrl.tag, returning:localImageUrl});
 						return localImageUrl;
 					});
 			});
@@ -331,6 +330,98 @@ class ServerCommands
 							} else {
 								return Promise.promise(null);
 							}
+						});
+				}
+			});
+	}
+
+	/**
+	 * Full inline output of the job. No need to download further.
+	 * @param  redis :RedisClient    [description]
+	 * @param  fs    :ServiceStorage [description]
+	 * @param  jobId :JobId          [description]
+	 * @return       [description]
+	 */
+	public static function getJobResultsFull(redis :RedisClient, fs :ServiceStorage, jobId :JobId) :Promise<JobResultFull>
+	{
+		return getJobResults(redis, fs, jobId)
+			.pipe(function(jobResult :JobResult) {
+				if (jobResult == null) {
+					return Promise.promise(null);
+				} else {
+					var jobResultFull :JobResultFull = {
+						id: jobResult.id,
+						status: jobResult.status,
+						exitCode: jobResult.exitCode,
+						stdout: null,
+						stderr: null,
+						inputs: {},
+						outputs: {},
+						error: jobResult.error
+					}
+
+					function getUrl(url :String) :Promise<String> {
+						if (url.startsWith('http')) {
+							return RequestPromises.get(url);
+						} else {
+							return fs.readFile(url)
+								.pipe(function(stream) {
+									return StreamPromises.streamToString(stream);
+								})
+								.errorPipe(function(err) {
+									return Promise.promise(Std.string(err));
+								});
+						}
+					}
+
+					var promises = [];
+					if (jobResult.stdout != null) {
+						promises.push(getUrl(jobResult.stdout)
+							.then(function(stdout) {
+								if (stdout != null) {
+									jobResultFull.stdout = stdout.split('\n');
+								}
+								return true;
+							}));
+					}
+
+					if (jobResult.stderr != null) {
+						promises.push(getUrl(jobResult.stderr)
+							.then(function(stderr) {
+								if (stderr != null) {
+									jobResultFull.stderr = stderr.split('\n');
+								}
+								return true;
+							}));
+					}
+
+					if (jobResult.inputs != null) {
+						for (input in jobResult.inputs) {
+							promises.push(getUrl('${jobResult.inputsBaseUrl}/$input')
+								.then(function(inputText) {
+									if (inputText != null) {
+										Reflect.setField(jobResultFull.inputs, input, inputText.split('\n'));
+									}
+									return true;
+								}));
+						}
+					}
+
+					if (jobResult.outputs != null) {
+						for (output in jobResult.outputs) {
+							promises.push(getUrl('${jobResult.outputsBaseUrl}/$output')
+								.then(function(outputText) {
+									if (outputText != null) {
+										Reflect.setField(jobResultFull.outputs, output, outputText.split('\n'));
+									}
+									return true;
+								}));
+						}
+					}
+
+					return Promise.whenAll(promises)
+						.then(function(_) {
+							return jobResultFull;
 						});
 				}
 			});

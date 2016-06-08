@@ -42,28 +42,19 @@ class JobTools
 	{
 		Assert.notNull(jobResult);
 		if (jobResult.stdout != null && jobResult.stdout.indexOf('://') == -1) {
-			jobResult.stdout = Path.join(urlPrefix, jobResult.stdout);
-			jobResult.stderr = Path.join(urlPrefix, jobResult.stderr);
-			jobResult.resultJson = Path.join(urlPrefix, jobResult.resultJson);
-			jobResult.inputsBaseUrl = Path.join(urlPrefix, jobResult.inputsBaseUrl);
-			jobResult.outputsBaseUrl = Path.join(urlPrefix, jobResult.outputsBaseUrl);
+			// jobResult.stdout = Path.join(urlPrefix, jobResult.stdout);
+			// jobResult.stderr = Path.join(urlPrefix, jobResult.stderr);
+			// jobResult.resultJson = Path.join(urlPrefix, jobResult.resultJson);
+			// jobResult.inputsBaseUrl = Path.join(urlPrefix, jobResult.inputsBaseUrl);
+			// jobResult.outputsBaseUrl = Path.join(urlPrefix, jobResult.outputsBaseUrl);
+
+			jobResult.stdout = urlPrefix + jobResult.stdout;
+			jobResult.stderr = urlPrefix + jobResult.stderr;
+			jobResult.resultJson = urlPrefix + jobResult.resultJson;
+			jobResult.inputsBaseUrl = urlPrefix + jobResult.inputsBaseUrl;
+			jobResult.outputsBaseUrl = urlPrefix + jobResult.outputsBaseUrl;
 		}
 	}
-
-	// public static function workerInputDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id, DIRECTORY_INPUTS);
-	// }
-
-	// public static function workerOutputDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id, DIRECTORY_OUTPUTS);
-	// }
-
-	// public static function workerStdoutDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id);
-	// }
 
 	public static function workerInputDir(id :ComputeJobId) :String
 	{

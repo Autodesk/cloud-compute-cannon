@@ -15,6 +15,7 @@ import promhx.Promise;
 	import js.node.stream.Readable;
 	import js.node.Http;
 	import js.node.http.*;
+	import js.node.http.ServerResponse;
 	import js.npm.Docker;
 	import js.npm.Busboy;
 	import js.npm.Ssh;
@@ -37,6 +38,7 @@ import promhx.Promise;
 	import ccc.storage.StorageTools;
 
 	import util.DockerTools;
+	import util.streams.StreamTools;
 
 	using Lambda;
 	using StringTools;
@@ -70,19 +72,6 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
-		alias:'image-push',
-		doc:'Pushes a docker image (downloads it if needed) and tags it into the local registry for workers to consume.',
-		args:{
-			tag: {doc: 'Custom tag for the image', short:'t'},
-			opts: {doc: 'ADD ME', short:'o'}
-		}
-	})
-	public function pullRemoteImageIntoRegistry(image :String, ?tag :String, ?opts: PullImageOptions) :Promise<DockerUrl>
-	{
-		return ServerCommands.pushImageIntoRegistry(image, tag, opts);
-	}
-
-	@rpc({
 		alias:'submitjob',
 		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
 		args:{
@@ -90,7 +79,7 @@ class ServiceBatchCompute
 			'image': {'doc': 'Docker image name [ubuntu:14.04].'},
 			'inputs': {'doc': 'Docker image name [ubuntu:14.04].'},
 			'workingDir': {'doc': 'The current working directory for the process in the docker container.'},
-			'cpus': {'doc': 'Minimum number of CPUs required for this process.'},
+			'cpus': {'doc': 'Minimum number of CPUs required for this process [1].'},
 			'maxDuration': {'doc': 'Maximum time (in seconds) this job will be allowed to run before being terminated.'},
 			'resultsPath': {'doc': 'Custom path on the storage service for the generated job.json, stdout, and stderr files.'},
 			'inputsPath': {'doc': 'Custom path on the storage service for the inputs files.'},
@@ -134,9 +123,9 @@ class ServiceBatchCompute
 
 	@rpc({
 		alias: 'job',
-		doc: 'Commands to query jobs [remove | kill | result | status | exitcode | stats | definition | time]',
+		doc: 'Commands to query jobs [remove | kill | result | result-full |status | exitcode | stats | definition | time]',
 		args: {
-			'command': {'doc':'Command to run in the docker container [remove | kill | result | status | exitcode | stats | definition | time]'},
+			'command': {'doc':'Command to run in the docker container [remove | kill | result | result-full | status | exitcode | stats | definition | time]'},
 			'jobId': {'doc': 'Job Id(s)'},
 			'json': {'doc': 'Output is JSON instead of human readable [true]'},
 		},
@@ -178,7 +167,7 @@ class ServiceBatchCompute
 	{
 #if (nodejs && !macro)
 		switch(command) {
-			case Remove,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
+			case Remove,Kill,Status,Result,ResultFull,ExitCode,Definition,JobStats,Time:
 			default:
 				return Promise.promise(cast {error:'Unrecognized job subcommand=\'$command\' [remove | kill | result | status | exitcode | stats | definition | time]'});
 		}
@@ -195,6 +184,8 @@ class ServiceBatchCompute
 					getStatus(_redis, job);
 				case Result:
 					getJobResults(_redis, _fs, job);
+				case ResultFull:
+					getJobResultsFull(_redis, _fs, job);
 				case ExitCode:
 					getExitCode(_redis, _fs, job);
 				case JobStats:
@@ -219,63 +210,8 @@ class ServiceBatchCompute
 								return null;
 							}
 						});
-				// case Stdout:
-				// 	getJobResults(job)
-				// 		.pipe(function(jobResults) {
-				// 			if (jobResults == null) {
-				// 				return Promise.promise(null);
-				// 			} else {
-				// 				return ComputeQueue.getJob(_redis, job)
-				// 					.pipe(function(jobDef :DockerJobDefinition) {
-				// 						var externalBaseUrl = fs.getExternalUrl();
-				// 						if (externalBaseUrl == null || externalBaseUrl == '') {
-				// 							_fs.
-				// 						} else {
-
-				// 						}
-				// 						trace('jobDef=${jobDef}');
-				// 					});
 				case Definition:
 					getJobDefinition(_redis, _fs, job);
-				// trace('Description');
-				// return ComputeQueue.getStatus(_redis, job)
-				// 	// .pipe(function(status) {
-				// 	// 	return 
-				// 		getJobDefinition(jobId)
-				// 			.pipe(function(jobdef :DockerJobDefinition) {
-								
-				// 				var jobDefCopy = Reflect.copy(jobdef);
-				// 				jobDefCopy.inputsPath = _fs.getExternalUrl(JobTools.inputDir(jobdef));
-				// 				jobDefCopy.outputsPath = _fs.getExternalUrl(JobTools.outputDir(jobdef));
-				// 				jobDefCopy.resultsPath = _fs.getExternalUrl(JobTools.resultDir(jobdef));
-				// 				var result :JobDescriptionComplete = {
-				// 					definition: jobDefCopy,
-				// 					status: status
-				// 				}
-				// 				trace('  result=$result');
-
-				// 				var resultsJsonPath = JobTools.resultJsonPath(jobDefCopy);
-				// 				return _fs.exists(resultsJsonPath)
-				// 					.pipe(function(exists) {
-				// 						if (exists) {
-				// 							return _fs.readFile(resultsJsonPath)
-				// 								.pipe(function(stream) {
-				// 									if (stream != null) {
-				// 										return StreamPromises.streamToString(stream)
-				// 											.then(function(resultJsonString) {
-				// 												result.result = Json.parse(resultJsonString);
-				// 												return result;
-				// 											});
-				// 									} else {
-				// 										return Promise.promise(result);
-				// 									}
-				// 								});
-				// 						} else {
-				// 							return Promise.promise(result);
-				// 						}
-				// 					});
-				// 			});
-				// 	});
 			}
 		}
 
@@ -287,68 +223,27 @@ class ServiceBatchCompute
 				}
 				return result;
 			});
-
-		// return switch(command) {
-		// 	case Kill:
-				
-
-		
-			// case Description:
-			// 	trace('getJobDefinition');
-			// 	return ComputeQueue.getStatus(_redis, job)
-			// 		.pipe(function(status) {
-			// 			return getJobDefinition(jobId)
-			// 				.pipe(function(jobdef :DockerJobDefinition) {
-								
-			// 					var jobDefCopy = Reflect.copy(jobdef);
-			// 					jobDefCopy.inputsPath = _fs.getExternalUrl(JobTools.inputDir(jobdef));
-			// 					jobDefCopy.outputsPath = _fs.getExternalUrl(JobTools.outputDir(jobdef));
-			// 					jobDefCopy.resultsPath = _fs.getExternalUrl(JobTools.resultDir(jobdef));
-			// 					var result :JobDescriptionComplete = {
-			// 						definition: jobDefCopy,
-			// 						status: status
-			// 					}
-			// 					trace('  result=$result');
-
-			// 					var resultsJsonPath = JobTools.resultJsonPath(jobDefCopy);
-			// 					return _fs.exists(resultsJsonPath)
-			// 						.pipe(function(exists) {
-			// 							if (exists) {
-			// 								return _fs.readFile(resultsJsonPath)
-			// 									.pipe(function(stream) {
-			// 										if (stream != null) {
-			// 											return StreamPromises.streamToString(stream)
-			// 												.then(function(resultJsonString) {
-			// 													result.result = Json.parse(resultJsonString);
-			// 													return result;
-			// 												});
-			// 										} else {
-			// 											return Promise.promise(result);
-			// 										}
-			// 									});
-			// 							} else {
-			// 								return Promise.promise(result);
-			// 							}
-			// 						});
-			// 				});
-			// 		});
-		// 	default:
-		// 		// Log.error('Unrecognized job subcommand=$command. Allowed [results]');
-		// 		throw 'Unrecognized job subcommand=$command. Allowed [kill|results]';
-		// 		Promise.promise(null);
-		// }
 #else
 		return Promise.promise(null);
 #end
 	}
 
-
 #if (nodejs && !macro)
 	@inject public var _fs :ServiceStorage;
 	@inject public var _redis :RedisClient;
 	@inject public var _config :StorageDefinition;
+	@inject public var _serviceRegistry :ServiceRegistry;
 
 	public function new() {}
+
+	public function router() :js.node.express.Router
+	{
+		var router = js.node.express.Express.GetRouter();
+		//Handle the special multi-part requests. This kind of request
+		//cannot be handled via the JSON-RPC system.
+		router.post(SERVER_API_RPC_URL_FRAGMENT, multiFormJobSubmissionRouter());
+		return router;
+	}
 
 	public function multiFormJobSubmissionRouter() :IncomingMessage->ServerResponse->(?Dynamic->Void)->Void
 	{
@@ -363,83 +258,30 @@ class ServiceBatchCompute
 		}
 	}
 
-	public function router() :js.node.express.Router
-	{
-		var router = js.node.express.Express.GetRouter();
-
-		/* /rpc */
-		//Handle the special multi-part requests. These are a special case.
-		router.post(SERVER_API_RPC_URL_FRAGMENT, multiFormJobSubmissionRouter());
-
-		var serverContext = new t9.remoting.jsonrpc.Context();
-		serverContext.registerService(this);
-		serverContext.registerService(ccc.compute.server.ServerCommands);
-		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext));
-		router.get(SERVER_API_RPC_URL_FRAGMENT, Routes.generateGetRequestHandler(serverContext, Constants.SERVER_RPC_URL));
-
-		router.post('/build/*', buildDockerImageRouter);
-		return router;
-	}
-
-	function buildDockerImageRouter(req :IncomingMessage, res :ServerResponse, next :?Dynamic->Void) :Void
-	{
-		function returnError(err :String, ?statusCode :Int = 400) {
-			res.setHeader("content-type","application/json-rpc");
-			res.writeHead(statusCode);
-			res.end(Json.stringify({
-				error: err
-			}));
-		}
-
-		var repositoryString :String = untyped req.params[0];
-
-		if (repositoryString == null) {
-			returnError('You must supply a docker repository after ".../build/"', 400);
-			return;
-		}
-
-		var repository :DockerUrl = repositoryString;
-
-		try {
-			if (repository.name == null) {
-				returnError('You must supply a docker repository after ".../build/"', 400);
-				return;
-			}
-			if (repository.tag == null) {
-				returnError('All images must have a tag', 400);
-				return;
-			}
-		} catch (err :Dynamic) {
-			returnError(err, 500);
-			return;
-		}
-
-		res.on('error', function(err) {
-			Log.error({error:err});
-		});
-		ServerCommands.buildImageIntoRegistry(req, repository, res)
-			.then(function(imageUrl) {
-				js.Node.setTimeout(function() {
-					res.writeHead(200);
-					res.end(imageUrl);
-				}, 5000);
-			})
-			.catchError(function(err) {
-				returnError('Failed to build image err=$err', 500);
-			});
-	}
-
 	function runComputeJobRequest(job :BasicBatchProcessRequest) :Promise<{jobId:JobId}>
 	{
 		if (job == null) {
 			throw 'Null job argument in ServiceBatchCompute.run(...)';
 		}
+
+		if (job.parameters.cpus < 1) {
+			throw 'Invalid number of cpus, must be >= 1';
+		}
+
 		var jobId :JobId = null;
 		var deleteInputs :Void->Promise<Bool> = null;
 
 		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
 
 		var p = Promise.promise(true)
+			.pipe(function(_) {
+				var dockerUrl :DockerUrl = job.image;
+				return _serviceRegistry.getCorrectImageUrl(dockerUrl)
+					.then(function(url) {
+						job.image = url;
+						return true;
+					});
+			})
 			.pipe(function(_) {
 				return getNewJobId();
 			})
@@ -636,7 +478,18 @@ class ServiceBatchCompute
 								item: dockerJob,
 								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
 							}
-							return ComputeQueue.enqueue(_redis, job);
+							return Promise.promise(true)
+								.pipe(function(_) {
+									var dockerUrl :DockerUrl = dockerJob.image.value;
+									return _serviceRegistry.getCorrectImageUrl(dockerUrl)
+										.then(function(url) {
+											dockerJob.image.value = url;
+											return true;
+										});
+								})
+								.pipe(function(_) {
+									return ComputeQueue.enqueue(_redis, job);
+								});
 						})
 						.then(function(_) {
 							res.writeHead(200, {'content-type': 'application/json'});
@@ -668,7 +521,6 @@ class ServiceBatchCompute
 	public function getNewJobId() :Promise<JobId>
 	{
 		return Promise.promise(JobTools.generateJobId());
-		// return ComputeQueue.generateJobId(_redis);
 	}
 
 	/**

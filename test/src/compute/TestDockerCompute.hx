@@ -11,7 +11,6 @@ import js.npm.Docker;
 import js.npm.FsExtended;
 import js.npm.FsPromises;
 import js.npm.RedisClient;
-import js.npm.HttpPromises;
 import js.npm.Ssh;
 import js.npm.TarFs;
 
@@ -496,7 +495,7 @@ class TestDockerCompute extends TestComputeBase
 			})
 			.errorPipe(function(err) {
 				Log.error(err);
-				return Promise.promise({exitCode:0, outputFiles:[]});
+				return Promise.promise({exitCode:0, copiedLogs:false, outputFiles:[]});
 			})
 			.pipe(function(_) {
 				return DockerJobTools.removeJobContainer(job);

@@ -214,6 +214,7 @@ class Job
 				}
 			})
 			.then(function(job :QueueJobDefinitionDocker) {
+				trace('job=${job}');
 				if (!_disposed) {
 					_job = job;
 					log = log.child({jobid:job.id});

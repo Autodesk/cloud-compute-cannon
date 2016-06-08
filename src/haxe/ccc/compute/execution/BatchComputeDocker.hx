@@ -198,8 +198,10 @@ class BatchComputeDocker
 						case Image:
 							var docker = job.worker.getInstance().docker();
 							var dockerImage = job.item.image.value;
+							// trace('dockerImage=${dockerImage}');
 							promise = DockerPromises.listImages(docker)
 								.pipe(function(images) {
+									// trace('images=${images}');
 									if (images.exists(function(e) return e.RepoTags.has(dockerImage))) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);

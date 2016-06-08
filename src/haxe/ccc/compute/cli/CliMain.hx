@@ -89,7 +89,8 @@ class CliMain
 			context.handleRpcRequest(requestDef)
 				.then(function(result :ResponseDefSuccess<CLIResult>) {
 					if (result.error != null) {
-						trace(result.error);
+						js.Node.console.error(result.error);
+						Node.process.exit(1);
 					}
 					switch(result.result) {
 						case Success:
@@ -129,7 +130,8 @@ class CliMain
 		}
 
 		//Server methods
-		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.server.ServerCommands, ccc.compute.ServiceBatchCompute);
+		// var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.ServiceRegistry);
+		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.server.ServerCommands, ccc.compute.ServiceBatchCompute, ccc.compute.ServiceRegistry);
 		for (def in serverMethodDefinitions) {
 			rpcDefinitionMap.set(def.alias, {isClient:false, def:def});
 			rpcAlias.push(def.alias);
