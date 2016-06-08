@@ -541,7 +541,7 @@ class ProviderTools
 					promise.boundPromise.reject(err);
 					return;
 				}
-				untyped __js__('container.modem.demuxStream(stream, process.stdout, process.stderr)');
+				untyped __js__('container.modem.demuxStream({0}, {1}, {2})', stream, Node.process.stdout, Node.process.stderr);
 				container.start(function(err, data) {
 					if (err != null) {
 						promise.boundPromise.reject(err);

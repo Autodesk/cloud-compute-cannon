@@ -38,8 +38,8 @@ class StreamTools
 	inline public static function stringToStream(s :String) :Readable<Dynamic>
 	{
 		var stream :Readable<Dynamic> = untyped __js__('new require("stream").Readable({encoding:"utf8"})');
-		untyped __js__('stream.push(s)');
-		untyped __js__('stream.push(null)');
+		untyped __js__('{0}.push({1})', stream, s);
+		untyped __js__('{0}.push(null)', stream);
 		return stream;
 	}
 }

@@ -249,7 +249,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						var billingIncrement = _config.billingIncrement;
 						var awsServer :PkgCloudServerAws = cast worker;
 						var launchTime = awsServer.launchTime;
-						var launchTimeSince1970Ms :Milliseconds = untyped __js__('new Date(launchTime).getTime()');
+						var launchTimeSince1970Ms :Milliseconds = untyped __js__('new Date({0}).getTime()', launchTime);
 						var launchTimeSince1970 = new TimeStamp(launchTimeSince1970Ms);
 						var now = TimeStamp.now();
 						var minutesSinceLaunch = (now - launchTimeSince1970).toMinutes();
