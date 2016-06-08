@@ -31,7 +31,6 @@ class TestsIntegration
 	static inline function isDisabled(key :String) :Bool
 	{
 		var env = js.Node.process.env;
-		trace('Reflect.field(env, $key)=${Reflect.field(env, key)}');
 		if (Reflect.field(env, key) == 'false' || Reflect.field(env, key) == '0') {
 			return true;
 		} else {
@@ -70,8 +69,6 @@ class TestsIntegration
 		var isInternet = !isDisabled('INTERNET');
 		var isUnit = !isDisabled('UNIT');
 
-		trace('isDisabled("DOCKER")=${isDisabled("DOCKER")}');
-		trace('isDisabled("UNIT")=${isDisabled("UNIT")}');
 		if (unitOnly()) {
 			isUnit = true;
 			isRedis = false;
@@ -88,17 +85,16 @@ class TestsIntegration
 
 		//Run the unit tests. These do not require any external dependencies
 		if (isUnit) {
-			// runner.add(new utils.TestMiscUnit());
-			// runner.add(new utils.TestPromiseQueue());
-			// runner.add(new utils.TestStreams());
-			// runner.add(new storage.TestStorageRestAPI());
-			// runner.add(new storage.TestStorageLocal());
-			// runner.add(new compute.TestRedisMock());
-			// if (isInternet) {
-			// 	runner.add(new storage.TestStorageSftp());
-			// }
+			runner.add(new utils.TestMiscUnit());
+			runner.add(new utils.TestPromiseQueue());
+			runner.add(new utils.TestStreams());
+			runner.add(new storage.TestStorageRestAPI());
+			runner.add(new storage.TestStorageLocal());
+			runner.add(new compute.TestRedisMock());
+			if (isInternet) {
+				runner.add(new storage.TestStorageSftp());
+			}
 		}
-		trace('isDockerProvider=${isDockerProvider}');
 
 		// if (ccc.compute.ConnectionToolsDocker.isLocalDockerHost()) {
 		// 	runner.add(new compute.TestFluent());
@@ -106,21 +102,21 @@ class TestsIntegration
 
 		if (isRedis) {
 			// These require a local redis db
-			// runner.add(new compute.TestAutoscaling());
-			// runner.add(new compute.TestRedis());
+			runner.add(new compute.TestAutoscaling());
+			runner.add(new compute.TestRedis());
 
 			//These require access to a local docker server
 			if (isDockerProvider) {
-				// runner.add(new compute.TestScheduler());
-				// runner.add(new compute.TestJobStates());
-				// runner.add(new compute.TestInstancePool());
-				// runner.add(new compute.TestComputeQueue());
-				// runner.add(new compute.TestScalingMock());
+				runner.add(new compute.TestScheduler());
+				runner.add(new compute.TestJobStates());
+				runner.add(new compute.TestInstancePool());
+				runner.add(new compute.TestComputeQueue());
+				runner.add(new compute.TestScalingMock());
 
-				// runner.add(new compute.TestCompleteJobSubmissionLocalDocker());
-				// runner.add(new compute.TestRestartAfterCrashLocalDocker());
+				runner.add(new compute.TestCompleteJobSubmissionLocalDocker());
+				runner.add(new compute.TestRestartAfterCrashLocalDocker());
 				runner.add(new compute.TestDockerCompute());
-				// runner.add(new compute.TestServiceBatchCompute());
+				runner.add(new compute.TestServiceBatchCompute());
 			}
 
 			// runner.add(new compute.TestCLIRemoteServerInstallation());

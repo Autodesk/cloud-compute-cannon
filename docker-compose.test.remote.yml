@@ -1,0 +1,18 @@
+compute:
+  command: ["haxe", "test/testsIntegration.hxml"]
+  environment:
+    AWS: "true"
+    DOCKER: "false"
+    VAGRANT: "false"
+
+redis:
+  log_driver: "none"
+
+# registry:
+#   log_driver: "none"
+
+elasticsearch:
+  log_driver: "none"
+
+kibana:
+  log_driver: "none"

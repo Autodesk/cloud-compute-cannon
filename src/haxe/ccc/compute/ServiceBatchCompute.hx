@@ -440,18 +440,17 @@ class ServiceBatchCompute
 		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
 
 		var p = Promise.promise(true)
+			// .pipe(function(_) {
+			// 	var dockerUrl :DockerUrl = job.image;
+			// 	trace('ORIGINAL URL=$dockerUrl');
+			// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
+			// 		.then(function(url) {
+			// 			trace('FINAL URL=$url');
+			// 			job.image = url;
+			// 			return true;
+			// 		});
+			// })
 			.pipe(function(_) {
-				var dockerUrl :DockerUrl = job.image;
-				trace('ORIGINAL URL=$dockerUrl');
-				return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
-					.then(function(url) {
-						trace('FINAL URL=$url');
-						job.image = url;
-						return true;
-					});
-			})
-			.pipe(function(_) {
-
 				return getNewJobId();
 			})
 			.pipe(function(id) {
@@ -648,16 +647,16 @@ class ServiceBatchCompute
 								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
 							}
 							return Promise.promise(true)
-								.pipe(function(_) {
-									var dockerUrl :DockerUrl = dockerJob.image.value;
-									trace('ORIGINAL URL=$dockerUrl');
-									return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
-										.then(function(url) {
-											trace('FINAL URL=$url');
-											dockerJob.image.value = url;
-											return true;
-										});
-								})
+								// .pipe(function(_) {
+								// 	var dockerUrl :DockerUrl = dockerJob.image.value;
+								// 	trace('ORIGINAL URL=$dockerUrl');
+								// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
+								// 		.then(function(url) {
+								// 			trace('FINAL URL=$url');
+								// 			dockerJob.image.value = url;
+								// 			return true;
+								// 		});
+								// })
 								.pipe(function(_) {
 									return ComputeQueue.enqueue(_redis, job);
 								});

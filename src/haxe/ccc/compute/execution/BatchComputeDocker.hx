@@ -259,14 +259,14 @@ class BatchComputeDocker
 								var mounts :Array<Mount> = [
 									{
 										// Source: Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, job.computeJobId, DIRECTORY_INPUTS),
-										Source: inputStorageWorker.getRootPath(),
+										Source: inputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
 										Destination: '/${DIRECTORY_INPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									},
 									{
 										// Source: Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, job.computeJobId, DIRECTORY_OUTPUTS),//job.computeJobId.workerOutputDir(),
-										Source: outputStorageWorker.getRootPath(),
+										Source: outputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
 										Destination: '/${DIRECTORY_OUTPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
