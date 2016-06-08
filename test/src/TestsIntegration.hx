@@ -104,24 +104,24 @@ class TestsIntegration
 
 		if (isRedis) {
 			// These require a local redis db
-			// runner.add(new compute.TestAutoscaling());
-			// runner.add(new compute.TestRedis());
+			runner.add(new compute.TestAutoscaling());
+			runner.add(new compute.TestRedis());
 
-			// //These require access to a local docker server
-			// if (isDockerProvider) {
-			// 	runner.add(new compute.TestScheduler());
-			// 	runner.add(new compute.TestJobStates());
-			// 	runner.add(new compute.TestInstancePool());
-			// 	runner.add(new compute.TestComputeQueue());
-			// 	runner.add(new compute.TestScalingMock());
+			//These require access to a local docker server
+			if (isDockerProvider) {
+				runner.add(new compute.TestScheduler());
+				runner.add(new compute.TestJobStates());
+				runner.add(new compute.TestInstancePool());
+				runner.add(new compute.TestComputeQueue());
+				runner.add(new compute.TestScalingMock());
 
-			// 	runner.add(new compute.TestCompleteJobSubmissionLocalDocker());
-			// 	runner.add(new compute.TestRestartAfterCrashLocalDocker());
-			// 	runner.add(new compute.TestDockerCompute());
-			// 	runner.add(new compute.TestServiceBatchCompute());
-			// }
+				runner.add(new compute.TestCompleteJobSubmissionLocalDocker());
+				runner.add(new compute.TestRestartAfterCrashLocalDocker());
+				runner.add(new compute.TestDockerCompute());
+				runner.add(new compute.TestServiceBatchCompute());
+			}
 
-			runner.add(new compute.TestRegistryBase());
+			// runner.add(new compute.TestRegistryBase());
 
 			// runner.add(new compute.TestCLIRemoteServerInstallation());
 			// runner.add(new compute.TestJobStates());
