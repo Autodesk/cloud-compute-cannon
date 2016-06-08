@@ -51,8 +51,10 @@ class ComputeQueue
 	{
 		for (key in scripts.keys()) {
 			var script = scripts.get(key);
-			script = 'local SCRIPTID = "$key"\n' + script;
-			scripts.set(key, script);
+			if (script.indexOf('local SCRIPTID') == -1) {
+				script = 'local SCRIPTID = "$key"\n' + script;
+				scripts.set(key, script);
+			}
 		}
 		return RedisLuaTools.initLuaScripts(redis, scripts)
 			.then(function(scriptIdsToShas :Map<String, String>) {

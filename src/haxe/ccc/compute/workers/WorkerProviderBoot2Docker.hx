@@ -113,6 +113,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 
 	var _currentWorkers = Set.createInt();
 	@inject public var _injector :minject.Injector;
+	#if debug public #end
 	var _localJobData :String;
 
 	public function new(?config :ServiceConfigurationWorkerProvider)
@@ -127,12 +128,10 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 				billingIncrement: 0
 			};
 		}
-	}
 
-	@post
-	override public function postInjection() :Promise<Bool>
-	{
-		log.debug({f:'postInjection'});
+		var isInContainer = ConnectionToolsDocker.isInsideContainer();
+		var hostName = isInContainer ? new HostName('localhost') : ConnectionToolsDocker.getDockerHost();
+		Constants.REGISTRY = new Host(hostName, new Port(REGISTRY_DEFAULT_PORT));
 		//The mount point for worker job data (inputs/outputs mounted to the job container)
 		//depends on if the server is running in a docker container or not.
 		if (ConnectionToolsDocker.isInsideContainer()) {
@@ -149,6 +148,12 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 			//If outside the container, use the local directory
 			_localJobData = baseWorkerDataPath;
 		}
+	}
+
+	@post
+	override public function postInjection() :Promise<Bool>
+	{
+		log.debug({f:'postInjection'});
 		//Something a bit hack-ish:
 		//If the stack is using the local docker as the worker provider,
 		//then you need to mount a special ServiceStorage to avoid the

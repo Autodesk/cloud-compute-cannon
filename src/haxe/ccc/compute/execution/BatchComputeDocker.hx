@@ -137,6 +137,7 @@ class BatchComputeDocker
 			//Pipe logs to file streams
 			//Copy the files to the remote worker
 			.pipe(function(_) {
+				trace('!!!HERE 1 $jobWorkingStatus');
 				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingInputs) {
 					var inputStorage = fs.clone().appendToRootPath(job.item.inputDir());
@@ -271,7 +272,7 @@ class BatchComputeDocker
 										RW: true
 									}
 								];
-								// trace('mounts=${mounts}');
+								trace('mounts=${mounts}');
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
 
 								var labels :Dynamic<String> = {

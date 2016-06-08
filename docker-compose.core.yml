@@ -27,8 +27,10 @@ redis:
 
 registry:
   image: registry:2.4.0
+  environment:
+    REGISTRY_HTTP_ADDR: 0.0.0.0:5001
   ports:
-    - "5001:5000"
+    - "5001:5001"
 
 fluentd:
   command: ["fluentd", "-v-v", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]

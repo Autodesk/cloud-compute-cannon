@@ -17,7 +17,7 @@ class TestMiscUnit extends haxe.unit.async.PromiseTest
 		// quay.io:80/bionano/lmvconverter
 		// bionano/lmvconverter
 		// quay.io/bionano/lmvconverter:latest
-		// localhost:5000/lmvconverter:latest
+		// localhost:5001/lmvconverter:latest
 		// quay.io:80/bionano/lmvconverter:c955c37
 		// bionano/lmvconverter:c955c37
 		// lmvconverter:c955c37

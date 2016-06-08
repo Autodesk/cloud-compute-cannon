@@ -38,7 +38,7 @@ registry:
   links:
     - fluentd
   #Pretty sure I don't care about listening to you ever in the dev context.
-  log_driver: "none"
+  # log_driver: "none"
 
 fluentd:
   extends:
