@@ -18,7 +18,10 @@ class ConnectionToolsRegistry
 			var host :Host = Reflect.field(env, ENV_VAR_ADDRESS_REGISTRY);
 			return host;
 		} else {
-			return new Host(new HostName(SERVER_HOSTNAME_PRIVATE), new Port(REGISTRY_DEFAULT_PORT));
+			var isInContainer = ConnectionToolsDocker.isInsideContainer();
+			var address :String = isInContainer ? 'registry' : ConnectionToolsDocker.getDockerHost();
+			var port = isInContainer ? REGISTRY_DEFAULT_PORT - 1 : REGISTRY_DEFAULT_PORT;
+			return new Host(new HostName(address), new Port(port));
 		}
 	}
 }

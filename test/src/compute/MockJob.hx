@@ -39,7 +39,8 @@ class MockJob extends Job
 						exitCode: jobExitCode,
 						JobWorkingStatus: workingStatus,
 						outputFiles: jobOutputFiles,
-						error: jobError
+						error: jobError,
+						copiedLogs: jobError == null
 					};
 					return jobResult;
 				} else {

@@ -441,6 +441,17 @@ class ServiceBatchCompute
 
 		var p = Promise.promise(true)
 			.pipe(function(_) {
+				var dockerUrl :DockerUrl = job.image;
+				trace('ORIGINAL URL=$dockerUrl');
+				return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
+					.then(function(url) {
+						trace('FINAL URL=$url');
+						job.image = url;
+						return true;
+					});
+			})
+			.pipe(function(_) {
+
 				return getNewJobId();
 			})
 			.pipe(function(id) {
@@ -636,7 +647,20 @@ class ServiceBatchCompute
 								item: dockerJob,
 								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
 							}
-							return ComputeQueue.enqueue(_redis, job);
+							return Promise.promise(true)
+								.pipe(function(_) {
+									var dockerUrl :DockerUrl = dockerJob.image.value;
+									trace('ORIGINAL URL=$dockerUrl');
+									return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
+										.then(function(url) {
+											trace('FINAL URL=$url');
+											dockerJob.image.value = url;
+											return true;
+										});
+								})
+								.pipe(function(_) {
+									return ComputeQueue.enqueue(_redis, job);
+								});
 						})
 						.then(function(_) {
 							res.writeHead(200, {'content-type': 'application/json'});

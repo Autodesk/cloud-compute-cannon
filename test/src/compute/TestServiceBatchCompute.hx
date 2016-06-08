@@ -7,13 +7,13 @@ import js.node.Path;
 import js.node.Fs;
 import js.npm.FsExtended;
 import js.npm.RedisClient;
-import js.npm.HttpPromises;
 
 import promhx.Promise;
 import promhx.Deferred;
 import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.PromiseTools;
+import promhx.RequestPromises;
 
 import util.RedisTools;
 
@@ -63,7 +63,7 @@ class TestServiceBatchCompute extends TestComputeBase
 		var INPUT_JSON_URL = 'http://httpbin.org/ip';
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return HttpPromises.get(INPUT_JSON_URL);
+				return RequestPromises.get(INPUT_JSON_URL);
 			})
 			.pipe(function(ipjson) {
 				var rand = Std.int(Math.random() * 1000000) + '';
