@@ -46,7 +46,7 @@ fluentd:
     service: fluentd
   build: ./etc/log/
   volumes:
-    - ./etc/log/fluent.conf:/fluentd/etc/fluent.conf
+    - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch

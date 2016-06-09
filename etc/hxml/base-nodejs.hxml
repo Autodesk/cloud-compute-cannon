@@ -7,5 +7,4 @@ etc/hxml/base.hxml
 -cp lib/promhx/src/main
 -cp lib/hxnodelibs
 
--cp common/src
 -cp src/haxe

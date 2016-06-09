@@ -1,0 +1,16 @@
+#Base content goes above
+#To recreate the templates, run
+#./bin/build-templates
+
+#<filter **>
+#  @type stdout
+#</filter>
+
+<match **>
+  @log_level debug
+  @type elasticsearch
+  host ::ELASTICSEARCH_HOST::
+  port 9200
+  logstash_format true
+  flush_interval 10
+</match>
