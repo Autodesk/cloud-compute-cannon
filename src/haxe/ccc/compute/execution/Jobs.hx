@@ -233,9 +233,6 @@ class Jobs
 			var workerStorage = _injector.getValue(ServiceStorage, BOOT2DOCKER_PROVIDER_STORAGE_PATH);
 			job._workerStorage = workerStorage;
 		}
-		else {
-			Log.error('!!!!Missing worker storage');
-		}
 		return job;
 	}
 }

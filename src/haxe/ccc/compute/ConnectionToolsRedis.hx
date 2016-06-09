@@ -54,7 +54,7 @@ class ConnectionToolsRedis
 
 	public static function getRedisConnectionParams() :{host:String, port:Int}
 	{
-		var address = ConnectionToolsDocker.isInsideContainer() ? 'redis' : ConnectionToolsDocker.getDockerHost();
+		var address :String = ConnectionToolsDocker.isInsideContainer() ? 'redis' : ConnectionToolsDocker.getDockerHost();
 		return {host:address, port:REDIS_PORT};
 	}
 

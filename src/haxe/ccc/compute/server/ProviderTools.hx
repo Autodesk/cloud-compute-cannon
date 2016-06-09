@@ -392,7 +392,7 @@ class ProviderTools
 		return promhx.Promise.whenAll(
 			[
 				util.DockerTools.ensureContainer(docker, 'redis:3', 'name', SERVER_CONTAINER_TAG_REDIS),
-				util.DockerTools.ensureContainer(docker, 'registry:2', 'name', SERVER_CONTAINER_TAG_REGISTRY, null, [Constants.REGISTRY_DEFAULT_PORT=>5000])
+				util.DockerTools.ensureContainer(docker, 'registry:2', 'name', SERVER_CONTAINER_TAG_REGISTRY, null, [Constants.REGISTRY_DEFAULT_PORT=>REGISTRY_DEFAULT_PORT])
 			])
 		.pipe(function(_) {
 			trace('Redis and registry containers running...');
@@ -541,7 +541,7 @@ class ProviderTools
 					promise.boundPromise.reject(err);
 					return;
 				}
-				untyped __js__('container.modem.demuxStream(stream, process.stdout, process.stderr)');
+				untyped __js__('container.modem.demuxStream({0}, {1}, {2})', stream, Node.process.stdout, Node.process.stderr);
 				container.start(function(err, data) {
 					if (err != null) {
 						promise.boundPromise.reject(err);

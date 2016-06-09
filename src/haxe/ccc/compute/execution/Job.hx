@@ -306,7 +306,9 @@ class Job
 							})
 							.then(function(_) {
 								try {
-									logStdStreamsToElasticSearch(_redis, _fs, _job.id);
+									if (_redis != null) {
+										logStdStreamsToElasticSearch(_redis, _fs, _job.id);
+									}
 								} catch (err :Dynamic) {
 									Log.error({error:err});
 								}

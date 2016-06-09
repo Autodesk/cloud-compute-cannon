@@ -32,11 +32,12 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 {
 	function doServiceStorageTest(storage :ServiceStorage) :Promise<Bool>
 	{
+		Assert.notNull(storage);
 		var testFileContent1 = 'This is an example: 久有归天愿.';
-		var testFilePath1 = 'sftptestfile';
+		var testFilePath1 = 'storage_test_file';
 
 		var testFileContent2 = 'This is another example: 天愿.';
-		var testFilePath2 = 'somePath${Math.floor(Math.random() * 1000000)}/sftptestfile2';
+		var testFilePath2 = 'somePath${Math.floor(Math.random() * 1000000)}/storage_testfile2';
 
 		var testdir = 'somedir${Math.floor(Math.random() * 1000000)}/withchild';
 
