@@ -282,17 +282,20 @@ class WorkerProviderBase
 		if (delay.toFloat() < 0) {
 			delay = new Seconds(0.0);
 		}
+
+		//TODO: There is a bug in the deferred logic. For now:
+		delay = new Minutes(45);
+		log.debug('addWorkerToDeferred workerId=$workerId removalTimeStamp=$removalTimeStamp delay=${delay.toMilliseconds().toInt()}');
 		var machineRemovalDelayed = {
 			id: workerId,
 			timeoutId: Node.setTimeout(function() {
 				_deferredRemovals = _deferredRemovals.filter(function(e) return e.id != workerId);
-				// Log.info('Shutdown deferred worker=$workerId delayMs=${delay} removalTimeStamp=${removalTimeStamp.toString()} now=${Date.now().toString()}');
+				log.debug('Shutdown deferred worker=$workerId delayMs=${delay} removalTimeStamp=${removalTimeStamp.toString()} now=${Date.now().toString()}');
 				InstancePool.setWorkerDeferredToRemoving(_redis, workerId);
-				// shutdownWorker(workerId);
 			}, delay.toMilliseconds().toInt()),
 			removalTime: removalTimeStamp
 		}
-		// Log.info('worker deferring for removal machine=$workerId removalTimeStamp=${removalTimeStamp.toString()} delay=${delay} now=${Date.now().toString()}');
+		// log.info('worker deferring for removal machine=$workerId removalTimeStamp=${removalTimeStamp.toString()} delay=${delay} now=${Date.now().toString()}');
 		_deferredRemovals.push(machineRemovalDelayed);
 		_deferredRemovals.sort(function(e1, e2) {
 			return e1.removalTime < e2.removalTime ? 1 : (e1.removalTime == e2.removalTime ? 0 : -1);
@@ -355,10 +358,13 @@ class WorkerProviderBase
 								});
 						});
 				case Deferred:
+					log.debug('instance=$instanceId deferred');
 					getShutdownDelay(instanceId)
 						.pipe(function(delay) {
+							log.debug('instance=$instanceId TimeStamp.now()=${TimeStamp.now()} delay=${delay} delay.toSeconds()=${delay.toSeconds()}');
 							var removalTimeStamp :TimeStamp = TimeStamp.now().addSeconds(delay.toSeconds());
-							// Log.info('removeWorker $instanceId delay=${delay.toString()} removalTimeStamp=$removalTimeStamp');
+							// log.info('removeWorker $instanceId delay=${delay.toString()} removalTimeStamp=$removalTimeStamp');
+							log.debug('instance=$instanceId deferred removalTimeStamp=$removalTimeStamp');
 							return InstancePool.setWorkerTimeout(redis, instanceId, removalTimeStamp)
 								.then(function(_) {
 									addWorkerToDeferred(instanceId, removalTimeStamp);
@@ -382,7 +388,7 @@ class WorkerProviderBase
 						deferred.resolve(true);
 					});
 				promise.catchError(function(err) {
-					Log.error(err);
+					log.error(err);
 					deferred.resolve(false);
 				});
 				return deferred.boundPromise;
