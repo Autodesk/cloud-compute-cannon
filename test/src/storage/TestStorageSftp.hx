@@ -117,7 +117,8 @@ class TestStorageSftp extends TestStorageBase
 	{
 		return Promise.promise(true)
 			.then(function(_) {
-				var config = {type:StorageSourceType.Sftp, sshConfig:{host:ConnectionToolsDocker.getDockerHost(), port:_sshPort, username:'root', password:'screencast'}, rootPath:'/tmp'};
+				var host :String = ConnectionToolsDocker.getDockerHost();
+				var config = {type:StorageSourceType.Sftp, sshConfig:{host:host, port:_sshPort, username:'root', password:'screencast'}, rootPath:'/tmp'};
 				_sftpFs = new ServiceStorageSftp()
 					.setConfig(config);
 				return _sftpFs;
@@ -132,7 +133,8 @@ class TestStorageSftp extends TestStorageBase
 	{
 		return Promise.promise(true)
 			.pipe(function(storage) {
-				var sshConfig = {host:ConnectionToolsDocker.getDockerHost(), port:_sshPort, username:'root', password:'screencast'};
+				var host :String = ConnectionToolsDocker.getDockerHost();
+				var sshConfig = {host:host, port:_sshPort, username:'root', password:'screencast'};
 				return SshTools.execute(sshConfig, 'find /some/made/up/path -type f', 10, 20)
 					.then(function(result) {
 						assertEquals(result.code, 1);

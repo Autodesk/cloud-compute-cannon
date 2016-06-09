@@ -529,6 +529,7 @@ class Constants
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
 
 	/* Server */
+	public static var REGISTRY :Host;
 	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
 	inline public static var SERVER_DEFAULT_PORT = 9000;
 	inline public static var REGISTRY_DEFAULT_PORT = 5001;

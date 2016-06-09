@@ -99,6 +99,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				return getPrivateHostName(cast _config)
 					.then(function(hostname) {
 						Constants.SERVER_HOSTNAME_PRIVATE = hostname;
+						Constants.REGISTRY = new Host(new HostName(Constants.SERVER_HOSTNAME_PRIVATE), new Port(REGISTRY_DEFAULT_PORT));
 						Log.debug('SERVER_HOSTNAME_PRIVATE=${Constants.SERVER_HOSTNAME_PRIVATE}');
 						return true;
 					});
@@ -238,7 +239,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				 * So we get the remainder of the hour for this instance
 				 * and shutdown just before the hour elapses.
 				 */
-				log.info({f:'getShutdownDelay', workerId:workerId, log:'getServer'});
+				log.debug({f:'getShutdownDelay', workerId:workerId, log:'getServer'});
 				return getServer(workerId)
 					.then(function(worker) {
 						/*
@@ -249,16 +250,16 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						var billingIncrement = _config.billingIncrement;
 						var awsServer :PkgCloudServerAws = cast worker;
 						var launchTime = awsServer.launchTime;
-						var launchTimeSince1970Ms :Milliseconds = untyped __js__('new Date(launchTime).getTime()');
+						var launchTimeSince1970Ms :Milliseconds = untyped __js__('new Date({0}).getTime()', launchTime);
 						var launchTimeSince1970 = new TimeStamp(launchTimeSince1970Ms);
 						var now = TimeStamp.now();
 						var minutesSinceLaunch = (now - launchTimeSince1970).toMinutes();
 						var remainingMinutesTheIncrement = minutesSinceLaunch % billingIncrement;
 						var delay = billingIncrement - remainingMinutesTheIncrement;
-						delay = delay - new Minutes(1);
 						if (delay < new Minutes(0)) {
 							delay = new Minutes(0);
 						}
+						log.debug({f:'getShutdownDelay', workerId:workerId, log:'getServer', delay:delay, launchTime:launchTime, launchTimeSince1970Ms:launchTimeSince1970Ms, launchTimeSince1970:launchTimeSince1970, now:now, minutesSinceLaunch:minutesSinceLaunch, remainingMinutesTheIncrement:remainingMinutesTheIncrement});
 						return delay;
 					});
 			case google:

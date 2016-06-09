@@ -138,7 +138,7 @@ class DockerTools
 	public static function parseDockerUrl(s :String) :DockerUrlBlob
 	{
 		s = s.trim();
-		var r = ~/(.*\/)?([a-z0-9]+)(:[a-z0-9]+)?/i;
+		var r = ~/(.*\/)?([a-z0-9_]+)(:[a-z0-9_]+)?/i;
 		r.match(s);
 		var registryAndUsername = r.matched(1);
 		var name = r.matched(2);
@@ -395,7 +395,7 @@ class DockerTools
 					resultStream.write(buf);
 				}
 				var bufferString = buf.toString();
-				log.trace({log:bufferString});
+				// log.trace({log:bufferString});
 			});
 		});
 		return promise.boundPromise;
@@ -462,7 +462,7 @@ class DockerTools
 								imageId = data.stream.replace('Successfully built', '').trim();
 							}
 						} else if (data.status != null) {
-							log.trace({log:bufferString});
+							// log.trace({log:bufferString});
 						} else if (data.error != null) {
 							log.error({log:'Error on stream getting image', error:data});
 							errorEncounteredInStream = true;

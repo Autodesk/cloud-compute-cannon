@@ -375,7 +375,7 @@ class ServiceBatchCompute
 		serverContext.registerService(this);
 		serverContext.registerService(ccc.compute.server.ServerCommands);
 		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext));
-		router.get(SERVER_API_RPC_URL_FRAGMENT, Routes.generateGetRequestHandler(serverContext, Constants.SERVER_RPC_URL));
+		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT));
 
 		router.post('/build/*', buildDockerImageRouter);
 		return router;
@@ -440,6 +440,16 @@ class ServiceBatchCompute
 		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
 
 		var p = Promise.promise(true)
+			// .pipe(function(_) {
+			// 	var dockerUrl :DockerUrl = job.image;
+			// 	trace('ORIGINAL URL=$dockerUrl');
+			// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
+			// 		.then(function(url) {
+			// 			trace('FINAL URL=$url');
+			// 			job.image = url;
+			// 			return true;
+			// 		});
+			// })
 			.pipe(function(_) {
 				return getNewJobId();
 			})
@@ -636,7 +646,20 @@ class ServiceBatchCompute
 								item: dockerJob,
 								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
 							}
-							return ComputeQueue.enqueue(_redis, job);
+							return Promise.promise(true)
+								// .pipe(function(_) {
+								// 	var dockerUrl :DockerUrl = dockerJob.image.value;
+								// 	trace('ORIGINAL URL=$dockerUrl');
+								// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
+								// 		.then(function(url) {
+								// 			trace('FINAL URL=$url');
+								// 			dockerJob.image.value = url;
+								// 			return true;
+								// 		});
+								// })
+								.pipe(function(_) {
+									return ComputeQueue.enqueue(_redis, job);
+								});
 						})
 						.then(function(_) {
 							res.writeHead(200, {'content-type': 'application/json'});

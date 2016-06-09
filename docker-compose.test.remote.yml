@@ -1,9 +1,9 @@
 compute:
   command: ["haxe", "test/testsIntegration.hxml"]
-  # environment:
-  #   AWS: "true"
-  #   DOCKER: "false"
-  #   VAGRANT: "false"
+  environment:
+    AWS: "true"
+    DOCKER: "false"
+    VAGRANT: "false"
 
 redis:
   log_driver: "none"

@@ -9,7 +9,7 @@ ENV NEKOPATH /root/neko/
 ENV LD_LIBRARY_PATH /root/neko/
 ENV PATH /root/neko/:$PATH
 
-ENV HAXE_DOWNLOAD_URL http://haxe.org/website-content/downloads/3.2.1/downloads/haxe-3.2.1-linux64.tar.gz
+ENV HAXE_DOWNLOAD_URL http://haxe.org/website-content/downloads/3.3.0-rc.1/downloads/haxe-3.3.0-rc.1-linux64.tar.gz
 
 # Dependencies
 RUN apt-get update && \
