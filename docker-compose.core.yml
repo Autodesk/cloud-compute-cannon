@@ -35,9 +35,8 @@ registry:
 fluentd:
   command: ["fluentd", "-v-v", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
   ports:
-      - "24224:24224"
+      - "24225:24225"
       - "9880:9880"
-      - "24444:24444"
 
 elasticsearch:
   image: elasticsearch:2.3

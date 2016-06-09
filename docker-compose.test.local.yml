@@ -8,8 +8,8 @@ compute:
 redis:
   log_driver: "none"
 
-# registry:
-#   log_driver: "none"
+registry:
+  log_driver: "none"
 
 elasticsearch:
   log_driver: "none"

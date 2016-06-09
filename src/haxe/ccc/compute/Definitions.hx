@@ -552,12 +552,8 @@ class Constants
 	inline public static var BOOT2DOCKER_PROVIDER_STORAGE_PATH = 'serverconfig.json';
 
 	/* Fluent/logging */
-	inline public static var FLUENTD_API_PORT = 24444;
-	inline public static var FLUENTD_SOURCE_PORT = 24224;
-	inline public static var FLUENTD_HTTP_COLLECTOR_PORT = 9880;
-	inline public static var FLUENTD_API_PATH = '/api/plugins.flushBuffers';
-	inline public static var WORKER_LOGGING_IMAGE_NAME = 'ccc_log_collector';
-	inline public static var WORKER_LOGGING_CONTAINER_NAME = WORKER_LOGGING_IMAGE_NAME;
+	inline public static var FLUENTD_SOURCE_PORT = 24225;
+	inline public static var FLUENTD_HTTP_COLLECTOR_PORT = 9881;
 	public static var FLUENTD_NODEJS_BUNYAN_TAG_PREFIX = 'docker.nodejs-bunyan';
 	public static var FLUENTD_WORKER_LOG_TAG_PREFIX = 'docker.$APP_NAME_COMPACT.worker';
 	public static var FLUENTD_SERVER_LOG_TAG_PREFIX = '$FLUENTD_NODEJS_BUNYAN_TAG_PREFIX.$APP_NAME_COMPACT.server';
