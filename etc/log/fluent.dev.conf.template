@@ -2,15 +2,15 @@
 #To recreate the templates, run
 #./bin/build-templates
 
-#<filter **>
-#  @type stdout
-#</filter>
+<filter **>
+  @type stdout
+</filter>
 
 <match **>
   @log_level debug
   @type elasticsearch
-  host ::ELASTICSEARCH_HOST::
+  host elasticsearch
   port 9200
   logstash_format true
-  flush_interval 10
+  flush_interval 4
 </match>

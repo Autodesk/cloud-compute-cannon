@@ -1,6 +1,6 @@
-# WARNING: FUCK
+# WARNING:
 # IF THIS FILE ENDS WITH .conf THEN DO NOT EDIT IT. EDIT THE .template file instead and
-# run ./bin/build/templates
+# run ./bin/build-templates
 
 <source>
   @type forward
@@ -25,8 +25,3 @@
   key_name log
   time_parse no
 </filter>
-
-#<filter **>
-#  @type stdout
-#</filter>
-
