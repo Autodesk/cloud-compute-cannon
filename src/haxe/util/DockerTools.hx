@@ -395,7 +395,7 @@ class DockerTools
 					resultStream.write(buf);
 				}
 				var bufferString = buf.toString();
-				log.trace({log:bufferString});
+				// log.trace({log:bufferString});
 			});
 		});
 		return promise.boundPromise;
