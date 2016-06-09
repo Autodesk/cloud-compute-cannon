@@ -462,7 +462,7 @@ class DockerTools
 								imageId = data.stream.replace('Successfully built', '').trim();
 							}
 						} else if (data.status != null) {
-							log.trace({log:bufferString});
+							// log.trace({log:bufferString});
 						} else if (data.error != null) {
 							log.error({log:'Error on stream getting image', error:data});
 							errorEncounteredInStream = true;
