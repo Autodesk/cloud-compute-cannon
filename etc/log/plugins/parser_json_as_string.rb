@@ -19,6 +19,8 @@ module Fluent
       def parse(text)
         begin
           text.gsub! '\"', '"'
+          text.gsub! '\\n', '\n'
+          text.gsub! '\\r', '\r'
           hash = nil
           time = nil
           if text.start_with?('{') then

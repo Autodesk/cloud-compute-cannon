@@ -239,7 +239,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				 * So we get the remainder of the hour for this instance
 				 * and shutdown just before the hour elapses.
 				 */
-				log.info({f:'getShutdownDelay', workerId:workerId, log:'getServer'});
+				log.debug({f:'getShutdownDelay', workerId:workerId, log:'getServer'});
 				return getServer(workerId)
 					.then(function(worker) {
 						/*
@@ -256,10 +256,10 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						var minutesSinceLaunch = (now - launchTimeSince1970).toMinutes();
 						var remainingMinutesTheIncrement = minutesSinceLaunch % billingIncrement;
 						var delay = billingIncrement - remainingMinutesTheIncrement;
-						delay = delay - new Minutes(1);
 						if (delay < new Minutes(0)) {
 							delay = new Minutes(0);
 						}
+						log.debug({f:'getShutdownDelay', workerId:workerId, log:'getServer', delay:delay, launchTime:launchTime, launchTimeSince1970Ms:launchTimeSince1970Ms, launchTimeSince1970:launchTimeSince1970, now:now, minutesSinceLaunch:minutesSinceLaunch, remainingMinutesTheIncrement:remainingMinutesTheIncrement});
 						return delay;
 					});
 			case google:
