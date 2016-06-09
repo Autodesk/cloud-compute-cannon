@@ -135,8 +135,8 @@ class TestsIntegration
 
 		if (isAws) {
 			// runner.add(new compute.TestPkgCloudAws());
-			// runner.add(new compute.TestScalingAmazon());
-			runner.add(new compute.TestCompleteJobSubmissionAmazon());
+			runner.add(new compute.TestScalingAmazon());
+			// runner.add(new compute.TestCompleteJobSubmissionAmazon());
 			// runner.add(new compute.TestRestartAfterCrashAWS());
 		}
 
