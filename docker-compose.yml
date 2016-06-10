@@ -5,16 +5,26 @@ compute:
   links:
     - redis
     - registry
+    - fluentd
 
 
 redis:
   extends:
     file: docker-compose.core.yml
     service: redis
+  links:
+    - fluentd
 
 
 registry:
   extends:
     file: docker-compose.core.yml
     service: registry
+  links:
+    - fluentd
 
+
+fluentd:
+  extends:
+    file: docker-compose.core.yml
+    service: fluentd

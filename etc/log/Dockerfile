@@ -9,5 +9,5 @@ RUN gem install fluent-plugin-parser
 COPY fluent.conf /fluentd/etc/
 COPY plugins /fluentd/plugins
 
-EXPOSE 24224 9880 24444
+EXPOSE 24225 9880
 CMD fluentd -c /fluentd/etc/$FLUENTD_CONF -p /fluentd/plugins $FLUENTD_OPT

@@ -17,9 +17,9 @@ compute:
   log_driver: "fluentd"
   log_opt:
     tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    fluentd-address: "localhost:24225"
 
 redis:
-  log_driver: "fluentd"
   #This config disables persistance to disk since we do not need it for development
   command: redis-server /usr/local/etc/redis/redis.conf
   volumes:
@@ -28,6 +28,10 @@ redis:
     - "6379:6379"
   links:
     - fluentd
+  log_driver: "fluentd"
+  log_opt:
+    tag: "docker.redis.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    fluentd-address: "localhost:24225"
 
 registry:
   volumes:
@@ -37,16 +41,15 @@ registry:
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
   links:
     - fluentd
-  #Pretty sure I don't care about listening to you ever in the dev context.
-  # log_driver: "none"
+  log_driver: "fluentd"
+  log_opt:
+    tag: "docker.registry.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    fluentd-address: "localhost:24225"
 
 fluentd:
-  extends:
-    file: docker-compose.core.yml
-    service: fluentd
   build: ./etc/log/
   volumes:
-    - ./etc/log/fluent.conf:/fluentd/etc/fluent.conf
+    - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
@@ -64,4 +67,3 @@ kibana:
   log_driver: "none"
   links:
     - elasticsearch
-    - fluentd
