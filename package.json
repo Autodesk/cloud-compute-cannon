@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "bin": {
     "ccc": "bin/cloudcomputecannon.js",
@@ -63,6 +63,7 @@
     "serve-favicon": "^2.2.0",
     "serve-index": "^1.7.2",
     "shortid": "^2.2.6",
+    "source-map-support": "^0.2.10"
     "ssh2": "^0.4.15",
     "streamifier": "^0.1.1",
     "tar-fs": "^1.12.0",
@@ -73,8 +74,7 @@
     "ws": "^0.8.0"
   },
   "devDependencies": {
-    "redis-mock": "^0.4.9",
-    "source-map-support": "^0.2.10"
+    "redis-mock": "^0.4.9"
   },
   "preferGlobal": true,
   "private": false
