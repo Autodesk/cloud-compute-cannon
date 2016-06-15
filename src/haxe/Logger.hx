@@ -82,7 +82,7 @@ class Logger
 // 		jobColorFilter.pipe(js.Node.process.stdout);
 		log = new AbstractLogger(
 		{
-			name: ccc.compute.Definitions.Constants.SERVER_CONTAINER_TAG_SERVER,
+			name: ccc.compute.Constants.SERVER_CONTAINER_TAG_SERVER,
 			level: Bunyan.DEBUG,
 			// streams: [
 			// 	{

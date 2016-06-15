@@ -19,7 +19,6 @@ import js.npm.PkgCloud.ClientOptionsAmazon;
 import promhx.Promise;
 
 import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.ConnectionToolsDocker;
 
 import yaml.Yaml;

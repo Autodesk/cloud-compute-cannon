@@ -25,7 +25,6 @@ import ccc.storage.StorageRestApi;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools;

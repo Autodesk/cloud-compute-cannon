@@ -20,8 +20,6 @@ import minject.Injector;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.ComputeQueue;
 import ccc.compute.LogStreams;
 import ccc.compute.execution.Job;

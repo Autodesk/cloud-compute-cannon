@@ -7,7 +7,6 @@ import promhx.Promise;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
 
 import t9.abstracts.time.*;
 import t9.abstracts.net.*;

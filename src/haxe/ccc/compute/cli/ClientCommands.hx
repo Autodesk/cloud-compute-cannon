@@ -1,8 +1,6 @@
 package ccc.compute.cli;
 
 import ccc.compute.client.ClientCompute;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.JobTools;
 import ccc.compute.InitConfigTools;
 import ccc.compute.ServiceBatchCompute;

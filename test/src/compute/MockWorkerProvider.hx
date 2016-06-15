@@ -4,7 +4,6 @@ import promhx.Promise;
 
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderBase;
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 
 import t9.abstracts.net.*;

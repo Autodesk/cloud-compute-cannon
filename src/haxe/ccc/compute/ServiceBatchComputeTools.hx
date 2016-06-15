@@ -1,6 +1,5 @@
 package ccc.compute;
 
-import ccc.compute.Definitions;
 import ccc.storage.ServiceStorage;
 
 import haxe.Json;

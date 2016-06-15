@@ -12,7 +12,6 @@ import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 import promhx.CallbackPromise;
 
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 

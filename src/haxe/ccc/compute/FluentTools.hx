@@ -1,6 +1,5 @@
 package ccc.compute;
 
-import ccc.compute.Definitions.Constants.*;
 
 import js.npm.FluentLogger;
 

@@ -19,8 +19,6 @@ import util.RedisTools;
 
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.InstancePool;
 import ccc.compute.JobTools;
 import ccc.compute.ServiceBatchCompute;
@@ -73,7 +71,7 @@ class TestServiceBatchCompute extends TestComputeBase
 				//This script copies the input to an output file
 				var scriptValue = '#!/usr/bin/env bash\ncp /${DIRECTORY_INPUTS}/$inputName /${DIRECTORY_OUTPUTS}/$outputName';
 				var jobParams :BasicBatchProcessRequest = {
-					image: Constants.DOCKER_IMAGE_DEFAULT,
+					image: DOCKER_IMAGE_DEFAULT,
 					cmd: ['/bin/bash', '/${DIRECTORY_INPUTS}/$scriptName'],
 					inputs: [
 						{
@@ -115,5 +113,5 @@ class TestServiceBatchCompute extends TestComputeBase
 
 	var _schedulingService :ServiceBatchCompute;
 
-	static var HOST = Host.fromString('localhost:${Constants.SERVER_DEFAULT_PORT}');
+	static var HOST = Host.fromString('localhost:${SERVER_DEFAULT_PORT}');
 }

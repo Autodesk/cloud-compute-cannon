@@ -1,7 +1,5 @@
 package ccc.compute.cli;
 
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 
 import haxe.Json;
 import haxe.remoting.JsonRpc;

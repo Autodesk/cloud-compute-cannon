@@ -3,7 +3,6 @@ package compute;
 // import batcher.cli.ProviderTools;
 import batcher.cli.ProviderTools.*;
 import batcher.cli.CliTools.*;
-import ccc.compute.Definitions;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 
 import js.Node;

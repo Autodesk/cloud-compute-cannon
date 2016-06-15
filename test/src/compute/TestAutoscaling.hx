@@ -15,8 +15,6 @@ import promhx.deferred.DeferredPromise;
 import promhx.PromiseTools;
 import promhx.RedisPromises;
 
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;

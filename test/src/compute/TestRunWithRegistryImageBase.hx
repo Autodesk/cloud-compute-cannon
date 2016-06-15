@@ -10,7 +10,6 @@ import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
 import ccc.compute.ConnectionToolsRedis;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;

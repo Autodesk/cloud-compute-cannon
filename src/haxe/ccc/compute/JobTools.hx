@@ -1,8 +1,6 @@
 package ccc.compute;
 
 import ccc.compute.JobTools;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 
 import js.node.Path;
 import js.node.stream.Readable;

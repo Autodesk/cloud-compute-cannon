@@ -3,7 +3,6 @@ package ccc.compute.client;
 import haxe.Json;
 import haxe.remoting.JsonRpc;
 
-import ccc.compute.Definitions;
 import ccc.compute.client.externs.python.PythonRequests;
 
 import python.*;

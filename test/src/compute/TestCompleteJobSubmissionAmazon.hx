@@ -4,7 +4,6 @@ import promhx.Promise;
 
 import ccc.compute.InstancePool;
 import ccc.compute.InitConfigTools;
-import ccc.compute.Definitions;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 import ccc.storage.StorageTools;
 import ccc.storage.ServiceStorage;

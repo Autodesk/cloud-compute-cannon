@@ -4,7 +4,6 @@ import js.npm.RedisClient;
 import js.npm.RedisClient;
 
 import ccc.compute.ConnectionToolsDocker;
-import ccc.compute.Definitions.Constants.*;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;

@@ -19,8 +19,6 @@ import promhx.RetryPromise;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.ConnectionToolsDocker;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
