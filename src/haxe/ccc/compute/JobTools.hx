@@ -48,21 +48,6 @@ class JobTools
 		}
 	}
 
-	// public static function workerInputDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id, DIRECTORY_INPUTS);
-	// }
-
-	// public static function workerOutputDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id, DIRECTORY_OUTPUTS);
-	// }
-
-	// public static function workerStdoutDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id);
-	// }
-
 	public static function workerInputDir(id :ComputeJobId) :String
 	{
 		return Path.join(id, DIRECTORY_INPUTS);
