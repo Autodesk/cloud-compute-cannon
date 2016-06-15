@@ -8,7 +8,9 @@ import js.npm.RedisClient;
 import js.npm.Docker;
 
 import ccc.compute.ComputeQueue;
+import ccc.compute.InstancePool;
 import ccc.compute.JobTools;
+import ccc.compute.workers.WorkerTools;
 import ccc.storage.ServiceStorage;
 
 import promhx.Promise;
@@ -33,6 +35,32 @@ using StringTools;
  */
 class ServerCommands
 {
+	public static function hardStopAndDeleteAllJobs(redis :RedisClient) :Promise<Bool>
+	{
+		trace('hardStopAndDeleteAllJobs');
+		return Promise.promise(true)
+			.pipe(function(_) {
+				//Remove all jobs
+				return ComputeQueue.getAllJobIds(redis)
+					.pipe(function(jobIds) {
+						return Promise.whenAll(jobIds.map(function(jobId) {
+							return ComputeQueue.removeJob(redis, jobId);
+						}));
+					})
+					//Clean all workers
+					.pipe(function(_) {
+						return ccc.compute.InstancePool.getAllWorkers(redis)
+							.pipe(function(workerDefs) {
+								return Promise.whenAll(workerDefs.map(
+									function(instance) {
+										return WorkerTools.cleanWorker(instance);
+									}));
+							});
+					});
+			})
+			.thenTrue();
+	}
+
 	public static function buildImageIntoRegistry(imageStream :IReadable, repositoryTag :String, resultStream :IWritable) :Promise<DockerUrl>
 	{
 		trace('buildImageIntoRegistry');

@@ -338,6 +338,17 @@ class InstancePool
 		return promise;
 	}
 
+	public static function getAllWorkers(client :RedisClient) :Promise<Array<WorkerDefinition>>
+	{
+		var promise = new promhx.CallbackPromise();
+		client.hgetall(REDIS_KEY_WORKERS, promise.cb2);
+		return promise
+			.then(function(data) {
+				trace('data=${data}');
+				return cast data;
+			});
+	}
+
 	public static function setWorkerTimeout(client :RedisClient, id :MachineId, time :TimeStamp) :Promise<Bool>
 	{
 		return evaluateLuaScript(client, SCRIPT_SET_WORKER_DEFERRED_TIMEOUT, [id, time.toFloat()])
