@@ -43,6 +43,23 @@ using promhx.PromiseTools;
  */
 class DockerJobTools
 {
+	public static function deleteJobRemoteData(job :DockerJobDefinition, fs :ServiceStorage) :Promise<Bool>
+	{
+		var paths = [
+			JobTools.inputDir(job),
+			JobTools.outputDir(job),
+			JobTools.resultDir(job)
+		].map(function(path) {
+			return fs.deleteDir(path)
+				.errorPipe(function(err) {
+					Log.error({message:'Failed to delete $path for job=${job.jobId}', error:err});
+					return Promise.promise(true);
+				});
+		});
+		return Promise.whenAll(paths)
+			.thenTrue();
+	}
+
 	public static function deleteWorkerInputs(job :QueueJobDefinitionDocker) :Promise<Bool>
 	{
 		var workerStorage = getWorkerStorage(job);
