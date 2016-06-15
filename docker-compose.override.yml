@@ -17,7 +17,7 @@ compute:
     HOST_PWD: "$PWD"
   log_driver: "fluentd"
   log_opt:
-    tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    tag: "docker.nodejs-bunyan.ccc{{.ImageName}}/{{.ID}}"
     fluentd-address: "localhost:24225"
 
 redis:
@@ -31,7 +31,7 @@ redis:
     - fluentd
   log_driver: "fluentd"
   log_opt:
-    tag: "docker.redis.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
     fluentd-address: "localhost:24225"
 
 registry:
@@ -44,7 +44,7 @@ registry:
     - fluentd
   log_driver: "fluentd"
   log_opt:
-    tag: "docker.registry.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
     fluentd-address: "localhost:24225"
 
 fluentd:

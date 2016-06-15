@@ -5,6 +5,7 @@ compute:
     #Mount local storage, even though it might use S3, we don't know at this point.
     - ./data/computejobs:/computejobs
     - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
+    - ./data/registry:/registry
   links:
     - redis
     - registry
@@ -13,14 +14,14 @@ compute:
     HOST_PWD: "$PWD"
   log_driver: "fluentd"
   log_opt:
-    tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    tag: "docker.nodejs-bunyan.ccc{{.ImageName}}/{{.ID}}"
     fluentd-address: "localhost:24225"
 
 
 redis:
   log_driver: "fluentd"
   log_opt:
-    tag: "docker.redis.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
+    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
     fluentd-address: "localhost:24225"
   #This config disables persistance to disk since we do not need it for development
   command: redis-server /usr/local/etc/redis/redis.conf
