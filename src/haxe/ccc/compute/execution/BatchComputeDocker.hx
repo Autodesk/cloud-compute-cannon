@@ -135,7 +135,6 @@ class BatchComputeDocker
 			//Pipe logs to file streams
 			//Copy the files to the remote worker
 			.pipe(function(_) {
-				trace('!!!HERE 1 $jobWorkingStatus');
 				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingInputs) {
 					var inputStorage = fs.clone().appendToRootPath(job.item.inputDir());
@@ -363,6 +362,19 @@ class BatchComputeDocker
 			})
 			.then(function(_) {
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
+				//The job is now finished. Clean up the temp worker storage,
+				//out of the promise chain (for speed)
+				inputStorageWorker.deleteDir()
+					.pipe(function(_) {
+						log.info('Deleted ${inputStorageWorker.toString()}');
+						return outputStorageWorker.deleteDir();
+					})
+					.then(function(_) {
+						log.info('Deleted ${outputStorageWorker.toString()}');
+					})
+					.catchError(function(err) {
+						log.error('Problem deleting ${outputStorageWorker.toString()} or ${inputStorageWorker.toString()} err=${err}');
+					});
 				return jobResult;
 			});
 
