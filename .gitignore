@@ -8,7 +8,6 @@
 .vagrant
 /build.hxml
 build
-bin/cloud*
 node_modules
 npm-debug.log
 platform
