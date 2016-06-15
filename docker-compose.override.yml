@@ -4,7 +4,7 @@ compute:
     - /var/run/docker.sock:/var/run/docker.sock
     - ./data/computejobs:/computejobs
     - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
-    - ./data/registry:/registry
+    - ./data/registry:/app/data/registry
   links:
     - redis
     - registry

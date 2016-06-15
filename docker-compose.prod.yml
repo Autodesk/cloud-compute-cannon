@@ -5,7 +5,7 @@ compute:
     #Mount local storage, even though it might use S3, we don't know at this point.
     - ./data/computejobs:/computejobs
     - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
-    - ./data/registry:/registry
+    - ./data/registry:/app/data/registry
   links:
     - redis
     - registry
