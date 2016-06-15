@@ -8,8 +8,6 @@ import js.npm.RedisClient;
 import js.npm.Docker;
 
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.JobTools;
 import ccc.storage.ServiceStorage;
 

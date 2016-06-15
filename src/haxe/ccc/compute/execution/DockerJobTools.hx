@@ -24,8 +24,6 @@ import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 
 using ccc.compute.JobTools;
 using ccc.compute.workers.WorkerTools;

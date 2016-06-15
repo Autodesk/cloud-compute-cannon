@@ -12,8 +12,6 @@ import js.npm.RedisClient;
 import js.npm.Ssh;
 
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.execution.Job;
 
 import promhx.Promise;

@@ -22,8 +22,6 @@ import minject.Injector;
 
 import promhx.Promise;
 
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.InitConfigTools;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ServiceBatchCompute;

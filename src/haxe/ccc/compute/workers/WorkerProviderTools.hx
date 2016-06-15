@@ -23,8 +23,6 @@ import promhx.DockerPromises;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 

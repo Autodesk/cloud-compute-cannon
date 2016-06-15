@@ -11,7 +11,6 @@ import promhx.RedisPromises;
 
 import ccc.compute.client.ClientCompute;
 import ccc.compute.ServiceBatchCompute;
-import ccc.compute.Definitions;
 import ccc.compute.ConnectionToolsRedis;
 
 import utils.TestTools;

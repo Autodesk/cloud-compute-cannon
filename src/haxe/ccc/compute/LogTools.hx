@@ -2,7 +2,6 @@ package ccc.compute;
 
 import haxe.Json;
 
-import ccc.compute.Definitions;
 
 class LogTools
 {

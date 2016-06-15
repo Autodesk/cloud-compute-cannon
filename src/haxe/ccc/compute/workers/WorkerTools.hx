@@ -11,7 +11,6 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 import ccc.storage.ServiceStorage;
 

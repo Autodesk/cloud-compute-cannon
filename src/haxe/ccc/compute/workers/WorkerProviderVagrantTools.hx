@@ -20,7 +20,6 @@ import promhx.RedisPromises;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
 import ccc.compute.workers.VagrantTools;
 
 import util.SshTools;

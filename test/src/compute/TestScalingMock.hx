@@ -20,7 +20,6 @@ import promhx.RedisPromises;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderVagrant;

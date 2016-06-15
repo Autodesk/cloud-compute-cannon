@@ -16,8 +16,6 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.RequestPromises;
 
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.JobTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
@@ -43,7 +41,7 @@ class TestTools
 		var out = ChildProcess.execSync(command);
 		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: (env != null ? env : js.Node.process.env), silent:true});
 		serverChildProcess.on(ChildProcessEvent.Message, function(message, sendHandle) {
-			if (message == Constants.IPC_MESSAGE_READY) {
+			if (message == IPC_MESSAGE_READY) {
 				promise.resolve(serverChildProcess);
 			}
 		});

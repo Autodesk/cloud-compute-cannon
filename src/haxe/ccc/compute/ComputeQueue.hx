@@ -14,7 +14,6 @@ import promhx.RedisPromises;
 import promhx.deferred.DeferredPromise;
 
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 
 using Lambda;

@@ -1,6 +1,5 @@
 package compute;
 
-import ccc.compute.Definitions;
 import ccc.compute.execution.Jobs;
 
 import t9.abstracts.time.*;

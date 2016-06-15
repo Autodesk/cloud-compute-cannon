@@ -1,6 +1,5 @@
 package compute;
 
-import ccc.compute.Definitions;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.Worker;
 

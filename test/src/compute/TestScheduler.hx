@@ -18,7 +18,6 @@ import util.RedisTools;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 import ccc.compute.JobTools;
 
 import utils.TestTools;

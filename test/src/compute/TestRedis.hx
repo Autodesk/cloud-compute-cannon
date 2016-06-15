@@ -16,7 +16,6 @@ import promhx.PromiseTools;
 
 import util.RedisTools;
 import ccc.compute.*;
-import ccc.compute.Definitions;
 
 using StringTools;
 using Lambda;

@@ -19,7 +19,6 @@ import promhx.RedisPromises;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools as Tools;

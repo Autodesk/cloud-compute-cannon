@@ -30,8 +30,6 @@ import ccc.storage.StorageSourceType;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.execution.BatchComputeDocker;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
