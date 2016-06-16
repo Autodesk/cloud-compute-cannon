@@ -56,6 +56,7 @@ class Constants
 	inline public static var SERVER_PATH_CHECKS_OK = 'OK';
 	inline public static var SERVER_PATH_STATUS = '/status';
 	inline public static var SERVER_PATH_READY = '/ready';
+	inline public static var SERVER_PATH_WAIT = '/wait';
 	inline public static var SERVER_API_URL = '/api';
 	inline public static var SERVER_API_RPC_URL_FRAGMENT = '/rpc';
 	inline public static var SERVER_RPC_URL = '$SERVER_API_URL/rpc';

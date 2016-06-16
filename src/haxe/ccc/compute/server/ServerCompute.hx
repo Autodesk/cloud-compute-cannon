@@ -191,6 +191,25 @@ class ServerCompute
 			}
 		});
 
+		//Check if server is ready
+		app.get(Constants.SERVER_PATH_WAIT, cast function(req, res) {
+			function check() {
+				if (status == ServerStatus.Ready_4_4) {
+					res.status(200).end();
+					return true;
+				} else {
+					return false;
+				}
+			}
+			var poll;
+			poll = function() {
+				if (!check()) {
+					Node.setTimeout(poll, 1000);
+				}
+			}
+			poll();
+		});
+
 		//Check if server is listening
 		app.get('/log', function(req, res) {
 			var logMessageString = 'somestring';
