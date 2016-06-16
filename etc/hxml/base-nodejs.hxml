@@ -2,7 +2,7 @@ etc/hxml/base.hxml
 
 -lib hxnodejs:4.0.8
 -lib nodejs-redis:1.1.1
--lib promhx-unit-test:1.1.5
+-lib promhx-unit-test:2.0.0
 
 -cp lib/promhx/src/main
 -cp lib/hxnodelibs

@@ -45,6 +45,8 @@ class Constants
 	inline public static var ENV_VAR_ADDRESS_REGISTRY = 'REGISTRY';
 	inline public static var ENV_VAR_AWS_PROVIDER_CONFIG = 'AWS_PROVIDER_CONFIG';
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
+	/* Env vars for running tests*/
+	inline public static var ENV_VAR_CCC_ADDRESS = 'CCC_ADDRESS';
 
 	/* Server */
 	public static var REGISTRY :Host;
