@@ -1,4 +1,4 @@
-package ccc.compute.cli;
+package ccc.compute.client.cli;
 
 import ccc.compute.server.ProviderTools;
 import ccc.compute.server.ProviderTools.*;

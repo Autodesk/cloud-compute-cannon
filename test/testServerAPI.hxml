@@ -1,0 +1,5 @@
+test/testbase.hxml
+
+-main TestServerAPI
+
+-js build/test/compute_test_server_api.js

@@ -1,4 +1,4 @@
-package ccc.compute.cli;
+package ccc.compute.client.cli;
 
 
 import haxe.Json;
@@ -48,7 +48,7 @@ class CliMain
 		}
 
 		var context = new t9.remoting.jsonrpc.Context();
-		context.registerService(ccc.compute.cli.ClientCommands);
+		context.registerService(ccc.compute.client.cli.ClientCommands);
 
 		//The following functions are broken out so that the CLI commands can be listed
 		//in alphabetical order when the help command is called.
@@ -117,7 +117,7 @@ class CliMain
 		//Add the client methods. These are handled the same as the remote JsonRpc
 		//methods, except that they are local, so the command JsonRpc is just sent
 		//to the local context.
-		var clientRpcDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.cli.ClientCommands);
+		var clientRpcDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.client.cli.ClientCommands);
 
 		var rpcDefinitionMap = new Map<String, {isClient:Bool, def:RemoteMethodDefinition}>();
 		var rpcAlias :Array<String> = [];

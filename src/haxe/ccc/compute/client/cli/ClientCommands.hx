@@ -1,4 +1,4 @@
-package ccc.compute.cli;
+package ccc.compute.client.cli;
 
 import ccc.compute.client.ClientCompute;
 import ccc.compute.JobTools;
@@ -7,7 +7,7 @@ import ccc.compute.ServiceBatchCompute;
 import ccc.compute.workers.WorkerProviderTools;
 import ccc.compute.server.ProviderTools;
 import ccc.compute.server.ProviderTools.*;
-import ccc.compute.cli.CliTools.*;
+import ccc.compute.client.cli.CliTools.*;
 import ccc.storage.ServiceStorageLocalFileSystem;
 
 import haxe.Resource;

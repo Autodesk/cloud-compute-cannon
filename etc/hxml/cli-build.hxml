@@ -23,7 +23,7 @@ etc/hxml/base-nodejs.hxml
 
 -cp test/src
 
--main ccc.compute.cli.CliMain
+-main ccc.compute.client.cli.CliMain
 
 -js build/cli/cloudcomputecannon.js
 

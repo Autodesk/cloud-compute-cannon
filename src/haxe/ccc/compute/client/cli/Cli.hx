@@ -1,4 +1,4 @@
-package ccc.compute.cli;
+package ccc.compute.client.cli;
 
 import haxe.Json;
 

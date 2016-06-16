@@ -10,6 +10,7 @@ import js.npm.Docker;
 import ccc.compute.ComputeQueue;
 import ccc.compute.InstancePool;
 import ccc.compute.JobTools;
+import ccc.compute.execution.DockerJobTools;
 import ccc.compute.workers.WorkerTools;
 import ccc.storage.ServiceStorage;
 
@@ -35,6 +36,22 @@ using StringTools;
  */
 class ServerCommands
 {
+	public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>
+	{
+		return return ComputeQueue.getAllJobIds(redis)
+			.pipe(function(jobIds :Array<JobId>) {
+				return Promise.whenAll(jobIds.map(function(jobId) {
+					return ComputeQueue.getJob(redis, jobId)
+						.pipe(function(job :DockerJobDefinition) {
+							return DockerJobTools.deleteJobRemoteData(job, fs);
+						});
+				}));
+			})
+			.pipe(function(_) {
+				return hardStopAndDeleteAllJobs(redis);
+			});
+	}
+
 	public static function hardStopAndDeleteAllJobs(redis :RedisClient) :Promise<Bool>
 	{
 		trace('hardStopAndDeleteAllJobs');

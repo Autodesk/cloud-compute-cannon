@@ -25,3 +25,9 @@ etc/hxml/server-build.hxml
 --next
 
 etc/hxml/cli-build.hxml
+
+-cmd echo "Building Server API tests"
+
+--next
+
+test/testServerAPI.hxml

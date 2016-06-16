@@ -5,7 +5,7 @@ import haxe.remoting.JsonRpc;
 
 import ccc.compute.JobTools;
 import ccc.compute.ServiceBatchCompute;
-import ccc.compute.cli.CliTools.*;
+import ccc.compute.client.cli.CliTools.*;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;

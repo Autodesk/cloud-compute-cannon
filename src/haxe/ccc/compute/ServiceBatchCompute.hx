@@ -68,6 +68,15 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
+		alias:'reset',
+		doc:'Resets the server: kills and removes all jobs, removes local and remote data on jobs in the database.'
+	})
+	public function serverReset() :Promise<Bool>
+	{
+		return ServerCommands.serverReset(_redis, _fs);
+	}
+
+	@rpc({
 		alias:'image-push',
 		doc:'Pushes a docker image (downloads it if needed) and tags it into the local registry for workers to consume.',
 		args:{
