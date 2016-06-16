@@ -4,6 +4,14 @@
  * than restarting docker containers.
  */
 
+var child_process = require('child_process');
+var http = require('http');
+var fs = require('fs');
+var express = require('express');
+var bodyParser = require('body-parser');
+var bunyan = require('bunyan');
+var log = bunyan.createLogger({name: "test-server"});
+
 function isInsideContainer() {
 	//http://stackoverflow.com/questions/23513045/how-to-check-if-a-process-is-running-inside-docker-container
 	try {
@@ -20,20 +28,9 @@ if (!isInsideContainer()) {
 	SERVER_PATH = 'build/cloud-compute-cannon-server.js';
 }
 
-var child_process = require('child_process');
-var http = require('http');
-var fs = require('fs');
-var express = require('express');
-var bodyParser = require('body-parser');
-var bunyan = require('bunyan');
-var log = bunyan.createLogger({name: "test-server"});
-
 var app = express();
 
-// app.use(bodyParser.text()); // for parsing application/json
-
 var appServerProcess = null;
-
 function restartServer(cb) {
 	function startServer() {
 		log.info('starting_server');
@@ -75,18 +72,22 @@ app.get('/restart', function (req, res) {
 });
 
 app.use(function (req, res, next) {
-	req.setEncoding('utf8');
-	req.rawBody = '';
+	var buffer = Buffer.concat([]);
 	req.on('data', function(chunk) {
-		req.rawBody += chunk;
+		buffer = Buffer.concat([buffer, chunk]);
 	});
-	req.on('end', function(){
+	req.on('end', function() {
+		req.rawBody = buffer.toString('utf8');
 		next();
 	});
 });
+
+//Test this with:
+//curl -X POST -T build/cloud-compute-cannon-server.js  http://localhost:9001/restart
 app.post('/restart', function (req, res) {
 	var serverCode = req.rawBody;
 	// res.status(200).end();
+	console.log(serverCode.substr(0, 30));
 	if (serverCode != null) {
 		fs.writeFileSync(SERVER_PATH, serverCode);
 		restartServer(function(err) {
