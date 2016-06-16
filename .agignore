@@ -1,0 +1,10 @@
+build/
+data/
+lib/janicek-core-haxe/doc
+lib/janicek-core-haxe/test
+lib/hxnodelibs/examples
+lib/promhx/bin
+lib/promhx/demo
+lib/promhx/hxml
+lib/promhx/tools
+tmp/
