@@ -24,9 +24,7 @@ class CliTools
 {
 	public static function getProxy(rpcUrl :UrlString)
 	{
-		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.ServiceBatchCompute)
-			.setConnection(new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(rpcUrl));
-		return proxy;
+		return ccc.compute.client.ProxyTools.getProxy(rpcUrl);
 	}
 
 	public static function getHost() :Host

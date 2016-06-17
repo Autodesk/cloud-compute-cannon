@@ -1,14 +1,17 @@
+package ccc.compute.server.tests;
+
 import js.Node;
 
 import haxe.unit.async.PromiseTestRunner;
 
 class TestServerAPI
 {
-	static function main()
-	{
-		TestMain.setupTestExecutable();
-		runServerAPITests();
-	}
+	// public static function main()
+	// {
+	// 	TestMain.setupTestExecutable();
+	// 	runServerAPITests();
+	// }
+
 
 	/**
 	 * This executes all tests against a server with address env.CCC_ADDRESS
@@ -16,28 +19,27 @@ class TestServerAPI
 	 */
 	public static function runServerAPITests() :Promise<Bool>
 	{
-		var env = Node.process.env;
-		if (!Reflect.hasField(env, ENV_VAR_CCC_ADDRESS)) {
-			throw 'Missing env var $ENV_VAR_CCC_ADDRESS';
-		}
 		var runner = new PromiseTestRunner();
 
 		//Run the unit tests. These do not require any external dependencies
-		runner.add(new utils.TestMiscUnit());
-		runner.add(new utils.TestPromiseQueue());
-		runner.add(new utils.TestStreams());
-		runner.add(new storage.TestStorageRestAPI());
-		runner.add(new storage.TestStorageLocal());
-		runner.add(new compute.TestRedisMock());
-		// if (isInternet) {
-		// 	runner.add(new storage.TestStorageSftp());
-		// }
+		// runner.add(new utils.TestMiscUnit());
+		// runner.add(new utils.TestPromiseQueue());
+		// runner.add(new utils.TestStreams());
+		// runner.add(new storage.TestStorageRestAPI());
+		// runner.add(new storage.TestStorageLocal());
+		// runner.add(new compute.TestRedisMock());
+		// // if (isInternet) {
+		// // 	runner.add(new storage.TestStorageSftp());
+		// // }
 
 
-		// if (isRedis) {
-		// 	// These require a local redis db
-		runner.add(new compute.TestAutoscaling());
-		runner.add(new compute.TestRedis());
+		// // if (isRedis) {
+		// // 	// These require a local redis db
+		// runner.add(new compute.TestAutoscaling());
+		// runner.add(new compute.TestRedis());
+
+		runner.add(new TestRegistry());
+		
 
 		// 	//These require access to a local docker server
 		// 	if (isDockerProvider) {

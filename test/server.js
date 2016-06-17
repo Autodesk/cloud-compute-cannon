@@ -2,6 +2,8 @@
  * This server provides a way to upload new server code
  * and restart the server process. This is much faster
  * than restarting docker containers.
+ *
+ * curl -X POST -T build/cloud-compute-cannon-server.js  http://localhost:9002/restart
  */
 
 var child_process = require('child_process');
@@ -10,7 +12,9 @@ var fs = require('fs');
 var express = require('express');
 var bodyParser = require('body-parser');
 var bunyan = require('bunyan');
-var log = bunyan.createLogger({name: "test-server"});
+var log = bunyan.createLogger({name: "reloader", host:""});
+
+var PORT = 9002;
 
 function isInsideContainer() {
 	//http://stackoverflow.com/questions/23513045/how-to-check-if-a-process-is-running-inside-docker-container
@@ -83,7 +87,7 @@ app.use(function (req, res, next) {
 });
 
 //Test this with:
-//curl -X POST -T build/cloud-compute-cannon-server.js  http://localhost:9001/restart
+//curl -X POST -T build/cloud-compute-cannon-server.js  http://localhost:9002/restart
 app.post('/restart', function (req, res) {
 	var serverCode = req.rawBody;
 	// res.status(200).end();
@@ -99,8 +103,8 @@ app.post('/restart', function (req, res) {
 });
 
 var httpServer = http.createServer(app);
-httpServer.listen('9001', function() {
-	log.info('Restart server listening on port 9001!');
+httpServer.listen(PORT, function() {
+	log.info('Restart server listening on port ' + PORT);
 	restartServer(function(err) {
 		if (err) {
 			log.error({message:'Failed to start server', error:err.stack});
@@ -110,12 +114,32 @@ httpServer.listen('9001', function() {
 	});
 });
 
+//Watch for file changes, and automatically reload
+var chokidar = require('chokidar');
+var watcher = chokidar.watch(SERVER_PATH, {
+  ignored: /[\/\\]\./,
+  persistent: true,
+  usePolling: true,
+  interval: 100,
+  binaryInterval: 300,
+  alwaysStat: true,
+  awaitWriteFinish: true
+});
+watcher.on('change', (path, stats) => {
+	restartServer(function(err) {
+    	if (err) {
+    		log.error(err);
+    	}
+	});
+});
+
 var closed = false;
 process.on('SIGINT', function() {
 	log.warn("Caught interrupt signal");
 	if (closed) {
 		return;
 	}
+	watcher.close();
 	closed = true;
 	httpServer.close(function() {
 		if (appServerProcess == null) {

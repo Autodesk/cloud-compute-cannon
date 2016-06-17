@@ -5,6 +5,4 @@ etc/hxml/base-nodejs.hxml
 # -D PromhxExposeErrors
 -D tests
 
--lib promhx-unit-test:2.0.0
-
 -cp test/src

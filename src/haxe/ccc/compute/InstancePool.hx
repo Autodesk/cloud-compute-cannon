@@ -345,7 +345,9 @@ class InstancePool
 		return promise
 			.then(function(data) {
 				trace('data=${data}');
-				return cast data;
+				trace('data=${data != null ? cast data : []} sdsfsdfsdfsdfsdfsdfdfsdfsdf
+					ssdd');
+				return data != null ? cast data : [];
 			});
 	}
 

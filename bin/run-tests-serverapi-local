@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-CCC_ADDRESS=localhost:9000 haxe test/testServerAPI.hxml -cmd "node build/test/compute_test_server_api.js"
+CCC_ADDRESS=localhost:9000 haxe test/testServerAPI.hxml -cmd "node build/test/compute_test_server_api.js" | bunyan

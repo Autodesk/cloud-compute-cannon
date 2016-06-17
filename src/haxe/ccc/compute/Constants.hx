@@ -47,11 +47,14 @@ class Constants
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
 	/* Env vars for running tests*/
 	inline public static var ENV_VAR_CCC_ADDRESS = 'CCC_ADDRESS';
+	inline public static var ENV_DISABLE_SERVER_CHECKS = 'DISABLE_SERVER_CHECKS';
 
 	/* Server */
 	public static var REGISTRY :Host;
 	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
 	inline public static var SERVER_DEFAULT_PORT = 9000;
+	//This port will be open to linked containers via HTTP (not HTTPS)
+	inline public static var SERVER_HTTP_PORT = 9001;
 	inline public static var REGISTRY_DEFAULT_PORT = 5001;
 	inline public static var REDIS_PORT = 6379;
 	inline public static var SERVER_PATH_CHECKS = '/checks';

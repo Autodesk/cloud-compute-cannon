@@ -76,7 +76,7 @@ class ServerCompute
 	{
 		js.npm.SourceMapSupport;
 		ErrorToJson;
-		Logger.log = new AbstractLogger({name: "CloudComputeCannon"});
+		Logger.log = new AbstractLogger({name: "ccc", host:""});
 		ConnectionToolsRedis.getRedisClient()
 			.then(function(redis) {
 				Log.info('Connected to redis');
@@ -90,7 +90,8 @@ class ServerCompute
 					Node.process.exit(0);
 				});
 
-				var PORT :Int = Reflect.hasField(js.Node.process.env, 'PORT') ? Std.int(Reflect.field(js.Node.process.env, 'PORT')) : 9000;
+				var env = Node.process.env;
+				var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
 				server.listen(PORT, function() {
 					Log.info('Listening http://localhost:$PORT');
 				});
@@ -118,6 +119,7 @@ class ServerCompute
 		Log.warn({log_check:'warn'});
 		Log.error({log_check:'error'});
 
+		var env = Node.process.env;
 
 		//Sanity checks
 		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
@@ -125,7 +127,7 @@ class ServerCompute
 			js.Node.process.exit(-1);
 		}
 
-		var CONFIG_PATH :String = Reflect.hasField(js.Node.process.env, 'CONFIG_PATH') ? Reflect.field(js.Node.process.env, 'CONFIG_PATH') : SERVER_MOUNTED_CONFIG_FILE;
+		var CONFIG_PATH :String = Reflect.hasField(env, 'CONFIG_PATH') ? Reflect.field(env, 'CONFIG_PATH') : SERVER_MOUNTED_CONFIG_FILE;
 		Log.debug({'CONFIG_PATH':CONFIG_PATH});
 		var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
 		Assert.notNull(config);
@@ -284,9 +286,11 @@ class ServerCompute
 
 				//Actually create the server and start listening
 				var server = Http.createServer(cast app);
+				var serverHTTP = Http.createServer(cast app);
 
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
+				websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
 
 
 				//After all API routes, assume that any remaining requests are for files.
@@ -299,23 +303,51 @@ class ServerCompute
 				//Setup a static file server to serve job results
 				app.use('/', StorageRestApi.staticFileRouter(storage));
 
+				var closing = false;
 				Node.process.on('SIGINT', function() {
 					Log.warn("Caught interrupt signal");
-					untyped server.close();
-					for (workerProvider in workerProviders) {
-						workerProvider.dispose();
+					if (closing) {
+						return;
 					}
-					Node.process.exit(0);
+					closing = true;
+					untyped server.close(function() {
+						untyped serverHTTP.close(function() {
+							return Promise.whenAll(workerProviders.map(function(workerProvider) {
+								return workerProvider.dispose();
+							}))
+							.then(function(_) {
+								Node.process.exit(0);
+							});
+						});
+					});
 				});
 
-				var PORT :Int = Reflect.hasField(js.Node.process.env, 'PORT') ? Std.int(Reflect.field(js.Node.process.env, 'PORT')) : 9000;
+				var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
 				server.listen(PORT, function() {
 					Log.info('Listening http://localhost:$PORT');
-					status = ServerStatus.Ready_4_4;
-					Log.debug({server_status:status});
-					if (Node.process.send != null) {//If spawned via a parent process, send will be defined
-						Node.process.send(Constants.IPC_MESSAGE_READY);
-					}
+					serverHTTP.listen(SERVER_HTTP_PORT, function() {
+						Log.info('Listening http://localhost:$SERVER_HTTP_PORT');
+						status = ServerStatus.Ready_4_4;
+						Log.debug({server_status:status});
+						if (Node.process.send != null) {//If spawned via a parent process, send will be defined
+							Node.process.send(Constants.IPC_MESSAGE_READY);
+						}
+
+						var disableServerCheck :Dynamic = Reflect.field(env, ENV_DISABLE_SERVER_CHECKS);
+						if (!(disableServerCheck != null && (disableServerCheck == '1' || disableServerCheck == 'true' || disableServerCheck == 'True'))) {
+							ccc.compute.server.tests.TestServerAPI.runServerAPITests()
+								.then(function(success) {
+									if (!success) {
+										Log.critical('Failed functional tests');
+										Node.process.exit(1);
+									}
+								})
+								.catchError(function(err) {
+									Log.critical({message:'Error in functional tests', error:err});
+									Node.process.exit(1);
+								});
+						}
+					});
 				});
 			});
 	}

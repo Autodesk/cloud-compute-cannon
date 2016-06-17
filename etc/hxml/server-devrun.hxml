@@ -4,4 +4,4 @@ etc/hxml/server-build.hxml
 
 -D PromhxExposeErrors
 
--cmd node build/cloud-compute-cannon-server.js | bunyan
+-cmd node build/cloud-compute-cannon-server.js

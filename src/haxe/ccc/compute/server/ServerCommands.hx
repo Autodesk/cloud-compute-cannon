@@ -68,6 +68,7 @@ class ServerCommands
 					.pipe(function(_) {
 						return ccc.compute.InstancePool.getAllWorkers(redis)
 							.pipe(function(workerDefs) {
+								trace('workerDefs=${workerDefs}');
 								return Promise.whenAll(workerDefs.map(
 									function(instance) {
 										return WorkerTools.cleanWorker(instance);

@@ -44,6 +44,7 @@
     "body-parser": "^1.14.1",
     "bunyan": "^1.8.0",
     "busboy": "^0.2.13",
+    "chokidar": "^1.5.2",
     "cli-color": "^1.1.0",
     "commander": "^2.9.0",
     "cors": "^2.7.1",

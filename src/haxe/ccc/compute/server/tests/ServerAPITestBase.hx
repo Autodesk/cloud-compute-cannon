@@ -1,5 +1,6 @@
-package compute;
+package ccc.compute.server.tests;
 
+import js.Node;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -19,41 +20,19 @@ typedef Disposable = {
 	function dispose() :Promise<Bool>;
 }
 
-class TestServerAPIBase extends TestBase
+class ServerAPITestBase extends haxe.unit.async.PromiseTest
 {
-	public static function resetRemoteServer(host :Host) :Promise<Bool>
-	{
-		var serverHost
-	}
-
-	public static function getProxy(rpcUrl :UrlString)
-	{
-		return ccc.compute.cli.CliTools.getProxy(rpcUrl);
-	}
-
 	var _redis :RedisClient;
 	var _serverHost :Host;
+	var _serverHostRPCAPI :UrlString;
 
 	override public function setup() :Null<Promise<Bool>>
 	{
-		var env = Node.process.env;
-		if (!Reflect.hasField(env, ENV_VAR_CCC_ADDRESS)) {
-			throw 'Missing env var $ENV_VAR_CCC_ADDRESS';
-		}
-		_serverHost = 
+		_serverHost = ServerTestTools.getServerAddress();
+		_serverHostRPCAPI = 'http://${_serverHost}${SERVER_RPC_URL}';
 		return super.setup()
 			.pipe(function(_) {
-
+				return ServerTestTools.resetRemoteServer(_serverHost);
 			});
 	}
-
-	override public function tearDown() :Null<Promise<Bool>>
-	{
-		return super.setup()
-			.pipe(function(_) {
-
-			});
-	}
-
-
 }
