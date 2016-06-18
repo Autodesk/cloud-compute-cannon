@@ -1,0 +1,11 @@
+etc/hxml/base-nodejs.hxml
+
+-D nodejs
+
+-debug
+
+-resource package.json@package.json
+
+-main ccc.compute.server.tests.ServerCI
+
+-js build/devci-server.js

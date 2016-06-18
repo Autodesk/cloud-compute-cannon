@@ -30,9 +30,6 @@ WORKDIR $APP
 
 RUN haxelib newrepo
 
-ENV PORT 9000
-EXPOSE $PORT
-
 #Only install npm packages if the package.json changes
 ADD ./package.json $APP/package.json
 RUN npm install
@@ -45,6 +42,11 @@ RUN haxelib install --always etc/hxml/base.hxml && haxelib install --always etc/
 COPY ./ $APP/
 
 RUN	haxe etc/hxml/build-all.hxml
+
+ENV PORT 9000
+EXPOSE $PORT
+EXPOSE 9001
+EXPOSE 9002
 
 CMD haxe etc/hxml/server-run.hxml
 

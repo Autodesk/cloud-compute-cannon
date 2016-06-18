@@ -1,6 +1,6 @@
 etc/hxml/base.hxml
 
--lib hxnodejs:4.0.8
+-lib hxnodejs:4.0.9
 -lib nodejs-redis:1.1.1
 -lib promhx-unit-test:2.0.0
 

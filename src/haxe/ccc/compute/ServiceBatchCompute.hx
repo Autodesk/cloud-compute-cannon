@@ -28,6 +28,7 @@ import promhx.Promise;
 	import ccc.compute.server.ServerCommands;
 	import ccc.compute.server.ServerCommands.*;
 	import ccc.compute.workers.WorkerProvider;
+	import ccc.compute.server.tests.TestServerAPI;
 
 	import ccc.storage.ServiceStorage;
 	import ccc.storage.StorageDefinition;
@@ -65,6 +66,15 @@ class ServiceBatchCompute
 	public function test(?echo :String = 'defaultECHO' ) :Promise<String>
 	{
 		return Promise.promise(echo + echo);
+	}
+
+	@rpc({
+		alias:'runtests',
+		doc:'Run all server functional tests'
+	})
+	public function runServerTests() :Promise<Bool>
+	{
+		return ccc.compute.server.tests.TestServerAPI.runServerAPITests('localhost:$SERVER_DEFAULT_PORT');
 	}
 
 	@rpc({

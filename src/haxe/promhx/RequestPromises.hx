@@ -34,7 +34,7 @@ class RequestPromises
 					}
 				});
 				res.on(ReadableEvent.End, function() {
-					promise.resolve(responseBuffer.toString('utf8'));
+					promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
 				});
 			}
 		}
@@ -81,7 +81,7 @@ class RequestPromises
 					}
 				});
 				res.on(ReadableEvent.End, function() {
-					promise.resolve(responseBuffer.toString('utf8'));
+					promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
 				});
 			}
 		}

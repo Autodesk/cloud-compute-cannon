@@ -1,0 +1,9 @@
+etc/hxml/base-nodejs.hxml
+
+-D nodejs
+
+-debug
+
+-main ccc.compute.server.tests.TestServerAPI
+
+-js build/test/server-test-runner.js

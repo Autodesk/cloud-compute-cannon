@@ -10,6 +10,9 @@ compute:
     - registry
     - fluentd
     - elasticsearch
+  ports:
+    - "9001:9001"
+    - "9002:9002"
   environment:
     #This is used to get the correct host working directory to pass into the
     #worker containers to map the local file system to /inputs+/outputs within

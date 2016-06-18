@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#Used by the dev CI reloader to compile tests then run them against specific
+#CCC stacks.
+haxe etc/hxml/server-api-test-runner.hxml
+echo "Host=$1"
+node build/test/server-test-runner.js $1

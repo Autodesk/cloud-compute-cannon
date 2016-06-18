@@ -71,10 +71,10 @@
     "tar-stream": "^1.5.2",
     "tar.gz": "^1.0.2",
     "terminal-kit": "^0.24.1",
-    "watchr": "^2.4.13",
     "ws": "^0.8.0"
   },
   "devDependencies": {
+    "bluebird": "^3.4.0",
     "redis-mock": "^0.4.9"
   },
   "preferGlobal": true,

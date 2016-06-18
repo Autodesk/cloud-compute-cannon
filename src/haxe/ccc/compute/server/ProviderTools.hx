@@ -1,6 +1,7 @@
 package ccc.compute.server;
 
 import ccc.compute.client.cli.CliTools.*;
+import ccc.compute.client.ClientTools;
 import ccc.compute.InitConfigTools;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 import ccc.compute.workers.WorkerProviderVagrantTools;
@@ -276,17 +277,7 @@ class ProviderTools
 	public static function checkServerRunning(instance :InstanceDefinition, ?swallowErrors :Bool = true) :Promise<Bool>
 	{
 		var host = getServerHost(new HostName(instance.ssh.host));
-		var url = 'http://$host/checks';
-		return RequestPromises.get(url)
-			.then(function(out) {
-				return out.trim() == SERVER_PATH_CHECKS_OK;
-			})
-			.errorPipe(function(err) {
-				if (!swallowErrors) {
-					Log.error({error:err, url:url});
-				}
-				return Promise.promise(false);
-			});
+		return ClientTools.isServerListening(host);
 	}
 
 	public static function serverCheck(serverBlob :ServerConnectionBlob) :Promise<ServerCheckResult>

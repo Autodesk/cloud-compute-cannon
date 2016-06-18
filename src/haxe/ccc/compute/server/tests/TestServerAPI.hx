@@ -6,18 +6,18 @@ import haxe.unit.async.PromiseTestRunner;
 
 class TestServerAPI
 {
-	// public static function main()
-	// {
-	// 	TestMain.setupTestExecutable();
-	// 	runServerAPITests();
-	// }
-
+	static function main()
+	{
+		var args = Sys.args;
+		trace('args=${args}');
+		// runServerAPITests()
+	}
 
 	/**
 	 * This executes all tests against a server with address env.CCC_ADDRESS
 	 * @return [description]
 	 */
-	public static function runServerAPITests() :Promise<Bool>
+	public static function runServerAPITests(targetHost :Host) :Promise<Bool>
 	{
 		var runner = new PromiseTestRunner();
 
@@ -38,7 +38,7 @@ class TestServerAPI
 		// runner.add(new compute.TestAutoscaling());
 		// runner.add(new compute.TestRedis());
 
-		runner.add(new TestRegistry());
+		runner.add(new TestRegistry(targetHost));
 		
 
 		// 	//These require access to a local docker server

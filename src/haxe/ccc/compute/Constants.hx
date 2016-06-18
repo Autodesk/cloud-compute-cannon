@@ -55,10 +55,12 @@ class Constants
 	inline public static var SERVER_DEFAULT_PORT = 9000;
 	//This port will be open to linked containers via HTTP (not HTTPS)
 	inline public static var SERVER_HTTP_PORT = 9001;
+	inline public static var SERVER_RELOADER_PORT = 9002;
 	inline public static var REGISTRY_DEFAULT_PORT = 5001;
 	inline public static var REDIS_PORT = 6379;
 	inline public static var SERVER_PATH_CHECKS = '/checks';
 	inline public static var SERVER_PATH_CHECKS_OK = 'OK';
+	inline public static var SERVER_PATH_RELOAD = '/reload';
 	inline public static var SERVER_PATH_STATUS = '/status';
 	inline public static var SERVER_PATH_READY = '/ready';
 	inline public static var SERVER_PATH_WAIT = '/wait';

@@ -30,4 +30,8 @@ etc/hxml/cli-build.hxml
 
 --next
 
-test/testServerAPI.hxml
+-cmd echo "Building Development CI server"
+
+--next
+
+etc/hxml/dev-ci-server-build.hxml

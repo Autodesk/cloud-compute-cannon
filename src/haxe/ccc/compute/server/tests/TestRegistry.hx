@@ -15,7 +15,7 @@ class TestRegistry extends ServerAPITestBase
 	 */
 	public function testRegistryEmpty() :Promise<Bool>
 	{
-		var registryHost = ConnectionToolsRegistry.getRegistryAddress();
+		var registryHost = new Host(_serverHost.getHostname(), new Port(REGISTRY_DEFAULT_PORT));
 		return DockerRegistryTools.getRegistryImagesAndTags(registryHost)
 			.then(function(images) {
 				var fields = Reflect.fields(images);
@@ -24,5 +24,8 @@ class TestRegistry extends ServerAPITestBase
 			});
 	}
 
-	public function new() {}
+	public function new(targetHost :Host)
+	{
+		super(targetHost);
+	}
 }

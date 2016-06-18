@@ -27,10 +27,10 @@ function isInsideContainer() {
 	}
 }
 
-var SERVER_PATH = 'cloud-compute-cannon-server.js';
-if (!isInsideContainer()) {
+// var SERVER_PATH = 'cloud-compute-cannon-server.js';
+// if (!isInsideContainer()) {
 	SERVER_PATH = 'build/cloud-compute-cannon-server.js';
-}
+// }
 
 var app = express();
 
@@ -69,7 +69,7 @@ app.get('/', function (req, res) {
 	res.send('Functional testing server');
 });
 
-app.get('/restart', function (req, res) {
+app.get('/reload', function (req, res) {
 	restartServer(function(err) {
 		res.send(err == null ? 'OK' : (err.stack == null ? err : err.stack));
 	});
@@ -88,7 +88,7 @@ app.use(function (req, res, next) {
 
 //Test this with:
 //curl -X POST -T build/cloud-compute-cannon-server.js  http://localhost:9002/restart
-app.post('/restart', function (req, res) {
+app.post('/reload', function (req, res) {
 	var serverCode = req.rawBody;
 	// res.status(200).end();
 	console.log(serverCode.substr(0, 30));

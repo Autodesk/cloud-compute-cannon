@@ -64,6 +64,7 @@ class ServerCompute
 {
 	static function main()
 	{
+		var v = 'sdfsdf';
 		//Required for source mapping
 		js.npm.SourceMapSupport;
 		//Embed various files
@@ -333,20 +334,20 @@ class ServerCompute
 							Node.process.send(Constants.IPC_MESSAGE_READY);
 						}
 
-						var disableServerCheck :Dynamic = Reflect.field(env, ENV_DISABLE_SERVER_CHECKS);
-						if (!(disableServerCheck != null && (disableServerCheck == '1' || disableServerCheck == 'true' || disableServerCheck == 'True'))) {
-							ccc.compute.server.tests.TestServerAPI.runServerAPITests()
-								.then(function(success) {
-									if (!success) {
-										Log.critical('Failed functional tests');
-										Node.process.exit(1);
-									}
-								})
-								.catchError(function(err) {
-									Log.critical({message:'Error in functional tests', error:err});
-									Node.process.exit(1);
-								});
-						}
+						// var disableServerCheck :Dynamic = Reflect.field(env, ENV_DISABLE_SERVER_CHECKS);
+						// if (!(disableServerCheck != null && (disableServerCheck == '1' || disableServerCheck == 'true' || disableServerCheck == 'True'))) {
+						// 	ccc.compute.server.tests.TestServerAPI.runServerAPITests()
+						// 		.then(function(success) {
+						// 			if (!success) {
+						// 				Log.critical('Failed functional tests');
+						// 				Node.process.exit(1);
+						// 			}
+						// 		})
+						// 		.catchError(function(err) {
+						// 			Log.critical({message:'Error in functional tests', error:err});
+						// 			Node.process.exit(1);
+						// 		});
+						// }
 					});
 				});
 			});
