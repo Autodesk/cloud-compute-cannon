@@ -8,6 +8,14 @@ import promhx.RetryPromise;
  */
 class ClientTools
 {
+	public static function waitUntilServerReady(host :Host, ?maxAttempts :Int = 300, ?delayMilliseconds :Int = 1000) :Promise<Bool>
+	{
+		return pollServerListening(host, maxAttempts, delayMilliseconds)
+			.pipe(function(_) {
+				return isServerReady(host);
+			});
+	}
+
 	public static function isServerListening(host :Host, ?swallowErrors :Bool = true) :Promise<Bool>
 	{
 		var url = 'http://${host}${SERVER_PATH_CHECKS}';
@@ -40,7 +48,6 @@ class ClientTools
 	public static function isServerReady(host :Host, ?swallowErrors :Bool = true) :Promise<Bool>
 	{
 		var url = 'http://${host}${SERVER_PATH_READY}';
-		trace('url=${url}');
 		return RequestPromises.get(url)
 			.then(function(out) {
 				return true;

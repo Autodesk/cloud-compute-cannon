@@ -15,6 +15,7 @@ import haxe.Json;
 import haxe.remoting.JsonRpc;
 
 import js.Node;
+import js.node.Buffer;
 import js.node.Fs;
 import js.node.Path;
 import js.node.child_process.ChildProcess;
@@ -25,6 +26,7 @@ import js.node.Url;
 import js.node.events.EventEmitter;
 import js.node.stream.Readable;
 import js.npm.Commander;
+import js.npm.CliColor;
 
 import promhx.RequestPromises;
 import promhx.RetryPromise;
@@ -40,8 +42,6 @@ class ServerCI
 		js.npm.SourceMapSupport;
 		//Embed various files
 		ErrorToJson;
-		// var localStackHost = getLocalDockerStackHost();
-		// runServer(localStackHost != null ? [localStackHost] : []);
 		runServer();
 	}
 
@@ -71,7 +71,7 @@ class ServerCI
 
 		var promise = new DeferredPromise();
 		process.once(ChildProcessEvent.Exit, function(code, signal) {
-			trace('exited with code=$code');
+			trace('Stack exited with code=$code');
 			if (!(promise.boundPromise.isRejected() || promise.boundPromise.isResolved() || promise.boundPromise.isErrored())) {
 				promise.boundPromise.reject('code=$code signal=$signal');
 			}
@@ -85,17 +85,17 @@ class ServerCI
 				//This may include downlowding large images
 				var maxAttempts = 60 * 5;
 				var delayMilliseconds = 1000;
-				return ClientTools.pollServerListening(host, maxAttempts, delayMilliseconds);
+				return ClientTools.waitUntilServerReady(host, maxAttempts, delayMilliseconds);
 			})
+			// .pipe(function(_) {
+			// 	trace("Server listening! Waiting until ready...");
+			// 	return ClientTools.isServerReady(host);
+			// })
 			.pipe(function(_) {
-				trace("POLLED");
-				return ClientTools.isServerReady(host);
-			})
-			.pipe(function(_) {
-				trace("READY");
 				process.stdout.removeListener(ReadableEvent.Data, traceOut);
 				process.stderr.removeListener(ReadableEvent.Data, traceOut);
 				promise.resolve(true);
+				trace("Server ready!");
 				return promise.boundPromise;
 			});
 	}
@@ -122,24 +122,24 @@ class ServerCI
 			.pipe(function(_) {
 				if (untyped program.local == true) {
 					var localhost = getLocalDockerStackHost();
-					trace('localhost=${localhost}');
 					if (localhost != null) {
+						trace('Check for running local stack...');
 						return ClientTools.isServerListening(localhost)
 							.pipe(function(isListening) {
-								trace('isListening=${isListening}');
 								if (isListening) {
+									trace('Existing stack listening on $localhost');
 									return Promise.promise([localhost]);
 								} else {
-									trace('start LocalDevStack');
+									trace('No existing local stack, booting up...');
 									return runLocalDevStack()
 										.then(function(_) {
-											trace('stack listening!');
+											trace('New stack ready!');
 											return [localhost];
 										});
 								}
 							});
 					} else {
-						trace('no docker daemon');
+						trace('No local docker daemon, cannot start local stack');
 						return Promise.promise([]);
 					}
 				} else {
@@ -154,12 +154,27 @@ class ServerCI
 
 	static function startFileWatcher(servers :Array<Host>)
 	{
-		trace('servers=${servers}');
 		var serverFilePath = 'build/$APP_SERVER_FILE';
+		var watchPaths = [
+			serverFilePath,
+			'build/test/server-test-runner.js',
+		];
+		var sizes = new Map<String, Int>();
+		watchPaths.iter(function(path) {
+			try {
+				sizes.set(path, Std.int(Fs.statSync(path).size));
+			} catch(err :Dynamic) {
+				trace(err);
+			}
+		});
+
+		// var listenPath = 'build/';
+		trace('Listening servers=${servers}');
+		trace('Listening to all changes on $watchPaths');
 
 		//Watch for file changes, and automatically reload
-		var chokidar :{watch:String->Dynamic->EventEmitter<Dynamic>} = Node.require('chokidar');
-		var watcher = chokidar.watch(serverFilePath, {
+		var chokidar :{watch:Array<String>->Dynamic->EventEmitter<Dynamic>} = Node.require('chokidar');
+		var watcher = chokidar.watch(watchPaths, {
 			// ignored: /[\/\\]\./,
 			persistent: true,
 			usePolling: true,
@@ -182,37 +197,54 @@ class ServerCI
 			}
 			isReloading = true;
 			reloadRequest = false;
-			var serverCodeString = Fs.readFileSync(serverFilePath, 'utf8');
-			trace('Reloading and running tests');
-			reloadAndRunTests(servers, serverCodeString)
-				.then(function(_) {
-					trace('ok');
-					return true;
-				})
-				.errorPipe(function(err) {
-					trace(err);
-					return Promise.promise(true);
-				})
-				.then(function(_) {
-					isReloading = false;
-					maybeReload();
-				});
+			var serverCodeString :String = null;
+			try {
+				serverCodeString = Fs.readFileSync(serverFilePath, 'utf8');
+				trace('Reloading and running tests');
+				reloadAndRunTests(servers, serverCodeString)
+					.then(function(_) {
+						return true;
+					})
+					.errorPipe(function(err) {
+						Node.process.stderr.write(CliColor.red(Std.string(err)));
+						return Promise.promise(true);
+					})
+					.then(function(_) {
+						isReloading = false;
+						maybeReload();
+					});
+			} catch (err :Dynamic) {
+				isReloading = false;
+				trace(err);
+				maybeReload();
+			}
 		}
 
 		watcher.on('change', function(path, stats) {
+			trace('Got file change path=$path');
+			var size = Std.int(stats.size);
+			if (sizes.exists(path) && sizes.get(path) == size) {
+				trace('File the same size, ignoring');
+				return;
+			}
+			sizes.set(path, size);
 			reloadRequest = true;
 			maybeReload();
 		});
+
+		//Start with the tests
+		reloadRequest = true;
+		maybeReload();
 	}
 
 	static function reloadAndRunTests(hosts :Array<Host>, serverCode :String) :Promise<Bool>
 	{
 		return Promise.whenAll(hosts.map(function(host) {
-			var reloadHost = new Host(host.getHostname(), new Port(SERVER_RELOADER_PORT));
-			return reloadServer(reloadHost, serverCode)
-				.pipe(function(_) {
+			// var reloadHost = new Host(host.getHostname(), new Port(SERVER_RELOADER_PORT));
+			// return reloadServer(reloadHost, serverCode)
+			// 	.pipe(function(_) {
 					return runTestsOnHost(host);
-				});
+				// });
 		}))
 		.thenTrue();
 	}
@@ -220,18 +252,39 @@ class ServerCI
 	static function runTestsOnHost(host :Host) :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
-		var testprocess = ChildProcess.spawn('./bin/server-tests $host');
-		testprocess.stdout.on(ReadableEvent.Data, function(data) {
-			trace(data);
-		});
+		var testScriptPath = 'bin/run-server-tests';
+		var testScriptExec = '$testScriptPath $host';
+		trace('Running tests="$testScriptExec"');
+		// var testprocess = ChildProcess.spawn(testScriptPath, [host]);
+		// testprocess.stdout.on(ReadableEvent.Data, function(data :Buffer) {
+		// 	Node.process.stdout.write(data);
+		// });
 
-		testprocess.stderr.on(ReadableEvent.Data, function(data) {
-			trace(data);
-		});
+		// testprocess.stderr.on(ReadableEvent.Data, function(data :Buffer) {
+		// 	Node.process.stderr.write(data);
+		// });
 
-		testprocess.on(ChildProcessEvent.Close, function(code, signal) {
-			trace('exited with code=$code');
-			promise.resolve(code == 0);
+		// testprocess.on(ChildProcessEvent.Close, function(code, signal) {
+		// 	trace('exited with code=$code');
+		// 	promise.resolve(code == 0);
+		// });
+
+		// testprocess.on(ChildProcessEvent.Error, function(err) {
+		// 	promise.boundPromise.reject(err);
+		// });
+
+		ChildProcess.exec(testScriptExec, function(error :Dynamic, stdout :String, stderr :String) {
+			if (error != null) {
+				promise.boundPromise.reject(error);
+				return;
+			}
+			if (stdout != null && stdout.length > 0) {
+				Node.process.stdout.write(stdout);
+			}
+			if (stderr != null && stderr.length > 0) {
+				Node.process.stderr.write(CliColor.red(stderr));
+			}
+			promise.resolve(true);
 		});
 
 		return promise.boundPromise;
@@ -240,9 +293,18 @@ class ServerCI
 	static function reloadServer(host :Host, serverCode :String) :Promise<Bool>
 	{
 		var url = 'http://${host}${SERVER_PATH_RELOAD}';
+		trace('Reloading server at $url...');
 		return RequestPromises.post(url, serverCode)
+			.pipe(function(_) {
+				//Give a decent amount of time to build and start the stack
+				//This may include downlowding large images
+				var maxAttempts = 60 * 5;
+				var delayMilliseconds = 1000;
+				var pingHost = new Host(host.getHostname(), new Port(SERVER_DEFAULT_PORT));
+				return ClientTools.waitUntilServerReady(pingHost, maxAttempts, delayMilliseconds);
+			})
 			.then(function(out) {
-				trace('reloadServer url=${url} out=$out');
+				trace('Reloaded and ready server ${host} out=$out');
 				return true;
 			});
 	}
