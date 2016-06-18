@@ -64,7 +64,7 @@ class ServerCompute
 {
 	static function main()
 	{
-		var v = 'sdfsdf';
+		var v = 'sdfsdfsdsdf';
 		//Required for source mapping
 		js.npm.SourceMapSupport;
 		//Embed various files

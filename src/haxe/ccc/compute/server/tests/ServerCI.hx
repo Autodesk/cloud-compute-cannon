@@ -63,7 +63,7 @@ class ServerCI
 		function traceOut(data :js.node.Buffer) {
 			var s = data.toString('utf8');
 			s = s.substr(0, s.length - 1);
-			// trace(s);
+			trace(s);
 		}
 
 		process.stdout.addListener(ReadableEvent.Data, traceOut);
