@@ -284,14 +284,8 @@ class TestDockerCompute extends TestComputeBase
 
 		var jobFsPath = 'tmp/testCompleteDockerJobRun/$dateString';
 
-		
-		// var fs = new ServiceStorageLocalFileSystem().setRootPath(jobFsPath);
-		// var workerStorage = ServiceStorageLocalFileSystem.getService('$jobFsPath/workerStorage');
-
 		var fs = ServiceStorageLocalFileSystem.getService().appendToRootPath(jobFsPath);
 		var workerStorage = _fs.appendToRootPath(jobFsPath);
-		trace('workerStorage=${workerStorage}');
-		trace('fs=${fs}');
 
 		var redis :RedisClient = _injector.getValue(js.npm.RedisClient);
 
@@ -313,14 +307,12 @@ class TestDockerCompute extends TestComputeBase
 
 		return Promise.promise(true)
 			.pipe(function(_) {
-				trace(1);
 				return DockerJobTools.deleteWorkerInputs(job)
 					.pipe(function(_) {
 						return DockerJobTools.deleteWorkerOutputs(job);
 					});
 			})
 			.pipe(function(_) {
-				trace(2);
 				//Make sure to put the inputs in the properly defined job path
 				//TODO: this needs to be better documented or automated.
 				var fsInputs = new ServiceStorageLocalFileSystem().setRootPath(exampleBaseDir + '/inputs');
@@ -328,7 +320,6 @@ class TestDockerCompute extends TestComputeBase
 				return DockerJobTools.copyInternal(fsInputs, fsExampleInputs);
 			})
 			.pipe(function(_) {
-				trace(3);
 				return BatchComputeDocker.executeJob(redis, job, fs, workerStorage, Log.log).promise;
 			})
 			.then(function(batchResults) {
@@ -337,15 +328,12 @@ class TestDockerCompute extends TestComputeBase
 				return true;
 			})
 			.pipe(function(_) {
-				trace(4);
 				return DockerJobTools.removeJobContainer(job);
 			})
 			.pipe(function(_) {
-				trace(5);
 				var outputStorage = fs.appendToRootPath(job.item.outputDir());
 				return outputStorage.listDir()
 					.then(function(files) {
-						trace(6);
 						return true;
 					});
 			})

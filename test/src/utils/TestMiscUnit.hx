@@ -4,6 +4,8 @@ import promhx.Promise;
 
 import util.DockerTools;
 
+import t9.abstracts.time.*;
+
 using StringTools;
 
 class TestMiscUnit extends haxe.unit.async.PromiseTest
@@ -40,6 +42,29 @@ class TestMiscUnit extends haxe.unit.async.PromiseTest
 		assertEquals(url.name, 'lmvconverter');
 		assertEquals(url.tag, '5b2be4e42396');
 		assertEquals(url.registryhost.toString(), 'localhost:5001');
+
+		return Promise.promise(true);
+	}
+
+	public function testTimeUnits()
+	{
+		var nowFloat = Date.now().getTime();
+		var now = new Milliseconds(nowFloat);
+		var ts = new TimeStamp(now);
+		assertEquals(ts.toString(), Date.fromTime(now.toFloat()).toString());
+		assertEquals(ts.toFloat(), nowFloat);
+
+		var ms1 = new Milliseconds(20);
+		var ms2 = new Milliseconds(5);
+		var ms3 = ms1 - ms2;
+		assertEquals(ms3.toFloat(), 15.0);
+
+		var seconds = new Seconds(10);
+		var ms = seconds.toMilliseconds().toFloat();
+		var timePlus :TimeStamp = ts.addSeconds(seconds);
+		var floatTimePlus = nowFloat + ms;
+		var timePlusFloat :Float = timePlus.toFloat();
+		assertEquals(timePlusFloat, floatTimePlus);
 
 		return Promise.promise(true);
 	}
