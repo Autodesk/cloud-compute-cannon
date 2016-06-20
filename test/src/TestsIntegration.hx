@@ -96,10 +96,6 @@ class TestsIntegration
 			}
 		}
 
-		// if (ccc.compute.ConnectionToolsDocker.isLocalDockerHost()) {
-		// 	runner.add(new compute.TestFluent());
-		// }
-
 		if (isRedis) {
 			// These require a local redis db
 			runner.add(new compute.TestAutoscaling());
@@ -134,10 +130,10 @@ class TestsIntegration
 		}
 
 		if (isAws) {
-			// runner.add(new compute.TestPkgCloudAws());
+			runner.add(new compute.TestPkgCloudAws());
 			runner.add(new compute.TestScalingAmazon());
-			// runner.add(new compute.TestCompleteJobSubmissionAmazon());
-			// runner.add(new compute.TestRestartAfterCrashAWS());
+			runner.add(new compute.TestCompleteJobSubmissionAmazon());
+			runner.add(new compute.TestRestartAfterCrashAWS());
 		}
 
 		runner.run();

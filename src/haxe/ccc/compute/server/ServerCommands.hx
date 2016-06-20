@@ -362,7 +362,6 @@ class ServerCommands
 					return Promise.promise(null);
 				} else {
 					var path = jobResults.stdout;
-					trace('getStdout jobId=$jobId path=$path');
 					if (path == null) {
 						return Promise.promise(null);
 					} else {

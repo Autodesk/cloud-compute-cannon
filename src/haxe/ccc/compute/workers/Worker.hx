@@ -193,7 +193,7 @@ class Worker
 	 */
 	public function dispose()
 	{
-		Log.warn({'status':_computeStatus, 'log':'dispose'});
+		Log.debug({'status':_computeStatus, 'log':'dispose'});
 		if (_redis == null) {
 			return Promise.promise(true);
 		}
