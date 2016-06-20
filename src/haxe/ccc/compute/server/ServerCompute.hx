@@ -10,6 +10,7 @@ import js.node.Path;
 import js.node.http.*;
 import js.node.Http;
 import js.node.Url;
+import js.node.stream.Readable;
 import js.npm.RedisClient;
 import js.npm.Docker;
 import js.npm.Express;
@@ -184,18 +185,18 @@ class ServerCompute
 		});
 
 		//Check if server is ready
-		app.get(Constants.SERVER_PATH_READY, cast function(req, res) {
+		app.get(SERVER_PATH_READY, cast function(req, res) {
 			if (status == ServerStatus.Ready_4_4) {
-				Log.debug('${Constants.SERVER_PATH_READY}=YES');
+				Log.debug('${SERVER_PATH_READY}=YES');
 				res.status(200).end();
 			} else {
-				Log.debug('${Constants.SERVER_PATH_READY}=NO');
+				Log.debug('${SERVER_PATH_READY}=NO');
 				res.status(500).end();
 			}
 		});
 
 		//Check if server is ready
-		app.get(Constants.SERVER_PATH_WAIT, cast function(req, res) {
+		app.get(SERVER_PATH_WAIT, cast function(req, res) {
 			function check() {
 				if (status == ServerStatus.Ready_4_4) {
 					res.status(200).end();
@@ -204,9 +205,13 @@ class ServerCompute
 					return false;
 				}
 			}
+			var ended = false;
+			req.once(ReadableEvent.Close, function() {
+				ended = true;
+			});
 			var poll;
 			poll = function() {
-				if (!check()) {
+				if (!check() && !ended) {
 					Node.setTimeout(poll, 1000);
 				}
 			}

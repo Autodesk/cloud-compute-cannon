@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 DOCKERBLOB="docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
-$DOCKERBLOB rm -fv compute
+# $DOCKERBLOB rm -fv compute
+$DOCKERBLOB rm -fv --all
 $DOCKERBLOB build
 $DOCKERBLOB up --abort-on-container-exit

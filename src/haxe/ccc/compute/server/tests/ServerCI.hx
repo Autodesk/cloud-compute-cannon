@@ -49,6 +49,7 @@ class ServerCI
 	{
 		try {
 			var hostname = ConnectionToolsDocker.getDockerHost();
+			trace('hostname=${hostname}');
 			return new Host(hostname, new Port(SERVER_DEFAULT_PORT));
 		} catch(err :Dynamic) {
 			trace('err=${err}');
@@ -240,11 +241,11 @@ class ServerCI
 	static function reloadAndRunTests(hosts :Array<Host>, serverCode :String) :Promise<Bool>
 	{
 		return Promise.whenAll(hosts.map(function(host) {
-			// var reloadHost = new Host(host.getHostname(), new Port(SERVER_RELOADER_PORT));
-			// return reloadServer(reloadHost, serverCode)
-			// 	.pipe(function(_) {
+			var reloadHost = new Host(host.getHostname(), new Port(SERVER_RELOADER_PORT));
+			return reloadServer(reloadHost, serverCode)
+				.pipe(function(_) {
 					return runTestsOnHost(host);
-				// });
+				});
 		}))
 		.thenTrue();
 	}
@@ -295,6 +296,7 @@ class ServerCI
 		var url = 'http://${host}${SERVER_PATH_RELOAD}';
 		trace('Reloading server at $url...');
 		return RequestPromises.post(url, serverCode)
+			.thenWait(1000)
 			.pipe(function(_) {
 				//Give a decent amount of time to build and start the stack
 				//This may include downlowding large images

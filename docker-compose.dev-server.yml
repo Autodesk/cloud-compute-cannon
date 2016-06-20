@@ -1,2 +1,2 @@
 compute:
-  command: ["node", "test/server"]
+  command: ["node", "src/js/server-reloading.js"]

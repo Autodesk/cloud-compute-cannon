@@ -72,8 +72,10 @@ class ConnectionToolsDocker
 				//https://github.com/docker/docker/issues/1143
 				// var stdout :String = js.node.ChildProcess.execSync("/sbin/ifconfig docker0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'", {stdio:['ignore','pipe','ignore']});
 				var stdout :String = js.node.ChildProcess.execSync("netstat -nr | grep '^0\\.0\\.0\\.0' | awk '{print $2}'", {stdio:['ignore','pipe','ignore']});
+				trace('stdout=${stdout}');
 				return new HostName(Std.string(stdout).trim());
 			} catch (ignored :Dynamic) {
+				trace('ignored=${ignored}');
 				throw 'Exhausted all methods to determine the docker server host. "$DOCKER_HOST" is not defined in the env vars, "docker0" is not defined in /etc/hosts, and "docker-machine" is either not installed or a machine called "default" is not running (where a redis container might be running).';
 				return null;
 			}
@@ -89,6 +91,7 @@ class ConnectionToolsDocker
 	{
 		try {
 			var stdout :String = js.node.ChildProcess.execSync("which docker-machine", {stdio:['ignore','pipe','ignore']});
+			trace('stdout=${stdout}');
 			return Std.string(stdout).trim().startsWith('/usr/local');
 		} catch (ignored :Dynamic) {
 			return false;
