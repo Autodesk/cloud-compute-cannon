@@ -465,28 +465,44 @@ class DockerTools
 				log.error({log:'Error on getting image', error:err});
 				promise.boundPromise.reject(err);
 			});
+
+
+			function processLine(line :String) {
+				if (line == null) {
+					return;
+				}
+				line = line.trim();
+				if (line.length == 0) {
+					return;
+				}
+				line = line.replace('\\"', '"');
+				try {
+					var data :ResponseStreamObject = Json.parse(line);
+					if (data.stream != null) {
+						log.trace({log:data.stream});
+						if (data.stream.startsWith('Successfully built')) {
+							imageId = data.stream.replace('Successfully built', '').trim();
+						}
+					} else if (data.status != null) {
+						// log.trace({log:bufferString});
+					} else if (data.error != null) {
+						log.error({log:'Error on stream getting image', error:data});
+						errorEncounteredInStream = true;
+						mostRecentError = data;
+					} else {
+						log.warn({log:'Cannot handle stream data', data:data});
+					}
+				} catch (err :Dynamic) {
+					log.error({log:'Cannot JSON.parse bufferString', error:err, data:line});
+				}
+			}
+
 			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
 				if (buf != null) {
 					var bufferString = buf.toString();
-					bufferString = bufferString.replace('\\"', '"');
-					try {
-						var data :ResponseStreamObject = Json.parse(bufferString);
-						if (data.stream != null) {
-							log.trace({log:data.stream});
-							if (data.stream.startsWith('Successfully built')) {
-								imageId = data.stream.replace('Successfully built', '').trim();
-							}
-						} else if (data.status != null) {
-							// log.trace({log:bufferString});
-						} else if (data.error != null) {
-							log.error({log:'Error on stream getting image', error:data});
-							errorEncounteredInStream = true;
-							mostRecentError = data;
-						} else {
-							log.warn({log:'Cannot handle stream data', data:data});
-						}
-					} catch (err :Dynamic) {
-						log.error({log:'Cannot JSON.parse bufferString', error:err, data:bufferString});
+					var lines = bufferString.split('\n');
+					for (line in lines) {
+						processLine(line);
 					}
 				}
 			});

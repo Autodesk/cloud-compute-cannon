@@ -56,6 +56,11 @@ abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogge
 	{
 		this.fatal(processLogMessage(msg, pos));
 	}
+
+	inline public function level(?newLevel :Int) :Int
+	{
+		return this.level(newLevel);
+	}
 }
 
 // abstract AbstractLogger({})
