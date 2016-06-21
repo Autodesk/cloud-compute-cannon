@@ -147,12 +147,12 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 				Log.critical('WorkerProviderBoot2Docker needs HOST_PWD defined if running inside a container.');
 				js.Node.process.exit(-1);
 			}
-			Constants.JOB_DATA_DIRECTORY_HOST_MOUNT = Path.join(Node.process.env['HOST_PWD'], 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
+			Constants.WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT = Path.join(Node.process.env['HOST_PWD'], 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
 			//If inside the container, use the mounted directory for file system access.
-			_localJobData = JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
+			_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
 		} else {
 			var baseWorkerDataPath = Path.join(Node.process.cwd(), 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
-			Constants.JOB_DATA_DIRECTORY_HOST_MOUNT = baseWorkerDataPath;
+			Constants.WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT = baseWorkerDataPath;
 			//If outside the container, use the local directory
 			_localJobData = baseWorkerDataPath;
 		}

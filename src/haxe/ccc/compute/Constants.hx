@@ -34,9 +34,9 @@ class Constants
 	public static inline var DIRECTORY_OUTPUTS = 'outputs';
 	public static inline var DIRECTORY_NAME_WORKER_OUTPUT = 'computejobs';
 	/** If you change this, change etc/log/plugins/output_worker_log.rb */
-	inline public static var JOB_DATA_DIRECTORY_WITHIN_CONTAINER = '/$DIRECTORY_NAME_WORKER_OUTPUT/';
+	inline public static var WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER = '/$DIRECTORY_NAME_WORKER_OUTPUT/';
 	// public static var DIRECTORY_WORKER_BASE = '/tmp/$DIRECTORY_NAME_WORKER_OUTPUT/';
-	public static var JOB_DATA_DIRECTORY_HOST_MOUNT = '/$DIRECTORY_NAME_WORKER_OUTPUT/';
+	public static var WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT = '/$DIRECTORY_NAME_WORKER_OUTPUT/';
 	// public static var SERVER_DATA_ROOT = '/$DIRECTORY_NAME_WORKER_OUTPUT/';
 	public static inline var STDOUT_FILE = 'stdout';
 	public static inline var STDERR_FILE = 'stderr';

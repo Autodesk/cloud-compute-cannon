@@ -5,6 +5,7 @@ import util.DockerTools;
 import haxe.Json;
 
 import js.Error;
+import js.Node;
 import js.node.stream.Readable;
 import js.node.Path;
 import js.npm.Docker;
@@ -43,6 +44,27 @@ using promhx.PromiseTools;
  */
 class DockerJobTools
 {
+	/**
+	 * This is complicated and a PITA
+	 * @param  path :String       [description]
+	 * @return      [description]
+	 */
+	public static function getDockerHostMountablePath(path :String) :String
+	{
+		if (Node.process.env['HOST_PWD'] != null && Node.process.env['HOST_PWD'] != '') {
+			var pwd = Node.process.env['HOST_PWD'];
+			if (path.indexOf(pwd) == -1) {
+				var toReplace = '/$DIRECTORY_NAME_WORKER_OUTPUT';
+				var replacement = Path.join(Node.process.env['HOST_PWD'], 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
+				return path.replace(toReplace, replacement);
+			} else {
+				return path;
+			}
+		} else {
+			return path;
+		}
+	}
+
 	public static function deleteJobRemoteData(job :DockerJobDefinition, fs :ServiceStorage) :Promise<Bool>
 	{
 		var paths = [
@@ -93,7 +115,7 @@ class DockerJobTools
 		Assert.notNull(job.computeJobId, 'job.computeJobId is null');
 		var workerStorageConfig :StorageDefinition = {
 			type: StorageSourceType.Sftp,
-			rootPath: JOB_DATA_DIRECTORY_HOST_MOUNT,
+			rootPath: WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT,
 			sshConfig: job.worker.ssh
 		};
 		return StorageTools.getStorage(workerStorageConfig);

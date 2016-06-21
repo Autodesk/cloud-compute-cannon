@@ -17,7 +17,7 @@ compute:
     #This is used to get the correct host working directory to pass into the
     #worker containers to map the local file system to /inputs+/outputs within
     #the container
-    HOST_PWD: "$PWD"
+    PWD: "$PWD"
   log_driver: "fluentd"
   log_opt:
     tag: "docker.nodejs-bunyan.ccc{{.ImageName}}/{{.ID}}"
