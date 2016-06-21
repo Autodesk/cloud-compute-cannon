@@ -48,7 +48,7 @@
     "cli-color": "^1.1.0",
     "commander": "^2.9.0",
     "cors": "^2.7.1",
-    "dockerode": "^2.2.9",
+    "dockerode": "^2.2.10",
     "elasticsearch": "^11.0.1",
     "eventemitter3": "^1.2.0",
     "express": "^4.12.3",

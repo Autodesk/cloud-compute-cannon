@@ -536,6 +536,7 @@ class DockerTools
 				Reflect.setField(opts.PortBindings, '${port}/tcp', [{HostPort:Std.string(ports[port])}]);
 			}
 		}
+		trace('container.start opts=$opts');
 		container.start(opts, promise.cb2);
 		return promise
 			.thenVal(container);

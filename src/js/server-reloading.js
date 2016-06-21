@@ -49,8 +49,7 @@ function restartServer(cb) {
 		appServerProcess.on('message', function(m) {
 			log.debug({forked_child_message:m});
 			if (m == 'READY') {
-				setTimeout(function() {cb(null);}, 30);
-				// cb(null);
+				setTimeout(function() {cb(null);}, 20);
 			}
 		});
 	}
