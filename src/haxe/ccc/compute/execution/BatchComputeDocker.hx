@@ -58,7 +58,7 @@ class BatchComputeDocker
 
 		log = log.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
 
-		log.info({log:'executeJob', fs:fs, job:LogTools.removePrivateKeys(job)});
+		log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
 
 		var computeJobId = job.computeJobId;
 		var docker = job.worker.getInstance().docker();
@@ -256,20 +256,22 @@ class BatchComputeDocker
 								var mounts :Array<Mount> = [
 									{
 										// Source: Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, job.computeJobId, DIRECTORY_INPUTS),
-										Source: inputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
+										// Source: inputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
+										Source: inputStorageWorker.getRootPath(),
 										Destination: '/${DIRECTORY_INPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									},
 									{
 										// Source: Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, job.computeJobId, DIRECTORY_OUTPUTS),//job.computeJobId.workerOutputDir(),
-										Source: outputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
+										// Source: outputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
+										Source: outputStorageWorker.getRootPath(),
 										Destination: '/${DIRECTORY_OUTPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									}
 								];
-								trace('mounts=${mounts}');
+								// trace('mounts=${mounts}');
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
 
 								var labels :Dynamic<String> = {
