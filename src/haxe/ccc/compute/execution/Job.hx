@@ -240,7 +240,7 @@ class Job
 		} else {
 			var workerStorageConfig :StorageDefinition = {
 				type: StorageSourceType.Sftp,
-				rootPath: JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
+				rootPath: WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
 				sshConfig: _job.worker.ssh
 			};
 			StorageTools.getStorage(workerStorageConfig);

@@ -81,6 +81,40 @@ class WorkerTools
 			});
 	}
 
+	/**
+	 * Delete docker images and local compute jobs directory
+	 * @param  worker :WorkerDefinition [description]
+	 * @return        [description]
+	 */
+	public static function cleanWorker(worker :InstanceDefinition) :Promise<Bool>
+	{
+		return Promise.promise(true)
+			.pipe(function(_) {
+				if (worker.ssh != null) {
+					return Promise.promise(true)
+						.pipe(function(_) {
+							//Stop and rm containers
+							return SshTools.execute(worker.ssh, "docker stop $(docker ps -a -q) && docker rm --volumes $(docker ps -a -q)");
+						})
+						.pipe(function(_) {
+							//Delete docker images
+							return SshTools.execute(worker.ssh, "docker rmi -f $(docker images -q)");
+						})
+						.pipe(function(_) {
+							//Delete docker volumes
+							return SshTools.execute(worker.ssh, "docker volume rm $(docker volume ls -qf dangling=true)");
+						})
+						.pipe(function(_) {
+							//Delete /computejobs files
+							return SshTools.execute(worker.ssh, 'sudo rm -rf $WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER/*');
+						})
+						.thenTrue();
+				} else {
+					return Promise.promise(true);
+				}
+			});
+	}
+
 	public static function removeJobsOnMachine(docker :Docker, jobs :Array<ComputeJobId>) :Promise<Bool>
 	{
 		return Promise.promise(true);

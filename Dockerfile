@@ -22,16 +22,13 @@ RUN apt-get update && \
 	mkdir /root/neko && \
 	wget -O - http://nekovm.org/_media/neko-2.0.0-linux64.tar.gz | tar xzf - --strip=1 -C "/root/neko"
 
-RUN npm install -g forever supervisor bunyan
+RUN npm install -g forever bunyan
 
 ENV APP /app
 RUN mkdir -p $APP
 WORKDIR $APP
 
 RUN haxelib newrepo
-
-ENV PORT 9000
-EXPOSE $PORT
 
 #Only install npm packages if the package.json changes
 ADD ./package.json $APP/package.json
@@ -46,6 +43,11 @@ COPY ./ $APP/
 
 RUN	haxe etc/hxml/build-all.hxml
 
-CMD haxe etc/hxml/server-run.hxml
+ENV PORT 9000
+EXPOSE $PORT
+EXPOSE 9001
+EXPOSE 9002
+
+CMD forever build/cloud-compute-cannon-server.js
 
 

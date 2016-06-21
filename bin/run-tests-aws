@@ -1,10 +1,7 @@
 #!/usr/bin/env sh
 rsync -av --exclude=node_modules --exclude=.git --exclude=tmp --exclude=.haxelib --exclude=.cloudcomputecannon --exclude=data/computejobs/* --exclude=data/registry/* --exclude=data/ServiceStorageLocalFileSystem/* --exclude=.vagrant --exclude=.bundle ./ serverstable:ccc/
 COMPUTE_CONFIG=`cat serverconfig.yml`
-# echo $COMPUTE_CONFIG
 DOCKER_COMPOSE="/opt/bin/docker-compose"
 COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && COMPUTE_CONFIG=\`cat serverconfig.yml\` $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.remote.yml up --abort-on-container-exit"
-# echo $COMMAND
 ssh serverstable "cd ccc && $COMMAND"
-# ssh serverstable "cd ccc && $DOCKER_COMPOSE"
 

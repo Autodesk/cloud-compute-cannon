@@ -273,7 +273,6 @@ class TestDockerCompute extends TestComputeBase
 		var sourceDockerContext = '$exampleBaseDir/dockerContext/';
 		var inputDir = '$exampleBaseDir/inputs';
 		var outputDir = 'tmp/testCompleteDockerJobRun/$dateString';
-		var workerBaseDir = '/tmp/testCompleteDockerJobRun/$dateString';
 
 		var jobId :JobId = 'jobid1';
 		var computeJobId :ComputeJobId = 'computeidjob1';
@@ -315,7 +314,15 @@ class TestDockerCompute extends TestComputeBase
 				//TODO: this needs to be better documented or automated.
 				var fsInputs = new ServiceStorageLocalFileSystem().setRootPath(exampleBaseDir + '/inputs');
 				var fsExampleInputs = fs.clone().appendToRootPath(job.item.inputDir());
-				return DockerJobTools.copyInternal(fsInputs, fsExampleInputs);
+				trace('fsExampleInputs=${fsExampleInputs}');
+				return DockerJobTools.copyInternal(fsInputs, fsExampleInputs)
+					.pipe(function(_) {
+						return fsExampleInputs.listDir()
+							.then(function(files) {
+								trace('files=${files}');
+								return true;
+							});
+						});
 			})
 			.pipe(function(_) {
 				return BatchComputeDocker.executeJob(redis, job, fs, workerStorage, Log.log).promise;
