@@ -53,11 +53,13 @@ fluentd:
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
+  log_driver: "json-file"
 
 elasticsearch:
   extends:
     file: docker-compose.core.yml
     service: elasticsearch
+  log_driver: "json-file"
 
 kibana:
   extends:
