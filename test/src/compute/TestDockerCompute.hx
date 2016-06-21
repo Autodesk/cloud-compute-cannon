@@ -74,19 +74,19 @@ class TestDockerCompute extends TestComputeBase
 			});
 	}
 
-	@timeout(500)
-	public function testSshConnectivity()
-	{
-		var workerDef = _worker;
-		return Promise.promise(true)
-			.pipe(function(_) {
-				return SshTools.execute(workerDef.ssh, 'echo "Hello"');
-			})
-			.then(function(result) {
-				assertEquals('Hello', result.stdout.trim());
-				return true;
-			});
-	}
+	// @timeout(500)
+	// public function testSshConnectivity()
+	// {
+	// 	var workerDef = _worker;
+	// 	return Promise.promise(true)
+	// 		.pipe(function(_) {
+	// 			return SshTools.execute(workerDef.ssh, 'echo "Hello"');
+	// 		})
+	// 		.then(function(result) {
+	// 			assertEquals('Hello', result.stdout.trim());
+	// 			return true;
+	// 		});
+	// }
 
 	@timeout(500)
 	public function testDockerConnectivity()
@@ -248,7 +248,6 @@ class TestDockerCompute extends TestComputeBase
 							deferred.boundPromise.reject(err);
 							return;
 						}
-						untyped __js__('container.modem.demuxStream(stream, process.stdout, process.stdout)');
 						container.start(function(err, data) {
 							if (err != null) {
 								deferred.boundPromise.reject(err);
@@ -257,6 +256,9 @@ class TestDockerCompute extends TestComputeBase
 						});
 						stream.once('end', function() {
 							deferred.resolve(true);
+						});
+						stream.on('data', function(data) {
+							Log.trace(data);
 						});
 					});
 				});
@@ -305,10 +307,7 @@ class TestDockerCompute extends TestComputeBase
 
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return DockerJobTools.deleteWorkerInputs(job)
-					.pipe(function(_) {
-						return DockerJobTools.deleteWorkerOutputs(job);
-					});
+				return workerStorage.deleteDir();
 			})
 			.pipe(function(_) {
 				//Make sure to put the inputs in the properly defined job path

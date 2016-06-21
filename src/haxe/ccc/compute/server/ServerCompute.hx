@@ -110,6 +110,11 @@ class ServerCompute
 			Log.trace(v, infos);
 		}
 
+		Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
+		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
+			Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));
+		}
+
 		trace({log_check:'haxe_trace'});
 		trace('trace_without_objectifying');
 		Log.trace({log_check:'trace'});

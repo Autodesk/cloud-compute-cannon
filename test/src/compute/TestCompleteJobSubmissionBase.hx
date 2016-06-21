@@ -92,11 +92,12 @@ class TestCompleteJobSubmissionBase extends TestComputeBase
 
 		// assume tester wants to user local file system if a service implementation isn't passed in
 		if (jobOutputStorage == null) {
-			var localStorageConfig :StorageDefinition = {
-				type: StorageSourceType.Local,
-				rootPath: ''
-			};
-			jobOutputStorage = StorageTools.getStorage(localStorageConfig);
+			jobOutputStorage = ServiceStorageLocalFileSystem.getService();
+			// var localStorageConfig :StorageDefinition = {
+			// 	type: StorageSourceType.Local,
+			// 	rootPath: ''
+			// };
+			// jobOutputStorage = StorageTools.getStorage(localStorageConfig);
 		}
 
 		var jobs = [];

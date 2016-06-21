@@ -303,6 +303,7 @@ class DockerTools
 	{
 		log = Logger.ensureLog(log, {f:'buildDockerImage'});
 		log = log.child({image:id, dockerhost:docker.modem.host});
+
 		var promise = new DeferredPromise();
 		log.debug('build_image');
 		docker.buildImage(image, {t:id}, function(err, stream: IReadable) {

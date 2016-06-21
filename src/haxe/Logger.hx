@@ -44,11 +44,14 @@ class Logger
 
 	inline public static function ensureLog(logger :AbstractLogger, ?fields :Dynamic) :AbstractLogger
 	{
-		var l = logger != null ? logger : log;
+		var parent = logger != null ? logger : log;
+		var child = parent;
 		if (fields != null) {
-			l = l.child(fields);
+			child = parent.child(fields);
 		}
-		return l;
+		untyped child._level = parent._level;
+		untyped child.streams[0].level = parent._level;
+		return child;
 	}
 
 	inline static function __init__()

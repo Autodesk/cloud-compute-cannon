@@ -48,6 +48,7 @@ class Constants
 	/* Env vars for running tests*/
 	inline public static var ENV_VAR_CCC_ADDRESS = 'CCC_ADDRESS';
 	inline public static var ENV_DISABLE_SERVER_CHECKS = 'DISABLE_SERVER_CHECKS';
+	inline public static var ENV_LOG_LEVEL = 'LOG_LEVEL';
 
 	/* Server */
 	public static var REGISTRY :Host;

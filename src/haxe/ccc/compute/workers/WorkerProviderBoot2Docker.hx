@@ -62,14 +62,18 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 
 	public static function getLocalDockerWorker()
 	{
-		var ssh = getSshConfig();
+		var dockerHost = ConnectionToolsDocker.getDockerHost();
+		// var ssh = getSshConfig();
 		var boot2docker :WorkerDefinition = {
 			id: 'dockermachinedefault',
-			hostPublic: new HostName(ssh.host),
-			hostPrivate: new HostName(ssh.host),
+			hostPublic: dockerHost,
+			hostPrivate: dockerHost,
 			docker: ConnectionToolsDocker.getDockerConfig(),
-			ssh: ssh
+			ssh: null
 		};
+		if (boot2docker.ssh == null) {
+			Reflect.deleteField(boot2docker, 'ssh');
+		}
 		return boot2docker;
 	}
 
@@ -79,40 +83,40 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 	 * @param  ?throwIfMissing :Bool         [description]
 	 * @return                 [description]
 	 */
-	@deprecated
-	public static function isSftpConfigInLocalDockerMachine(?throwIfMissing :Bool = true) :Promise<Bool>
-	{
-		var config :StorageDefinition = {
-			type: StorageSourceType.Sftp,
-			rootPath: '/',
-			sshConfig: getSshConfig()
-		};
-		var storage = StorageTools.getStorage(config);
-		return storage.readFile(LOCAL_DOCKER_SSH_CONFIG_PATH)
-			.pipe(StreamPromises.streamToString)
-			.then(function(s) {
-				return s.indexOf(DOCKER_SSH_CONFIG_SFTP_ADDITION) > -1;
-			})
-			.errorPipe(function(err) {
-				Log.error(err);
-				return Promise.promise(false);
-			});
-	}
+	// @deprecated
+	// public static function OBSOLETEisSftpConfigInLocalDockerMachine(?throwIfMissing :Bool = true) :Promise<Bool>
+	// {
+	// 	var config :StorageDefinition = {
+	// 		type: StorageSourceType.Sftp,
+	// 		rootPath: '/',
+	// 		sshConfig: getSshConfig()
+	// 	};
+	// 	var storage = StorageTools.getStorage(config);
+	// 	return storage.readFile(LOCAL_DOCKER_SSH_CONFIG_PATH)
+	// 		.pipe(StreamPromises.streamToString)
+	// 		.then(function(s) {
+	// 			return s.indexOf(DOCKER_SSH_CONFIG_SFTP_ADDITION) > -1;
+	// 		})
+	// 		.errorPipe(function(err) {
+	// 			Log.error(err);
+	// 			return Promise.promise(false);
+	// 		});
+	// }
 
 	public static function getLocalDocker() :Docker
 	{
 		return new Docker(getLocalDockerWorker().docker);
 	}
 
-	public static function getSshConfig() :js.npm.Ssh.ConnectOptions
-	{
-		return {
-			host: ConnectionToolsDocker.getDockerHost(),
-			port: 22,
-			username: 'docker',
-			password: 'tcuser'
-		};
-	}
+	// public static function getSshConfig() :js.npm.Ssh.ConnectOptions
+	// {
+	// 	return {
+	// 		host: ConnectionToolsDocker.getDockerHost(),
+	// 		port: 22,
+	// 		username: 'docker',
+	// 		password: 'tcuser'
+	// 	};
+	// }
 
 	inline static var ID = 'dockermachinedefault';
 

@@ -639,7 +639,7 @@ end
 if (redis.call("GET", "$REDIS_KEY_AUTOSCALING_ENABLED") or "true") == "true" then
 	--local message = "Autoscaling..."
 	--$ SNIPPET_INFO
-	print("pending count=" .. tostring(redis.call("LLEN", "$REDIS_KEY_PENDING")))
+	--print("pending count=" .. tostring(redis.call("LLEN", "$REDIS_KEY_PENDING")))
 	if redis.call("LLEN", "$REDIS_KEY_PENDING") > 0 then
 		local pendingJobs = redis.call("LRANGE", "$REDIS_KEY_PENDING", 0, -1)
 		local required = {cpus=0}

@@ -7,7 +7,9 @@ abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogge
 
 	inline public function child(fields :Dynamic) :AbstractLogger
 	{
-		return this.child(fields);
+		var newChild = this.child(fields);
+		newChild.level(this.level());
+		return newChild;
 	}
 
 	static function isObject(v :Dynamic) :Bool
@@ -57,9 +59,15 @@ abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogge
 		this.fatal(processLogMessage(msg, pos));
 	}
 
-	inline public function level(?newLevel :Int) :Int
+	inline public function level(?newLevel :Null<Int>) :Int
 	{
-		return this.level(newLevel);
+		if (newLevel != null) {
+			untyped this._level = newLevel;
+			untyped this.streams[0].level = newLevel;
+		} else {
+
+		}
+		return untyped this._level;
 	}
 }
 

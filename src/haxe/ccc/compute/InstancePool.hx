@@ -291,9 +291,9 @@ class InstancePool
 
 	public static function addInstance(client :RedisClient, poolId :MachinePoolId, worker :WorkerDefinition, parameters :WorkerParameters, ?state :MachineStatus = MachineStatus.Available) :Promise<Bool>
 	{
-		Assert.notNull(worker.ssh);
-		Assert.notNull(worker.ssh.host);
-		Assert.that(worker.ssh.host != '', worker.ssh + '');
+		// Assert.notNull(worker.ssh);
+		// Assert.notNull(worker.ssh.host);
+		// Assert.that(worker.ssh.host != '', worker.ssh + '');
 		Assert.notNull(worker.docker);
 		// Assert.notNull(worker.docker.host);
 		Assert.that(worker.docker.host != '');
@@ -948,6 +948,7 @@ for hashkey,rediskey in pairs({${WORKER_HASHES.keys().array().map(function(k) re
 		elseif hashkey == "workers" or hashkey == "workerParameters" then
 			local workerDef = cjson.decode(all[i+1])
 			--Remove the key text because it is useless when inspecting
+			print("workerDef.ssh=" .. tostring(workerDef.ssh))
 			if workerDef.ssh then
 				workerDef.ssh.privateKey = nil
 			end

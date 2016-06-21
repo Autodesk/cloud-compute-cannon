@@ -56,7 +56,9 @@ class BatchComputeDocker
 		Assert.notNull(workerStorage);
 		Assert.notNull(job.computeJobId);
 
-		log = log.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
+		var parentLog = log;
+		log = parentLog.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
+		untyped log._level = parentLog._level;
 
 		log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
 

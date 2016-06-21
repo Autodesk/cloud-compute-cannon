@@ -44,10 +44,11 @@ class TestServiceBatchCompute extends TestComputeBase
 	{
 		return super.setup()
 			.pipe(function(_) {
-
 				var out = untyped __js__('require("child_process").execSync("haxe etc/hxml/cli-build.hxml")');
 				//Create a server in a forker process
-				return TestTools.forkServerCompute()
+				var envCopy = Reflect.copy(js.Node.process.env);
+				Reflect.setField(envCopy, ENV_LOG_LEVEL, 70);//js.npm.Bunyan.WARN);
+				return TestTools.forkServerCompute(envCopy)
 					.then(function(serverprocess) {
 						_childProcess = serverprocess;
 						return true;
@@ -91,10 +92,8 @@ class TestServiceBatchCompute extends TestComputeBase
 					.thenWait(5000)
 					.pipe(function(result) {
 						var jobId = result.jobId;
-						trace('jobId=${jobId}');
 						return ClientCompute.getJobData(HOST, jobId)
 							.pipe(function(jobResult) {
-								trace('jobResult=${jobResult}');
 								return Promise.promise(true);
 							});
 						// return Promise.promise(true);

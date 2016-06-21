@@ -51,6 +51,8 @@ class TestsIntegration
 	static function main()
 	{
 		TestMain.setupTestExecutable();
+		untyped Logger.log._level = 50;
+		// Logger.log.level(js.npm.Bunyan.WARN);
 
 		var isRedis = !isDisabled('REDIS');
 		var isAws = detectPkgCloud();
@@ -75,34 +77,34 @@ class TestsIntegration
 
 		//Run the unit tests. These do not require any external dependencies
 		if (isUnit) {
-			// runner.add(new utils.TestMiscUnit());
-			// runner.add(new utils.TestPromiseQueue());
-			// runner.add(new utils.TestStreams());
-			// runner.add(new storage.TestStorageRestAPI());
-			// runner.add(new storage.TestStorageLocal());
-			// runner.add(new compute.TestRedisMock());
-			// if (isInternet) {
-			// 	// runner.add(new storage.TestStorageSftp());
-			// }
+			runner.add(new utils.TestMiscUnit());
+			runner.add(new utils.TestPromiseQueue());
+			runner.add(new utils.TestStreams());
+			runner.add(new storage.TestStorageRestAPI());
+			runner.add(new storage.TestStorageLocal());
+			runner.add(new compute.TestRedisMock());
+			if (isInternet) {
+				// runner.add(new storage.TestStorageSftp());
+			}
 		}
 
 		if (isRedis) {
 			// These require a local redis db
-			// runner.add(new compute.TestAutoscaling());
-			// runner.add(new compute.TestRedis());
+			runner.add(new compute.TestAutoscaling());
+			runner.add(new compute.TestRedis());
 
 			// //These require access to a local docker server
 			if (isDockerProvider) {
-				// runner.add(new compute.TestScheduler());
-				// runner.add(new compute.TestJobStates());
-				// runner.add(new compute.TestInstancePool());
-				// runner.add(new compute.TestComputeQueue());
-				// runner.add(new compute.TestScalingMock());
+				runner.add(new compute.TestScheduler());
+				runner.add(new compute.TestJobStates());
+				runner.add(new compute.TestInstancePool());
+				runner.add(new compute.TestComputeQueue());
+				runner.add(new compute.TestScalingMock());
 
 				runner.add(new compute.TestCompleteJobSubmissionLocalDocker());
-			// // 	runner.add(new compute.TestRestartAfterCrashLocalDocker());
-			// 	runner.add(new compute.TestDockerCompute());
-			// 	runner.add(new compute.TestServiceBatchCompute());
+				runner.add(new compute.TestRestartAfterCrashLocalDocker());
+				runner.add(new compute.TestDockerCompute());
+				runner.add(new compute.TestServiceBatchCompute());
 			}
 
 			// runner.add(new compute.TestCLIRemoteServerInstallation());
