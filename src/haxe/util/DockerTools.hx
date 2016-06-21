@@ -329,32 +329,47 @@ class DockerTools
 				log.error({log:'Error on building image', type:'readable_stream_error', error:err});
 				promise.boundPromise.reject(err);
 			});
+
+			function processLine(line :String) {
+				if (line == null) {
+					return;
+				}
+				line = line.trim();
+				if (line.length == 0) {
+					return;
+				}
+				var data :ResponseStreamObject;
+				try {
+					data = Json.parse(line);
+				} catch (err :Dynamic) {
+					log.error({log:'Maybe not the end of the world, but cannot json parse bufferString', data:bufferString, error:err});
+					return;
+				}
+				if (data.stream != null) {
+					// log.trace({log:data.stream});
+					if (data.stream.startsWith('Successfully built')) {
+						imageId = data.stream.replace('Successfully built', '').trim();
+					}
+				} else if (data.status != null) {
+					// log.trace({log:bufferString});
+				} else if (data.error != null) {
+					log.error({log:'Stream data contains an error entry', data:bufferString, error:data.error});
+					errorEncounteredInStream = true;
+					mostRecentError = data;
+				} else {
+					log.warn({log:'Cannot handle stream data', data:bufferString});
+				}
+			}
+
 			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
 				if (resultStream != null && buf != null) {
 					resultStream.write(buf);
 				}
 				if (buf != null) {
 					var bufferString = buf.toString();
-					var data :ResponseStreamObject;
-					try {
-						data = Json.parse(bufferString);
-					} catch (err :Dynamic) {
-						log.error({log:'Maybe not the end of the world, but cannot json parse bufferString', data:bufferString, error:err});
-						return;
-					}
-					if (data.stream != null) {
-						// log.trace({log:data.stream});
-						if (data.stream.startsWith('Successfully built')) {
-							imageId = data.stream.replace('Successfully built', '').trim();
-						}
-					} else if (data.status != null) {
-						// log.trace({log:bufferString});
-					} else if (data.error != null) {
-						log.error({log:'Stream data contains an error entry', data:bufferString, error:data.error});
-						errorEncounteredInStream = true;
-						mostRecentError = data;
-					} else {
-						log.warn({log:'Cannot handle stream data', data:bufferString});
+					var lines = bufferString.split('\n');
+					for (line in lines) {
+						processLine(line);
 					}
 				}
 			});

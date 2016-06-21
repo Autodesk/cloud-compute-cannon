@@ -18,6 +18,7 @@ class FluentTools
 
 	static var emitter :FluentLogger = FluentLogger.createFluentSender(APP_NAME_COMPACT,
 		{
-			host: ConnectionToolsDocker.getContainerAddress('fluentd')
+			host: ConnectionToolsDocker.getContainerAddress('fluentd'),
+			port: FLUENTD_SOURCE_PORT
 		});
 }

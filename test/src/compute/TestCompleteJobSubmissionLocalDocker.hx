@@ -46,8 +46,13 @@ class TestCompleteJobSubmissionLocalDocker extends TestCompleteJobSubmissionBase
 			});
 	}
 
+	/**
+	 * This is currently disabled since we no longer use SFTP for accessing
+	 * the local provider storage. Instead we use direct file system access
+	 * via mounted volumes. This means that mounted volumes must be correct.
+	 */
 	@timeout(1000)
-	public function testSftpConfiguredCorrectly()
+	public function DISABLEDtestSftpConfiguredCorrectly()
 	{
 		return WorkerProviderBoot2Docker.isSftpConfigInLocalDockerMachine()
 			.then(function(ok) {

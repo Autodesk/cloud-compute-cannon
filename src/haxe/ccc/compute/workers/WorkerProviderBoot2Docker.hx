@@ -73,6 +73,13 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		return boot2docker;
 	}
 
+	/**
+	 * This method should be obsolete since file access on local docker
+	 * providers are now using direct file access with mounted local volumes.
+	 * @param  ?throwIfMissing :Bool         [description]
+	 * @return                 [description]
+	 */
+	@deprecated
 	public static function isSftpConfigInLocalDockerMachine(?throwIfMissing :Bool = true) :Promise<Bool>
 	{
 		var config :StorageDefinition = {
@@ -127,8 +134,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 			};
 		}
 
-		var isInContainer = ConnectionToolsDocker.isInsideContainer();
-		var hostName = isInContainer ? new HostName('localhost') : ConnectionToolsDocker.getDockerHost();
+		var hostName = ConnectionToolsDocker.getDockerHost();
 		Constants.REGISTRY = new Host(hostName, new Port(REGISTRY_DEFAULT_PORT));
 		//The mount point for worker job data (inputs/outputs mounted to the job container)
 		//depends on if the server is running in a docker container or not.
