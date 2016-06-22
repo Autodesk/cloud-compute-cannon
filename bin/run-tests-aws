@@ -1,7 +1,22 @@
 #!/usr/bin/env sh
-rsync -av --exclude=node_modules --exclude=.git --exclude=tmp --exclude=.haxelib --exclude=.cloudcomputecannon --exclude=data/computejobs/* --exclude=data/registry/* --exclude=data/ServiceStorageLocalFileSystem/* --exclude=.vagrant --exclude=.bundle ./ serverstable:ccc/
-COMPUTE_CONFIG=`cat serverconfig.yml`
-DOCKER_COMPOSE="/opt/bin/docker-compose"
-COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && COMPUTE_CONFIG=\`cat serverconfig.yml\` $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.remote.yml up --abort-on-container-exit"
-ssh serverstable "cd ccc && $COMMAND"
+SERVER_HOST=$1
+SERVER_CONFIG_PATH=$2
+REMOTE_CCC_PATH="ccc"
+REMOTE_SERVER_CONFIG_FILE="serverconfig.yml"
+if [ $# -eq 0 ]
+	then
+		SERVER_HOST="serverstable"
+fi
+if [ -z "$2" ]
+  then
+    echo "Missing server config path"
+    exit 1
+fi
+
+bin/sync-to-remote $SERVER_HOST
+scp SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/$REMOTE_SERVER_CONFIG_FILE
+ #"/opt/bin/docker-compose"
+DOCKER_COMPOSE="docker-compose"
+COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && COMPUTE_CONFIG=\`cat $REMOTE_SERVER_CONFIG_FILE\` $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.remote.yml up --abort-on-container-exit"
+ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"
 
