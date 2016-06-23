@@ -72,6 +72,10 @@ class PromiseQueue
 		} else {
 			_processing = true;
 			var promise = e.f();
+			if (promise == null) {
+				promise = Promise.promise(null);
+			}
+
 			promise.then(function(val) {
 				e.p.resolve(val);
 				_processing = false;
@@ -83,6 +87,7 @@ class PromiseQueue
 					});
 				return val;
 			});
+
 			promise.catchError(function(err) {
 				Log.error(err);
 				e.p.boundPromise.reject(err);
