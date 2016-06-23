@@ -1,5 +1,5 @@
 etc/hxml/server-build.hxml
 
--D PromhxExposeErrors
+# -D PromhxExposeErrors
 
 -cmd node build/cloud-compute-cannon-server.js

@@ -456,17 +456,8 @@ class ServiceBatchCompute
 
 		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
 
-		var p = Promise.promise(true)
-			// .pipe(function(_) {
-			// 	var dockerUrl :DockerUrl = job.image;
-			// 	trace('ORIGINAL URL=$dockerUrl');
-			// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
-			// 		.then(function(url) {
-			// 			trace('FINAL URL=$url');
-			// 			job.image = url;
-			// 			return true;
-			// 		});
-			// })
+		var error :Dynamic = null;
+		return Promise.promise(true)
 			.pipe(function(_) {
 				return getNewJobId();
 			})
@@ -488,6 +479,10 @@ class ServiceBatchCompute
 					outputsPath: job.outputsPath,
 					resultsPath: job.resultsPath
 				};
+
+				if (dockerJob.command != null && untyped __typeof__(dockerJob.command) == 'string') {
+					throw 'command field must be an array, not a string';
+				}
 #if debug
 				//Check the results path since we're not using UUID's anymore
 				var resultsJsonPath = JobTools.resultJsonPath(dockerJob);
@@ -512,18 +507,27 @@ class ServiceBatchCompute
 						}
 						return ComputeQueue.enqueue(_redis, job);
 					})
+					.thenTrue();
+			})
+			//It has this odd errorPipe (then maybe throw later) promise
+			//structure because otherwise the caught and rethrown error
+			//won't actually be passed down the promise chain
+			.errorPipe(function(err) {
+				Log.error('Got error, deleting inputs for jobId=$jobId err=$err');
+				error = err;
+				deleteInputs()
 					.then(function(_) {
-						return {jobId:jobId};
+						Log.error('Deleted inputs for jobId=$jobId err=$err');
 					});
+
+				return Promise.promise(true);
+			})
+			.then(function(_) {
+				if (error != null) {
+					throw error;
+				}
+				return {jobId:jobId};
 			});
-		p.catchError(function(err) {
-			Log.error('Got error, deleting inputs for jobId=$jobId err=$err');
-			deleteInputs()
-				.then(function(_) {
-					Log.error('Deleted inputs for jobId=$jobId err=$err');
-				});
-		});
-		return p;
 	}
 
 	function returnHelp() :String
@@ -609,6 +613,11 @@ class ServiceBatchCompute
 								returnError('JsonRpc method ${Constants.RPC_METHOD_JOB_SUBMIT} != ${jsonrpc.method}');
 								return;
 							}
+							if (jsonrpc.method == null || jsonrpc.method != Constants.RPC_METHOD_JOB_SUBMIT) {
+								returnError('JsonRpc method ${Constants.RPC_METHOD_JOB_SUBMIT} != ${jsonrpc.method}');
+								return;
+							}
+
 							inputPath = jsonrpc.params.inputsPath != null ? (jsonrpc.params.inputsPath.endsWith('/') ? jsonrpc.params.inputsPath : jsonrpc.params.inputsPath + '/') : jobId.defaultInputDir();
 							if (jsonrpc.params.inputs != null) {
 								var inputFilesObj = writeInputFiles(jsonrpc.params.inputs, inputPath);
@@ -657,6 +666,10 @@ class ServiceBatchCompute
 								outputsPath: jsonrpc.params.outputsPath,
 								resultsPath: jsonrpc.params.resultsPath
 							};
+
+							if (jsonrpc.params.cmd != null && untyped __typeof__(jsonrpc.params.cmd) == 'string') {
+								throw 'command field must be an array, not a string';
+							}
 
 							var job :QueueJobDefinitionDocker = {
 								id: jobId,

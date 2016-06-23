@@ -285,6 +285,7 @@ class BatchComputeDocker
 									case Context:
 										job.id;
 								}
+
 								return DockerJobTools.runDockerContainer(docker, job.computeJobId, imageId, job.item.command, mounts, job.item.workingDir, labels, log)
 									.pipe(function(containerunResult) {
 										error = containerunResult.error;
