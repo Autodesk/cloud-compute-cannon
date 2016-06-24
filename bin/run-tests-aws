@@ -3,6 +3,7 @@ SERVER_HOST=$1
 SERVER_CONFIG_PATH=$2
 REMOTE_CCC_PATH="ccc"
 REMOTE_SERVER_CONFIG_FILE="serverconfig.yml"
+LOG_LEVEL=10
 if [ $# -eq 0 ]
 	then
 		SERVER_HOST="serverstable"
@@ -14,9 +15,10 @@ if [ -z "$2" ]
 fi
 
 bin/sync-to-remote $SERVER_HOST
-scp SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/$REMOTE_SERVER_CONFIG_FILE
+scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/$REMOTE_SERVER_CONFIG_FILE
  #"/opt/bin/docker-compose"
-DOCKER_COMPOSE="docker-compose"
-COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && COMPUTE_CONFIG=\`cat $REMOTE_SERVER_CONFIG_FILE\` $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.remote.yml up --abort-on-container-exit"
+# DOCKER_COMPOSE="docker-compose"
+DOCKER_COMPOSE="/opt/bin/docker-compose"
+COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && LOG_LEVEL="$LOG_LEVEL" COMPUTE_CONFIG=\`cat $REMOTE_SERVER_CONFIG_FILE\` $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.remote.yml up --abort-on-container-exit"
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"
 

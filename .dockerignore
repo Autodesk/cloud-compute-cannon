@@ -8,7 +8,9 @@ build
 node_modules/
 serverconfig.yaml
 tmp/
-data/
+data/computejobs/**
+data/registry/**
+data/ServiceStorageLocalFileSystem/**
 
 #REMOVE THIS WHEN WORKING
 #./etc/log

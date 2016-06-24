@@ -353,6 +353,7 @@ class InstancePool
 
 	public static function setWorkerTimeout(client :RedisClient, id :MachineId, time :TimeStamp) :Promise<Bool>
 	{
+		trace('setWorkerTimeout id=$id time=$time');
 		return evaluateLuaScript(client, SCRIPT_SET_WORKER_DEFERRED_TIMEOUT, [id, time.toFloat()])
 			.then(function(_) {
 				return true;
@@ -1257,6 +1258,8 @@ $SNIPPET_UPDATE_WORKER_COUNTS
 
 			SCRIPT_SET_WORKER_DEFERRED_TIMEOUT =>
 '
+print("ARGV[1]=" .. tostring(ARGV[1]))
+print("ARGV[2]=" .. tostring(ARGV[2]))
 local machineId = ARGV[1]
 local time = tonumber(ARGV[2])
 local status = "${MachineStatus.Deferred}"

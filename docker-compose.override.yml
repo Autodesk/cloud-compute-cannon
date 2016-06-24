@@ -57,7 +57,8 @@ fluentd:
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
-  log_driver: "json-file"
+  # log_driver: "json-file"
+  # log_opt: {}
 
 elasticsearch:
   extends:

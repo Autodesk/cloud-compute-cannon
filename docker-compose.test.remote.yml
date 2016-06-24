@@ -4,9 +4,11 @@ compute:
     AWS: "true"
     DOCKER: "false"
     VAGRANT: "false"
+  log_driver: "json-file"
+  log_opt: {}
 
-redis:
-  log_driver: "none"
+# redis:
+#   log_driver: "none"
 
 registry:
   log_driver: "none"

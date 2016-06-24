@@ -12,8 +12,13 @@ class TestMain
 {
 	public static function setupTestExecutable()
 	{
-		var bunyanLogger :js.npm.Bunyan.BunyanLogger = Logger.log;
-		bunyanLogger.level(js.npm.Bunyan.WARN);
+		trace('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
+		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
+			Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));
+		} else {
+			Logger.log.level(js.npm.Bunyan.WARN);
+		}
+		trace('Log.level=${Logger.log.level()}');
 
 		//Required for source mapping
 		js.npm.SourceMapSupport;

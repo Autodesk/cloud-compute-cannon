@@ -51,8 +51,6 @@ class TestsIntegration
 	static function main()
 	{
 		TestMain.setupTestExecutable();
-		untyped Logger.log._level = 50;
-		// Logger.log.level(js.npm.Bunyan.WARN);
 
 		var isRedis = !isDisabled('REDIS');
 		var isAws = detectPkgCloud();
@@ -122,7 +120,7 @@ class TestsIntegration
 		}
 
 		if (isAws) {
-			runner.add(new compute.TestPkgCloudAws());
+			// runner.add(new compute.TestPkgCloudAws());
 			runner.add(new compute.TestScalingAmazon());
 			runner.add(new compute.TestCompleteJobSubmissionAmazon());
 			runner.add(new compute.TestRestartAfterCrashAWS());
