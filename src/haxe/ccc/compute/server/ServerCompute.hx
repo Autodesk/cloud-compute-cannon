@@ -129,7 +129,7 @@ class ServerCompute
 		Log.debug({'CONFIG_PATH':CONFIG_PATH});
 		var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
 		Assert.notNull(config);
-		Log.info({server_status:ServerStatus.Booting_1_4, config:config, config_path:CONFIG_PATH, HOST_PWD:Node.process.env['HOST_PWD']});
+		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:Node.process.env['HOST_PWD']});
 
 		var status = ServerStatus.Booting_1_4;
 		var injector = new Injector();
