@@ -83,6 +83,7 @@ class Job
 			outputs: batchJobResult.outputFiles,
 			error: batchJobResult.error,
 		};
+		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
 		jobStorage = jobStorage.appendToRootPath(job.item.resultDir());
 		return Promise.promise(true)
 			.pipe(function(_) {

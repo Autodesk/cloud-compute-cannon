@@ -322,7 +322,11 @@ class WorkerProviderBase
 	 */
 	function getShutdownDelay(workerId :MachineId) :Promise<Minutes>
 	{
-		return Promise.promise(_config.billingIncrement);
+		if (_config.billingIncrement == null) {
+			return Promise.promise(new Minutes(0));
+		} else {
+			return Promise.promise(_config.billingIncrement);
+		}
 	}
 
 	var _instanceStatusCache = new Map<MachineId,MachineStatus>();

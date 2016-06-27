@@ -245,20 +245,27 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						 *	value is unlikely to change in the near future, lets
 						 *	hard code it to avoid billing mistakes.
 						 */
-						var billingIncrement = _config.billingIncrement;
-						var awsServer :PkgCloudServerAws = cast worker;
-						var launchTime = awsServer.launchTime;
-						var launchTimeSince1970Ms :Milliseconds = untyped __js__('new Date({0}).getTime()', launchTime);
-						var launchTimeSince1970 = new TimeStamp(launchTimeSince1970Ms);
-						var now = TimeStamp.now();
-						var minutesSinceLaunch = (now - launchTimeSince1970).toMinutes();
-						var remainingMinutesTheIncrement = minutesSinceLaunch % billingIncrement;
-						var delay = billingIncrement - remainingMinutesTheIncrement;
-						if (delay < new Minutes(0)) {
-							delay = new Minutes(0);
+						var billingIncrement :Minutes = _config.billingIncrement;
+						if (billingIncrement == null || billingIncrement.toFloat() == 0) {
+							trace('billingIncrement=${billingIncrement} so returning delay=0');
+							return new Minutes(0);
+						} else {
+							var awsServer :PkgCloudServerAws = cast worker;
+							var launchTime = awsServer.launchTime;
+							var launchTimeSince1970Ms :Milliseconds = untyped __js__('new Date({0}).getTime()', launchTime);
+							var launchTimeSince1970 = new TimeStamp(launchTimeSince1970Ms);
+							var now = TimeStamp.now();
+							var minutesSinceLaunch = (now - launchTimeSince1970).toMinutes();
+							var remainingMinutesTheIncrement = minutesSinceLaunch % billingIncrement;
+							trace('minutesSinceLaunch % billingIncrement ($minutesSinceLaunch % $billingIncrement) = ${minutesSinceLaunch % billingIncrement}');
+							trace('FLOAT minutesSinceLaunch % billingIncrement ($minutesSinceLaunch % $billingIncrement) = ${minutesSinceLaunch.toFloat() % billingIncrement.toFloat()}');
+							var delay = billingIncrement - remainingMinutesTheIncrement;
+							if (delay < new Minutes(0)) {
+								delay = new Minutes(0);
+							}
+							log.debug({f:'getShutdownDelay', billingIncrement:billingIncrement, workerId:workerId, log:'getServer', delay:delay, launchTime:launchTime, launchTimeSince1970Ms:launchTimeSince1970Ms, launchTimeSince1970:launchTimeSince1970, now:now, minutesSinceLaunch:minutesSinceLaunch, remainingMinutesTheIncrement:remainingMinutesTheIncrement});
+							return delay;
 						}
-						log.debug({f:'getShutdownDelay', workerId:workerId, log:'getServer', delay:delay, launchTime:launchTime, launchTimeSince1970Ms:launchTimeSince1970Ms, launchTimeSince1970:launchTimeSince1970, now:now, minutesSinceLaunch:minutesSinceLaunch, remainingMinutesTheIncrement:remainingMinutesTheIncrement});
-						return delay;
 					});
 			case google:
 				return super.getShutdownDelay(workerId);

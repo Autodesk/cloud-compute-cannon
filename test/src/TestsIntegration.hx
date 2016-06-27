@@ -75,7 +75,7 @@ class TestsIntegration
 
 		//Run the unit tests. These do not require any external dependencies
 		if (isUnit) {
-			// runner.add(new utils.TestMiscUnit());
+			runner.add(new utils.TestMiscUnit());
 			// runner.add(new utils.TestPromiseQueue());
 			// runner.add(new utils.TestStreams());
 			// runner.add(new storage.TestStorageRestAPI());
@@ -120,7 +120,7 @@ class TestsIntegration
 		}
 
 		if (isAws) {
-			// runner.add(new compute.TestPkgCloudAws());
+			runner.add(new compute.TestPkgCloudAws());
 			runner.add(new compute.TestScalingAmazon());
 			runner.add(new compute.TestCompleteJobSubmissionAmazon());
 			runner.add(new compute.TestRestartAfterCrashAWS());

@@ -215,7 +215,7 @@ class TestScalingBase extends TestComputeBase
 					.thenWait(50)
 					.pipe(function(_) {
 						return manager.whenFinishedCurrentChanges()
-							.thenWait(50)
+							.thenWait(200)
 							.then(function(_) {
 								return assertEquals(manager.getActiveWorkers().length, Std.int(Math.max(1, machineTargetMinCount)));
 							});

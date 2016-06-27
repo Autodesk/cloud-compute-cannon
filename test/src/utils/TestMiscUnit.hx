@@ -66,6 +66,10 @@ class TestMiscUnit extends haxe.unit.async.PromiseTest
 		var timePlusFloat :Float = timePlus.toFloat();
 		assertEquals(timePlusFloat, floatTimePlus);
 
+		var val :Float = 300.0;
+		var mins = new Minutes(val);
+		assertEquals(mins, val);
+
 		return Promise.promise(true);
 	}
 }

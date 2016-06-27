@@ -17,9 +17,16 @@ compute:
     #worker containers to map the local file system to /inputs+/outputs within
     #the container. Only used for local docker providers (not cloud)
     HOST_PWD: "$PWD"
+    #Sets the max log level (bunyan where 10=trace 40=warn)
+    LOG_LEVEL: "$LOG_LEVEL"
 
 redis:
   image: redis:3.2.0-alpine
+  command: redis-server /usr/local/etc/redis/redis.conf
+  volumes:
+    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
+    - /data
   #No ports are specified here because the prod version must not expose the
   #port outside the machine, whereas the development case exposes the port
   #because sometimes the dev server is run outside a container context

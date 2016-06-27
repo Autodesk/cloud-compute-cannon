@@ -7,8 +7,9 @@ compute:
   log_driver: "json-file"
   log_opt: {}
 
-# redis:
-#   log_driver: "none"
+redis:
+  log_driver: "json-file"
+  log_opt: {}
 
 registry:
   log_driver: "none"
