@@ -63,7 +63,7 @@ class ConnectionToolsDocker
 			var host :String = Reflect.field(js.Node.process.env, DOCKER_HOST);//Looks like: tcp://192.168.59.103:2376
 			host = host.replace('tcp://', '');
 			return new HostName(host.split(':')[0]);
-		} else if (isDockerMachineAvailable()) {
+		} else if (isDefaultDockerMachine()) {
 			var stdout :String = js.node.ChildProcess.execSync("docker-machine ip default", {stdio:['ignore','pipe','ignore']});
 			return new HostName(Std.string(stdout).trim());
 		} else {
@@ -74,9 +74,24 @@ class ConnectionToolsDocker
 				var stdout :String = js.node.ChildProcess.execSync("netstat -nr | grep '^0\\.0\\.0\\.0' | awk '{print $2}'", {stdio:['ignore','pipe','ignore']});
 				return new HostName(Std.string(stdout).trim());
 			} catch (ignored :Dynamic) {
-				throw 'Exhausted all methods to determine the docker server host. "$DOCKER_HOST" is not defined in the env vars, "docker0" is not defined in /etc/hosts, and "docker-machine" is either not installed or a machine called "default" is not running (where a redis container might be running).';
-				return null;
+				//Localhost
+				return new HostName('localhost');
 			}
+		}
+	}
+
+	static function isDefaultDockerMachine() :Bool
+	{
+		if (isDockerMachineAvailable()) {
+
+			try {
+				var stdout :String = js.node.ChildProcess.execSync("docker-machine ip default", {stdio:['ignore','pipe','ignore']});
+				return true;
+			} catch(err :Dynamic) {
+				return false;
+			}
+		} else {
+			return false;
 		}
 	}
 
@@ -89,7 +104,7 @@ class ConnectionToolsDocker
 	{
 		try {
 			var stdout :String = js.node.ChildProcess.execSync("which docker-machine", {stdio:['ignore','pipe','ignore']});
-			return Std.string(stdout).trim().startsWith('/usr/local');
+			return true;
 		} catch (ignored :Dynamic) {
 			return false;
 		}
