@@ -324,8 +324,7 @@ class BatchComputeDocker
 					return outputStorageWorker.listDir()
 						.pipe(function(files) {
 							outputFiles = files;
-							trace('outputFiles=${outputFiles}');
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
+							//log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
 							if (outputFiles != null && outputFiles.length > 0) {
 								return DockerJobTools.copyInternal(outputStorageWorker, outputStorageRemote);
 							} else {
