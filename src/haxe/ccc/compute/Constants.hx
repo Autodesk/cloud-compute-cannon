@@ -32,6 +32,7 @@ class Constants
 	public static inline var RESULTS_JSON_FILE = 'result.json';
 	public static inline var DIRECTORY_INPUTS = 'inputs';
 	public static inline var DIRECTORY_OUTPUTS = 'outputs';
+	public static var LOCAL_WORKER_HOST_MOUNT_PREFIX = '';
 	public static inline var DIRECTORY_NAME_WORKER_OUTPUT = 'computejobs';
 	/** If you change this, change etc/log/plugins/output_worker_log.rb */
 	inline public static var WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER = '/$DIRECTORY_NAME_WORKER_OUTPUT/';

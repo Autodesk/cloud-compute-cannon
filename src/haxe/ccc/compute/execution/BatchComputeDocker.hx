@@ -270,7 +270,6 @@ class BatchComputeDocker
 										RW: true
 									}
 								];
-								trace('mounts=${mounts}');
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
 
 								var labels :Dynamic<String> = {

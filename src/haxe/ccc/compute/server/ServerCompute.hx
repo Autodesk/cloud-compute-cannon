@@ -103,9 +103,9 @@ class ServerCompute
 		js.Node.process.stderr.setMaxListeners(100);
 
 		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
-		haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
-			Log.trace(v, infos);
-		}
+		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
+		// 	Log.trace(v, infos);
+		// }
 
 		trace({log_check:'haxe_trace'});
 		trace('trace_without_objectifying');
@@ -151,13 +151,6 @@ class ServerCompute
 		injector.map(Express).toValue(app);
 
 		untyped __js__('app.use(require("cors")())');
-		//Just log everything while I'm debugging/testing
-#if debug
-		app.all('*', cast function(req, res, next) {
-			trace(req.url);
-			next();
-		});
-#end
 
 		app.use(untyped Node.require('express-bunyan-logger').errorLogger());
 

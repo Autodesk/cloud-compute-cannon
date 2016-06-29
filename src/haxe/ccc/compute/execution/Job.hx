@@ -301,17 +301,17 @@ class Job
 								} else {
 									return Promise.promise(true);
 								}
-							})
-							.then(function(_) {
-								try {
-									if (_redis != null) {
-										logStdStreamsToElasticSearch(_redis, _fs, _job.id);
-									}
-								} catch (err :Dynamic) {
-									Log.error({error:err});
-								}
-								return true;
 							});
+							// .then(function(_) {
+							// 	try {
+							// 		if (_redis != null) {
+							// 			logStdStreamsToElasticSearch(_redis, _fs, _job.id);
+							// 		}
+							// 	} catch (err :Dynamic) {
+							// 		Log.error({error:err});
+							// 	}
+							// 	return true;
+							// });
 					});
 				p.catchError(function(err) {
 					// This is no longer needed
