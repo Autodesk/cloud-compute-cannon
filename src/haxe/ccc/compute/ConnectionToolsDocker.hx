@@ -70,9 +70,12 @@ class ConnectionToolsDocker
 			//Nothing defined, last guess: are we in a container?
 			try {
 				//https://github.com/docker/docker/issues/1143
-				// var stdout :String = js.node.ChildProcess.execSync("/sbin/ifconfig docker0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'", {stdio:['ignore','pipe','ignore']});
 				var stdout :String = js.node.ChildProcess.execSync("netstat -nr | grep '^0\\.0\\.0\\.0' | awk '{print $2}'", {stdio:['ignore','pipe','ignore']});
-				return new HostName(Std.string(stdout).trim());
+				if (stdout == null || stdout.trim().length == 0) {
+					return new HostName('localhost');
+				} else {
+					return new HostName(Std.string(stdout).trim());
+				}
 			} catch (ignored :Dynamic) {
 				//Localhost
 				return new HostName('localhost');
