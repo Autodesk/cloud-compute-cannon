@@ -27,7 +27,7 @@ redis:
   volumes:
     - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
     # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-    - /data
+    - ./data/redis:/data
   ports:
     #Don't expose this port to the host, only linked containers.
     - "6379"

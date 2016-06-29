@@ -74,8 +74,13 @@ class TestDockerCompute extends TestComputeBase
 			});
 	}
 
+	/**
+	 * This is obsolete since local docker workers use a locally mounted
+	 * storage volume, not SFTP since the local docker daemon since 1.12
+	 * cannot be ssh'ed into.
+	 */
 	@timeout(500)
-	public function testSshConnectivity()
+	public function OBSOLETEtestSshConnectivity()
 	{
 		var workerDef = _worker;
 		return Promise.promise(true)

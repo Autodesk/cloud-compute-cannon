@@ -46,15 +46,15 @@ class TestCompleteJobSubmissionLocalDocker extends TestCompleteJobSubmissionBase
 			});
 	}
 
-	@timeout(1000)
-	public function testSftpConfiguredCorrectly()
-	{
-		return WorkerProviderBoot2Docker.isSftpConfigInLocalDockerMachine()
-			.then(function(ok) {
-				assertTrue(ok);
-				return true;
-			});
-	}
+	// @timeout(1000)
+	// public function testSftpConfiguredCorrectly()
+	// {
+	// 	return WorkerProviderBoot2Docker.isSftpConfigInLocalDockerMachine()
+	// 		.then(function(ok) {
+	// 			assertTrue(ok);
+	// 			return true;
+	// 		});
+	// }
 
 	@timeout(600000) //10m
 	public function testCompleteJobSubmissionLocalDocker()
