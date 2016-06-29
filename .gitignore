@@ -18,6 +18,7 @@ data/Service*
 data/computejobs/*
 data/registry/docker
 data/ServiceStorage*
+data/redis
 .cloudcomputecannon
 client.py
 results
