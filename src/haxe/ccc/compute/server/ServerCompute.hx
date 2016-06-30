@@ -226,6 +226,54 @@ class ServerCompute
 
 		status = ServerStatus.ConnectingToRedis_2_4;
 		Log.info({server_status:status});
+
+		var workerProviders = config.providers.map(WorkerProviderTools.getProvider);
+
+		//Actually create the server and start listening
+		var server = Http.createServer(cast app);
+		var serverHTTP = Http.createServer(cast app);
+
+		var closing = false;
+		Node.process.on('SIGINT', function() {
+			Log.warn("Caught interrupt signal");
+			if (closing) {
+				return;
+			}
+			closing = true;
+			untyped server.close(function() {
+				untyped serverHTTP.close(function() {
+					return Promise.whenAll(workerProviders.map(function(workerProvider) {
+						return workerProvider.dispose();
+					}))
+					.then(function(_) {
+						Node.process.exit(0);
+					});
+				});
+			});
+		});
+
+		var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
+		server.listen(PORT, function() {
+			Log.info('Listening http://localhost:$PORT');
+			serverHTTP.listen(SERVER_HTTP_PORT, function() {
+				Log.info('Listening http://localhost:$SERVER_HTTP_PORT');
+				// var disableServerCheck :Dynamic = Reflect.field(env, ENV_DISABLE_SERVER_CHECKS);
+				// if (!(disableServerCheck != null && (disableServerCheck == '1' || disableServerCheck == 'true' || disableServerCheck == 'True'))) {
+				// 	ccc.compute.server.tests.TestServerAPI.runServerAPITests()
+				// 		.then(function(success) {
+				// 			if (!success) {
+				// 				Log.critical('Failed functional tests');
+				// 				Node.process.exit(1);
+				// 			}
+				// 		})
+				// 		.catchError(function(err) {
+				// 			Log.critical({message:'Error in functional tests', error:err});
+				// 			Node.process.exit(1);
+				// 		});
+				// }
+			});
+		});
+
 		Promise.promise(true)
 			.pipe(function(_) {
 				return ConnectionToolsRedis.getRedisClient()
@@ -263,8 +311,6 @@ class ServerCompute
 				Assert.notNull(storage);
 				injector.map(ServiceStorage).toValue(storage);
 
-				var workerProviders = config.providers.map(WorkerProviderTools.getProvider);
-
 				//The queue manager
 				var schedulingService = new ccc.compute.ServiceBatchCompute();
 				injector.map(ServiceBatchCompute).toValue(schedulingService);
@@ -288,10 +334,6 @@ class ServerCompute
 				//Server infrastructure. This automatically handles client JSON-RPC remoting and other API requests
 				app.use(SERVER_API_URL, cast schedulingService.router());
 
-				//Actually create the server and start listening
-				var server = Http.createServer(cast app);
-				var serverHTTP = Http.createServer(cast app);
-
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
 				websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
@@ -307,52 +349,11 @@ class ServerCompute
 				//Setup a static file server to serve job results
 				app.use('/', StorageRestApi.staticFileRouter(storage));
 
-				var closing = false;
-				Node.process.on('SIGINT', function() {
-					Log.warn("Caught interrupt signal");
-					if (closing) {
-						return;
-					}
-					closing = true;
-					untyped server.close(function() {
-						untyped serverHTTP.close(function() {
-							return Promise.whenAll(workerProviders.map(function(workerProvider) {
-								return workerProvider.dispose();
-							}))
-							.then(function(_) {
-								Node.process.exit(0);
-							});
-						});
-					});
-				});
-
-				var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
-				server.listen(PORT, function() {
-					Log.info('Listening http://localhost:$PORT');
-					serverHTTP.listen(SERVER_HTTP_PORT, function() {
-						Log.info('Listening http://localhost:$SERVER_HTTP_PORT');
-						status = ServerStatus.Ready_4_4;
-						Log.debug({server_status:status});
-						if (Node.process.send != null) {//If spawned via a parent process, send will be defined
-							Node.process.send(Constants.IPC_MESSAGE_READY);
-						}
-
-						// var disableServerCheck :Dynamic = Reflect.field(env, ENV_DISABLE_SERVER_CHECKS);
-						// if (!(disableServerCheck != null && (disableServerCheck == '1' || disableServerCheck == 'true' || disableServerCheck == 'True'))) {
-						// 	ccc.compute.server.tests.TestServerAPI.runServerAPITests()
-						// 		.then(function(success) {
-						// 			if (!success) {
-						// 				Log.critical('Failed functional tests');
-						// 				Node.process.exit(1);
-						// 			}
-						// 		})
-						// 		.catchError(function(err) {
-						// 			Log.critical({message:'Error in functional tests', error:err});
-						// 			Node.process.exit(1);
-						// 		});
-						// }
-					});
-				});
+				status = ServerStatus.Ready_4_4;
+				Log.debug({server_status:status});
+				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
+					Node.process.send(Constants.IPC_MESSAGE_READY);
+				}
 			});
 	}
 

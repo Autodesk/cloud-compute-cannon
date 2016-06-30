@@ -379,6 +379,7 @@ class Job
 							return Promise.promise(true);
 						})
 						.pipe(function(_) {
+							//We may already be shut down
 							if (_redis != null) {
 								return ComputeQueue.processPending(_redis)
 									.thenTrue();

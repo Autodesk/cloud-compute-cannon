@@ -62,7 +62,7 @@ class ClientCompute
 						promise.boundPromise.reject(err);
 					}
 				} else {
-					promise.boundPromise.reject('non-200 response');
+					promise.boundPromise.reject('non-200 response body=$body');
 				}
 			});
 		return promise.boundPromise;

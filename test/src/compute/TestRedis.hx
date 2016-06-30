@@ -74,7 +74,6 @@ class TestRedis extends haxe.unit.async.PromiseTest
 	@timeout(100)
 	public function testRedisStream()
 	{
-		trace('testRedisStream');
 		return Promise.whenAll([ConnectionToolsRedis.getRedisClient(), ConnectionToolsRedis.getRedisClient()])
 			.pipe(function(redises :Array<RedisClient>) {
 				var deferred = new DeferredPromise<Bool>();

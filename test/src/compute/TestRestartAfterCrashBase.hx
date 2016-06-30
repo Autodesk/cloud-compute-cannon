@@ -66,7 +66,6 @@ class TestRestartAfterCrashBase extends TestBase
 					cmd: ['sleep', '2'],
 					parameters: {cpus:1, maxDuration:60*1000*10}
 				};
-
 				//Get the job id
 				return ClientCompute.postJob(hostport, jobParams)
 					.then(function(result) {

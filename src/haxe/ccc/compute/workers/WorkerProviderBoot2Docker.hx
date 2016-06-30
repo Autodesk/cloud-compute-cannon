@@ -146,9 +146,9 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		Constants.REGISTRY = new Host(hostName, new Port(REGISTRY_DEFAULT_PORT));
 		setHostWorkerDirectoryMount();
 		_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
-		if (ConnectionToolsDocker.isInsideContainer()) {
+		if (!ConnectionToolsDocker.isInsideContainer()) {
 			//If inside the container, use the mounted directory for file system access.
-			_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
+			_localJobData = Constants.LOCAL_WORKER_HOST_MOUNT_PREFIX + WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
 		}
 	}
 
@@ -164,7 +164,6 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		//ServiceStorage for the 'worker'.
 		var workerStorage = ServiceStorageLocalFileSystem.getService(_localJobData);
 		_injector.map(ServiceStorage, BOOT2DOCKER_PROVIDER_STORAGE_PATH).toValue(workerStorage);
-
 		return super.postInjection();
 	}
 
