@@ -51,18 +51,7 @@ class DockerJobTools
 	 */
 	public static function getDockerHostMountablePath(path :String) :String
 	{
-		if (Node.process.env['HOST_PWD'] != null && Node.process.env['HOST_PWD'] != '') {
-			var pwd = Node.process.env['HOST_PWD'];
-			if (path.indexOf(pwd) == -1) {
-				var toReplace = '/$DIRECTORY_NAME_WORKER_OUTPUT';
-				var replacement = Path.join(Node.process.env['HOST_PWD'], 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
-				return path.replace(toReplace, replacement);
-			} else {
-				return path;
-			}
-		} else {
-			return path;
-		}
+		return LOCAL_WORKER_HOST_MOUNT_PREFIX + path;
 	}
 
 	public static function deleteJobRemoteData(job :DockerJobDefinition, fs :ServiceStorage) :Promise<Bool>

@@ -272,7 +272,7 @@ class BatchComputeDocker
 										RW: true
 									}
 								];
-								trace('mounts=${mounts}');
+
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
 
 								var labels :Dynamic<String> = {
@@ -328,8 +328,7 @@ class BatchComputeDocker
 					return outputStorageWorker.listDir()
 						.pipe(function(files) {
 							outputFiles = files;
-							trace('outputFiles=${outputFiles}');
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
+							//log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
 							if (outputFiles != null && outputFiles.length > 0) {
 								return DockerJobTools.copyInternal(outputStorageWorker, outputStorageRemote);
 							} else {

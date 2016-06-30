@@ -72,7 +72,7 @@ class ClientCommands
 {
 	@rpc({
 		alias:'devtest',
-		doc:'Various convenience functions for dev testing',
+		doc:'Various convenience functions for dev testing. [longjob]',
 		args:{
 			'command':{doc: 'Output is JSON'}
 		}
@@ -80,13 +80,18 @@ class ClientCommands
 	public static function devtest(command :String) :Promise<CLIResult>
 	{
 		var devCommand :DevTestCommand = command;
-		return switch(command) {
-			case Longjob:
-				runclient(['sleep', '500'], 'ubuntu')
-					.thenVal(CLIResult.Success);
-			default:
-				log('Unknown command=$command');
-				Promise.promise(CLIResult.PrintHelpExit1);
+		if (devCommand == null) {
+			log('Available commands: [longjob]');
+			return Promise.promise(CLIResult.Success);
+		} else {
+			return switch(command) {
+				case Longjob:
+					runclient(['sleep', '500'], 'busybox')
+						.thenVal(CLIResult.Success);
+				default:
+					log('Unknown command=$command. Available commands: [longjob]');
+					Promise.promise(CLIResult.PrintHelpExit1);
+			}
 		}
 	}
 

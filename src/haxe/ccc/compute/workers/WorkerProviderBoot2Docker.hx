@@ -40,6 +40,21 @@ using promhx.PromiseTools;
  */
 class WorkerProviderBoot2Docker extends WorkerProviderBase
 {
+	public static function setHostWorkerDirectoryMount()
+	{
+		//The mount point for worker job data (inputs/outputs mounted to the job container)
+		//depends on if the server is running in a docker container or not.
+		if (ConnectionToolsDocker.isInsideContainer()) {
+			if (Node.process.env['HOST_PWD'] == null || Node.process.env['HOST_PWD'] == '') {
+				Log.critical('WorkerProviderBoot2Docker needs HOST_PWD defined if running inside a container.');
+				js.Node.process.exit(-1);
+			}
+			Constants.LOCAL_WORKER_HOST_MOUNT_PREFIX = Path.join(Node.process.env['HOST_PWD'], 'data');
+		} else {
+			Constants.LOCAL_WORKER_HOST_MOUNT_PREFIX = Path.join(Node.process.cwd(), 'data');
+		}
+	}
+
 	public static function getService(redis :js.npm.RedisClient) :WorkerProvider
 	{
 		var worker = getLocalDockerWorker();
@@ -48,17 +63,6 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		provider.postInjection();
 		return provider;
 	}
-
-	// public static function getWorkerStorage() :ServiceStorage
-	// {
-	// 	var workerDef = getLocalDockerWorker();
-	// 	var workerStorageConfig :StorageDefinition = {
-	// 		type: StorageSourceType.Sftp,
-	// 		rootPath: DIRECTORY_WORKER_BASE,
-	// 		sshConfig: workerDef.ssh
-	// 	};
-	// 	return StorageTools.getStorage(workerStorageConfig);
-	// }
 
 	public static function getLocalDockerWorker()
 	{
@@ -140,21 +144,11 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 
 		var hostName = ConnectionToolsDocker.getDockerHost();
 		Constants.REGISTRY = new Host(hostName, new Port(REGISTRY_DEFAULT_PORT));
-		//The mount point for worker job data (inputs/outputs mounted to the job container)
-		//depends on if the server is running in a docker container or not.
+		setHostWorkerDirectoryMount();
+		_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
 		if (ConnectionToolsDocker.isInsideContainer()) {
-			if (Node.process.env['HOST_PWD'] == null || Node.process.env['HOST_PWD'] == '') {
-				Log.critical('WorkerProviderBoot2Docker needs HOST_PWD defined if running inside a container.');
-				js.Node.process.exit(-1);
-			}
-			Constants.WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT = Path.join(Node.process.env['HOST_PWD'], 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
 			//If inside the container, use the mounted directory for file system access.
 			_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
-		} else {
-			var baseWorkerDataPath = Path.join(Node.process.cwd(), 'data/$DIRECTORY_NAME_WORKER_OUTPUT');
-			Constants.WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT = baseWorkerDataPath;
-			//If outside the container, use the local directory
-			_localJobData = baseWorkerDataPath;
 		}
 	}
 

@@ -469,7 +469,6 @@ statusBlob.computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", 
 statusBlob.jobId = jobId
 statusBlob.job = cjson.decode(redis.call("HGET", "$REDIS_KEY_VALUES", jobId))
 local statusBlobString = cjson.encode(statusBlob)
-print("SETTING " .. jobId .. " status=" .. statusBlobString)
 redis.call("HSET", "$REDIS_KEY_STATUS", jobId, statusBlobString)
 redis.call("SET", "$REDIS_CHANNEL_STATUS", statusBlobString)
 redis.call("PUBLISH", "$REDIS_CHANNEL_STATUS", statusBlobString) --JobStatusUpdate
@@ -506,14 +505,6 @@ end
 
 statusBlob.JobFinishedStatus = jobFinishedStatus
 statusBlob.JobStatus = "${JobStatus.Finalizing}"
-
-print("jobFinishedStatus=" .. jobFinishedStatus)
-
-if jobFinishedError then
-	print("YEP THERS jobFinishedError" .. tostring(jobFinishedError))
-else
-	print("NOPE NO jobFinishedError")
-end
 
 local jobFinishedError = jobFinishedError or nil
 statusBlob.error = jobFinishedError or nil
@@ -657,14 +648,13 @@ end
 	static var SNIPPET_FINISH_JOB =
 //Expects jobId,jobFinishedStatus,time,jobFinishedError
 '
-print("SNIPPET_FINISH_JOB "  .. jobId)
 if not redis.call("ZRANK", "$REDIS_KEY_WORKING", jobId) then
 	return {err="Job " .. jobId .. " is not in working mode"}
 end
 
 local computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-local message = "Finishing job=" .. jobId .. " computeJobId=" .. computeJobId .. "   jobFinishedStatus=" .. jobFinishedStatus
-$SNIPPET_INFO
+--local message = "Finishing job=" .. jobId .. " computeJobId=" .. computeJobId .. "   jobFinishedStatus=" .. jobFinishedStatus
+-- $ SNIPPET_INFO
 
 --Update the stats object
 $SNIPPET_GET_STATSOBJECT
@@ -911,8 +901,8 @@ if not jobId then
 	return {err=message}
 end
 
-local message = "Finished called for computeId=" .. tostring(computeJobId) .. " jobId=" .. jobId
-$SNIPPET_INFO
+--local message = "Finished called for computeId=" .. tostring(computeJobId) .. " jobId=" .. jobId
+--$ SNIPPET_INFO
 
 $SNIPPET_FINISH_JOB
 $SNIPPET_PROCESS_PENDING

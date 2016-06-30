@@ -550,6 +550,7 @@ class DockerTools
 
 	public static function startContainer(container :DockerContainer, ?opts :StartContainerOptions, ?ports :Map<Int,Int>) :Promise<DockerContainer>
 	{
+		//TODO: clean this up once tested.
 		var promise = new promhx.CallbackPromise();
 
 		if (ports == null) {
@@ -568,8 +569,7 @@ class DockerTools
 				Reflect.setField(opts.PortBindings, '${port}/tcp', [{HostPort:Std.string(ports[port])}]);
 			}
 		}
-		trace('container.start opts=$opts');
-		container.start(opts, promise.cb2);
+		container.start(promise.cb2);
 		return promise
 			.thenVal(container);
 	}

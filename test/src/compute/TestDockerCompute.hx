@@ -74,20 +74,6 @@ class TestDockerCompute extends TestComputeBase
 			});
 	}
 
-	// @timeout(500)
-	// public function testSshConnectivity()
-	// {
-	// 	var workerDef = _worker;
-	// 	return Promise.promise(true)
-	// 		.pipe(function(_) {
-	// 			return SshTools.execute(workerDef.ssh, 'echo "Hello"');
-	// 		})
-	// 		.then(function(result) {
-	// 			assertEquals('Hello', result.stdout.trim());
-	// 			return true;
-	// 		});
-	// }
-
 	@timeout(500)
 	public function testDockerConnectivity()
 	{

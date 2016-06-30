@@ -41,7 +41,43 @@ class ConnectionToolsDocker
 	 */
 	public static function getDockerHost() :HostName
 	{
-		return new HostName('localhost');
+		if (Reflect.field(js.Node.process.env, DOCKER_HOST) != null) {
+			var host :String = Reflect.field(js.Node.process.env, DOCKER_HOST);//Looks like: tcp://192.168.59.103:2376
+			host = host.replace('tcp://', '');
+			return new HostName(host.split(':')[0]);
+		} else if (isDefaultDockerMachine()) {
+			var stdout :String = js.node.ChildProcess.execSync("docker-machine ip default", {stdio:['ignore','pipe','ignore']});
+			return new HostName(Std.string(stdout).trim());
+		} else {
+			//Nothing defined, last guess: are we in a container?
+			try {
+				//https://github.com/docker/docker/issues/1143
+				var stdout :String = js.node.ChildProcess.execSync("netstat -nr | grep '^0\\.0\\.0\\.0' | awk '{print $2}'", {stdio:['ignore','pipe','ignore']});
+				if (stdout == null || stdout.trim().length == 0) {
+					return new HostName('localhost');
+				} else {
+					return new HostName(Std.string(stdout).trim());
+				}
+			} catch (ignored :Dynamic) {
+				//Localhost
+				return new HostName('localhost');
+			}
+		}
+	}
+
+	static function isDefaultDockerMachine() :Bool
+	{
+		if (isDockerMachineAvailable()) {
+
+			try {
+				var stdout :String = js.node.ChildProcess.execSync("docker-machine ip default", {stdio:['ignore','pipe','ignore']});
+				return true;
+			} catch(err :Dynamic) {
+				return false;
+			}
+		} else {
+			return false;
+		}
 	}
 
 	public static function getDocker() :Docker
@@ -49,14 +85,19 @@ class ConnectionToolsDocker
 		return new Docker(getDockerConfig());
 	}
 
+	public static function isDockerMachineAvailable() :Bool
+	{
+		try {
+			var stdout :String = js.node.ChildProcess.execSync("which docker-machine", {stdio:['ignore','pipe','ignore']});
+			return true;
+		} catch (ignored :Dynamic) {
+			return false;
+		}
+	}
+
 	public static function getDockerConfig() :ConstructorOpts
 	{
 		return getLocalDockerOpts();
-	}
-
-	static function getDockerPort() :Int
-	{
-		return 2376;
 	}
 
 	public static function isLocalDockerHost() :Bool

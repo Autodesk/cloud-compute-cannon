@@ -16,6 +16,7 @@ tmp
 data/computejobs/[a-zA-Z0-9_]*
 data/registry/[a-zA-Z0-9_]*
 data/ServiceStorageLocalFileSystem/[a-zA-Z0-9_]*
-.cloudcomputecannon/
+data/redis
+.cloudcomputecannon
 client.py
 results

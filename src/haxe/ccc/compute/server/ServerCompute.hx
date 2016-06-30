@@ -106,9 +106,9 @@ class ServerCompute
 		js.Node.process.stderr.setMaxListeners(100);
 
 		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
-		haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
-			Log.trace(v, infos);
-		}
+		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
+		// 	Log.trace(v, infos);
+		// }
 
 		Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
 		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
@@ -138,7 +138,7 @@ class ServerCompute
 		Log.debug({'CONFIG_PATH':CONFIG_PATH});
 		var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
 		Assert.notNull(config);
-		Log.info({server_status:ServerStatus.Booting_1_4, config:config, config_path:CONFIG_PATH, HOST_PWD:Node.process.env['HOST_PWD']});
+		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:Node.process.env['HOST_PWD']});
 
 		var status = ServerStatus.Booting_1_4;
 		var injector = new Injector();
@@ -160,13 +160,6 @@ class ServerCompute
 		injector.map(Express).toValue(app);
 
 		untyped __js__('app.use(require("cors")())');
-		//Just log everything while I'm debugging/testing
-#if debug
-		app.all('*', cast function(req, res, next) {
-			trace(req.url);
-			next();
-		});
-#end
 
 		app.use(untyped Node.require('express-bunyan-logger').errorLogger());
 

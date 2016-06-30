@@ -27,7 +27,9 @@ redis:
   #This config disables persistance to disk since we do not need it for development
   command: redis-server /usr/local/etc/redis/redis.conf
   volumes:
-    - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
+    - ./data/redis:/data
   ports:
     - "6379:6379"
   links:
