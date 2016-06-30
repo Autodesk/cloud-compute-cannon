@@ -91,10 +91,8 @@ class TestServiceBatchCompute extends TestComputeBase
 					.thenWait(5000)
 					.pipe(function(result) {
 						var jobId = result.jobId;
-						trace('jobId=${jobId}');
 						return ClientCompute.getJobData(HOST, jobId)
 							.pipe(function(jobResult) {
-								trace('jobResult=${jobResult}');
 								return Promise.promise(true);
 							});
 						// return Promise.promise(true);

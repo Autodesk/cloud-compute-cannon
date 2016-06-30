@@ -194,6 +194,26 @@ class ServerCompute
 
 		status = ServerStatus.ConnectingToRedis_2_4;
 		Log.info({server_status:status});
+
+		var workerProviders = config.providers.map(WorkerProviderTools.getProvider);
+
+		//Actually create the server and start listening
+		var server = Http.createServer(cast app);
+
+		Node.process.on('SIGINT', function() {
+			Log.warn("Caught interrupt signal");
+			untyped server.close();
+			for (workerProvider in workerProviders) {
+				workerProvider.dispose();
+			}
+			Node.process.exit(0);
+		});
+
+		var PORT :Int = Reflect.hasField(js.Node.process.env, 'PORT') ? Std.int(Reflect.field(js.Node.process.env, 'PORT')) : 9000;
+		server.listen(PORT, function() {
+			Log.info('Listening http://localhost:$PORT');
+		});
+
 		Promise.promise(true)
 			.pipe(function(_) {
 				return ConnectionToolsRedis.getRedisClient()
@@ -231,8 +251,6 @@ class ServerCompute
 				Assert.notNull(storage);
 				injector.map(ServiceStorage).toValue(storage);
 
-				var workerProviders = config.providers.map(WorkerProviderTools.getProvider);
-
 				//The queue manager
 				var schedulingService = new ccc.compute.ServiceBatchCompute();
 				injector.map(ServiceBatchCompute).toValue(schedulingService);
@@ -256,9 +274,6 @@ class ServerCompute
 				//Server infrastructure. This automatically handles client JSON-RPC remoting and other API requests
 				app.use(SERVER_API_URL, cast schedulingService.router());
 
-				//Actually create the server and start listening
-				var server = Http.createServer(cast app);
-
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
 
@@ -273,24 +288,11 @@ class ServerCompute
 				//Setup a static file server to serve job results
 				app.use('/', StorageRestApi.staticFileRouter(storage));
 
-				Node.process.on('SIGINT', function() {
-					Log.warn("Caught interrupt signal");
-					untyped server.close();
-					for (workerProvider in workerProviders) {
-						workerProvider.dispose();
-					}
-					Node.process.exit(0);
-				});
-
-				var PORT :Int = Reflect.hasField(js.Node.process.env, 'PORT') ? Std.int(Reflect.field(js.Node.process.env, 'PORT')) : 9000;
-				server.listen(PORT, function() {
-					Log.info('Listening http://localhost:$PORT');
-					status = ServerStatus.Ready_4_4;
-					Log.debug({server_status:status});
-					if (Node.process.send != null) {//If spawned via a parent process, send will be defined
-						Node.process.send(Constants.IPC_MESSAGE_READY);
-					}
-				});
+				status = ServerStatus.Ready_4_4;
+				Log.debug({server_status:status});
+				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
+					Node.process.send(Constants.IPC_MESSAGE_READY);
+				}
 			});
 	}
 
