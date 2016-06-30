@@ -16,6 +16,8 @@ using StringTools;
 
 class ConnectionToolsDocker
 {
+	public inline static var DOCKER_HOST = 'DOCKER_HOST'; //Looks like: tcp://192.168.59.103:2376
+
 	public static function getContainerAddress(linkName :String) :HostName
 	{
 		if (isInsideContainer()) {
