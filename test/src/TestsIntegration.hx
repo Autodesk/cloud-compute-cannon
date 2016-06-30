@@ -53,6 +53,8 @@ class TestsIntegration
 		var bunyanLogger :js.npm.Bunyan.BunyanLogger = Logger.log;
 		bunyanLogger.level(js.npm.Bunyan.WARN);
 
+		ccc.compute.workers.WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
+
 		//Required for source mapping
 		js.npm.SourceMapSupport;
 		util.EmbedMacros.embedFiles('etc');
@@ -92,7 +94,7 @@ class TestsIntegration
 			runner.add(new storage.TestStorageLocal());
 			runner.add(new compute.TestRedisMock());
 			if (isInternet) {
-				runner.add(new storage.TestStorageSftp());
+				// runner.add(new storage.TestStorageSftp());
 			}
 		}
 

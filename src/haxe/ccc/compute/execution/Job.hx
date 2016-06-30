@@ -378,7 +378,13 @@ class Job
 							return Promise.promise(true);
 						})
 						.pipe(function(_) {
-							return ComputeQueue.processPending(_redis);
+							//We may already be shut down
+							if (_redis != null) {
+								return ComputeQueue.processPending(_redis)
+									.thenTrue();
+							} else {
+								return Promise.promise(true);
+							}
 						})
 						.pipe(function(_) {
 							return dispose()
