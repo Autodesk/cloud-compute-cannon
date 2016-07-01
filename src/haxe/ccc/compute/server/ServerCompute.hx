@@ -4,9 +4,11 @@ import ccc.storage.StorageSourceType;
 import haxe.Json;
 import haxe.remoting.JsonRpc;
 
+import js.Error;
 import js.Node;
 import js.node.Fs;
 import js.node.Path;
+import js.node.Process;
 import js.node.http.*;
 import js.node.Http;
 import js.node.Url;
@@ -74,41 +76,22 @@ class ServerCompute
 		runServer();
 	}
 
-	static function maintest()
-	{
-		js.npm.SourceMapSupport;
-		ErrorToJson;
-		Logger.log = new AbstractLogger({name: "ccc", host:""});
-		ConnectionToolsRedis.getRedisClient()
-			.then(function(redis) {
-				Log.info('Connected to redis');
-				//Actually create the server and start listening
-				var app = new Express();
-				var server = Http.createServer(cast app);
-
-				Node.process.on('SIGINT', function() {
-					Log.warn("Caught interrupt signal");
-					untyped server.close();
-					Node.process.exit(0);
-				});
-
-				var env = Node.process.env;
-				var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
-				server.listen(PORT, function() {
-					Log.info('Listening http://localhost:$PORT');
-				});
-			});
-	}
-
 	static function runServer()
 	{
 		js.Node.process.stdout.setMaxListeners(100);
 		js.Node.process.stderr.setMaxListeners(100);
 
 		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
-		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
-		// 	Log.trace(v, infos);
-		// }
+		haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
+			Log.trace(v, infos);
+		}
+
+		function globalErrorHandler(err) {
+			Log.critical({crash:err.stack, message:'crash'});
+			Node.process.exit(1);
+		}
+
+		Node.process.on(ProcessEvent.UncaughtException, globalErrorHandler);
 
 		Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
 		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
@@ -160,8 +143,6 @@ class ServerCompute
 		injector.map(Express).toValue(app);
 
 		untyped __js__('app.use(require("cors")())');
-
-		app.use(untyped Node.require('express-bunyan-logger').errorLogger());
 
 		app.get('/version', function(req, res) {
 			var haxeCompilerVersion = Version.getHaxeCompilerVersion();
@@ -230,8 +211,13 @@ class ServerCompute
 		var workerProviders = config.providers.map(WorkerProviderTools.getProvider);
 
 		//Actually create the server and start listening
-		var server = Http.createServer(cast app);
-		var serverHTTP = Http.createServer(cast app);
+		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
+		var server = Http.createServer(function(req, res) {
+			appHandler(req, res, globalErrorHandler);
+		});
+		var serverHTTP = Http.createServer(function(req, res) {
+			appHandler(req, res, globalErrorHandler);
+		});
 
 		var closing = false;
 		Node.process.on('SIGINT', function() {
