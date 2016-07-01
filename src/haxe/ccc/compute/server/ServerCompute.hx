@@ -86,12 +86,10 @@ class ServerCompute
 			Log.trace(v, infos);
 		}
 
-		function globalErrorHandler(err) {
+		Node.process.on(ProcessEvent.UncaughtException, function(err) {
 			Log.critical({crash:err.stack, message:'crash'});
 			Node.process.exit(1);
-		}
-
-		Node.process.on(ProcessEvent.UncaughtException, globalErrorHandler);
+		});
 
 		Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
 		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
@@ -212,11 +210,14 @@ class ServerCompute
 
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
+		var requestErrorHandler = function(err) {
+			Log.error({error:err.stack, message:'Uncaught error'});
+		}
 		var server = Http.createServer(function(req, res) {
-			appHandler(req, res, globalErrorHandler);
+			appHandler(req, res, requestErrorHandler);
 		});
 		var serverHTTP = Http.createServer(function(req, res) {
-			appHandler(req, res, globalErrorHandler);
+			appHandler(req, res, requestErrorHandler);
 		});
 
 		var closing = false;

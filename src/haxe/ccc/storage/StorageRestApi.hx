@@ -31,18 +31,22 @@ class StorageRestApi
 		storage.readFile(file)
 			.then(function(stream) {
 				stream.once('error', function(err) {
+					Log.error({error:err, file:file, message:'Error reading file'});
 					res.status(500)
 						.send(Json.stringify({
-							error: err
+							file:file,
+							error:'Could not read file'
 						}));
 				});
 				stream.pipe(res);
 			})
 			.catchError(function(err) {
 				res.setHeader('Content-Type', 'application/json');
+				Log.error({error:err, file:file, message:'Error reading file'});
 				res.status(500)
 					.send(Json.stringify({
-						error: err
+						file:file,
+						error:'Could not read file'
 					}));
 			});
 	}
