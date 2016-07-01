@@ -84,12 +84,10 @@ class ServerCompute
 			Log.trace(v, infos);
 		}
 
-		function globalErrorHandler(err) {
+		Node.process.on(ProcessEvent.UncaughtException, function(err) {
 			Log.critical({crash:err.stack, message:'crash'});
 			Node.process.exit(1);
-		}
-
-		Node.process.on(ProcessEvent.UncaughtException, globalErrorHandler);
+		});
 
 		trace({log_check:'haxe_trace'});
 		trace('trace_without_objectifying');
@@ -182,7 +180,9 @@ class ServerCompute
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
 		var server = Http.createServer(function(req, res) {
-			appHandler(req, res, globalErrorHandler);
+			appHandler(req, res, function(err) {
+				Log.error({error:err.stack, message:'Uncaught error'});
+			});
 		});
 
 		Node.process.on('SIGINT', function() {
