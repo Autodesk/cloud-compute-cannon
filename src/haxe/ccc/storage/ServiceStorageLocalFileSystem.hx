@@ -1,5 +1,6 @@
 package ccc.storage;
 
+import js.Error;
 import js.node.Fs;
 import js.node.Path;
 import js.node.stream.Readable;
@@ -59,9 +60,13 @@ class ServiceStorageLocalFileSystem
 				path = Path.join(js.Node.process.cwd(), path);
 			}
 			if (err.code == 'ENOENT') {
-				throw 'Missing file $localPath not found at $path';
+				var promise = new Promise();
+				promise.reject('Missing file $localPath not found at $path');
+				return promise;
 			} else {
-				throw 'readFile but Fs.statSync($path) threw $err';
+				var promise = new Promise();
+				promise.reject(err);
+				return promise;
 			}
 		}
 #end
