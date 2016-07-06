@@ -115,7 +115,7 @@ Host awsworker
 		var hostData = CliTools.getSSHConfigHostData('awsworker', sshConfigData);
 		assertNotNull(hostData);
 		assertEquals(hostData.username, 'core');
-		assertEquals(hostData.key, fakeKeyData);
+		assertEquals(hostData.privateKey, fakeKeyData);
 		assertEquals(hostData.host, new HostName('ec2-54-177-176-228.us-west-1.compute.amazonaws.com'));
 		return Promise.promise(true);
 	}

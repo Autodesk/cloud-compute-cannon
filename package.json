@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "bin": {
     "ccc": "bin/cloudcomputecannon.js",
@@ -32,12 +32,12 @@
     "foo": "--log-driver=fluentd",
     "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf"
   },
-  "XXrepository": {
+  "repository": {
     "type": "git",
-    "url": "git@git.autodesk.com:amagod/batcher.git"
+    "url": "https://github.com/Autodesk/cloudcomputecannon.git"
   },
-  "XXbugs": {
-    "url": "https://git.autodesk.com/amagod/batcher/issues"
+  "bugs": {
+    "url": "https://github.com/Autodesk/cloudcomputecannon/issues"
   },
   "dependencies": {
     "base64-stream": "^0.1.3",
