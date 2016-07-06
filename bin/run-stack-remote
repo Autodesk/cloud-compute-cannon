@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+SERVER_HOST=$1
+SERVER_CONFIG_PATH=$2
+bin/sync-to-remote $1
+scp $SERVER_CONFIG_PATH $SERVER_HOST:ccc/serverconfig.yml
+DOCKER_COMPOSE="docker-compose"
+COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` COMPUTE_CONFIG=\`cat serverconfig.yml\` $DOCKER_COMPOSE up -d"
+echo $COMMAND
+ssh $SERVER_HOST "cd ccc && $COMMAND"
