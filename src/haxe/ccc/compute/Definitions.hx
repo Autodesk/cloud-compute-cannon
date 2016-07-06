@@ -379,8 +379,11 @@ typedef BasicBatchProcessResponseFull = {>BasicBatchProcessResponse,
 
 typedef ServerConnectionBlob = {
 	var host :Host;
-	var server :InstanceDefinition;
-	var provider: ServiceConfiguration;
+	/**
+	 * If server is missing, the server ssh config is pulled from ~/.ssh/config
+	 */
+	@:optional var server :InstanceDefinition;
+	@:optional var provider: ServiceConfiguration;
 }
 
 @:enum

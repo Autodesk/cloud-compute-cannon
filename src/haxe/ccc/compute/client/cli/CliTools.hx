@@ -6,9 +6,11 @@ import ccc.compute.server.ProviderTools.*;
 import haxe.Json;
 
 import js.Node;
+import js.node.Fs;
 import js.node.Os;
 import js.node.Path;
 import js.npm.FsExtended;
+import js.npm.Ssh;
 
 import promhx.Promise;
 import promhx.RequestPromises;
@@ -109,8 +111,8 @@ class CliTools
 	public static function getServerHostInCLI() :Host
 	{
 		var program :js.npm.Commander = js.Node.require('commander');
-		if (Reflect.hasField(program, 'host')) {
-			var host :Host = Reflect.field(program, 'host');
+		if (Reflect.hasField(program, 'server')) {
+			var host :Host = Reflect.field(program, 'server');
 			return host;
 		} else {
 			return null;
@@ -176,9 +178,53 @@ class CliTools
 		}
 	}
 
-	// public static function isLocalServer() :Promise<Bool>
-	// {
-	// 	return serverCheck('localhost:${Constants.SERVER_DEFAULT_PORT}');
-	// }
-
+	public static function getSSHConfigHostData(host :String, ?sshConfigData :String) :ConnectOptions
+	{
+		try {
+			if (sshConfigData == null) {
+				var sshConfigPath = Path.join(untyped __js__('require("os").homedir()'), '.ssh/config');
+				sshConfigData = Fs.readFileSync(sshConfigPath, {encoding:'utf8'});
+			}
+			var lines = sshConfigData.split('\n');
+			var foundEntry = false;
+			var i = 0;
+			var hostName :HostName = null;
+			var key = null;
+			var username = null;
+			var hostRegExStr = '\\s?Host\\s+([a-zA-Z_0-9]+)';
+			while (i < lines.length) {
+				if (foundEntry) {
+					//Check if we're out
+					var hostRegEx = new EReg(hostRegExStr, '');//~/\s+Host\s+([a-zA-Z_0-9]+).*/;
+					if (hostRegEx.match(lines[i])) {
+						break;
+					} else {
+						if (lines[i].trim().startsWith('User')) {
+							username = lines[i].replace('User', '').trim();
+						} else if (lines[i].trim().startsWith('IdentityFile')) {
+							var identityFile = lines[i].replace('IdentityFile', '').trim();
+							if (identityFile.startsWith('~')) {
+								identityFile = identityFile.replace('~', untyped __js__('require("os").homedir()'));
+							}
+							key = Fs.readFileSync(identityFile, {encoding:'utf8'});
+						} else if (lines[i].trim().startsWith('HostName')) {
+							hostName = new HostName(lines[i].replace('HostName', '').trim());
+						}
+					}
+				} else {
+					var hostRegEx = new EReg(hostRegExStr, '');
+					if (hostRegEx.match(lines[i])) {
+					}
+					if (hostRegEx.match(lines[i]) && hostRegEx.matched(1) == host) {
+						foundEntry = true;
+					}
+				}
+				i++;
+			}
+			return hostName != null ? {host:hostName, privateKey:key, username:username} : null;
+		} catch(err :Dynamic) {
+			trace('err=${err}');
+			return null;
+		}
+	}
 }

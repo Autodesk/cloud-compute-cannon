@@ -495,12 +495,15 @@ class ClientCommands
 		doc:'Install the cloudcomputecannon server locally or on a remote provider',
 		args:{
 			'config':{doc: '<Path to server config yaml file>', short:'c'},
+			'host':{doc: 'Provide an existing server. The host should be in your ~/.ssh/config since we cannot yet pass keys.'},
+			'key':{doc: 'SSH key or path to SSH key. Requires --host parameter'},
+			'username':{doc: 'SSH username. Requires --host parameter'},
 			'force':{doc: 'Even if a server exists, rebuild and restart', short:'f'},
 			'uploadonly':{doc: 'DEBUG/DEVELOPER: Only upload server files to remote server.'}
 		},
 		docCustom: 'Examples:\n  server-install          (installs a local cloud-cannon-compute on your machine, via docker)\n  server-install [path to server config yaml file]    (installs a remote server)'
 	})
-	public static function install(?config :String, ?force :Bool = false, ?uploadonly :Bool = false) :Promise<CLIResult>
+	public static function install(?config :String, ?host :HostName, ?key :String, ?username :String, ?force :Bool = false, ?uploadonly :Bool = false) :Promise<CLIResult>
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (config != null) {
@@ -517,14 +520,50 @@ class ClientCommands
 
 			return Promise.promise(true)
 				.pipe(function(_) {
-					if (isServerConnection(path)) {
-						//Perform tests on the existing server
-						var serverBlob :ServerConnectionBlob = readServerConnection(path);
+					var serverConfig = InitConfigTools.getConfigFromFile(config);
+					var serverBlob :ServerConnectionBlob = {
+						host: null
+					};
+					//If a host is supplied, try to get the credentials
+					var sshConfig = null;
+					if (host != null) {
+						//Use the provided server
+						//Search the ~/.ssh/config in case the key is defined there.
+						if (key == null) {
+							sshConfig = CliTools.getSSHConfigHostData(host);
+							if (sshConfig == null) {
+								throw 'No key supplied for host=$host and the host entry was not found in ~/.ssh/config';
+							}
+						} else {
+							try {
+								key = Fs.readFileSync(key, {encoding:'utf8'});
+							} catch (err :Dynamic) {}
+							if (username == null) {
+								throw 'No username supplied for host=$host and the host entry was not found in ~/.ssh/config';
+							}
+							sshConfig = {
+								privateKey: key,
+								host: host,
+								username: username
+							}
+						}
+
+						serverBlob.host = new Host(new HostName(sshConfig.host), new Port(SERVER_DEFAULT_PORT));
+						//Write it without the ssh config data, since
+						//we'll pick it up from the ~/.ssh/config every time
+						writeServerConnection(serverBlob, path);
+						//But add it here so the install procedure will work
+						serverBlob.server = {
+								id :null,
+								hostPublic: new HostName(sshConfig.host),
+								hostPrivate: null,
+								ssh: sshConfig,
+								docker: null
+						}
 						return Promise.promise(serverBlob);
 					} else {
-						//Just create the server instance.
+						//Create the server instance.
 						//It doesn't validate or check the running containers, that is the next step
-						var serverConfig = InitConfigTools.getConfigFromFile(config);
 						var providerConfig = serverConfig.providers[0];
 						return ProviderTools.createServerInstance(providerConfig)
 							.then(function(instanceDef) {
@@ -540,15 +579,13 @@ class ClientCommands
 				})
 				//Don't assume anything is working except ssh/docker connections.
 				.pipe(function(serverBlob) {
-					// trace('serverBlob=${serverBlob}');
 					return ProviderTools.installServer(serverBlob, force, uploadonly);
-					// return ProviderTools.copyFilesForRemoteServer(serverBlob);
 				})
-				// .pipe(function(_) {
-				// 	// trace('checking server now');
-				// 	return servercheck();
-				// })
-				.thenVal(CLIResult.Success);
+				.thenVal(CLIResult.Success)
+				.errorPipe(function(err) {
+					warn(err);
+					return Promise.promise(CLIResult.ExitCode(1));
+				});
 		} else {
 			//Install and run via docker
 			//First check if there is a local instance running
@@ -556,12 +593,8 @@ class ClientCommands
 			var host :String = null;
 			return Promise.promise(true)
 				.then(function(_) {
-					try {
-						hostName = ConnectionToolsDocker.getDockerHost();
-						return hostName;
-					} catch(err :Dynamic) {
-						return new HostName('localhost');
-					}
+					hostName = ConnectionToolsDocker.getDockerHost();
+					return hostName;
 				})
 				.pipe(function(hostname :HostName) {
 					host = '$SERVER_DEFAULT_PROTOCOL://$hostname:$SERVER_DEFAULT_PORT';

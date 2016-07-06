@@ -1,5 +1,9 @@
 package utils;
 
+import ccc.compute.client.cli.CliTools;
+
+import js.node.Fs;
+
 import promhx.Promise;
 
 import util.DockerTools;
@@ -70,6 +74,49 @@ class TestMiscUnit extends haxe.unit.async.PromiseTest
 		var mins = new Minutes(val);
 		assertEquals(mins, val);
 
+		return Promise.promise(true);
+	}
+
+	public function testSSHConfigParsing()
+	{
+		var fakeKeyPath = '/tmp/keyFake';
+		var fakeKeyData = 'someFakeKey';
+		Fs.writeFileSync(fakeKeyPath, fakeKeyData);
+		var sshConfigData = '
+Host platform
+    User ubuntu
+    HostName ec2-54-215-14-115.us-west-1.compute.amazonaws.com
+    IdentityFile ~/.ssh/platform.pem
+
+Host platformdokku
+     User dokku
+     IdentityFile ~/.ssh/id_rsa_dokku_push
+     HostName ec2-54-215-14-115.us-west-1.compute.amazonaws.com
+     RequestTTY yes
+
+Host default
+    HostName 192.168.50.1
+    User core
+    Port 22
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    PasswordAuthentication no
+    IdentityFile /Users/dionamago/.vagrant.d/insecure_private_key
+    IdentitiesOnly yes
+    LogLevel FATAL
+
+Host awsworker
+     User core
+     IdentityFile $fakeKeyPath
+     HostName ec2-54-177-176-228.us-west-1.compute.amazonaws.com
+     RequestTTY yes
+		';
+
+		var hostData = CliTools.getSSHConfigHostData('awsworker', sshConfigData);
+		assertNotNull(hostData);
+		assertEquals(hostData.username, 'core');
+		assertEquals(hostData.key, fakeKeyData);
+		assertEquals(hostData.host, new HostName('ec2-54-177-176-228.us-west-1.compute.amazonaws.com'));
 		return Promise.promise(true);
 	}
 }

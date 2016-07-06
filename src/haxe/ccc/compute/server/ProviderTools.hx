@@ -454,6 +454,8 @@ class ProviderTools
 
 	static function runDockerComposedServer(instance :InstanceDefinition) :Promise<Bool>
 	{
+		var command :String;
+		var dockerCompose = "/opt/bin/docker-compose";
 		return Promise.promise(true)
 			.pipe(function(_) {
 				//Docker stop
@@ -461,9 +463,9 @@ class ProviderTools
 			})
 			.pipe(function(_) {
 				//Docker up
-				return SshTools.execute(instance.ssh, 'cd ${Constants.APP_NAME_COMPACT} && sudo docker-compose build compute')
+				command = 'cd ${Constants.APP_NAME_COMPACT} && $dockerCompose build compute';
+				return SshTools.execute(instance.ssh, command, 10, 10, null, null, true)
 					.then(function(execResult) {
-						trace('execResult=${execResult}');
 						if (execResult.code != 0) {
 							throw execResult;
 						}
@@ -472,9 +474,9 @@ class ProviderTools
 			})
 			.pipe(function(_) {
 				//Docker up
-				return SshTools.execute(instance.ssh, 'cd ${Constants.APP_NAME_COMPACT} && sudo docker-compose up -d')
+				command = 'cd ${Constants.APP_NAME_COMPACT} && HOST_PWD=$$PWD $dockerCompose up -d';
+				return SshTools.execute(instance.ssh, command, 10, 10, null, null, true)
 					.then(function(execResult) {
-						trace('execResult=${execResult}');
 						if (execResult.code != 0) {
 							throw execResult;
 						}

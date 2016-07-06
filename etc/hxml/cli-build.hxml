@@ -18,9 +18,6 @@ etc/hxml/base-nodejs.hxml
 
 -debug
 
--D nodejs
--D PromhxExposeErrors
-
 -cp test/src
 
 -main ccc.compute.client.cli.CliMain

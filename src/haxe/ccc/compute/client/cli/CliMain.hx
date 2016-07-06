@@ -34,7 +34,7 @@ class CliMain
 		var program :Commander = js.Node.require('commander');
 		//Is there a remote server config? If not, the commands will be limited.
 
-		program = program.option('-H, --host <host>', 'Set server host here rather than via configuration');//'localhost:9000'
+		program = program.option('-S, --server <server>', 'Set server host here rather than via configuration');//'localhost:9000'
 		program = program.option('-v, --verbose', 'Show the JSON-RPC call to the server');
 
 		var address = null;
