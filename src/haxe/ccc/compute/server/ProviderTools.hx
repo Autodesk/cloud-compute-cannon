@@ -1,6 +1,5 @@
 package ccc.compute.server;
 
-import ccc.compute.client.cli.CliTools.*;
 import ccc.compute.client.ClientTools;
 import ccc.compute.InitConfigTools;
 import ccc.compute.workers.WorkerProviderBoot2Docker;

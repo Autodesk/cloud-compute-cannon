@@ -1,10 +1,6 @@
 package ccc.compute;
 
-
-import promhx.Promise;
-
 #if (nodejs && !macro)
-	import haxe.Json;
 	import haxe.remoting.JsonRpc;
 	import t9.js.jsonrpc.Routes;
 
@@ -28,7 +24,6 @@ import promhx.Promise;
 	import ccc.compute.server.ServerCommands;
 	import ccc.compute.server.ServerCommands.*;
 	import ccc.compute.workers.WorkerProvider;
-	import ccc.compute.server.tests.TestServerAPI;
 
 	import ccc.storage.ServiceStorage;
 	import ccc.storage.StorageDefinition;
@@ -66,15 +61,6 @@ class ServiceBatchCompute
 	public function test(?echo :String = 'defaultECHO' ) :Promise<String>
 	{
 		return Promise.promise(echo + echo);
-	}
-
-	@rpc({
-		alias:'runtests',
-		doc:'Run all server functional tests'
-	})
-	public function runServerTests() :Promise<Bool>
-	{
-		return ccc.compute.server.tests.TestServerAPI.runServerAPITests('localhost:$SERVER_DEFAULT_PORT');
 	}
 
 	@rpc({
@@ -390,6 +376,8 @@ class ServiceBatchCompute
 
 		var serverContext = new t9.remoting.jsonrpc.Context();
 		serverContext.registerService(this);
+		//Remote tests
+		serverContext.registerService(new ccc.compute.server.tests.ServiceTests());
 		serverContext.registerService(ccc.compute.server.ServerCommands);
 		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext));
 		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT));

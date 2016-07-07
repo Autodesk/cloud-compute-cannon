@@ -6,7 +6,6 @@ import util.DockerRegistryTools;
 
 class TestRegistry extends ServerAPITestBase
 {
-
 	/**
 	 * After the tests runs the setup, everything
 	 * should be clear and empty, including the registry.

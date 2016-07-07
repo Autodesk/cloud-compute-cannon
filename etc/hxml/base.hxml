@@ -1,7 +1,7 @@
 -cp lib/janicek-core-haxe/src
 -cp lib/haxe-json-rpc/src/haxe
 
--lib hx-color-trace:0.0.2
+-lib hx-color-trace:0.0.3
 -lib version
 -lib abstracts-core:0.1.1
 -lib yaml:1.2.1

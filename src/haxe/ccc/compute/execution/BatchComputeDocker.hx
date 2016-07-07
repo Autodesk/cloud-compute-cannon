@@ -60,7 +60,8 @@ class BatchComputeDocker
 		log = parentLog.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
 		untyped log._level = parentLog._level;
 
-		log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
+		// log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
+		log.info({log:'executeJob', job:LogTools.removePrivateKeys(job)});
 
 		var computeJobId = job.computeJobId;
 		var docker = job.worker.getInstance().docker();
@@ -72,8 +73,6 @@ class BatchComputeDocker
 		var outputStorageRemote = fs.clone().appendToRootPath(job.item.outputDir());
 		var resultsStorageRemote = fs.clone().appendToRootPath(job.item.resultDir());
 
-		trace('inputStorageRemote=${inputStorageRemote}');
-		trace('inputStorageWorker=${inputStorageWorker}');
 		/*
 			Set the job JobWorkingStatus. This is to
 			resume the job in case the Node.js process
@@ -154,7 +153,6 @@ class BatchComputeDocker
 						})
 						.pipe(function(_) {
 							log.debug({JobWorkingStatus:jobWorkingStatus, log:'workerStorage.makeDir ${workerStorage.getRootPath()}${job.computeJobId.workerOutputDir()}'});
-							trace('mkdir $outputStorageWorker');
 							return outputStorageWorker.makeDir()
 								.then(function(_) {
 									return true;
@@ -371,7 +369,7 @@ class BatchComputeDocker
 			.then(function(_) {
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
 				//The job is now finished. Clean up the temp worker storage,
-				//out of the promise chain (for speed)
+				// out of the promise chain (for speed)
 				inputStorageWorker.deleteDir()
 					.pipe(function(_) {
 						log.info('Deleted ${inputStorageWorker.toString()}');

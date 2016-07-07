@@ -78,6 +78,8 @@ class Constants
 	inline public static var SERVER_INSTALL_COMPOSE_SCRIPT = 'etc/server/install_docker_compose.sh';
 	inline public static var SERVER_MOUNTED_CONFIG_FILE = 'serverconfig.json';
 	inline public static var BOOT2DOCKER_PROVIDER_STORAGE_PATH = 'serverconfig.json';
+	public static var SERVER_LOCAL_HOST :Host = new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT));
+	public static var SERVER_LOCAL_RPC_URL :UrlString = '${SERVER_DEFAULT_PROTOCOL}://${SERVER_LOCAL_HOST}${SERVER_RPC_URL}';
 
 	/* Fluent/logging */
 	inline public static var FLUENTD_SOURCE_PORT = 24225;

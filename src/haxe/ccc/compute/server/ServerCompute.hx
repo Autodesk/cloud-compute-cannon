@@ -1,7 +1,5 @@
 package ccc.compute.server;
 
-import ccc.storage.StorageSourceType;
-import haxe.Json;
 import haxe.remoting.JsonRpc;
 
 import js.Error;
@@ -23,8 +21,6 @@ import js.npm.RedisClient;
 
 import minject.Injector;
 
-import promhx.Promise;
-
 import ccc.compute.InitConfigTools;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ServiceBatchCompute;
@@ -38,6 +34,7 @@ import ccc.compute.workers.WorkerProviderVagrant;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 import ccc.compute.workers.WorkerProviderTools;
 import ccc.compute.workers.WorkerManager;
+import ccc.storage.StorageSourceType;
 import ccc.storage.StorageTools;
 import ccc.storage.StorageDefinition;
 import ccc.storage.ServiceStorage;
@@ -82,9 +79,9 @@ class ServerCompute
 		js.Node.process.stderr.setMaxListeners(100);
 
 		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
-		haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
-			Log.trace(v, infos);
-		}
+		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
+		// 	Log.trace(v, infos);
+		// }
 
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
 			Log.critical({crash:err.stack, message:'crash'});
@@ -359,7 +356,7 @@ class ServerCompute
 					})
 					.then(function(out) {
 						var outputJson :JobResult = Json.parse(out);
-						ws.send(Json.stringify({jsonrpc:'2.0', result:outputJson}));
+						ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, result:outputJson}));
 					});
 			}
 		}
@@ -379,12 +376,12 @@ class ServerCompute
 					if (jsonrpc.method == Constants.RPC_METHOD_JOB_NOTIFY) {
 						//Here is where the interesting stuff happens
 						if (jsonrpc.params == null) {
-							ws.send(Json.stringify({jsonrpc:'2.0', error:'Missing params', code:JsonRpcErrorCode.InvalidParams, data:{original_request:jsonrpc}}));
+							ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Missing params', code:JsonRpcErrorCode.InvalidParams, data:{original_request:jsonrpc}}));
 							return;
 						}
 						var jobId = jsonrpc.params.jobId;
 						if (jobId == null) {
-							ws.send(Json.stringify({jsonrpc:'2.0', error:'Missing jobId parameter', code:JsonRpcErrorCode.InvalidParams, data:{original_request:jsonrpc}}));
+							ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Missing jobId parameter', code:JsonRpcErrorCode.InvalidParams, data:{original_request:jsonrpc}}));
 							return;
 						}
 						map.set(jobId, ws);
@@ -407,11 +404,11 @@ class ServerCompute
 
 					} else {
 						Log.error('Unknown method');
-						ws.send(Json.stringify({jsonrpc:'2.0', error:'Unknown method', code:JsonRpcErrorCode.MethodNotFound, data:{original_request:jsonrpc}}));
+						ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Unknown method', code:JsonRpcErrorCode.MethodNotFound, data:{original_request:jsonrpc}}));
 					}
 				} catch (err :Dynamic) {
-					Log.error(err);
-					ws.send(Json.stringify({jsonrpc:'2.0', error:'Error parsing JSON-RPC', code:JsonRpcErrorCode.ParseError, data:{original_request:message, error:err}}));
+					Log.error({error:err});
+					ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Error parsing JSON-RPC', code:JsonRpcErrorCode.ParseError, data:{original_request:message, error:err}}));
 				}
 			});
 			ws.on(WebSocketEvent.Close, function(code, message) {
@@ -421,10 +418,8 @@ class ServerCompute
 			});
 		});
 
-		var stream = RedisTools.createJsonStream(redis, ComputeQueue.REDIS_CHANNEL_STATUS)//, ComputeQueue.REDIS_KEY_STATUS)
-		// var stream = RedisTools.createPublishStream(redis, ComputeQueue.REDIS_CHANNEL_STATUS)
+		var stream = RedisTools.createJsonStream(redis, ComputeQueue.REDIS_CHANNEL_STATUS)
 			.then(function(status :JobStatusUpdate) {
-				// var status :JobStatusObj = Json.parse(out);
 				if (status.jobId == null) {
 					Log.warn('No jobId for status=${Json.stringify(status)}');
 					return;

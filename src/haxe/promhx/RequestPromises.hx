@@ -12,6 +12,7 @@ import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.node.buffer.Buffer;
 
+using promhx.PromiseTools;
 using StringTools;
 
 class RequestPromises
@@ -23,8 +24,16 @@ class RequestPromises
 		var responseBuffer :Buffer = null;
 		var cb = function(res :IncomingMessage) {
 			res.setEncoding('utf8');
+			res.on(ReadableEvent.Error, function(err) {
+				if (!promise.boundPromise.isErroredOrFinished()) {
+					promise.boundPromise.reject({error:err, url:url});
+				} else {
+					Log.error({error:err, stack:(err.stack != null ? err.stack : null)});
+				}
+			});
+
 			if (res.statusCode < 200 || res.statusCode > 299) {
-				promise.boundPromise.reject('ERROR status code ${res.statusCode}');
+				promise.boundPromise.reject('ERROR status code ${res.statusCode} url=$url');
 			} else {
 				res.on(ReadableEvent.Data, function(chunk :Buffer) {
 					if (responseBuffer == null) {
@@ -34,7 +43,9 @@ class RequestPromises
 					}
 				});
 				res.on(ReadableEvent.End, function() {
-					promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
+					if (!promise.isDeferredErroredOrFinished()) {
+						promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
+					}
 				});
 			}
 		}
@@ -43,8 +54,8 @@ class RequestPromises
 		try {
 			request = caller.get(url, cb);
 			request.on(WritableEvent.Error, function(err) {
-				if (!promise.boundPromise.isResolved()) {
-					promise.boundPromise.reject(err);
+				if (!promise.isDeferredErroredOrFinished()) {
+					promise.boundPromise.reject({error:err, url:url});
 				} else {
 					Log.error(err);
 				}
@@ -52,7 +63,7 @@ class RequestPromises
 			if (timeout > 0) {
 				request.setTimeout(timeout, function() {
 					var err = {url:url, error:'timeout', timeout:timeout};
-					if (!promise.boundPromise.isResolved()) {
+					if (!promise.isDeferredErroredOrFinished()) {
 						promise.boundPromise.reject(err);
 					} else {
 						Log.error(err);
@@ -60,7 +71,7 @@ class RequestPromises
 				});
 			}
 		} catch(err :Dynamic) {
-			promise.boundPromise.reject(err);
+			promise.boundPromise.reject({error:err, url:url});
 		}
 		return promise.boundPromise;
 	}
@@ -70,6 +81,9 @@ class RequestPromises
 		var promise = new DeferredPromise();
 		var responseBuffer :Buffer = null;
 		var cb = function(res :IncomingMessage) :Void {
+			res.on(ReadableEvent.Error, function(err) {
+				promise.boundPromise.reject({error:err, url:url});
+			});
 			if (res.statusCode < 200 || res.statusCode > 299) {
 				promise.boundPromise.reject('ERROR status code ${res.statusCode}');
 			} else {
@@ -81,7 +95,9 @@ class RequestPromises
 					}
 				});
 				res.on(ReadableEvent.End, function() {
-					promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
+					if (!promise.isDeferredErroredOrFinished()) {
+						promise.resolve(responseBuffer.toString('utf8'));
+					}
 				});
 			}
 		}
@@ -97,8 +113,8 @@ class RequestPromises
 		try {
 			request = caller.request(options, cb);
 			request.on(WritableEvent.Error, function(err) {
-				if (!promise.boundPromise.isResolved()) {
-					promise.boundPromise.reject(err);
+				if (!promise.isDeferredErroredOrFinished()) {
+					promise.resolve(responseBuffer.toString('utf8'));
 				} else {
 					Log.error(err);
 				}

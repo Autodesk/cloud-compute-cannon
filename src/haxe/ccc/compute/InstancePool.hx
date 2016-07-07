@@ -343,17 +343,19 @@ class InstancePool
 		var promise = new promhx.CallbackPromise();
 		client.hgetall(REDIS_KEY_WORKERS, promise.cb2);
 		return promise
-			.then(function(data) {
+			.then(function(out) {
+				var data :haxe.DynamicAccess<WorkerDefinition> = cast out;
 				trace('data=${data}');
-				trace('data=${data != null ? cast data : []} sdsfsdfsdfsdfsdfsdfdfsdfsdf
-					ssdd');
-				return data != null ? cast data : [];
+				var result :Array<WorkerDefinition> = [];
+				for (key in data.keys()) {
+					result.push(data[key]);
+				}
+				return result;
 			});
 	}
 
 	public static function setWorkerTimeout(client :RedisClient, id :MachineId, time :TimeStamp) :Promise<Bool>
 	{
-		trace('setWorkerTimeout id=$id time=$time');
 		return evaluateLuaScript(client, SCRIPT_SET_WORKER_DEFERRED_TIMEOUT, [id, time.toFloat()])
 			.then(function(_) {
 				return true;
@@ -364,9 +366,6 @@ class InstancePool
 	{
 		return evaluateLuaScript(client, SCRIPT_GET_ALL_WORKER_TIMEOUTS, [providerId])
 			.then(Json.parse);
-			// .then(function(result :Array<{id:MachineId, time:Float}>) {
-
-			// });
 	}
 
 	public static function getJobCountOnMachine(client :RedisClient, id :MachineId) :Promise<Int>

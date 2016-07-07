@@ -25,4 +25,16 @@ class ServerTestTools
 			.setConnection(new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(rpcUrl));
 		return proxy;
 	}
+
+	public static function getJobResult(jobId :JobId) :Promise<JobResult>
+	{
+		var proxy = getProxy(SERVER_LOCAL_RPC_URL);
+		function getJobData() {
+			return proxy.doJobCommand(JobCLICommand.Result, [jobId], true)
+				.then(function(out) {
+					return out[jobId];
+				});
+		}
+		return JobWebSocket.getJobResult(SERVER_LOCAL_HOST, jobId, getJobData);
+	}
 }
