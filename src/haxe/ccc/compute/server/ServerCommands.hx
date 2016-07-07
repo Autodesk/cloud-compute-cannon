@@ -54,7 +54,6 @@ class ServerCommands
 
 	public static function hardStopAndDeleteAllJobs(redis :RedisClient) :Promise<Bool>
 	{
-		trace('hardStopAndDeleteAllJobs');
 		return Promise.promise(true)
 			.pipe(function(_) {
 				//Remove all jobs
@@ -68,7 +67,6 @@ class ServerCommands
 					.pipe(function(_) {
 						return ccc.compute.InstancePool.getAllWorkers(redis)
 							.pipe(function(workerDefs) {
-								trace('workerDefs=${workerDefs}');
 								return Promise.whenAll(workerDefs.map(
 									function(instance) {
 										return WorkerTools.cleanWorker(instance);
@@ -81,7 +79,6 @@ class ServerCommands
 
 	public static function buildImageIntoRegistry(imageStream :IReadable, repositoryTag :String, resultStream :IWritable) :Promise<DockerUrl>
 	{
-		trace('buildImageIntoRegistry');
 		return Promise.promise(true)
 			.pipe(function(_) {
 				var docker = ConnectionToolsDocker.getDocker();

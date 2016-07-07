@@ -21,13 +21,9 @@ import js.node.Fs;
 import js.npm.FsExtended;
 import js.npm.Request;
 
-import haxe.Json;
-
 import promhx.Promise;
 import promhx.RequestPromises;
 import promhx.deferred.DeferredPromise;
-
-import t9.abstracts.net.*;
 
 import yaml.Yaml;
 

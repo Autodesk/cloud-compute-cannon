@@ -299,12 +299,10 @@ class TestDockerCompute extends TestComputeBase
 				//TODO: this needs to be better documented or automated.
 				var fsInputs = new ServiceStorageLocalFileSystem().setRootPath(exampleBaseDir + '/inputs');
 				var fsExampleInputs = fs.clone().appendToRootPath(job.item.inputDir());
-				trace('fsExampleInputs=${fsExampleInputs}');
 				return DockerJobTools.copyInternal(fsInputs, fsExampleInputs)
 					.pipe(function(_) {
 						return fsExampleInputs.listDir()
 							.then(function(files) {
-								trace('files=${files}');
 								return true;
 							});
 						});

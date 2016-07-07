@@ -51,7 +51,11 @@ class DockerJobTools
 	 */
 	public static function getDockerHostMountablePath(path :String) :String
 	{
-		return LOCAL_WORKER_HOST_MOUNT_PREFIX + path;
+		if (!path.startsWith(LOCAL_WORKER_HOST_MOUNT_PREFIX)) {
+			return LOCAL_WORKER_HOST_MOUNT_PREFIX + path;
+		} else {
+			return path;
+		}
 	}
 
 	public static function deleteJobRemoteData(job :DockerJobDefinition, fs :ServiceStorage) :Promise<Bool>
@@ -207,11 +211,9 @@ class DockerJobTools
 		imageId = imageId.toLowerCase();
 		Assert.notNull(docker);
 		Assert.notNull(imageId);
-		var volumes = {};
 		var hostConfig :CreateContainerHostConfig = {};
 		hostConfig.Binds = [];
 		for (mount in mounts) {
-			Reflect.setField(volumes, mount.Destination, {});
 			hostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
 		}
 
@@ -222,7 +224,6 @@ class DockerJobTools
 			AttachStderr: true,
 			Tty: false,
 			Labels: labels,
-			Volumes: volumes,
 			HostConfig: hostConfig,
 			WorkingDir: workingDir
 		}

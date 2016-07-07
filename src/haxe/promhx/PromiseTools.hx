@@ -6,6 +6,16 @@ import promhx.deferred.DeferredPromise;
 
 class PromiseTools
 {
+	public static function isErroredOrFinished(p :Promise<Dynamic>) :Bool
+	{
+		return p.isErrored() || p.isFulfilled() || p.isRejected();
+	}
+
+	public static function isDeferredErroredOrFinished(p :DeferredPromise<Dynamic>) :Bool
+	{
+		return p.isErrored() || p.isFulfilled() || p.boundPromise.isErrored() || p.boundPromise.isFulfilled() || p.boundPromise.isRejected();
+	}
+
 	public static function error<A>(err :Dynamic) :Promise<A>
 	{
 		var p = new Promise();

@@ -9,10 +9,10 @@ package ccc.compute.server.tests;
  * 5) Hides stderr/out, but shows errors
  */
 
-import ccc.compute.client.ClientTools;
-
 import haxe.Json;
 import haxe.remoting.JsonRpc;
+
+import ccc.compute.client.ClientTools;
 
 import js.Node;
 import js.node.Buffer;

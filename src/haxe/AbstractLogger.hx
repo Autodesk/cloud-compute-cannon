@@ -19,13 +19,25 @@ abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogge
 
 	static function processLogMessage(logThing :Dynamic, pos :haxe.PosInfos)
 	{
-		var obj :Dynamic = switch(untyped __typeof__(logThing)) {
-			case 'object': logThing;
-			default: {message:Std.string(logThing)};
+		var obj :haxe.DynamicAccess<Dynamic> = switch(untyped __typeof__(logThing)) {
+			case 'object': cast logThing;
+			default: cast {message:Std.string(logThing)};
 		}
-		Reflect.setField(obj, 'src', {file:pos.fileName, line:pos.lineNumber});
-		// Reflect.setField(obj, 'level', Std.int(logCode / 10));
-		Reflect.setField(obj, 'time', untyped __js__('new Date().toISOString()'));
+		obj['src'] = {file:pos.fileName, line:pos.lineNumber};
+		obj['time'] = untyped __js__('new Date().toISOString()');
+		//Ensure errors are strings, not objects, for eventual consumption by Elasticsearch
+		if (obj.exists('error') && obj['error'] != null) {
+			switch(untyped __typeof__(obj['error'])) {
+				case 'string': //Good
+				default:
+					try {
+						var e = obj['error'];
+						obj['error'] = e.stack != null ? e.stack : e + '';
+					} catch (err :Dynamic) {
+						//Swallow
+					}
+			}
+		}
 		return obj;
 	}
 
