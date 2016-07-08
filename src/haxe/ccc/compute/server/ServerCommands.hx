@@ -1,7 +1,9 @@
 package ccc.compute.server;
 
-import haxe.Json;
+import haxe.Resource;
 
+import js.node.Fs;
+import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
@@ -14,7 +16,6 @@ import ccc.compute.execution.DockerJobTools;
 import ccc.compute.workers.WorkerTools;
 import ccc.storage.ServiceStorage;
 
-import promhx.Promise;
 import promhx.PromiseTools;
 import promhx.StreamPromises;
 import promhx.DockerPromises;
@@ -25,17 +26,39 @@ import promhx.RequestPromises;
 import util.DockerTools;
 import util.DockerRegistryTools;
 
-import t9.abstracts.net.*;
-
-using Lambda;
 using promhx.PromiseTools;
-using StringTools;
 
 /**
  * Server API methods
  */
 class ServerCommands
 {
+	public static function version() :ServerVersionBlob
+	{
+		if (_versionBlob == null) {
+			_versionBlob = versionInternal();
+		}
+		return _versionBlob;
+	}
+
+	static var _versionBlob :ServerVersionBlob;
+	static function versionInternal()
+	{
+		var haxeCompilerVersion = Version.getHaxeCompilerVersion();
+		var customVersion = null;
+		try {
+			customVersion = Fs.readFileSync(Path.join(ROOT, 'VERSION'), {encoding:'utf8'});
+		} catch(ignored :Dynamic) {
+			customVersion = null;
+		}
+		var npmPackageVersion = null;
+		try {
+			npmPackageVersion = Json.parse(Resource.getString('package.json')).version;
+		}
+		var instance = Std.string(Std.int(Math.random() * 100000000));
+		return {npm:npmPackageVersion, compiler:haxeCompilerVersion, VERSION:customVersion, instance:instance};
+	}
+
 	public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>
 	{
 		return return ComputeQueue.getAllJobIds(redis)

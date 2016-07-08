@@ -7,7 +7,7 @@ import haxe.unit.async.PromiseTestRunner;
 class ServiceTests
 {
 	@rpc({
-		alias:'runtests',
+		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
 	public function runServerTests() :Promise<CompleteTestResult>

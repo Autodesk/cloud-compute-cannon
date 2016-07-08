@@ -112,7 +112,7 @@ Host awsworker
      RequestTTY yes
 		';
 
-		var hostData = CliTools.getSSHConfigHostData('awsworker', sshConfigData);
+		var hostData = CliTools.getSSHConfigHostData(new HostName('awsworker'), sshConfigData);
 		assertNotNull(hostData);
 		assertEquals(hostData.username, 'core');
 		assertEquals(hostData.privateKey, fakeKeyData);

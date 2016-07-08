@@ -29,6 +29,11 @@ class CliTools
 		return ccc.compute.client.ProxyTools.getProxy(rpcUrl);
 	}
 
+	public static function getTestsProxy(rpcUrl :UrlString)
+	{
+		return ccc.compute.client.ProxyTools.getTestsProxy(rpcUrl);
+	}
+
 	public static function getHost() :Host
 	{
 		var configPath = findExistingServerConfigPath();
@@ -36,7 +41,7 @@ class CliTools
 		var host = if (hasServerHostInCLI()) {
 			getServerHostInCLI();
 		} else if (connection != null) {
-			ProviderTools.getServerHost(new HostName(connection.server.ssh.host));
+			ProviderTools.getServerHost(new HostName(connection.server.hostPublic));
 		} else {
 			null;
 		}
@@ -80,6 +85,20 @@ class CliTools
 	public static function readServerConnection(configPath :CLIServerPathRoot) :ServerConnectionBlob
 	{
 		var serverDef :ServerConnectionBlob = Json.parse(FsExtended.readFileSync(configPath.getServerJsonConfigPath(), {}));
+		if (serverDef.server == null) {
+			var hostName = serverDef.host.getHostname();
+			var sshConfig = CliTools.getSSHConfigHostData(hostName);
+			if (sshConfig != null) {
+				serverDef.server = {
+					id: null,
+					hostPublic: new HostName(sshConfig.host),
+					hostPrivate: null,
+					ssh: sshConfig,
+					docker: null
+				};
+				serverDef.host = new Host(serverDef.server.hostPublic, new Port(SERVER_DEFAULT_PORT));
+			}
+		}
 		return serverDef;
 	}
 
@@ -93,6 +112,13 @@ class CliTools
 		if (path == null) {
 			path = js.Node.process.cwd();
 		}
+		//Don't write the ssh info if it is in our ~/.ssh/config
+		var hostName = config.host.getHostname();
+		var sshConfig = CliTools.getSSHConfigHostData(hostName);
+		if (sshConfig != null) {
+			config.server = null;
+		}
+
 		var configString = Json.stringify(config, null, '\t');
 		FsExtended.ensureDirSync(path.getServerJsonConfigPathDir());
 		FsExtended.writeFileSync(path.getServerJsonConfigPath(), configString);
@@ -124,61 +150,51 @@ class CliTools
 	 * @param  config :ProviderConfig [description]
 	 * @return        [description]
 	 */
-	public static function getServerHost(?path :String) :Promise<Host>
+	public static function getServerHost(?path :String) :Host
+	{
+		var host :Host = getRawServerHost(path);
+		if (host == null) {
+			return host;
+		}
+		var hostName :HostName = host.getHostname();
+		var sshConfig = getSSHConfigHostData(hostName);
+		if (sshConfig != null) {
+			host = new Host(new HostName(sshConfig.host), host.port());
+		}
+		return host;
+	}
+
+	static function getRawServerHost(?path :String) :Host
 	{
 		if (hasServerHostInCLI()) {
-			return Promise.promise(getServerHostInCLI());
+			return getServerHostInCLI();
 		} else {
 			var configPath = findExistingServerConfigPath(path);
 			if (configPath != null) {
 				var config = readServerConnection(configPath);
 				if (config != null) {
 					var host :Host = getHostFromServerConfig(config);
-					return Promise.promise(host);
-				} else {
-					return Promise.promise(null);
+					return host;
 				}
-			} else {
-				return Promise.promise(null);
 			}
-
-			// var config = readServerConnection(path);
-			// if (config != null) {
-			// 	var host :Host = getHostFromServerConfig(config.data);
-			// 	return Promise.promise(host);
-			// } else {
-			// 	return Promise.promise(null);
-			// }
-			// return CliTools.isLocalServer()	
-			// 	.pipe(function(isLocal) {
-			// 		if (isLocal) {
-			// 			trace('returning localhost for server');
-			// 			var localhost :Host = 'localhost:${Constants.SERVER_DEFAULT_PORT}';
-			// 			return Promise.promise(localhost);
-			// 		} else {
-			// 			var config = InitConfigTools.ohGodGetConfigFromSomewhere();
-			// 			return ensureRemoteServer(config.providers[0])//Check for saved credentials on disk
-			// 				.then(function(serverBlob) {
-			// 					var serverHost :Host = serverBlob.server.ssh.host + ':' + SERVER_PORT;
-			// 					return serverHost;
-			// 				});
-			// 		}
-			// 	});
 		}
+		return null;
 	}
 
 	inline public static function getHostFromServerConfig(config :ServerConnectionBlob) :Host
 	{
 		if (config.host != null) {
-			return config.host + ':' + SERVER_DEFAULT_PORT;
+			return config.host;
+		} else if (config.server != null && config.server.hostPublic != null) {
+			return new Host(new HostName(config.server.hostPublic), new Port(SERVER_DEFAULT_PORT));
 		} else if (config.server != null && config.server.ssh != null) {
-			return config.server.ssh.host + ':' + SERVER_DEFAULT_PORT;
+			return new Host(new HostName(config.server.ssh.host), new Port(SERVER_DEFAULT_PORT));
 		} else {
 			return null;
 		}
 	}
 
-	public static function getSSHConfigHostData(host :String, ?sshConfigData :String) :ConnectOptions
+	public static function getSSHConfigHostData(host :HostName, ?sshConfigData :String) :ConnectOptions
 	{
 		try {
 			if (sshConfigData == null) {

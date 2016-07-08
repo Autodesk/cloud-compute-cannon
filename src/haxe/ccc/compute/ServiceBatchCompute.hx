@@ -52,6 +52,15 @@ class ServiceBatchCompute
 {
 
 	@rpc({
+		alias:'server-version',
+		doc:'Get the server version info'
+	})
+	public function serverVersion() :Promise<ServerVersionBlob>
+	{
+		return Promise.promise(ServerCommands.version());
+	}
+
+	@rpc({
 		alias:'test',
 		doc:'Test function for verifying JSON-RPC calls',
 		args:{
