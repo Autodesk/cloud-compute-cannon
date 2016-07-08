@@ -213,6 +213,8 @@ class DockerJobTools
 		Assert.notNull(imageId);
 		var hostConfig :CreateContainerHostConfig = {};
 		hostConfig.Binds = [];
+		//Ensure json-file logging so we can get to the logs
+		hostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
 		for (mount in mounts) {
 			hostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
 		}

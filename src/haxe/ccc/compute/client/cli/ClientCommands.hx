@@ -608,7 +608,8 @@ class ClientCommands
 				.pipe(function(_) {
 					var serverConfig = InitConfigTools.getConfigFromFile(config);
 					var serverBlob :ServerConnectionBlob = {
-						host: null
+						host: null,
+						provider: serverConfig
 					};
 					//If a host is supplied, try to get the credentials
 					var sshConfig = null;
@@ -651,11 +652,11 @@ class ClientCommands
 
 						//But add it here so the install procedure will work
 						serverBlob.server = {
-								id :null,
-								hostPublic: new HostName(sshConfig.host),
-								hostPrivate: null,
-								ssh: sshConfig,
-								docker: null
+							id :null,
+							hostPublic: new HostName(sshConfig.host),
+							hostPrivate: null,
+							ssh: sshConfig,
+							docker: null
 						}
 						return Promise.promise(serverBlob);
 					} else {

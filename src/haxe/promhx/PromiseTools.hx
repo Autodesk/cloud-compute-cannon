@@ -123,10 +123,10 @@ class PromiseTools
 		var results = [];
 		while (p.length > 0) {
 			promise = chainPipeInternal(promise, p.shift())
-						.then(function(val) {
-							results.push(val);
-							return val;
-						});
+				.then(function(val) {
+					results.push(val);
+					return val;
+				});
 		}
 		return promise
 			.then(function(_) {

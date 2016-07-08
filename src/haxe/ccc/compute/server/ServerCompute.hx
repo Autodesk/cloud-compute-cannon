@@ -143,6 +143,12 @@ class ServerCompute
 			var versionBlob = ServerCommands.version();
 			res.send(Json.stringify(versionBlob));
 		});
+
+		app.get('/config', function(req, res) {
+			var configCopy = LogTools.removePrivateKeys(config);
+			res.send(Json.stringify(configCopy, null, '  '));
+		});
+
 		//Check if server is listening
 		app.get(Constants.SERVER_PATH_CHECKS, function(req, res) {
 			res.send(Constants.SERVER_PATH_CHECKS_OK);

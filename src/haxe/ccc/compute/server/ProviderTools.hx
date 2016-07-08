@@ -473,7 +473,7 @@ class ProviderTools
 			})
 			.pipe(function(_) {
 				//Docker up
-				command = 'cd ${Constants.APP_NAME_COMPACT} && HOST_PWD=$$PWD $dockerCompose up -d';
+				command = 'cd ${Constants.APP_NAME_COMPACT} && HOST_PWD=$$PWD $ENV_VAR_COMPUTE_CONFIG=`cat $SERVER_MOUNTED_CONFIG_FILE` $dockerCompose up -d';
 				return SshTools.execute(instance.ssh, command, 10, 10, null, null, true)
 					.then(function(execResult) {
 						if (execResult.code != 0) {
@@ -548,6 +548,11 @@ class ProviderTools
 
 	public static function copyFilesForRemoteServer(serverBlob :ServerConnectionBlob) :Promise<Bool>
 	{
+		if (serverBlob.provider == null) {
+			var p = new Promise();
+			p.reject('Missing serverBlob.provider');
+			return p;
+		}
 		//Ensure the hostname
 		Constants.SERVER_HOSTNAME_PUBLIC = serverBlob.server.hostPublic;
 		Constants.SERVER_HOSTNAME_PRIVATE = serverBlob.server.hostPrivate;
@@ -585,8 +590,7 @@ class ProviderTools
 
 	static function copyServerFiles(storage :ServiceStorage) :Promise<Bool>
 	{
-		js.Node.process.stdout.write('...copying files to ${storage.toString()}...');
-
+		trace('...copying files to ${storage.toString()}...');
 		return Promise.promise(true)
 			//Copy non-template files first. Don't copy files that also have a template version
 			.pipe(function(_) {
@@ -600,9 +604,12 @@ class ProviderTools
 					var content = Resource.getString(resourceName);
 					var name = resourceName.startsWith('etc/server/') ? resourceName.replace('etc/server/', '') : resourceName;
 					var path = name;
-					promises.push(storage.writeFile(path, StreamTools.stringToStream(content)));
+					promises.push(function() {
+						trace(path);
+						return storage.writeFile(path, StreamTools.stringToStream(content));
+					});
 				}
-				return Promise.whenAll(promises);
+				return PromiseTools.chainPipePromises(promises);
 			})
 			//Copy the templates afterwards so they overwrite non-template files
 			.pipe(function(_) {
@@ -613,9 +620,12 @@ class ProviderTools
 					var name = resourceName.startsWith('etc/server/') ? resourceName.replace('etc/server/', '') : resourceName;
 					name = name.substr(0, name.length - '.template'.length);
 					var path = name;
-					promises.push(storage.writeFile(path, StreamTools.stringToStream(content)));
+					promises.push(function() {
+						trace(path);
+						return storage.writeFile(path, StreamTools.stringToStream(content));
+					});
 				}
-				return Promise.whenAll(promises);
+				return PromiseTools.chainPipePromises(promises);
 			})
 			.then(function(_) {
 				return true;
