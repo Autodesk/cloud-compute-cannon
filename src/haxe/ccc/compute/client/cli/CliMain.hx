@@ -36,6 +36,7 @@ class CliMain
 
 		program = program.option('-S, --server <server>', 'Set server host here rather than via configuration');//'localhost:9000'
 		program = program.option('-v, --verbose', 'Show the JSON-RPC call to the server');
+		program = program.option('-c, --check', 'Check server and client version before making remote API call');
 
 		var address = null;
 		function printRpcRequest(requestDef) {
@@ -52,22 +53,28 @@ class CliMain
 
 		//The following functions are broken out so that the CLI commands can be listed
 		//in alphabetical order when the help command is called.
-		function serverRequest(requestDef) {
-			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
-			CliTools.getServerHost()
-				.then(function(hostport) {
-					address = 'http://$hostport${SERVER_RPC_URL}';
-					printRpcRequest(requestDef);
-					var clientConnection = new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(address);
-					clientConnection.request(requestDef.method, requestDef.params)
-						.then(function(result) {
-							var msg = Json.stringify(result, null, '\t');
+		function serverRequest(requestDef :RequestDef) {
+			return maybeThrowErrorIfVersionMismatch()
+				.pipe(function(_) {
+					requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
+					var hostAndPort = CliTools.getServerHost();
+					return Promise.promise(true)
+						.pipe(function(_) {
+							address = 'http://$hostAndPort${SERVER_RPC_URL}';
+							printRpcRequest(requestDef);
+							var clientConnection = new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(address);
+							return clientConnection.request(requestDef.method, requestDef.params)
+								.then(function(result) {
+									var msg = Json.stringify(result, null, '\t');
 #if nodejs
-							js.Node.console.log(msg);
+									js.Node.console.log(msg);
 #else
-							trace(msg);
+									trace(msg);
 #end
-							js.Node.process.exit(0);
+									js.Node.process.exit(0);
+
+									return true;
+								});
 						});
 				})
 				.catchError(function(err) {
@@ -84,7 +91,10 @@ class CliMain
 			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
 			printRpcRequest(requestDef);
 			var command = program.commands.find(function(e) return untyped e._name == requestDef.method);
-			context.handleRpcRequest(requestDef)
+			return maybeThrowErrorIfVersionMismatch()
+				.pipe(function(_) {
+					return context.handleRpcRequest(requestDef);
+				})
 				.then(function(result :ResponseDefSuccess<CLIResult>) {
 					if (result.error != null) {
 						trace(result.error);
@@ -127,7 +137,8 @@ class CliMain
 		}
 
 		//Server methods
-		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.server.ServerCommands, ccc.compute.ServiceBatchCompute);
+		//ccc.compute.server.ServerCommands, 
+		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.ServiceBatchCompute, ccc.compute.server.tests.ServiceTests);
 		for (def in serverMethodDefinitions) {
 			rpcDefinitionMap.set(def.alias, {isClient:false, def:def});
 			rpcAlias.push(def.alias);
@@ -165,6 +176,28 @@ class CliMain
 			js.Node.setTimeout(function(){trace('ERROR EXITED BECAUSE TIMED OUT, should not exit this way');}, 10000000);
 			program.parse(js.Node.process.argv);
 		}
+	}
+
+	static function maybeThrowErrorIfVersionMismatch() :Promise<Bool>
+	{
+		var program :{check:Bool} = js.Node.require('commander');
+		if (program.check) {
+			return throwErrorIfVersionMismatch();
+		} else {
+			return Promise.promise(true);
+		}
+	}
+
+	static function throwErrorIfVersionMismatch() :Promise<Bool>
+	{
+		return ClientCommands.validateServerAndClientVersions()
+			.then(function(ok) {
+				if (!ok) {
+					traceRed('Client and server version mismatch');
+					js.Node.process.exit(1);
+				}
+				return ok;
+			});
 	}
 
 }

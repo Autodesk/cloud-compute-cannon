@@ -140,14 +140,8 @@ class ServerCompute
 		untyped __js__('app.use(require("cors")())');
 
 		app.get('/version', function(req, res) {
-			var haxeCompilerVersion = Version.getHaxeCompilerVersion();
-			var customVersion = null;
-			try {
-				customVersion = Fs.readFileSync(Path.join(ROOT, 'VERSION'), {encoding:'utf8'});
-			} catch(ignored :Dynamic) {
-				customVersion = 'Missing VERSION file';
-			}
-			res.send(Json.stringify({compiler:haxeCompilerVersion, file:customVersion, status:status}));
+			var versionBlob = ServerCommands.version();
+			res.send(Json.stringify(versionBlob));
 		});
 		//Check if server is listening
 		app.get(Constants.SERVER_PATH_CHECKS, function(req, res) {

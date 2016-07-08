@@ -386,6 +386,18 @@ typedef ServerConnectionBlob = {
 	@:optional var provider: ServiceConfiguration;
 }
 
+typedef ServerVersionBlob = {
+	var npm :String;
+	var compiler :String;
+	var instance :String;
+	@:optional var VERSION :String;
+}
+
+typedef ClientVersionBlob = {
+	var npm :String;
+	var compiler :String;
+}
+
 @:enum
 abstract JobCLICommand(String) from String {
 	var Remove = 'remove';

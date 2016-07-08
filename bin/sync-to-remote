@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 REMOTE=$1
-REMOTE_CCC_PATH="ccc"
-rsync -av --exclude=serverconfig.yml --exclude=node_modules --exclude=.git --exclude=tmp --exclude=.haxelib --exclude=.cloudcomputecannon --exclude=data/redis --exclude=data/computejobs/* --exclude=data/registry/* --exclude=data/ServiceStorageLocalFileSystem/* --exclude=.vagrant --exclude=.bundle ./ $REMOTE:$REMOTE_CCC_PATH/
+REMOTE_CCC_PATH="cloudcomputecannon"
+rsync -av --exclude=**.DS_Store* --exclude=serverconfig.yml --exclude=node_modules --exclude=.git --exclude=tmp --exclude=.haxelib --exclude=.cloudcomputecannon --exclude=data/redis --exclude=data/computejobs/* --exclude=data/registry/* --exclude=data/ServiceStorageLocalFileSystem/* --exclude=.vagrant --exclude=.bundle ./ $REMOTE:$REMOTE_CCC_PATH/
