@@ -50,9 +50,8 @@ package ccc.compute;
  */
 class ServiceBatchCompute
 {
-
 	@rpc({
-		alias:'server-version',
+		alias:'serverversion',
 		doc:'Get the server version info'
 	})
 	public function serverVersion() :Promise<ServerVersionBlob>
