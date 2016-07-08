@@ -28,6 +28,8 @@ import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
 
+import util.DockerUrl;
+
 using ccc.compute.JobTools;
 using ccc.compute.workers.WorkerTools;
 
@@ -201,7 +203,17 @@ class BatchComputeDocker
 							var dockerImage = job.item.image.value;
 							promise = DockerPromises.listImages(docker)
 								.pipe(function(images) {
-									if (images.exists(function(e) return e.RepoTags.has(dockerImage))) {
+									trace('images=${images}');
+									trace('dockerImage=${dockerImage}');
+									var imageExists = images.exists(function(e) {
+										return e.RepoTags.exists(function(tag :DockerUrl) {
+											return DockerUrlTools.matches(dockerImage, tag);
+										});
+									});
+									trace('imageExists=${imageExists}');
+
+
+									if (imageExists) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);
 									} else {

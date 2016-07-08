@@ -24,6 +24,7 @@ import promhx.StreamPromises;
 import promhx.RequestPromises;
 
 import util.DockerTools;
+import util.DockerUrl;
 import util.DockerRegistryTools;
 
 using promhx.PromiseTools;
