@@ -34,13 +34,15 @@ Cloud-compute-cannon installs globally.
 
 	npm install -g cloud-compute-cannon
 
-This installs the `cloudcannon` executable.
+This installs the `ccc` executable.
 
 ## Running
 
 ### 'Hello world' example
 
-	cloudcannon run --image=python --command="python -c print('Hello world!')" --output=./localOutputDir
+--command=\'["python", "-c", "print(\\\"Hello World!\\\")"]
+
+	ccc run --image=elyase/staticpython --command='["python", "-c", "print(\"Hello World!\")"]' --output=./localOutputDir
 
 This assumes you have docker installed on the local machine, since we haven't specified any cloud provider, such as AWS. It instructs a worker to pull the python docker image, creates a container that runs the python command. The `output` option instructs cloudcannon to copy the results (here only the stdout) to the directory.
 
@@ -52,7 +54,7 @@ There are many other options that are documented below.
 
 You can see logs for the entire stack at:
 
-http://<host>:9200
+http://<host>:5601
 
 The first time you'll need to configure Kibana:
 
@@ -60,28 +62,15 @@ Click on settings in the top-line menu, choose indices and then make sure that t
 
 To confirm there are indices go to:
 
-http://<host>:9200/_cat/indices
+http://<host>:5601/_cat/indices
 
 and you should see logstash-*** indices.
 
 ## Configuration
 
-Deploying to a remote machine, or deploying anywhere that uses real cloud providers (e.g. AWS, GCE) requires passing in environmental variables *and* also a yaml config file.
-
-E.g.
-
-	COMPUTE_CONFIG=`cat serverconfig.yaml` docker-compose up
-
-The other environment variables are specified in the docker-compose.yml file.
+Deploying to a remote machine, or deploying anywhere that uses real cloud providers (e.g. AWS, GCE) requires passing in a configuration file.
 
 Example config yaml files are found in `compute/servers/etc`.
-
-The full list of environment variables used by the compute queue:
-
-	PORT=9000
-	REDIS_PORT=6379
-	REDIS_HOST=redis
-	COMPUTE_CONFIG=`cat serverconfig.yaml`
 
 Yaml config example:
 
@@ -98,38 +87,39 @@ providers:
     minWorkers: 0
     priority: 1
     #billingIncrement are measured in MINUTES. AWS defaults to 60 if this is not set
-    billingIncrement: 60
+    billingIncrement: 58
     credentials:
       provider: "amazon"
-      keyId: "AKIAIWJON3HDJNRFHCQQ"
-      key: "exampleKey"
+      keyId: "AKIAIWJON3HDJ"
+      key: "SLV3lNIPbGwv6oSyqXHoA5aIE7A"
       region: "us-west-1"
-      SecurityGroupId: "sg-a3eae4e7"
-    worker:
-      #You can set arbitrary tags here. This relies on the AWS permissions allowing tagging.
-      #Tagging is not used internally, so these are optional.
+    server:
       Tags:
         - Key: "Name"
-          Value: "APlatformWorker_DionsTest"
-        - Key: "PlatformId"
-          Value: "DionsTest"
-      InstanceType: "m4.large"
-      #https://coreos.com/dist/aws/aws-stable.json
-      ImageId: "ami-c2e490a2"
-      #If you want to run the compute server outside the network where the workers are allocated, e.g. 
-      #for testing, set this to true.
-      usePublicIp: false
-      SubnetId: "subnet-828f7ee7"
-      #This is optional, it will use the default VPC security group.
-      SecurityGroup: "platform-test-security-group"
-      KeyName: "platform-test-keypair"
-        Key: |
-          -----BEGIN RSA PRIVATE KEY-----
-          MIIEowIBAAKCAQEAhmr9lnVKTkk5p/Z/MFgPXHlTYyGt8EBqrXlmusPwBiSJsGtS9Pd+YFyFEsMy
-          7SNAljfJrv/PaRWtOwHDIizHBkeEqQoZTOaNbieN152VwKJm/Lfe3wS2+BjyViV97iD8WBxcOWS+
-          ...
-          -----END RSA PRIVATE KEY-----
+          Value: "CCC_Server"
+      InstanceType: "m3.medium"
+      ImageId: "ami-652c5505"
+      KeyName: "ccc-keypair"
+      Key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+        JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+        -----END RSA PRIVATE KEY-----
+    worker:
+      Tags:
+        - Key: "Name"
+          Value: "CCC_Worker"
+      InstanceType: "m3.medium"
+      ImageId: "ami-61e99101"
+      KeyName: "ccc-keypair"
+      Key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+        JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+        -----END RSA PRIVATE KEY-----
 ```
+
+In the above configuration, only the `credentials.keyId` and `credentials.key` values need to be modified to run under your own AWS account.
 
 ## Testing
 
@@ -154,7 +144,7 @@ If you have a running server (let's assume here at *localhost:9000*), you can te
 
 ## Developers
 
-CloudComputeCannon is written in [Haxe](http://haxe.org/). To develop, you'll need to install Haxe, ([Docker](https://www.docker.com/), and [Node+NPM](http://nodejs.org/).
+CloudComputeCannon is written in [Haxe](http://haxe.org/). To develop, you'll need to install Haxe, ([Docker](https://www.docker.com/) +1.12, and [Node+NPM](http://nodejs.org/).
 
 Steps for running the functional tests locally:
 

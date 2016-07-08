@@ -21,3 +21,5 @@ PACKAGE_VERSION=$(cat package.json \
 
 git tag $PACKAGE_VERSION && git push --tags
 
+npm install -g cloud-compute-cannon
+
