@@ -60,21 +60,41 @@ class TestJobs extends ServerAPITestBase
 			});
 	}
 
-	public function XXtestWriteOutput() :Promise<Bool>
+	@timeout(120000)
+	public function testWriteOutput() :Promise<Bool>
 	{
-		return Promise.promise(true);
-		// var targetOut = 'out${Std.int(Math.random() * 100000000)}';
-		// var targetOutFile = 'out${Std.int(Math.random() * 100000000)}';
-		// var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		// return proxy.submitJob('busybox', ["echo", targetOut, ">", targetOutFile])
-		// 	.pipe(function(out) {
-		// 		return ClientCompute.getJobResult(_serverHost, out.jobId);
-		// 	})
-		// 	.pipe(function(jobResult) {
-		// 		var stdOutUrl = jobResult.stdout;
-		// 		assertNotNull(stdOutUrl);
-		// 		return true;
-		// 	});
+		var outputValue = 'out${Std.int(Math.random() * 100000000)}';
+		var outputName = 'out${Std.int(Math.random() * 100000000)}';
+		var script =
+'!/bin/sh
+echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
+';
+		var scriptName = 'script.sh';
+		var input :ComputeInputSource = {
+			type: InputSource.InputInline,
+			value: script,
+			name: scriptName
+		}
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input])
+			.pipe(function(out) {
+				return ServerTestTools.getJobResult(out.jobId);
+			})
+			.pipe(function(jobResult) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+				var outputUrl = jobResult.outputsBaseUrl;
+				var outputs = jobResult.outputs != null ? jobResult.outputs : [];
+				assertTrue(outputs.length == 1);
+				var outputUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputs[0]}';
+				return RequestPromises.get(outputUrl)
+					.then(function(out) {
+						out = out != null ? out.trim() : out;
+						assertEquals(out, outputValue);
+						return true;
+					});
+			});
 	}
 
 	public function new(targetHost :Host)
