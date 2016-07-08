@@ -1,3 +1,3 @@
 test/testsCompile.hxml
 
--cmd INTERNET=true DOCKER=true VAGRANT=false REDIS=false AWS=false node build/test/compute_tests.js | bunyan
+-cmd INTERNET=false DOCKER=false VAGRANT=false REDIS=false AWS=false node build/test/compute_tests.js | bunyan

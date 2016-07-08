@@ -31,6 +31,7 @@ package ccc.compute;
 	import ccc.storage.StorageTools;
 
 	import util.DockerTools;
+	import util.DockerUrl;
 
 	using Lambda;
 	using StringTools;

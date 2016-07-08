@@ -7,6 +7,7 @@ import js.node.Fs;
 import promhx.Promise;
 
 import util.DockerTools;
+import util.DockerUrl;
 
 import t9.abstracts.time.*;
 
@@ -39,13 +40,22 @@ class TestMiscUnit extends haxe.unit.async.PromiseTest
 			'lmvconverter',
 			'localhost:5001/lmvconverter:5b2be4e42396'
 		]) {
-			assertEquals(e, DockerTools.joinDockerUrl(DockerTools.parseDockerUrl(e)));
+			assertEquals(e, DockerUrlTools.joinDockerUrl(DockerUrlTools.parseDockerUrl(e)));
 		}
 
 		var url :DockerUrl = 'localhost:5001/lmvconverter:5b2be4e42396';
 		assertEquals(url.name, 'lmvconverter');
 		assertEquals(url.tag, '5b2be4e42396');
 		assertEquals(url.registryhost.toString(), 'localhost:5001');
+
+		var other :DockerUrl = 'localhost:5002/lmvconverter';
+		assertTrue(DockerUrlTools.matches(url, other));
+
+		var another :DockerUrl = 'localhost:5002/lmvconverterX';
+		assertFalse(DockerUrlTools.matches(url, another));
+
+		var another2 :DockerUrl = 'lmvconverter:5b2be4e42396XXXXXX';
+		assertFalse(DockerUrlTools.matches(url, another2));
 
 		return Promise.promise(true);
 	}
