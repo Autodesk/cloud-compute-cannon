@@ -752,6 +752,28 @@ class ClientCommands
 	}
 
 	@rpc({
+		alias:'server-install-aws',
+		doc:'Install the cloudcomputecannon server on AWS (Amazon Web Services)',
+		args:{
+			'key':{doc: 'AWS account key', short:'k'},
+			'keyId':{doc: 'AWS account keyId', short:'i'}
+		}
+	})
+	public static function serverInstallAws(?key :String, ?keyId :String) :Promise<CLIResult>
+	{
+		console.log('This feature is coming soon!');
+		return Promise.promise(CLIResult.Success);
+		// if (key == null) {
+		// 	warn('Missing key');
+		// 	return Promise.promise(CLIResult.ExitCode(1));
+		// }
+		// if (keyId == null) {
+		// 	warn('Missing keyId');
+		// 	return Promise.promise(CLIResult.ExitCode(1));
+		// }
+	}
+
+	@rpc({
 		alias:'server-config',
 		doc:'Print out the current server configuration. Defaults to JSON output.',
 		args:{
