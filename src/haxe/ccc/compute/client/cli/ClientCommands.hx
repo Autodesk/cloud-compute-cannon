@@ -492,8 +492,19 @@ class ClientCommands
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
-		return ProviderTools.stopServer(serverBlob)
-			.thenVal(CLIResult.Success);
+		if (isServerLocalDockerInstall(serverBlob)) {
+			var localPath = path.getLocalServerPath();
+			try {
+				var stdout :js.node.Buffer = js.node.ChildProcess.execSync("docker-compose stop", {cwd:localPath});
+				return Promise.promise(CLIResult.Success);
+			} catch(err :Dynamic) {
+				traceRed(err);
+				return Promise.promise(CLIResult.ExitCode(1));
+			}
+		} else {
+			return ProviderTools.stopServer(serverBlob)
+				.thenVal(CLIResult.Success);
+		}
 	}
 
 	@rpc({
