@@ -534,7 +534,7 @@ class ClientCommands
 		},
 		docCustom: 'Examples:\n  server-install          (installs a local cloud-cannon-compute on your machine, via docker)\n  server-install [path to server config yaml file]    (installs a remote server)'
 	})
-	public static function serverUpdate(?config :String, ?uploadonly :Bool = false) :Promise<CLIResult>
+	public static function serverUpgrade(?config :String, ?uploadonly :Bool = false) :Promise<CLIResult>
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 
@@ -553,26 +553,27 @@ class ClientCommands
 			}
 			var serverConfig = InitConfigTools.getConfigFromFile(config);
 			serverBlob.provider = serverConfig;
+			return Promise.promise(true)
+				//Don't assume anything is working except ssh/docker connections.
+				.pipe(function(_) {
+					var force = true;
+					return ProviderTools.installServer(serverBlob, force, uploadonly);
+				})
+				.then(function(_) {
+					if (config != null) {
+						//Write the possibly updated configuration
+						writeServerConnection(serverBlob, path);
+					}
+					return true;
+				})
+				.thenVal(CLIResult.Success)
+				.errorPipe(function(err) {
+					warn(err);
+					return Promise.promise(CLIResult.ExitCode(1));
+				});
+		} else {
+			return install(null, null, null, null, true, false);
 		}
-
-		return Promise.promise(true)
-			//Don't assume anything is working except ssh/docker connections.
-			.pipe(function(_) {
-				var force = true;
-				return ProviderTools.installServer(serverBlob, force, uploadonly);
-			})
-			.then(function(_) {
-				if (config != null) {
-					//Write the possibly updated configuration
-					writeServerConnection(serverBlob, path);
-				}
-				return true;
-			})
-			.thenVal(CLIResult.Success)
-			.errorPipe(function(err) {
-				warn(err);
-				return Promise.promise(CLIResult.ExitCode(1));
-			});
 	}
 
 	@rpc({
@@ -1059,61 +1060,6 @@ class ClientCommands
 					})
 					.thenVal(CLIResult.Success);
 			});
-	}
-
-	@rpc({
-		alias:'ensureServerInstanceOLD',
-		doc:'Install the cloudcomputecannon server on a provider:\n  cloudcannon install <vagrant | Path to server config yaml file>',
-		args:{
-			'config':{doc: '<vagrant | Path to server config yaml file>'}
-		}
-	})
-	public static function ensureServerInstanceOLD(?config :String = 'foooooooooooooo') :Promise<InstanceDefinition>
-	{
-		return null;
-		// var path = Node.process.cwd();
-		// var serverConnectionPath = Path.join(path, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE);
-		// // var serverConfigPath = Path.join(path, LOCAL_CONFIG_DIR, SERVER_CONNECTION_FILE);
-		// var vagrant = config == 'vagrant';
-
-		// //Get the configuration, either from the given file, or the locally installed.
-		// return Promise.promise(true)
-		// 	.pipe(function(_) {
-		// 		//Some more complex checking here in case previous installs failed or containers have gone down.
-		// 		if (FsExtends.existsSync(serverConnectionPath)) {
-		// 			throw 'Found connection file at $serverConnectionJsonPath but no server configuration. Installing would overwrite the connection file'
-		// 		}
-
-
-		// 		if (vagrant) {
-		// 			var serverConfig :ServiceConfiguration = InitConfigTools.parseConfig(Resource.getString('ServerConfigVagrant'));
-		// 			return Promise.promise(serverConfig);
-		// 		} else {
-					
-		// 		}
-		// 	})
-		// 	//We have a bare CoreOS instance now
-		
-
-
-		
-		// var serverConfig :ServiceConfiguration = if (vagrant) {
-		// 	trace('haxe.Resource.getString("ServerConfigVagrant")=${haxe.Resource.getString("ServerConfigVagrant")}');
-		// 	InitConfigTools.parseConfig(haxe.Resource.getString('ServerConfigVagrant'));
-		// } else if (config == null) {
-		// 	InitConfigTools.getDefaultConfig();
-		// } else {
-		// 	InitConfigTools.getConfigFromFile(config);
-		// }
-		// trace('serverConfig=${serverConfig}');
-		// return ProviderTools.buildRemoteServer(serverConfig.providers[0])
-		// 	.then(function(serverBlob) {
-		// 		trace('serverBlob=${serverBlob}');
-		// 		// var serverblob :ServerConnectionBlob = {server:instanceDef};
-		// 		// CliTools.writeServerConnection(serverblob);
-		// 		return true;
-		// 	});
-		// return Promise.promise(true);
 	}
 
 	static function doJobCommand<T>(job :JobId, command :JobCLICommand) :Promise<T>

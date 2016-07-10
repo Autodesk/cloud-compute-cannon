@@ -112,9 +112,16 @@ class ServerCompute
 			js.Node.process.exit(-1);
 		}
 
+		var config :ServiceConfiguration = null;
 		var CONFIG_PATH :String = Reflect.hasField(env, 'CONFIG_PATH') ? Reflect.field(env, 'CONFIG_PATH') : SERVER_MOUNTED_CONFIG_FILE;
 		Log.debug({'CONFIG_PATH':CONFIG_PATH});
-		var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
+		if (Reflect.field(env, ENV_CLIENT_DEPLOYMENT) == 'true') {
+			Log.debug('Loading config from mounted file=$CONFIG_PATH');
+			config = InitConfigTools.getConfigFromFile(CONFIG_PATH);
+		} else {
+			config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
+		}
+
 		Assert.notNull(config);
 		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:Node.process.env['HOST_PWD']});
 

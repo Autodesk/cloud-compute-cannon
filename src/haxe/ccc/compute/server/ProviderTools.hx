@@ -11,6 +11,7 @@ import ccc.storage.ServiceStorageLocalFileSystem;
 
 import haxe.Json;
 import haxe.Resource;
+import haxe.Template;
 
 import js.Node;
 import js.node.Os;
@@ -234,7 +235,7 @@ class ProviderTools
 										return Promise.promise(true);
 									} else {
 										js.Node.process.stdout.write('starting server stack...');
-										return runDockerComposedServer(instance);
+										return runDockerComposedServer(instance.ssh);
 									}
 								});
 						}
@@ -451,36 +452,16 @@ class ProviderTools
 			});
 	}
 
-	static function runDockerComposedServer(instance :InstanceDefinition) :Promise<Bool>
+	static function runDockerComposedServer(ssh :ConnectOptions) :Promise<Bool>
 	{
-		var command :String;
-		var dockerCompose = "/opt/bin/docker-compose";
-		return Promise.promise(true)
-			.pipe(function(_) {
-				//Docker stop
-				return stopDockerComposedServer(instance);
-			})
-			.pipe(function(_) {
-				//Docker up
-				command = 'cd ${Constants.APP_NAME_COMPACT} && $dockerCompose build compute';
-				return SshTools.execute(instance.ssh, command, 10, 10, null, null, true)
-					.then(function(execResult) {
-						if (execResult.code != 0) {
-							throw execResult;
-						}
-						return true;
-					});
-			})
-			.pipe(function(_) {
-				//Docker up
-				command = 'cd ${Constants.APP_NAME_COMPACT} && HOST_PWD=$$PWD $ENV_VAR_COMPUTE_CONFIG=`cat $SERVER_MOUNTED_CONFIG_FILE` $dockerCompose up -d';
-				return SshTools.execute(instance.ssh, command, 10, 10, null, null, true)
-					.then(function(execResult) {
-						if (execResult.code != 0) {
-							throw execResult;
-						}
-						return true;
-					});
+		var dc ="docker-compose -f docker-compose.yml -f docker-compose.prod.yml";
+		var command = 'cd ${Constants.APP_NAME_COMPACT} && $dc stop && $dc rm -fv && $dc build && $dc up -d';
+		return SshTools.execute(ssh, command, 10, 10, null, null, true)
+			.then(function(execResult) {
+				if (execResult.code != 0) {
+					throw execResult;
+				}
+				return true;
 			});
 	}
 
@@ -588,6 +569,20 @@ class ProviderTools
 			.thenTrue();
 	}
 
+	static function generateFluentConfigFiles() :Map<String,String>
+	{
+		var map = new Map<String,String>();
+		for (type in ['dev', 'prod']) {
+			var base = 'etc/log/fluent.conf.base.template';
+			var baseContent = new Template(Resource.getString(base)).execute(Constants);
+			var inFile = 'etc/log/fluent.$type.conf.template';
+			var inContent = Resource.getString(inFile);
+			var outContent = new Template(inContent).execute(Constants);
+			map['etc/log/fluent.$type.conf'] = baseContent + outContent;
+		}
+		return map;
+	}
+
 	static function copyServerFiles(storage :ServiceStorage) :Promise<Bool>
 	{
 		trace('...copying files to ${storage.toString()}...');
@@ -611,10 +606,22 @@ class ProviderTools
 				}
 				return PromiseTools.chainPipePromises(promises);
 			})
+			//Generate and copy the log templated files so they can overwrite existing files
+			.pipe(function(_) {
+				var promises = [];
+				var logConfigFileMap = generateFluentConfigFiles();
+				for (path in logConfigFileMap.keys()) {
+					promises.push(function() {
+						trace(path);
+						return storage.writeFile(path, StreamTools.stringToStream(logConfigFileMap.get(path)));
+					});
+				}
+				return PromiseTools.chainPipePromises(promises);
+			})
 			//Copy the templates afterwards so they overwrite non-template files
 			.pipe(function(_) {
 				var promises = [];
-				var templates = Resource.listNames().filter(function(e) return e.endsWith('.template'));
+				var templates = Resource.listNames().filter(function(e) return e.endsWith('.template') && !e.startsWith('etc/log'));
 				for (resourceName in templates) {
 					var content = new haxe.Template(Resource.getString(resourceName)).execute(Constants);
 					var name = resourceName.startsWith('etc/server/') ? resourceName.replace('etc/server/', '') : resourceName;
