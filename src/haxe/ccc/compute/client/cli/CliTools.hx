@@ -150,6 +150,12 @@ class CliTools
 		}
 	}
 
+	public static function isServerLocalDockerInstall(config :ServerConnectionBlob) :Bool
+	{
+		var host = getHostFromServerConfig(config);
+		return host.startsWith('localhost');
+	}
+
 	/**
 	 * Gets the address of a running cloudcomputecannon server.
 	 * @param  config :ProviderConfig [description]
