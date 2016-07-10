@@ -1,5 +1,4 @@
 compute:
-  build: "."
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - ./data/computejobs:/computejobs
@@ -9,19 +8,7 @@ compute:
     - redis
     - registry
     - fluentd
-    - elasticsearch
-  ports:
-    - "9001:9001"
-    - "9002:9002"
-  environment:
-    #This is used to get the correct host working directory to pass into the
-    #worker containers to map the local file system to /inputs+/outputs within
-    #the container
-    PWD: "$PWD"
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.nodejs-bunyan.ccc{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+
 
 redis:
   #This config disables persistance to disk since we do not need it for development
@@ -34,10 +21,7 @@ redis:
     - "6379:6379"
   links:
     - fluentd
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+
 
 registry:
   volumes:
@@ -47,10 +31,7 @@ registry:
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
   links:
     - fluentd
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+
 
 fluentd:
   build: ./etc/log/
@@ -59,20 +40,19 @@ fluentd:
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
-  # log_driver: "json-file"
-  # log_opt: {}
+
 
 elasticsearch:
   extends:
     file: docker-compose.core.yml
     service: elasticsearch
   log_driver: "json-file"
+  log_opt: {}
+
 
 kibana:
   extends:
     file: docker-compose.core.yml
     service: kibana
-  #Pretty sure I don't care about listening to you ever in the dev context.
-  log_driver: "none"
   links:
     - elasticsearch

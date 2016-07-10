@@ -41,7 +41,12 @@ class CliTools
 		var host = if (hasServerHostInCLI()) {
 			getServerHostInCLI();
 		} else if (connection != null) {
-			ProviderTools.getServerHost(new HostName(connection.server.hostPublic));
+			if (connection.server == null) {
+				//This must be a local deployment
+				return connection.host;
+			} else {
+				ProviderTools.getServerHost(new HostName(connection.server.hostPublic));
+			}
 		} else {
 			null;
 		}
