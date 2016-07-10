@@ -31,7 +31,7 @@ class CliMain
 		//Embed various files
 		util.EmbedMacros.embedFiles('etc');
 
-		var program :Commander = js.Node.require('commander');
+		var program :Commander = Node.require('commander');
 		//Is there a remote server config? If not, the commands will be limited.
 
 		program = program.option('-S, --server <server>', 'Set server host here rather than via configuration');//'localhost:9000'
@@ -41,12 +41,14 @@ class CliMain
 		var address = null;
 		function printRpcRequest(requestDef) {
 			if (Reflect.field(program, "verbose")) {
-				js.Node.console.log('-------JSON-RPCJson-------\n' + Json.stringify(requestDef, null, '\t') + '\n--------------------------');
+				Node.console.log('-------JSON-RPCJson-------\n' + Json.stringify(requestDef, null, '\t') + '\n--------------------------');
 				if (address != null) {
-					js.Node.console.log('host=$address');
+					Node.console.log('host=$address');
 				}
 			}
 		}
+
+		var isValidCommand = false;
 
 		var context = new t9.remoting.jsonrpc.Context();
 		context.registerService(ccc.compute.client.cli.ClientCommands);
@@ -54,6 +56,7 @@ class CliMain
 		//The following functions are broken out so that the CLI commands can be listed
 		//in alphabetical order when the help command is called.
 		function serverRequest(requestDef :RequestDef) {
+			isValidCommand = true;
 			return maybeThrowErrorIfVersionMismatch()
 				.pipe(function(_) {
 					requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
@@ -67,11 +70,11 @@ class CliMain
 								.then(function(result) {
 									var msg = Json.stringify(result, null, '\t');
 #if nodejs
-									js.Node.console.log(msg);
+									Node.console.log(msg);
 #else
 									trace(msg);
 #end
-									js.Node.process.exit(0);
+									Node.process.exit(0);
 
 									return true;
 								});
@@ -79,7 +82,7 @@ class CliMain
 				})
 				.catchError(function(err) {
 					trace('ERROR from $requestDef\nError:\n$err');
-					js.Node.process.exit(1);
+					Node.process.exit(1);
 				});
 		}
 
@@ -88,6 +91,7 @@ class CliMain
 		}
 
 		function clientRequest(requestDef) {
+			isValidCommand = true;
 			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
 			printRpcRequest(requestDef);
 			var command = program.commands.find(function(e) return untyped e._name == requestDef.method);
@@ -103,20 +107,20 @@ class CliMain
 						case Success:
 							Node.process.exit(0);
 						case PrintHelp:
-							js.Node.console.log(command.helpInformation());
+							Node.console.log(command.helpInformation());
 							Node.process.exit(0);
 						case PrintHelpExit1:
-							js.Node.console.log(command.helpInformation());
+							Node.console.log(command.helpInformation());
 							Node.process.exit(1);
 						case ExitCode(code):
 							Node.process.exit(code);
 						default:
-							js.Node.console.log('Internal Error: unknown CLIResult: ${result.result}');
+							Node.console.log('Internal Error: unknown CLIResult: ${result.result}');
 							Node.process.exit(-1);
 					}
 				}).catchError(function(err) {
 					Log.error('ERROR from $requestDef\nError:\n$err');
-					js.Node.process.exit(1);
+					Node.process.exit(1);
 				});
 		}
 
@@ -159,28 +163,37 @@ class CliMain
 			.description('output usage information')
 			.action(function(env){
 				// trace('program.host=${untyped program.host}');
-				if (js.Node.process.argv[2] != null) {
-					js.Node.console.log('\n  ERROR: Unknown command: ' + js.Node.process.argv[2]);
+				if (Node.process.argv[2] != null) {
+					Node.console.log('\n  ERROR: Unknown command: ' + Node.process.argv[2]);
 				}
 				program.outputHelp();
-				js.Node.process.exit(0);
+				Node.process.exit(0);
 			});
 
-		if (js.Node.process.argv.slice(2).length == 0) {
-			// trace('FORCE HELP');
+		if (Node.process.argv.slice(2).length == 0) {
 			program.outputHelp();
 		} else {
 			//Long timeout so the process doesn't end automatically,
 			//since active Promises on the Promise stack do not prevent
 			//the node.js process from exiting.
-			js.Node.setTimeout(function(){trace('ERROR EXITED BECAUSE TIMED OUT, should not exit this way');}, 10000000);
-			program.parse(js.Node.process.argv);
+			Node.setTimeout(function() {
+				if (isValidCommand) {
+					Node.setTimeout(function() {
+						traceRed('Command timed out');
+						Node.process.exit(1);
+					}, 60000);
+				} else {
+					traceRed('Unknown command.');
+					Node.process.exit(1);
+				}
+			}, 20);
+			program.parse(Node.process.argv);
 		}
 	}
 
 	static function maybeThrowErrorIfVersionMismatch() :Promise<Bool>
 	{
-		var program :{check:Bool} = js.Node.require('commander');
+		var program :{check:Bool} = Node.require('commander');
 		if (program.check) {
 			return throwErrorIfVersionMismatch();
 		} else {
@@ -194,7 +207,7 @@ class CliMain
 			.then(function(ok) {
 				if (!ok) {
 					traceRed('Client and server version mismatch');
-					js.Node.process.exit(1);
+					Node.process.exit(1);
 				}
 				return ok;
 			});
