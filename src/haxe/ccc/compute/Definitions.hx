@@ -203,7 +203,7 @@ abstract MachinePoolId(String) to String
 }
 
 @:enum
-abstract JobStatus(String) from String {
+abstract JobStatus(String) to String from String {
 	/**
 	 * The job is in the queue.
 	 * Set in Redis, not handled elsewhere.
@@ -241,6 +241,14 @@ abstract JobWorkingStatus(String) from String to String {
 	var CopyingOutputs = 'copying_outputs';
 	var CopyingLogs = 'copying_logs';
 	var FinishedWorking = 'finished_working';
+}
+
+/**
+ * Used to bundle together the entire status
+ */
+typedef JobStatusBlob = {
+	var status :JobStatus;
+	var statusWorking :JobWorkingStatus;
 }
 
 typedef BatchJobResult = {
@@ -282,6 +290,7 @@ abstract JobFinishedStatus(String) from String {
 
 typedef JobStatusUpdate = {
 	var JobStatus :JobStatus;
+	var JobWorkingStatus :JobWorkingStatus;
 	var JobFinishedStatus :JobFinishedStatus;
 	var jobId :JobId;
 	@:optional var computeJobId :ComputeJobId;

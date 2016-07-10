@@ -409,11 +409,12 @@ class ServerCommands
 			});
 	}
 
-	public static function getStatus(redis :RedisClient, jobId :JobId) :Promise<Null<JobStatus>>
+	public static function getStatus(redis :RedisClient, jobId :JobId) :Promise<Null<String>>
 	{
-		return ComputeQueue.getStatus(redis, jobId)
+		return ComputeQueue.getJobStatus(redis, jobId)
 			.then(function(jobStatusBlob) {
-				return jobStatusBlob != null ? jobStatusBlob.JobStatus : null;
+				var s :String = jobStatusBlob.status == JobStatus.Working ? jobStatusBlob.statusWorking : jobStatusBlob.status;
+				return s;
 			})
 			.errorPipe(function(err) {
 				Log.error(err);

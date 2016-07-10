@@ -144,6 +144,15 @@ class ServiceBatchCompute
 		return ComputeQueue.getAllJobIds(_redis);
 	}
 
+	// @rpc({
+	// 	alias: 'job-status-all',
+	// 	doc: 'List all job statuses'
+	// })
+	// public function jobs() :Promise<Array<JobId>>
+	// {
+	// 	return ComputeQueue.getAllJobIds(_redis);
+	// }
+
 	@rpc({
 		alias: 'job',
 		doc: 'Commands to query jobs [remove | kill | result | status | exitcode | stats | definition | time]',
@@ -156,6 +165,29 @@ class ServiceBatchCompute
 	})
 	public function doJobCommand(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = true) :Promise<TypedDynamicObject<JobId,Dynamic>>
 	{
+		switch(command) {
+			case Status:
+				//The special case of the status of all jobs. Best to
+				//do it all in one go instead of piecemeal.
+				if (jobId == null || jobId.length == 0) {
+					return ComputeQueue.getJobStatuses(_redis)
+						.then(function(jobStatusBlobs :TypedDynamicObject<JobId,JobStatusBlob>) {
+							var result :TypedDynamicObject<JobId,String> = {};
+							for (jobId in jobStatusBlobs.keys()) {
+								var statusBlob :JobStatusBlob = jobStatusBlobs[jobId];
+								var s :String = statusBlob.status == JobStatus.Working ? statusBlob.statusWorking : statusBlob.status;
+								result[jobId] = s;
+							}
+							return result;
+						})
+						.errorPipe(function(err) {
+							Log.error(err);
+							return Promise.promise(null);
+						});
+				}
+			default://continue
+		}
+
 		if (jobId == null || jobId.length == 0 || (jobId.length == 1 && jobId[0] == null)) {
 			return ComputeQueue.getAllJobIds(_redis)
 				.pipe(function(jobId) {

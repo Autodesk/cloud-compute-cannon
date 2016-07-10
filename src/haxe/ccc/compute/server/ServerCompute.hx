@@ -269,6 +269,8 @@ class ServerCompute
 			.pipe(function(_) {
 				return ConnectionToolsRedis.getRedisClient()
 					.pipe(function(redis) {
+						//Pipe specific logs from redis since while developing
+						ServiceBatchComputeTools.pipeRedisLogs(redis);
 						injector.map(RedisClient).toValue(redis);
 						return InitConfigTools.initAll(redis);
 					});
@@ -434,12 +436,10 @@ class ServerCompute
 				if (map.exists(status.jobId)) {
 					switch(status.JobStatus) {
 						case Pending, Working, Finalizing:
-							trace('job=${status.jobId} status=${status.JobStatus}');
+							// trace('job=${status.jobId} status=${status.JobStatus}');
 						case Finished:
 							notifyJobFinished(status.jobId, status, status.job);
 					}
-				} else {
-					trace('but no websocket open');
 				}
 			});
 		stream.catchError(function(err) {
