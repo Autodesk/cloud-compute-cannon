@@ -1,5 +1,6 @@
 package ccc.compute;
 
+import haxe.DynamicAccess;
 import haxe.Json;
 import haxe.io.Bytes;
 
@@ -245,6 +246,24 @@ class ComputeQueue
 			});
 	}
 
+	public static function getJobStatus(redis :RedisClient, jobId :JobId) :Promise<JobStatusBlob>
+	{
+		return evaluateLuaScript(redis, SCRIPT_JOB_STATUS, [jobId])
+			.then(function(s) {
+				var obj = Json.parse(s);
+				return cast obj;
+			});
+	}
+
+	public static function getJobStatuses(redis :RedisClient) :Promise<TypedDynamicObject<JobId,JobStatusBlob>>
+	{
+		return evaluateLuaScript(redis, SCRIPT_JOB_STATUSES, [])
+			.then(function(s :String) {
+				var obj = Json.parse(s);
+				return obj;
+			});
+	}
+
 	public static function removeJob<T>(redis :RedisClient, jobId :JobId) :Promise<QueueObject<T>>
 	{
 		Assert.notNull(jobId);
@@ -454,6 +473,8 @@ class ComputeQueue
 	inline static var SCRIPT_GET_JOB_DEFINITION = '${PREFIX}get_job_definition';
 	inline static var SCRIPT_GET_JOB_DEFINITION_FROM_COMPUTE_ID = '${PREFIX}get_job_definition_from_compute_id';
 	inline static var SCRIPT_REMOVE_ALL_JOB_DATA = '${PREFIX}remove_job_data';
+	inline static var SCRIPT_JOB_STATUSES = '${PREFIX}get_job_statuses';
+	inline static var SCRIPT_JOB_STATUS = '${PREFIX}get_job_status';
 
 	/**
 	 * Re-used snippets of Lua code
@@ -990,6 +1011,36 @@ local jobId = ARGV[1]
 $SNIPPET_GET_STATSOBJECT
 return cjson.encode(stats)
 ',
+
+		SCRIPT_JOB_STATUS =>//<JobStatusBlob>
+'
+local jobId = ARGV[1]
+local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
+local status = statusBlob.JobStatus
+local result = {status=status}
+if status == "${JobStatus.Working}" then
+	local computeJobId = redis.call("HGET", "${REDIS_KEY_JOB_ID_TO_COMPUTE_ID}", jobId)
+	result.statusWorking = redis.call("HGET", "${REDIS_KEY_COMPUTEJOB_WORKING_STATE}", computeJobId)
+end
+return cjson.encode(result)
+',
+
+		SCRIPT_JOB_STATUSES =>//<Map<JobId,JobStatusBlob>>
+'
+local jobIds = redis.call("HKEYS", "$REDIS_KEY_STATUS")
+local result = {}
+for i,jobId in ipairs(jobIds) do
+	local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
+	local status = statusBlob.JobStatus
+	result[jobId] = {status=status}
+	if status == "${JobStatus.Working}" then
+		local computeJobId = redis.call("HGET", "${REDIS_KEY_JOB_ID_TO_COMPUTE_ID}", jobId)
+		result[jobId].statusWorking = redis.call("HGET", "${REDIS_KEY_COMPUTEJOB_WORKING_STATE}", computeJobId)
+	end
+end
+return cjson.encode(result)
+',
+
 			SCRIPT_TO_JSON =>
 '
 local result = {}
