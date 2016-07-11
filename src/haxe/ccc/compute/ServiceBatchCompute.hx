@@ -155,16 +155,19 @@ class ServiceBatchCompute
 
 	@rpc({
 		alias: 'job',
-		doc: 'Commands to query jobs [remove | kill | result | status | exitcode | stats | definition | time]',
+		doc: 'Commands to query jobs, e.g. status, outputs.',
 		args: {
 			'command': {'doc':'Command to run in the docker container [remove | kill | result | status | exitcode | stats | definition | time]'},
 			'jobId': {'doc': 'Job Id(s)'},
 			'json': {'doc': 'Output is JSON instead of human readable [true]'},
 		},
-		docCustom:'With no jobId arguments, all jobs are returned'
+		docCustom:'   With no jobId arguments, all jobs are returned.\n   commands:\n      remove\n      kill\n      result\n      status\t\torder of job status: [pending,copying_inputs,copying_image,container_running,copying_outputs,copying_logs,finalizing,finished]\n      exitcode\n      stats\n      definition\n      time'
 	})
 	public function doJobCommand(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = true) :Promise<TypedDynamicObject<JobId,Dynamic>>
 	{
+		if (command == null) {
+			return PromiseTools.error('Missing command.');
+		}
 		switch(command) {
 			case Status:
 				//The special case of the status of all jobs. Best to

@@ -20,7 +20,7 @@ abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogge
 	static function processLogMessage(logThing :Dynamic, pos :haxe.PosInfos)
 	{
 		var obj :haxe.DynamicAccess<Dynamic> = switch(untyped __typeof__(logThing)) {
-			case 'object': cast logThing;
+			case 'object': cast Reflect.copy(logThing);
 			default: cast {message:Std.string(logThing)};
 		}
 		obj['src'] = {file:pos.fileName, line:pos.lineNumber};
