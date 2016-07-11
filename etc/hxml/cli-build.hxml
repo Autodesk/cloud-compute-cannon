@@ -17,6 +17,7 @@ etc/hxml/base-nodejs.hxml
 # -dce full
 
 -debug
+# -D PromhxExposeErrors
 
 -cp test/src
 

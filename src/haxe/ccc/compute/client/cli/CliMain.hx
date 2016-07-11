@@ -51,6 +51,12 @@ class CliMain
 		var isValidCommand = false;
 
 		var context = new t9.remoting.jsonrpc.Context();
+		context.rpc.add(function(r) {
+			var p :{verbose:Bool} = Node.require('commander');
+			if (p.verbose || true) {
+				trace(Json.stringify(r, null, '  '));
+			}
+		});
 		context.registerService(ccc.compute.client.cli.ClientCommands);
 
 		//The following functions are broken out so that the CLI commands can be listed
@@ -81,7 +87,7 @@ class CliMain
 						});
 				})
 				.catchError(function(err) {
-					trace('ERROR from $requestDef\nError:\n$err');
+					trace(Json.stringify({error:err}, null, '  '));
 					Node.process.exit(1);
 				});
 		}
@@ -93,7 +99,6 @@ class CliMain
 		function clientRequest(requestDef) {
 			isValidCommand = true;
 			requestDef.id = JsonRpcConstants.JSONRPC_NULL_ID;//This is not strictly necessary but keep it for completion.
-			printRpcRequest(requestDef);
 			var command = program.commands.find(function(e) return untyped e._name == requestDef.method);
 			return maybeThrowErrorIfVersionMismatch()
 				.pipe(function(_) {

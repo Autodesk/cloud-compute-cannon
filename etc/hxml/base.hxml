@@ -1,6 +1,7 @@
 -cp lib/janicek-core-haxe/src
 -cp lib/haxe-json-rpc/src/haxe
 
+-lib msignal:1.2.4
 -lib hx-color-trace:0.0.3
 -lib version
 -lib abstracts-core:0.1.1
