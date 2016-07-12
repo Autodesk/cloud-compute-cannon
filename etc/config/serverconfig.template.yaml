@@ -6,7 +6,7 @@ server:
 providers:
   - type: "Boot2Docker"
     maxWorkers: 1
-    minWorkers: 0
+    minWorkers: 1
     priority: 1
     #billingIncrement is measured in minutes
     billingIncrementMs: 0

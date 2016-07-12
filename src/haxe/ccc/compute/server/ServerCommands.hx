@@ -26,14 +26,51 @@ import promhx.RequestPromises;
 import util.DockerTools;
 import util.DockerUrl;
 import util.DockerRegistryTools;
+import util.DateFormatTools;
 
 using promhx.PromiseTools;
+using DateTools;
 
 /**
  * Server API methods
  */
 class ServerCommands
 {
+	public static function status(redis :RedisClient) :Promise<SystemStatus>
+	{
+		return InstancePool.toJson(redis)
+			.pipe(function(workerJson :InstancePoolJson) {
+				return ComputeQueue.toJson(redis)
+					.then(function(jobsJson :QueueJson) {
+						var now = Date.now();
+						return {
+							pending: jobsJson.pending,
+							workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
+								return {
+									id :m.id,
+									jobs: m.jobs != null ? m.jobs.map(function(computeJobId) {
+										var jobId = jobsJson.getJobId(computeJobId);
+										var stats = jobsJson.getStats(jobId);
+										var enqueued = Date.fromTime(stats.enqueueTime);
+										var dequeued = Date.fromTime(stats.lastDequeueTime);
+										return {
+											id: jobId,
+											enqueued: enqueued.toString(),
+											started: dequeued.toString(),
+											duration: DateFormatTools.getShortStringOfDateDiff(dequeued, now)
+										}
+									}) : [],
+									cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
+								};
+							}),
+							// jobsJson:jobsJson,
+							// workerJson: workerJson,
+							finished: jobsJson.getFinishedAndStatus()
+						};
+					});
+			});
+	}
+
 	public static function version() :ServerVersionBlob
 	{
 		if (_versionBlob == null) {

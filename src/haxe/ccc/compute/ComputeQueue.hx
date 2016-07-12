@@ -1054,8 +1054,10 @@ end
 
 local computeJobIds = redis.call("HGETALL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID")
 result.computeJobIds = {}
+result.jobIds = {}
 for i=1,#computeJobIds,2 do
 	result.computeJobIds[computeJobIds[i]] = computeJobIds[i + 1]
+	result.jobIds[computeJobIds[i + 1]] = computeJobIds[i]
 end
 
 local workingStates = redis.call("HGETALL", "$REDIS_KEY_COMPUTEJOB_WORKING_STATE")
@@ -1068,6 +1070,13 @@ local jobStatus = redis.call("HGETALL", "$REDIS_KEY_STATUS")
 result.jobStatus = {}
 for i=1,#jobStatus,2 do
 	result.jobStatus[jobStatus[i]] = cjson.decode(jobStatus[i + 1])
+end
+
+local jobStats = redis.call("HGETALL", "$REDIS_KEY_STATS")
+result.stats = {}
+for i=1,#jobStats,2 do
+	local stats = cmsgpack.unpack(jobStats[i + 1])
+	result.stats[jobStats[i]] = stats
 end
 
 return cjson.encode(result)
@@ -1182,7 +1191,10 @@ abstract Stats(Array<Float>)
 typedef QueueJsonDump = {
 	var pending :Array<JobId>;
 	var working :Array<{id:JobId, score:Float}>;
-	var jobStatus :TypedDynamicObject<JobId, JobStatus>;
+	var computeJobIds :TypedDynamicObject<JobId, ComputeJobId>;
+	var jobIds :TypedDynamicObject<ComputeJobId,JobId>;
+	var jobStatus :TypedDynamicObject<JobId, JobStatusUpdate>;
+	var stats :TypedDynamicObject<JobId, Stats>;
 	var jobFinishedStatus :TypedDynamicObject<JobId, JobFinishedStatus>;
 	var jobWorkingStatus :TypedDynamicObject<ComputeJobId, JobWorkingStatus>;
 }
@@ -1204,6 +1216,7 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 			return this.pending;
 		}
 	}
+
 	inline function get_working() :Array<{id:JobId, score:Float}>
 	{
 		if (this.working == null || Reflect.fields(this.working).length == 0) {
@@ -1213,8 +1226,43 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 		}
 	}
 
+	inline public function getFinishedAndStatus() :TypedDynamicObject<JobFinishedStatus,Array<JobId>>
+	{
+		if (this.jobStatus == null || Reflect.fields(this.jobStatus).length == 0) {
+			return {};
+		} else {
+			var results :TypedDynamicObject<JobFinishedStatus,Array<JobId>> = {};
+			for (jobId in this.jobStatus.keys()) {
+				var statusUpdate :JobStatusUpdate = this.jobStatus[jobId];
+				if (statusUpdate.JobStatus == JobStatus.Finished) {
+					var finishedStatus :String = statusUpdate.JobFinishedStatus;
+					if (!results.exists(finishedStatus)) {
+						results.set(finishedStatus, []);
+					}
+					results.get(finishedStatus).push(jobId);
+				}
+			}
+			return results;
+		}
+	}
+
 	inline public function isJobInQueue(jobId :JobId) :Bool
 	{
 		return pending.has(jobId) || working.exists(function(e) return e.id == jobId);
+	}
+
+	inline public function getComputeJobId(jobId :JobId) :ComputeJobId
+	{
+		return Reflect.field(this.computeJobIds, jobId);
+	}
+
+	inline public function getStats(jobId :JobId) :Stats
+	{
+		return Reflect.field(this.stats, jobId);
+	}
+
+	inline public function getJobId(computeJobId :ComputeJobId) :JobId
+	{
+		return Reflect.field(this.jobIds, computeJobId);
 	}
 }
