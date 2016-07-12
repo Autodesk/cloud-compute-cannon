@@ -52,6 +52,15 @@ package ccc.compute;
 class ServiceBatchCompute
 {
 	@rpc({
+		alias:'status',
+		doc:'Get the running status of the system: pending jobs, running jobs, worker machines'
+	})
+	public function status() :Promise<SystemStatus>
+	{
+		return ServerCommands.status(_redis);
+	}
+
+	@rpc({
 		alias:'serverversion',
 		doc:'Get the server version info'
 	})
@@ -143,15 +152,6 @@ class ServiceBatchCompute
 	{
 		return ComputeQueue.getAllJobIds(_redis);
 	}
-
-	// @rpc({
-	// 	alias: 'job-status-all',
-	// 	doc: 'List all job statuses'
-	// })
-	// public function jobs() :Promise<Array<JobId>>
-	// {
-	// 	return ComputeQueue.getAllJobIds(_redis);
-	// }
 
 	@rpc({
 		alias: 'job',

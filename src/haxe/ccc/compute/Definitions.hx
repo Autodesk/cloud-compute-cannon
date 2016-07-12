@@ -260,7 +260,7 @@ typedef BatchJobResult = {
 }
 
 @:enum
-abstract JobFinishedStatus(String) from String {
+abstract JobFinishedStatus(String) from String to String {
 	/**
 	 * Success simply means the docker container ran, then eventually exited.
 	 * The container can exit with a non-zero exit code, this is still
@@ -328,6 +328,11 @@ typedef JobResult = {
 	@:optional var error :Dynamic;
 }
 
+typedef SystemStatus = {
+	var pending :Array<JobId>;
+	// var working :TypedDynamicObject<JobId,String>;
+	// var workers :TypedDynamicObject<MachineId,>;
+}
 
 /**
  *********************************************

@@ -917,7 +917,6 @@ redis.call("ZREM", "$REDIS_KEY_WORKER_DEFERRED_TIME", machineId)
 ';
 
 public static var SNIPPET_GET_JSON =
-	//Counts idle machines and reduces the target machines by that amount
 '
 local machinePoolKeys = redis.call("ZRANGE", "$REDIS_KEY_WORKER_POOL_PRIORITY", 0, -1)
 local result = {pools={}}
@@ -925,18 +924,26 @@ for index,poolId in ipairs(machinePoolKeys) do
 	local pool = "$REDIS_KEY_WORKER_POOLS_PREFIX" .. poolId
 	local instanceList = {}
 	local poolScore = redis.call("ZSCORE", "$REDIS_KEY_WORKER_POOL_PRIORITY", poolId)
-	table.insert(result.pools, {id=poolId, score=tonumber(poolScore), instances=instanceList})
+	--local poolEntry = {id=poolId, score=tonumber(poolScore), instances=instanceList}
+	local poolEntry = {id=poolId, score=tonumber(poolScore)}
+	table.insert(result.pools, poolEntry)
 	local machines = redis.call("ZRANGE", pool, 0, -1)
 	for index,machineId in ipairs(machines) do
 		local jobs = {}
-		local machineDescription = {id=machineId, jobs=jobs}
+		local machineDescription = {id=machineId}
 		table.insert(instanceList, machineDescription)
 		local jobIds = redis.call("SMEMBERS", "$REDIS_KEY_WORKER_JOBS_PREFIX" .. machineId)
 		for index,jobId in ipairs(jobIds) do
 			table.insert(jobs, jobId)
 		end
+		if #jobs > 0 then
+			machineDescription.jobs = jobs
+		end
 		local cpus = tonumber(redis.call("HGET", "$REDIS_KEY_WORKER_AVAILABLE_CPUS", machineId))
 		machineDescription.cpus = cpus
+	end
+	if #instanceList > 0 then
+		poolEntry.instances = instanceList
 	end
 end
 for hashkey,rediskey in pairs({${WORKER_HASHES.keys().array().map(function(k) return k + '=\"' + WORKER_HASHES[k] + '\"').join(", ")}}) do
@@ -1360,9 +1367,11 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 	inline public function getMachine(id :MachineId) :JsonDumpInstance
 	{
 		for (pool in this.pools) {
-			for (machine in pool.instances) {
-				if (machine.id == id) {
-					return machine;
+			if (pool.instances != null) {
+				for (machine in pool.instances) {
+					if (machine.id == id) {
+						return machine;
+					}
 				}
 			}
 		}
@@ -1378,7 +1387,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 	{
 		var arr = [];
 		for (pool in this.pools) {
-			arr = arr.concat(pool.instances);
+			arr = arr.concat(pool.instances != null ? pool.instances : []);
 		}
 		return arr;
 	}
@@ -1388,7 +1397,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var arr = [];
 		for (pool in this.pools) {
 			if (pool.id == poolId) {
-				arr = pool.instances.map(function(i) return i.id);
+				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
 		}
 		return arr;
@@ -1399,7 +1408,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var arr :Array<MachineId> = [];
 		for (pool in this.pools) {
 			if (pool.id == poolId) {
-				arr = pool.instances.map(function(i) return i.id);
+				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
 		}
 		var activeStatuses = [MachineStatus.Available];
@@ -1418,7 +1427,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var arr :Array<MachineId> = [];
 		for (pool in this.pools) {
 			if (pool.id == poolId) {
-				arr = pool.instances.map(function(i) return i.id);
+				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
 		}
 		var activeStatuses = [MachineStatus.Available, MachineStatus.WaitingForRemoval, MachineStatus.Deferred];
@@ -1467,6 +1476,11 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		return Reflect.field(Reflect.field(this, 'cpus'), id);
 	}
 
+	inline public function getTotalCpus(id :MachineId) :Int
+	{
+		return Reflect.field(Reflect.field(this, 'workerParameters'), id).cpus;
+	}
+
 	inline public function getAllAvailableCpus() :Int
 	{
 		// var cpus = Reflect.field(this, 'cpus');
@@ -1481,10 +1495,12 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 	public function getMachineRunningJob(id :ComputeJobId) :JsonDumpInstance
 	{
 		for (pool in this.pools) {
-			for (machine in pool.instances) {
-				for (jobId in machine.jobs) {
-					if (id == jobId) {
-						return machine;
+			if (pool.instances != null) {
+				for (machine in pool.instances) {
+					for (jobId in machine.jobs) {
+						if (id == jobId) {
+							return machine;
+						}
 					}
 				}
 			}
@@ -1497,9 +1513,11 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var map = new Map<ComputeJobId, MachineId>();
 		for (pool in this.pools) {
 			if (pool.id == id) {
-				for (machine in pool.instances) {
-					for (jobId in machine.jobs) {
-						map.set(jobId, machine.id);
+				if (pool.instances != null) {
+					for (machine in pool.instances) {
+						for (jobId in machine.jobs) {
+							map.set(jobId, machine.id);
+						}
 					}
 				}
 			}
