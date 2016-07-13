@@ -182,16 +182,11 @@ class CliMain
 			//since active Promises on the Promise stack do not prevent
 			//the node.js process from exiting.
 			Node.setTimeout(function() {
-				if (isValidCommand) {
-					Node.setTimeout(function() {
-						traceRed('Command timed out');
-						Node.process.exit(1);
-					}, 60000);
-				} else {
+				if (!isValidCommand) {
 					traceRed('Unknown command.');
 					Node.process.exit(1);
 				}
-			}, 20);
+			}, 50);
 			program.parse(Node.process.argv);
 		}
 	}
