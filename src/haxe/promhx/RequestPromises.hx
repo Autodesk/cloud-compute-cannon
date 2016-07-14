@@ -32,22 +32,22 @@ class RequestPromises
 				}
 			});
 
-			if (res.statusCode < 200 || res.statusCode > 299) {
-				promise.boundPromise.reject('ERROR status code ${res.statusCode} url=$url');
-			} else {
-				res.on(ReadableEvent.Data, function(chunk :Buffer) {
-					if (responseBuffer == null) {
-						responseBuffer = chunk;
+			res.on(ReadableEvent.Data, function(chunk :Buffer) {
+				if (responseBuffer == null) {
+					responseBuffer = chunk;
+				} else {
+					responseBuffer = Buffer.concat([responseBuffer, chunk]);
+				}
+			});
+			res.on(ReadableEvent.End, function() {
+				if (!promise.isDeferredErroredOrFinished()) {
+					if (res.statusCode < 200 || res.statusCode > 299) {
+						promise.boundPromise.reject(responseBuffer != null ? responseBuffer.toString('utf8') : 'ERROR status code ${res.statusCode} url=$url');
 					} else {
-						responseBuffer = Buffer.concat([responseBuffer, chunk]);
-					}
-				});
-				res.on(ReadableEvent.End, function() {
-					if (!promise.isDeferredErroredOrFinished()) {
 						promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
 					}
-				});
-			}
+				}
+			});
 		}
 		var caller :{get:String->(IncomingMessage->Void)->ClientRequest} = url.startsWith('https') ? cast js.node.Https : cast js.node.Http;
 		var request = null;

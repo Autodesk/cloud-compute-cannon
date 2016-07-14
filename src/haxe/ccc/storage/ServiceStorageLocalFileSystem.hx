@@ -23,9 +23,9 @@ using StringTools;
 class ServiceStorageLocalFileSystem
 	extends ServiceStorageBase
 {
-	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'data/ServiceStorageLocalFileSystem';
+	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'data/ServiceStorageLocalFileSystem/';
 
-	public static function getService(?path :String) :ServiceStorage
+	public static function getService(?path :String) :ServiceStorageLocalFileSystem
 	{
 		path = path == null ? STORAGE_LOCAL_DEFAULT_PATH : path;
 		return new ServiceStorageLocalFileSystem().setRootPath(path);
@@ -39,8 +39,7 @@ class ServiceStorageLocalFileSystem
 	@post
 	override public function postInjection()
 	{
-		Assert.notNull(_config);
-		_rootPath = _config.rootPath;
+		super.postInjection();
 		_rootPath = _rootPath == null ? STORAGE_LOCAL_DEFAULT_PATH : _rootPath;
 	}
 
@@ -213,12 +212,13 @@ class ServiceStorageLocalFileSystem
 
 	override public function setRootPath(val :String)
 	{
-		_rootPath = val;
+		super.setRootPath(val);
 		//This breaks the clean package separation maintained until now.
 		//But it's only used testing.
 		if (!ccc.compute.ConnectionToolsDocker.isInsideContainer()) {
 			_rootPath = js.node.Path.resolve(_rootPath);
 		}
+		_rootPath = ensureEndsWithSlash(_rootPath);
 		return this;
 	}
 

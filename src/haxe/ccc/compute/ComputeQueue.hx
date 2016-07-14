@@ -301,6 +301,9 @@ class ComputeQueue
 
 	public static function finishComputeJob<T>(redis :RedisClient, computeJobId :ComputeJobId, status :JobFinishedStatus, ?error :Dynamic) :Promise<QueueJobDefinitionDocker>
 	{
+		if (error != null) {
+			error = Json.stringify(error);
+		}
 		return evaluateLuaScript(redis, SCRIPT_FINISHED_COMPUTE_JOB, [computeJobId, status, Date.now().getTime(), error])
 			.then(function(s :String) {
 				var obj = Json.parse(s);

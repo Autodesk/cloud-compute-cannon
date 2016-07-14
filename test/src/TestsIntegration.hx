@@ -74,17 +74,22 @@ class TestsIntegration
 		var runner = new PromiseTestRunner();
 
 		//Run the unit tests. These do not require any external dependencies
-		if (isUnit) {
-			runner.add(new utils.TestMiscUnit());
-			runner.add(new utils.TestPromiseQueue());
-			runner.add(new utils.TestStreams());
-			runner.add(new storage.TestStorageRestAPI());
-			runner.add(new storage.TestStorageLocal());
-			runner.add(new compute.TestRedisMock());
-			if (isInternet) {
-				// runner.add(new storage.TestStorageSftp());
-			}
-		}
+		// if (isUnit) {
+			runner.add(new ccc.compute.server.tests.TestUnit());
+		// 	runner.add(new utils.TestPromiseQueue());
+		// 	runner.add(new utils.TestStreams());
+		// 	runner.add(new storage.TestStorageRestAPI());
+			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
+			runner.add(new ccc.compute.server.tests.TestStorageS3());
+		// 	runner.add(new compute.TestRedisMock());
+		// 	if (isInternet) {
+		// 		// runner.add(new storage.TestStorageSftp());
+		// 	}
+		// }
+
+		// if (isInternet) {
+		// 	runner.add(new storage.TestStorageS3());
+		// }
 
 		if (isRedis) {
 			// These require a local redis db

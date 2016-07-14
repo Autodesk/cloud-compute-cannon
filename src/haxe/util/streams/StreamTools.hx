@@ -1,15 +1,17 @@
 package util.streams;
 
+import haxe.extern.EitherType;
+
 import js.node.stream.Transform;
 import js.node.stream.Readable;
 import js.node.stream.Duplex;
 
 class StreamTools
 {
-	public static function createTransformStreamString(f :String->String) :IDuplex
+	public static function createTransformStream<T>(f :T->T) :IDuplex
 	{
 		var transform = untyped __js__('new require("stream").Transform({decodeStrings:false,objectMode:false})');
-		untyped transform._transform = function(chunk :String, encoding :String, callback) {
+		untyped transform._transform = function(chunk :T, encoding :String, callback) {
 			if (chunk != null) {
 				try {
 					chunk = f(chunk);

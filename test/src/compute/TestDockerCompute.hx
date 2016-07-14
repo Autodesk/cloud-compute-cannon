@@ -155,7 +155,7 @@ class TestDockerCompute extends TestComputeBase
 		}
 
 		var source = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:sourceDir});
-		var dest = StorageTools.getStorage({type:StorageSourceType.Sftp, rootPath:destDir, sshConfig:workerDef.ssh});
+		var dest = StorageTools.getStorage({type:StorageSourceType.Sftp, rootPath:destDir, credentials:workerDef.ssh});
 
 		return DockerJobTools.copyInternal(source, dest)
 			.pipe(function(_) {

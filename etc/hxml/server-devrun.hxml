@@ -3,5 +3,6 @@ etc/hxml/server-build.hxml
 -debug
 
 # -D PromhxExposeErrors
+-D extra_validation
 
 -cmd node build/cloud-compute-cannon-server.js

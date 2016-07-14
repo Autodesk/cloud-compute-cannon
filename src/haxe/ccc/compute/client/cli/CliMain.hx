@@ -164,14 +164,13 @@ class CliMain
 		}
 
 		program
-			.command('*')
-			.description('output usage information')
-			.action(function(env){
-				// trace('program.host=${untyped program.host}');
-				if (Node.process.argv[2] != null) {
-					Node.console.log('\n  ERROR: Unknown command: ' + Node.process.argv[2]);
+			.command('*', {noHelp:true})
+			.action(function(arg){
+				if (arg == null) {
+					program.outputHelp();
+				} else {
+					traceRed('Unknown command: $arg');
 				}
-				program.outputHelp();
 				Node.process.exit(0);
 			});
 

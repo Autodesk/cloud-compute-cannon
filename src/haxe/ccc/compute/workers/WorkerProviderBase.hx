@@ -137,7 +137,6 @@ class WorkerProviderBase
 
 	public function setWorkerCount(newCount :Int) :Promise<Bool>
 	{
-		log.debug({f:'setWorkerCount', newCount:newCount});
 		// Log.info('setWorkerCount newCount=$newCount _targetWorkerCount=$_targetWorkerCount _actualWorkerCount=$_actualWorkerCount');
 		if (newCount > _config.maxWorkers || newCount < _config.minWorkers) {
 			//This can occur if counts are set in between config updates
@@ -146,6 +145,7 @@ class WorkerProviderBase
 		}
 		_targetWorkerCount = newCount;
 		if (_targetWorkerCount != _actualWorkerCount) {
+			log.debug({f:'setWorkerCount', newCount:newCount});
 			if (_updateCountPromise == null) {
 				_updateCountPromise = updateWorkerCount(_redis, _targetWorkerCount, this)
 					.then(function(currentCount) {
@@ -332,7 +332,7 @@ class WorkerProviderBase
 	var _instanceStatusCache = new Map<MachineId,MachineStatus>();
 	function onWorkerStatusUpdate(statuses :Array<StatusResult>)
 	{
-		log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
+		// log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
 		for (status in statuses) {
 			var instanceId = status.id;
 			if (_instanceStatusCache.get(instanceId) == status.status) {

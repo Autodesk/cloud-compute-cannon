@@ -6,6 +6,7 @@ import js.node.stream.Writable;
 import js.npm.PkgCloud;
 
 import promhx.Promise;
+import promhx.PromiseTools;
 import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
@@ -14,17 +15,18 @@ import ccc.storage.ServiceStorageBase;
 import ccc.storage.StorageSourceType;
 import ccc.storage.StorageDefinition;
 
-using StringTools;
 using Lambda;
+using StringTools;
 
 class ServiceStorageS3 extends ServiceStorageBase
 {
-	private var _defaultContainerName :String = "bionano-platform-test"; // we always need a bucket
+	var _containerName :String = "bionano-platform-test"; // we always need a bucket
+	var _client :StorageClientP;
+	var _httpAccessUrl :String;
 
 	private static var precedingSlash = ~/^\/+/;
 	private static var endingSlash = ~/\/+$/;
 	private static var extraSlash = ~/\/{2,}/g;
-
 	private static var splitRegEx = ~/\/+/g;
 	private static var replaceChar :String = "--";
 
@@ -33,107 +35,113 @@ class ServiceStorageS3 extends ServiceStorageBase
 		super();
 	}
 
-	private function getClient() :StorageClientP
+	override public function toString()
 	{
-		return _config.storageClient;
+		return '[StorageS3 _rootPath=$_rootPath container=${_containerName} externalUrlPrefix=${_httpAccessUrl}]';
 	}
 
-	public function getContainerName(?options: Dynamic) :String {
-		if (options != null && options.container != null) {
-			return options.container;
-		}
+	private function getClient() :StorageClientP
+	{
+		return _client;
+	}
 
-		return _defaultContainerName;
+	public function getContainerName(?options: Dynamic) :String
+	{
+		return _containerName;
 	}
 
 	override public function setConfig(config :StorageDefinition) :ServiceStorageBase
 	{
-		if (config.defaultContainer != null) {
-			_defaultContainerName = config.defaultContainer;
+		Assert.notNull(config.container);
+		Assert.notNull(config.httpAccessUrl);
+		Assert.notNull(config.credentials);
+
+		if (config.container != null) {
+			_containerName = config.container;
 		}
+
+		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl);
+		_client = PkgCloud.storage.createClient(config.credentials);
 
 		return super.setConfig(config);
 	}
 
-	public function convertPath(?path: String) :String
+	override public function clone() :ServiceStorage
 	{
-		path = ((path != null) ? path : '');
-		path = (_rootPath + path);
+		var copy = new ServiceStorageS3();
+		var config = Reflect.copy(_config);
+		config.httpAccessUrl = _httpAccessUrl;
+		config.container = _containerName;
+		config.rootPath = _rootPath;
+		copy.setConfig(config);
+		return copy;
+	}
 
-		// strip preceding slash
-		var result = precedingSlash.replace(path, '');
-
-		// AWS S3 allows path-like object names so this functionality isn't necessary
-		// convert a path to a container replacing / with -
-//		result = splitRegEx.replace(result, replaceChar);
-
-		return result;
+	override public function exists(path :String) :Promise<Bool>
+	{
+		path = getPath(path);
+		var client = getClient();
+		return client.getContainer(getContainerName())
+			.pipe(function(container) {
+				return client.getFile(container, path)
+					.then(function(file) {
+						return true;
+					})
+					.errorPipe(function(err) {
+						return Promise.promise(false);
+					});
+			});
 	}
 
 	override public function readFile(path :String) :Promise<IReadable>
 	{
+		path = getPath(path);
 		var client = this.getClient();
 		var options :Dynamic = {
 			container: this.getContainerName(),
-			remote: convertPath(path)
+			remote: path
 		};
-
 		try {
 			var readStream = client.download(options);
-
 			readStream.on('error', function(err) {
 				Log.error('ERROR (THIS IS OUT OF THE PROMISE CHAIN) ServiceStorageS3.readFile path=$path err=$err');
 			});
-
 			return Promise.promise(readStream);
 		} catch(err :Dynamic) {
-			return Promise.promise(true)
-				.then(function(_) {
-					throw err;
-					return null;
-				});
+			return PromiseTools.error(err);
 		}
 	}
 
 	override public function readDir(?path :String) :Promise<IReadable>
 	{
-		throw 'Not implemented';
+		throw 'readDir(...) Not implemented';
 		return null;
 	}
 
 	override public function writeFile(path :String, data :IReadable) :Promise<Bool>
 	{
-		return this.getFileWritable(path)
+		path = getPath(path);
+		return getFileWritableInternal(path)
 			.pipe(function(writeStream) {
-				return StreamPromises.pipe(data, writeStream, [WritableEvent.Finish], 'ServiceStorageS3.writeFile path=$path');
+				return StreamPromises.pipe(data, writeStream, ['success'], 'ServiceStorageS3.writeFile path=$path');
 			});
 	}
 
 	override public function getFileWritable(path :String) :Promise<IWritable>
 	{
-		var client = this.getClient();
+		path = getPath(path);
+		return getFileWritableInternal(path);
+	}
+
+	function getFileWritableInternal(path :String) :Promise<IWritable>
+	{
+		var client = getClient();
 		var options :Dynamic = {
-			container: this.getContainerName(),
-			remote: convertPath(path)
+			container: getContainerName(),
+			remote: path
 		};
 		try {
 			var writeStream = client.upload(options);
-
-			writeStream.on(WritableEvent.Error, function(err) {
-				Log.error('ERROR (THIS IS OUT OF THE PROMISE CHAIN) writing file path=$path err=$err');
-			});
-			var isFinished = false;
-			writeStream.once(WritableEvent.Finish, function() {
-				isFinished = true;
-			});
-			writeStream.on('success', function(file) {
-				js.Node.setImmediate(function() {
-					if (!isFinished) {
-						writeStream.emit(WritableEvent.Finish, writeStream);
-					}
-				});
-			});
-
 			return Promise.promise(writeStream);
 		}  catch(err :Dynamic) {
 			return Promise.promise(true)
@@ -161,6 +169,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 	override public function deleteFile(path :String) :Promise<Bool>
 	{
 		Assert.notNull(path);
+		path = getPath(path);
 
 		var client = this.getClient();
 		return client.getContainer(this.getContainerName())
@@ -223,18 +232,25 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function listDir(?path :String) :Promise<Array<String>>
 	{
+		path = getPath(path);
+		if (path != null && path.length == 0) {
+			path = null;
+		}
+		//S3/AWS only
+		path = ensureEndsWithSlash(path);
 		var client = this.getClient();
 		return client.getContainer(this.getContainerName())
 			.pipe(function(container) {
-				return client.getFiles(container);
+				var options = {prefix:path};
+				return client.getFiles(container, options);
 			})
 			.then(function(files :Array<File>) {
-				return files.map(function (File) {
-					if ((path != null) && (File.name.startsWith(path))){
-						return File.name;
+				return files.map(function (f) {
+					if (path != null) {
+						return f.name.substr(path.length);
+					} else {
+						return f.name;
 					}
-
-					return File.name;
 				});
 			});
 	}
@@ -247,70 +263,48 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function setRootPath(path :String) :ServiceStorage
 	{
-		if (! endingSlash.match(path)) {
-			path = path + '/';
-		}
-
-		_rootPath = extraSlash.replace(path, '/');
+		super.setRootPath(path);
+		_rootPath = removePrecedingSlash(_rootPath);
 		return this;
-	}
-
-	override public function getRootPath() :String
-	{
-		return _rootPath;
 	}
 
 	override public function appendToRootPath(path :String) :ServiceStorage
 	{
-		if (! endingSlash.match(path)) {
-			path = path + '/';
-		}
-		_rootPath = extraSlash.replace(_rootPath + path, '/');
-		return this;
+		var copy = clone();
+		path = path.replace('//', '/');
+		copy.setRootPath(getPath(path));
+		return copy;
 	}
 
 	override public function getPath(p :String) :String
 	{
-		if (p != null && p.startsWith('/')) {
-			return precedingSlash.replace(p, '');
-		} else {
-			return convertPath(p);
+		if (p != null && _httpAccessUrl != null && p.startsWith(_httpAccessUrl)) {
+			p = p.substr(_httpAccessUrl.length);
 		}
+		var path = super.getPath(p);
+		return removePrecedingSlash(path);
+// 		// AWS S3 allows path-like object names so this functionality isn't necessary
+// 		// convert a path to a container replacing / with -
+//		result = splitRegEx.replace(result, replaceChar);
+// 		return result;
 	}
 
 	override public function getExternalUrl(?path :String) :String
 	{
-		var baseUrl = _config.httpAccessUrl;
-		var bucket = _defaultContainerName;
-		var url = baseUrl + '/' + bucket + this.getRootPath();
-		if (!url.endsWith('/')) {
-			url = url + '/';
+		path = getPath(path);
+		if (_httpAccessUrl != null) {
+			return _httpAccessUrl + path;
+		} else {
+			return path;
 		}
-		if (path != null) {
-			url = url + path;
-		}
-		return url;
 	}
 
-	// stronger assertions than StorageTools.getConfigFromServiceConfiguration
-	public static function getS3ConfigFromServiceConfiguration(input :ServiceConfiguration) :StorageDefinition
+	static function removePrecedingSlash(s :String) :String
 	{
-		Assert.notNull(input.server);
-
-		var storageConfig = input.server.storage;
-		Assert.notNull(storageConfig);
-		Assert.notNull(storageConfig.type);
-		Assert.notNull(storageConfig.rootPath);
-		Assert.notNull(storageConfig.defaultContainer);
-		Assert.notNull(storageConfig.httpAccessUrl);
-		Assert.notNull(storageConfig.credentials);
-
-		return {
-			type: cast storageConfig.type,
-			storageClient: PkgCloud.storage.createClient(storageConfig.credentials),
-			rootPath: storageConfig.rootPath,
-			defaultContainer: storageConfig.defaultContainer,
-			httpAccessUrl: storageConfig.httpAccessUrl
-		};
+		if (s.startsWith('/')) {
+			return removePrecedingSlash(s.substring(1));
+		} else {
+			return s;
+		}
 	}
 }
