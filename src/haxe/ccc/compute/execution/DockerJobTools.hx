@@ -222,8 +222,8 @@ class DockerJobTools
 		var opts :CreateContainerOptions = {
 			Image: imageId,
 			Cmd: cmd,
-			AttachStdout: true,
-			AttachStderr: true,
+			AttachStdout: false,
+			AttachStderr: false,
 			Tty: false,
 			Labels: labels,
 			HostConfig: hostConfig,
