@@ -20,7 +20,7 @@ class CliColors
 	public static function createColorTransformStream(color :String)
 	{
 		var f :String->String = Reflect.field(js.npm.CliColor, color);
-		var transform = util.streams.StreamTools.createTransformStreamString(f);
+		var transform = util.streams.StreamTools.createTransformStream(f);
 		return transform;
 	}
 

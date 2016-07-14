@@ -233,13 +233,10 @@ class ServerCommands
 		if (remoteImageUrl.tag == null) {
 			remoteImageUrl.tag = 'latest';
 		}
-		trace('remoteImageUrl=${remoteImageUrl}');
 		var localImageUrl :DockerUrl = remoteImageUrl;
-		trace('localImageUrl=${localImageUrl}');
 		if (tag != null) {
 			localImageUrl.tag = tag;
 		}
-		trace('localImageUrl=${localImageUrl}');
 		var registryAddress :Host = ConnectionToolsDocker.getLocalRegistryHost();
 
 		return Promise.promise(true)
@@ -247,13 +244,8 @@ class ServerCommands
 			.pipe(function(_) {
 				//Then tag it
 				var dockerImage = docker.getImage(image);
-				trace('fffff');
-				trace('localImageUrl=${localImageUrl}');
-				trace('Host.fromString("localhost:$REGISTRY_DEFAULT_PORT")=${Host.fromString('localhost:$REGISTRY_DEFAULT_PORT')}');
 				localImageUrl.registryhost = Host.fromString('localhost:$REGISTRY_DEFAULT_PORT');
-				trace('localImageUrl=${localImageUrl}');
 				var newImageName = localImageUrl.noTag();
-				trace('newImageName=${newImageName}');
 				var promise = new CallbackPromise();
 				log.debug({step:'pulled_success_tagging', repo:newImageName, tag:localImageUrl.tag});
 				dockerImage.tag({repo:newImageName, tag:localImageUrl.tag}, promise.cb2);
@@ -320,13 +312,11 @@ class ServerCommands
 				return switch(jobStatusBlob.JobStatus) {
 					case Pending,Working:
 						if (jobStatusBlob.computeJobId != null) {
-							// trace('ComputeQueue.finishComputeJob ${jobStatusBlob.computeJobId}');
 							ComputeQueue.finishComputeJob(redis, jobStatusBlob.computeJobId, JobFinishedStatus.Killed)
 								.then(function(_) {
 									return 'killed';
 								});
 						} else {
-							// trace('ComputeQueue.finishJob ${jobStatusBlob.jobId}');
 							ComputeQueue.finishJob(redis, jobStatusBlob.jobId, JobFinishedStatus.Killed)
 								.then(function(_) {
 									return 'killed';
@@ -342,7 +332,7 @@ class ServerCommands
 			});
 	}
 
-	public static function getJobDefinition(redis :RedisClient, fs :ServiceStorage, jobId :JobId) :Promise<DockerJobDefinition>
+	public static function getJobDefinition(redis :RedisClient, fs :ServiceStorage, jobId :JobId, ?externalUrl :Bool = true) :Promise<DockerJobDefinition>
 	{
 		Assert.notNull(redis);
 		Assert.notNull(fs);
@@ -353,63 +343,38 @@ class ServerCommands
 					return null;
 				} else {
 					var jobDefCopy = Reflect.copy(jobdef);
-					jobDefCopy.inputsPath = fs.getExternalUrl(JobTools.inputDir(jobdef));
-					jobDefCopy.outputsPath = fs.getExternalUrl(JobTools.outputDir(jobdef));
-					jobDefCopy.resultsPath = fs.getExternalUrl(JobTools.resultDir(jobdef));
+					jobDefCopy.inputsPath = externalUrl ? fs.getExternalUrl(JobTools.inputDir(jobdef)) : JobTools.inputDir(jobdef);
+					jobDefCopy.outputsPath = externalUrl ? fs.getExternalUrl(JobTools.outputDir(jobdef)) : JobTools.outputDir(jobdef);
+					jobDefCopy.resultsPath = externalUrl ? fs.getExternalUrl(JobTools.resultDir(jobdef)) : JobTools.resultDir(jobdef);
 					return jobDefCopy;
 				}
-				
-				// var result :JobDescriptionComplete = {
-				// 	definition: jobDefCopy,
-				// 	status: status
-				// }
-				// trace('  result=$result');
-
-				// var resultsJsonPath = JobTools.resultJsonPath(jobDefCopy);
-				// return _fs.exists(resultsJsonPath)
-				// 	.pipe(function(exists) {
-				// 		if (exists) {
-				// 			return _fs.readFile(resultsJsonPath)
-				// 				.pipe(function(stream) {
-				// 					if (stream != null) {
-				// 						return StreamPromises.streamToString(stream)
-				// 							.then(function(resultJsonString) {
-				// 								result.result = Json.parse(resultJsonString);
-				// 								return result;
-				// 							});
-				// 					} else {
-				// 						return Promise.promise(result);
-				// 					}
-				// 				});
-				// 		} else {
-				// 			return Promise.promise(result);
-				// 		}
 			});
 	}
 
 	public static function getJobPath(redis :RedisClient, fs :ServiceStorage, jobId :JobId, pathType :JobPathType) :Promise<String>
 	{
-		return getJobDefinition(redis, fs, jobId)
+		return getJobDefinition(redis, fs, jobId, false)
 			.then(function(jobdef :DockerJobDefinition) {
 				if (jobdef == null) {
 					Log.error({log:'jobId=$jobId no job definition, cannot get results path', jobid:jobId});
 					return null;
 				} else {
-					return switch(pathType) {
-						case Inputs: return jobdef.inputsPath;
-						case Outputs: return jobdef.outputsPath;
-						case Results: return jobdef.resultsPath;
+					var path = switch(pathType) {
+						case Inputs: jobdef.inputsPath;
+						case Outputs: jobdef.outputsPath;
+						case Results: jobdef.resultsPath;
 						default:
 							Log.error({log:'getJobPath jobId=$jobId unknown pathType=$pathType', jobid:jobId});
 							throw 'getJobPath jobId=$jobId unknown pathType=$pathType';
 					}
+					return fs.getExternalUrl(path);
 				}
 			});
 	}
 
 	public static function getJobResults(redis :RedisClient, fs :ServiceStorage, jobId :JobId) :Promise<JobResult>
 	{
-		return getJobDefinition(redis, fs, jobId)
+		return getJobDefinition(redis, fs, jobId, false)
 			.pipe(function(jobdef :DockerJobDefinition) {
 				if (jobdef == null) {
 					Log.error('jobId=$jobId no job definition, cannot get results path');

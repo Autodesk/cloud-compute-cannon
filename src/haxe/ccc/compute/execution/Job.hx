@@ -74,8 +74,8 @@ class Job
 			id: job.id,
 			status: finishedStatus,
 			exitCode: batchJobResult.exitCode,
-			stdout: externalBaseUrl + job.item.resultDir() + STDOUT_FILE,
-			stderr: externalBaseUrl + job.item.resultDir() + STDERR_FILE,
+			stdout: fs.getExternalUrl(job.item.stdoutPath()),
+			stderr: fs.getExternalUrl(job.item.stderrPath()),
 			resultJson: externalBaseUrl + job.item.resultJsonPath(),
 			inputsBaseUrl: externalBaseUrl + job.item.inputDir(),
 			outputsBaseUrl: externalBaseUrl + job.item.outputDir(),
@@ -83,17 +83,19 @@ class Job
 			outputs: batchJobResult.outputFiles,
 			error: batchJobResult.error,
 		};
+
 		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
-		jobStorage = jobStorage.appendToRootPath(job.item.resultDir());
+		var jobResultsStorage = jobStorage.appendToRootPath(job.item.resultDir());
 		return Promise.promise(true)
 			.pipe(function(_) {
 				if (batchJobResult.copiedLogs) {
-					return jobStorage.exists(STDOUT_FILE)
+
+					return jobResultsStorage.exists(STDOUT_FILE)
 						.pipe(function(exists) {
 							if (!exists) {
 								jobResult.stdout = null;
 							}
-							return jobStorage.exists(STDERR_FILE);
+							return jobResultsStorage.exists(STDERR_FILE);
 						})
 						.then(function(exists) {
 							if (!exists) {
@@ -108,12 +110,12 @@ class Job
 				}
 			})
 			.pipe(function(_) {
-				return jobStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
+				return jobResultsStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
 			})
 			.pipe(function(_) {
 				if (externalBaseUrl != '') {
 					return promhx.RetryPromise.pollRegular(function() {
-						return jobStorage.readFile(RESULTS_JSON_FILE)
+						return jobResultsStorage.readFile(RESULTS_JSON_FILE)
 							.pipe(function(readable) {
 								return StreamPromises.streamToString(readable);
 							})
@@ -242,7 +244,7 @@ class Job
 			var workerStorageConfig :StorageDefinition = {
 				type: StorageSourceType.Sftp,
 				rootPath: WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
-				sshConfig: _job.worker.ssh
+				credentials: _job.worker.ssh
 			};
 			StorageTools.getStorage(workerStorageConfig);
 		}
@@ -324,6 +326,9 @@ class Job
 						writeJobResults(_job, _fs, batchJobResult, finishedStatus)
 							.then(function(_) {
 								finishJob(finishedStatus, Std.string(err));
+							})
+							.catchError(function(err) {
+								log.error({error:err, state:_currentInternalState, message:'Failed to write job results'});
 							});
 					}
 				});
@@ -387,8 +392,16 @@ class Job
 								return Promise.promise(true);
 							}
 						})
+						.errorPipe(function(err) {
+							log.error({error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
+							return Promise.promise(true);
+						})
 						.pipe(function(_) {
 							return dispose()
+								.errorPipe(function(err) {
+									log.error({error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
+									return Promise.promise(true);
+								})
 								.thenTrue();
 						});
 				} else {

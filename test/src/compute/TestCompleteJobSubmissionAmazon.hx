@@ -29,7 +29,7 @@ class TestCompleteJobSubmissionAmazon extends TestCompleteJobSubmissionBase
 			.pipe(function(_) {
 				var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere();
 				if(config.server.storage != null) {
-					var storageConfig = StorageTools.getConfigFromServiceConfiguration(config);
+					var storageConfig = config.server.storage;//StorageTools.getConfigFromServiceConfiguration(config);
 					Log.info('Configuration specifies a Storage Definition of type: ${storageConfig.type}');
 					_storageService = StorageTools.getStorage(storageConfig);
 				}

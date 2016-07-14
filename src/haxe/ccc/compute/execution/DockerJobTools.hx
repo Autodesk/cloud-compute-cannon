@@ -109,7 +109,7 @@ class DockerJobTools
 		var workerStorageConfig :StorageDefinition = {
 			type: StorageSourceType.Sftp,
 			rootPath: WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT,
-			sshConfig: job.worker.ssh
+			credentials: job.worker.ssh
 		};
 		return StorageTools.getStorage(workerStorageConfig);
 	}
@@ -222,8 +222,8 @@ class DockerJobTools
 		var opts :CreateContainerOptions = {
 			Image: imageId,
 			Cmd: cmd,
-			AttachStdout: true,
-			AttachStderr: true,
+			AttachStdout: false,
+			AttachStderr: false,
 			Tty: false,
 			Labels: labels,
 			HostConfig: hostConfig,
@@ -276,13 +276,13 @@ class DockerJobTools
 		return deferredPromise.boundPromise;
 	}
 
-	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage) :Promise<Bool>
+	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage, ?checkLogsReadable :Bool = true) :Promise<{stdout:Bool,stderr:Bool}>
 	{
 		return getContainerId(docker, computeJobId)
 			.pipe(function(id) {
 				if (id == null) {
 					Log.error('Cannot find container with tag: "computeId=$computeJobId"');
-					return Promise.promise(false);
+					return Promise.promise({stdout:false,stderr:false});
 				} else {
 					return Promise.whenAll([fs.getFileWritable(STDOUT_FILE), fs.getFileWritable(STDERR_FILE)])
 						.pipe(function(pipes) {
@@ -290,8 +290,41 @@ class DockerJobTools
 							var err = pipes[1];
 							return DockerTools.writeContainerLogs(docker.getContainer(id), out, err);
 						})
-						//TODO: am I not listening to the correct events?
-						.thenWait(100);
+						.pipe(function(stdFilesWritten) {
+							if (checkLogsReadable) {
+								var promises = [];
+								if (stdFilesWritten.stdout) {
+									promises.push(RetryPromise.pollRegular(function() {
+										return fs.exists(STDOUT_FILE)
+											.then(function(exists) {
+												if (exists) {
+													return true;
+												} else {
+													throw 'not yet found';
+													return false;
+												}
+											});
+									}));
+								}
+								if (stdFilesWritten.stderr) {
+									promises.push(RetryPromise.pollRegular(function() {
+										return fs.exists(STDERR_FILE)
+											.then(function(exists) {
+												if (exists) {
+													return true;
+												} else {
+													throw 'not yet found';
+													return false;
+												}
+											});
+									}));
+								}
+								return Promise.whenAll(promises)
+									.thenVal(stdFilesWritten);
+							} else {
+								return Promise.promise(stdFilesWritten);
+							}
+						});
 				}
 			});
 	}

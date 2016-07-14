@@ -7,7 +7,7 @@ import promhx.RequestPromises;
 class TestJobs extends ServerAPITestBase
 {
 	@timeout(120000)
-	public function testWriteStdout() :Promise<Bool>
+	public function XtestWriteStdout() :Promise<Bool>
 	{
 		var targetOut = 'out${Std.int(Math.random() * 100000000)}';
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
@@ -19,6 +19,7 @@ class TestJobs extends ServerAPITestBase
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
+				assertNotNull(jobResult.stdout);
 				var stdOutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
 				assertNotNull(stdOutUrl);
 				return RequestPromises.get(stdOutUrl)
@@ -26,6 +27,58 @@ class TestJobs extends ServerAPITestBase
 						stdout = stdout != null ? stdout.trim() : stdout;
 						assertEquals(stdout, targetOut);
 						return true;
+					});
+			});
+	}
+
+		@timeout(120000)
+	public function testWriteStdoutAndStderr() :Promise<Bool>
+	{
+		var outputValueStdout = 'out${Std.int(Math.random() * 100000000)}';
+		var outputValueStderr = 'out${Std.int(Math.random() * 100000000)}';
+		var script =
+'#!/bin/sh
+echo "$outputValueStdout"
+echo "$outputValueStderr" >>/dev/stderr
+';
+		var scriptName = 'script.sh';
+		var input :ComputeInputSource = {
+			type: InputSource.InputInline,
+			value: script,
+			name: scriptName
+		}
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input])
+			.pipe(function(out) {
+				return ServerTestTools.getJobResult(out.jobId);
+			})
+			.pipe(function(jobResult) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+
+				return Promise.promise(true)
+					.pipe(function(_) {
+						assertNotNull(jobResult.stderr);
+						var stderrUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stderr}';
+						assertNotNull(stderrUrl);
+						return RequestPromises.get(stderrUrl)
+							.then(function(stderr) {
+								stderr = stderr != null ? stderr.trim() : stderr;
+								assertEquals(stderr, outputValueStderr);
+								return true;
+							});
+					})
+					.pipe(function(_) {
+						assertNotNull(jobResult.stdout);
+						var stdoutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+						assertNotNull(stdoutUrl);
+						return RequestPromises.get(stdoutUrl)
+							.then(function(stdout) {
+								stdout = stdout != null ? stdout.trim() : stdout;
+								assertEquals(stdout, outputValueStdout);
+								return true;
+							});
 					});
 			});
 	}
@@ -66,7 +119,7 @@ class TestJobs extends ServerAPITestBase
 		var outputValue = 'out${Std.int(Math.random() * 100000000)}';
 		var outputName = 'out${Std.int(Math.random() * 100000000)}';
 		var script =
-'!/bin/sh
+'#!/bin/sh
 echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
 ';
 		var scriptName = 'script.sh';

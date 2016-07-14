@@ -1,7 +1,8 @@
 package ccc.compute.server.tests;
 
+import haxe.unit.async.PromiseTest;
 import haxe.unit.async.PromiseTestRunner;
-
+import minject.Injector;
 import promhx.PromiseTools;
 
 @:enum
@@ -14,13 +15,43 @@ abstract DevTest(String) {
  */
 class ServiceTests
 {
+	@inject
+	public var _injector :Injector;
+
 	@rpc({
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
 	public function runServerTests() :Promise<CompleteTestResult>
 	{
-		return TestServerAPI.runServerAPITests('localhost:$SERVER_DEFAULT_PORT');
+		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
+		var runner = new PromiseTestRunner();
+
+		runner.add(new TestUnit());
+		runner.add(new TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
+		var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
+		switch(injectedStorage.type) {
+			case Sftp: Log.warn('No Test for SFTP storage');
+			case Local: //Already running local storage
+			case Cloud:
+				var test :PromiseTest = new TestStorageS3(cast injectedStorage);
+				runner.add(test);
+		}
+
+		runner.add(new TestJobs(targetHost));
+		runner.add(new TestRegistry(targetHost));
+
+		var exitOnFinish = false;
+		var disableTrace = true;
+		return runner.run(exitOnFinish, disableTrace)
+			.then(function(result) {
+				result.tests.iter(function(test) {
+					if (test.error != null) {
+						traceRed(test.error.replace('\\n', '\n'));
+					}
+				});
+				return result;
+			});
 	}
 
 	@rpc({
@@ -48,6 +79,18 @@ class ServiceTests
 				trace('results=${results}');
 				return results;
 			});
+	}
+
+	@rpc({
+		alias:'test-rpc',
+		doc:'Test function for verifying JSON-RPC calls',
+		args:{
+			echo: {doc:'String argument will be echoed back'}
+		}
+	})
+	public function test(?echo :String = 'defaultECHO' ) :Promise<String>
+	{
+		return Promise.promise(echo + echo);
 	}
 
 	public function new() {}

@@ -11,8 +11,9 @@ class TestRegistry extends ServerAPITestBase
 	 * should be clear and empty, including the registry.
 	 * Without the registry being empty, other tests
 	 * may not work.
+	 * This may be complete bullshit.
 	 */
-	public function testRegistryEmpty() :Promise<Bool>
+	public function DISABLED_UNTIL_THIS_MAKES_SENSE_testRegistryEmpty() :Promise<Bool>
 	{
 		var registryHost = new Host(_serverHost.getHostname(), new Port(REGISTRY_DEFAULT_PORT));
 		return DockerRegistryTools.getRegistryImagesAndTags(registryHost)

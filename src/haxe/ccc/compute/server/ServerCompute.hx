@@ -62,6 +62,9 @@ abstract ServerStatus(String) {
  */
 class ServerCompute
 {
+	public static var StorageService :ServiceStorage;
+	public static var WorkerProvider :WorkerProvider;
+
 	static function main()
 	{
 		var v = 'sdfsdfdsfsdsfsdfsssdfsdf';
@@ -135,9 +138,16 @@ class ServerCompute
 			throw 'config.workerProviders == null';
 		}
 
+		/* Storage*/
 		Assert.notNull(config.server);
-		var storageConfig = StorageTools.getConfigFromServiceConfiguration(config);
+		Assert.notNull(config.server.storage);
+		var storageConfig :StorageDefinition = config.server.storage;
+		var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
+		Assert.notNull(storage);
+		StorageService = storage;
 		injector.map('ccc.storage.StorageDefinition').toValue(storageConfig);
+		injector.map(ccc.storage.ServiceStorage).toValue(storage);
+		trace('injector.getValue(ccc.storage.ServiceStorage)=${injector.getValue(ccc.storage.ServiceStorage)}');
 
 		var ROOT = Path.dirname(Path.dirname(Path.dirname(Node.__dirname)));
 
@@ -248,20 +258,6 @@ class ServerCompute
 			Log.info('Listening http://localhost:$PORT');
 			serverHTTP.listen(SERVER_HTTP_PORT, function() {
 				Log.info('Listening http://localhost:$SERVER_HTTP_PORT');
-				// var disableServerCheck :Dynamic = Reflect.field(env, ENV_DISABLE_SERVER_CHECKS);
-				// if (!(disableServerCheck != null && (disableServerCheck == '1' || disableServerCheck == 'true' || disableServerCheck == 'True'))) {
-				// 	ccc.compute.server.tests.TestServerAPI.runServerAPITests()
-				// 		.then(function(success) {
-				// 			if (!success) {
-				// 				Log.critical('Failed functional tests');
-				// 				Node.process.exit(1);
-				// 			}
-				// 		})
-				// 		.catchError(function(err) {
-				// 			Log.critical({message:'Error in functional tests', error:err});
-				// 			Node.process.exit(1);
-				// 		});
-				// }
 			});
 		});
 
@@ -270,7 +266,7 @@ class ServerCompute
 				return ConnectionToolsRedis.getRedisClient()
 					.pipe(function(redis) {
 						//Pipe specific logs from redis since while developing
-						ServiceBatchComputeTools.pipeRedisLogs(redis);
+						// ServiceBatchComputeTools.pipeRedisLogs(redis);
 						injector.map(RedisClient).toValue(redis);
 						return InitConfigTools.initAll(redis);
 					});
@@ -300,9 +296,7 @@ class ServerCompute
 				Log.debug({server_status:status});
 				//Build and inject the app logic
 				//Create services
-				var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
-				Assert.notNull(storage);
-				injector.map(ServiceStorage).toValue(storage);
+				WorkerProvider = workerProviders[0];
 
 				//The queue manager
 				var schedulingService = new ccc.compute.ServiceBatchCompute();
@@ -347,6 +341,25 @@ class ServerCompute
 				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
 					Node.process.send(Constants.IPC_MESSAGE_READY);
 				}
+
+				//Run internal tests
+				Log.debug('Running server functional tests');
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests')
+					.then(function(out) {
+						try {
+							var results = Json.parse(out);
+							if (results.run == results.passed) {
+								Log.info({testResults:results, passed:true});
+							} else {
+								Log.error({testResults:results, passed:false});
+							}
+						} catch(err :Dynamic) {
+							Log.error({error:err, message:'Failed to parse test results'});
+						}
+					})
+					.catchError(function(err) {
+						Log.error({error:err, message:'failed tests!'});
+					});
 			});
 	}
 
@@ -357,15 +370,20 @@ class ServerCompute
 
 		function notifyJobFinished(jobId :JobId, status :JobStatusUpdate, job :DockerJobDefinition) {
 			if (map.exists(jobId)) {
-				var ws = map.get(jobId);
 				var resultsPath = job.resultJsonPath();
 				storage.readFile(resultsPath)
 					.pipe(function(stream) {
 						return promhx.StreamPromises.streamToString(stream);
 					})
 					.then(function(out) {
-						var outputJson :JobResult = Json.parse(out);
-						ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, result:outputJson}));
+						var ws = map.get(jobId);
+						if (ws != null) {
+							var outputJson :JobResult = Json.parse(out);
+							ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, result:outputJson}));
+						}
+					})
+					.catchError(function(err) {
+						Log.error({error:err, message:'Failed to read file jobId=$jobId resultsPath=$resultsPath', JobStatusUpdate:status});
 					});
 			}
 		}

@@ -266,8 +266,6 @@ class DockerTools
 				if (resultStream != null && buf != null) {
 					resultStream.write(buf);
 				}
-				var bufferString = buf.toString();
-				// log.trace({log:bufferString});
 			});
 		});
 		return promise.boundPromise;
@@ -341,7 +339,6 @@ class DockerTools
 							imageId = data.stream.replace('Successfully built', '').trim();
 						}
 					} else if (data.status != null) {
-						// log.trace({log:bufferString});
 					} else if (data.error != null) {
 						log.error({log:'Error on stream getting image', error:data});
 						errorEncounteredInStream = true;
@@ -387,9 +384,7 @@ class DockerTools
 			exposedPortsObj = {};
 			for (port in ports.keys()) {
 				exposedPortsObj['${port}/tcp'] = {};
-				// exposedPortsObj['${port}/tcp'] = [{HostPort:Std.string(ports[port])}];
 			}
-			// trace('exposedPortsObj=${exposedPortsObj}');
 			opts.ExposedPorts = exposedPortsObj;
 
 			if (!Reflect.hasField(opts, 'HostConfig')) {
@@ -430,7 +425,7 @@ class DockerTools
 			.thenVal(container);
 	}
 
-	public static function writeContainerLogs(container :DockerContainer, stdout :IWritable, stderr :IWritable) :Promise<Bool>
+	public static function writeContainerLogs(container :DockerContainer, stdout :IWritable, stderr :IWritable) :Promise<{stdout:Bool,stderr:Bool}>
 	{
 		var promise = new DeferredPromise();
 
@@ -443,15 +438,33 @@ class DockerTools
 				Log.error(err);
 				promise.boundPromise.reject(err);
 			});
+
+
+			var passThroughStdout :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+			var passThroughStderr :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+
+			passThroughStdout.pipe(stdout);
+			passThroughStderr.pipe(stderr);
+
 			var modem :Modem = untyped __js__('container.modem');
-			modem.demuxStream(stream, stdout, stderr);
+			modem.demuxStream(stream, passThroughStdout, passThroughStderr);
+
+			var isStdOutWritten = false;
+			var isStdErrWritten = false;
+
+			passThroughStdout.on(ReadableEvent.Data, function(data) {
+				isStdOutWritten = true;
+			});
+			passThroughStderr.on(ReadableEvent.Data, function(data) {
+				isStdErrWritten = true;
+			});
 
 			stream.once(ReadableEvent.End, function() {
 				var stdoutFinished = false;
 				var stderrFinished = false;
 				function check() {
 					if (stdoutFinished && stderrFinished) {
-						promise.resolve(true);
+						promise.resolve({stdout:isStdOutWritten,stderr:isStdErrWritten});
 					}
 				}
 

@@ -48,6 +48,7 @@ EXPOSE $PORT
 EXPOSE 9001
 EXPOSE 9002
 
-CMD forever build/cloud-compute-cannon-server.js
+#Do not watch the entire tree, just that file
+CMD forever --watchDirectory build build/cloud-compute-cannon-server.js
 
 

@@ -203,16 +203,11 @@ class BatchComputeDocker
 							var dockerImage = job.item.image.value;
 							promise = DockerPromises.listImages(docker)
 								.pipe(function(images) {
-									trace('images=${images}');
-									trace('dockerImage=${dockerImage}');
 									var imageExists = images.exists(function(e) {
 										return e.RepoTags.exists(function(tag :DockerUrl) {
 											return DockerUrlTools.matches(dockerImage, tag);
 										});
 									});
-									trace('imageExists=${imageExists}');
-
-
 									if (imageExists) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);

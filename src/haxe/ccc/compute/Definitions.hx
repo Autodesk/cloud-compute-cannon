@@ -7,6 +7,7 @@ package ccc.compute;
 
 	import ccc.storage.ServiceStorage;
 	import ccc.storage.StorageTools;
+	import ccc.storage.StorageDefinition;
 #end
 
 import t9.abstracts.time.Minutes;
@@ -492,16 +493,16 @@ typedef ENV = {
 }
 
 typedef ServiceConfigurationServer = {
-	@:optional var storage: ServiceConfigurationStorage;
+	@:optional var storage: StorageDefinition;
 }
 
-typedef ServiceConfigurationStorage = {
-	var type: String;
-	@:optional var rootPath: String;
-	@:optional var defaultContainer :String;
-	@:optional var credentials :#if nodejs ProviderCredentials #else Dynamic #end;
-	@:optional var httpAccessUrl :String;
-}
+// typedef ServiceConfigurationStorage = {
+// 	var type: String;
+// 	@:optional var rootPath: String;
+// 	@:optional var container :String;
+// 	@:optional var credentials :#if nodejs ProviderCredentials #else Dynamic #end;
+// 	@:optional var httpAccessUrl :String;
+// }
 
 /* This is only used when creating worker providers in code */
 @:enum

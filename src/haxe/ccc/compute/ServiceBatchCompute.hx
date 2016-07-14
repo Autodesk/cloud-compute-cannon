@@ -70,18 +70,6 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
-		alias:'test',
-		doc:'Test function for verifying JSON-RPC calls',
-		args:{
-			echo: {doc:'String argument will be echoed back'}
-		}
-	})
-	public function test(?echo :String = 'defaultECHO' ) :Promise<String>
-	{
-		return Promise.promise(echo + echo);
-	}
-
-	@rpc({
 		alias:'reset',
 		doc:'Resets the server: kills and removes all jobs, removes local and remote data on jobs in the database.'
 	})
@@ -394,6 +382,8 @@ class ServiceBatchCompute
 	@inject public var _fs :ServiceStorage;
 	@inject public var _redis :RedisClient;
 	@inject public var _config :StorageDefinition;
+	@inject public var _storage :ServiceStorage;
+	@inject public var _injector :minject.Injector;
 
 	public function new() {}
 
@@ -421,7 +411,10 @@ class ServiceBatchCompute
 		var serverContext = new t9.remoting.jsonrpc.Context();
 		serverContext.registerService(this);
 		//Remote tests
-		serverContext.registerService(new ccc.compute.server.tests.ServiceTests());
+		var serviceTests = new ccc.compute.server.tests.ServiceTests();
+		trace('_injector.injectInto(serviceTests);');
+		_injector.injectInto(serviceTests);
+		serverContext.registerService(serviceTests);
 		serverContext.registerService(ccc.compute.server.ServerCommands);
 		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext));
 		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT));
@@ -772,7 +765,7 @@ class ServiceBatchCompute
 				var type :InputSource = input.type;
 				switch(type) {
 					case InputInline:
-						Log.info('Got input "${input.name}" inline=${input.value}');
+						// Log.info('Got input "${input.name}" inline=${input.value}');
 						promises.push(_fs.writeFile(inputFilePath, Streamifier.createReadStream(input.value)));
 						inputNames.push(input.name);
 					case InputUrl:
@@ -781,11 +774,11 @@ class ServiceBatchCompute
 						}
 						var url :String = input.value;
 						if (url.startsWith('http')) {
-							Log.info('Got input "${input.name}" url=${input.value}');
+							// Log.info('Got input "${input.name}" url=${input.value}');
 							var request :String->IReadable = Node.require('request');
 							promises.push(_fs.writeFile(inputFilePath, request(input.value)));
 						} else {
-							Log.info('Got input "${input.name}" local fs=${input.value}');
+							// Log.info('Got input "${input.name}" local fs=${input.value}');
 							promises.push(
 								_fs.readFile(url)
 									.pipe(function(stream) {
