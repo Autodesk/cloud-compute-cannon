@@ -74,7 +74,7 @@ class Job
 			id: job.id,
 			status: finishedStatus,
 			exitCode: batchJobResult.exitCode,
-			stdout: fs.getExternalUrl(job.item.stdoutPath()),	
+			stdout: fs.getExternalUrl(job.item.stdoutPath()),
 			stderr: fs.getExternalUrl(job.item.stderrPath()),
 			resultJson: externalBaseUrl + job.item.resultJsonPath(),
 			inputsBaseUrl: externalBaseUrl + job.item.inputDir(),
@@ -86,22 +86,18 @@ class Job
 
 		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
 		var jobResultsStorage = jobStorage.appendToRootPath(job.item.resultDir());
-		trace('jobResult=${jobResult} jobResultsStorage=$jobResultsStorage');
 		return Promise.promise(true)
 			.pipe(function(_) {
-				trace('batchJobResult.copiedLogs=${batchJobResult.copiedLogs}');
 				if (batchJobResult.copiedLogs) {
 
 					return jobResultsStorage.exists(STDOUT_FILE)
 						.pipe(function(exists) {
-							trace('jobResultsStorage.exists($STDOUT_FILE) $exists');
 							if (!exists) {
 								jobResult.stdout = null;
 							}
 							return jobResultsStorage.exists(STDERR_FILE);
 						})
 						.then(function(exists) {
-							trace('jobResultsStorage.exists($STDERR_FILE) $exists');
 							if (!exists) {
 								jobResult.stderr = null;
 							}
