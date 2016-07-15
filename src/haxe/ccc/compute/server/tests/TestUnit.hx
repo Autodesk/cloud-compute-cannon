@@ -35,6 +35,11 @@ class TestUnit extends haxe.unit.async.PromiseTest
 
 		assertEquals(JobTools.inputDir(jobdef), '$inputsPath/');
 
+		var customInputsPath = 'customInputs';
+		jobdef.inputsPath = customInputsPath;
+
+		assertEquals(JobTools.inputDir(jobdef), '$customInputsPath/');
+
 		return Promise.promise(true);
 	}
 
