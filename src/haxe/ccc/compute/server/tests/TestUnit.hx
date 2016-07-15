@@ -59,7 +59,8 @@ class TestUnit extends haxe.unit.async.PromiseTest
 			'bionano/lmvconverter:c955c37',
 			'lmvconverter:c955c37',
 			'lmvconverter',
-			'localhost:5001/lmvconverter:5b2be4e42396'
+			'localhost:5001/lmvconverter:5b2be4e42396',
+			'quay.io/bionano/computeworker_nanodesign:1b41fba'
 		]) {
 			assertEquals(e, DockerUrlTools.joinDockerUrl(DockerUrlTools.parseDockerUrl(e)));
 		}
@@ -77,6 +78,12 @@ class TestUnit extends haxe.unit.async.PromiseTest
 
 		var another2 :DockerUrl = 'lmvconverter:5b2be4e42396XXXXXX';
 		assertFalse(DockerUrlTools.matches(url, another2));
+
+		var another3 :DockerUrl = 'quay.io/bionano/computeworker_nanodesign:1b41fba';
+		assertEquals(another3.repository, 'bionano/computeworker_nanodesign');
+		assertEquals(another3.name, 'computeworker_nanodesign');
+		assertEquals(another3.tag, '1b41fba');
+		assertEquals(another3.registryhost, 'quay.io');
 
 		return Promise.promise(true);
 	}

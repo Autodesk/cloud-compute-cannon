@@ -118,7 +118,7 @@ class DockerUrlTools
 	public static function parseDockerUrl(s :String) :DockerUrlBlob
 	{
 		s = s.trim();
-		var r = ~/(.*\/)?([a-z0-9]+)(:[a-z0-9]+)?/i;
+		var r = ~/(.*\/)?([a-z0-9_]+)(:[a-z0-9_]+)?/i;
 		r.match(s);
 		var registryAndUsername = r.matched(1);
 		var name = r.matched(2);

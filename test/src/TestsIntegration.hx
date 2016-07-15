@@ -79,8 +79,8 @@ class TestsIntegration
 		// 	runner.add(new utils.TestPromiseQueue());
 		// 	runner.add(new utils.TestStreams());
 		// 	runner.add(new storage.TestStorageRestAPI());
-			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
-			runner.add(new ccc.compute.server.tests.TestStorageS3());
+			// runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
+			// runner.add(new ccc.compute.server.tests.TestStorageS3());
 		// 	runner.add(new compute.TestRedisMock());
 		// 	if (isInternet) {
 		// 		// runner.add(new storage.TestStorageSftp());
