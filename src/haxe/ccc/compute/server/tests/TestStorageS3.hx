@@ -1,5 +1,10 @@
 package ccc.compute.server.tests;
 
+import promhx.RetryPromise;
+import promhx.RequestPromises;
+
+import util.streams.StreamTools;
+
 class TestStorageS3 extends TestStorageBase
 {
 	public function new(?storage :ccc.storage.ServiceStorageS3)
@@ -95,10 +100,32 @@ class TestStorageS3 extends TestStorageBase
 	@timeout(30000)
 	public function testStorageTestS3() :Promise<Bool>
 	{
-		if (_storage != null) {
-			return doStorageTest(_storage);
-		} else {
-			return Promise.promise(true);
-		}
+		Assert.notNull(_storage);
+		return doStorageTest(_storage);
+	}
+
+	@timeout(30000)
+	public function testS3ExternalUrl() :Promise<Bool>
+	{
+		Assert.notNull(_storage);
+		return Promise.promise(true)
+			.pipe(function(_) {
+				var testFileName = 'testExternalUrlFile${Math.floor(Math.random() * 1000000)}';
+				var testFileContent = 'testFileContent${Math.floor(Math.random() * 1000000)}';
+				return _storage.writeFile(testFileName, StreamTools.stringToStream(testFileContent))
+					.pipe(function(_) {
+						var outputUrl = _storage.getExternalUrl(testFileName);
+						trace('outputUrl=${outputUrl}');
+						return RetryPromise.pollRegular(
+							function() {
+								return RequestPromises.get(outputUrl);
+							}, 10, 200);
+					})
+					.then(function(out) {
+						out = out != null ? out.trim() : out;
+						assertEquals(out, testFileContent);
+						return true;
+					});
+			});
 	}
 }
