@@ -37,7 +37,7 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 
 	function doPathParsing(s :ServiceStorage) :Promise<Bool>
 	{
-		var rootPath = 'rootPathTest';
+		var rootPath = 'rootPathTest/';
 		var storage :ServiceStorageBase = cast s.clone();
 
 		storage.setRootPath(rootPath);
