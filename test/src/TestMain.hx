@@ -23,7 +23,7 @@ class TestMain
 
 		//Required for source mapping
 		js.npm.SourceMapSupport;
-		util.EmbedMacros.embedFiles('etc');
+		util.EmbedMacros.embedFiles('etc', ['etc/hxml/.*']);
 		ErrorToJson;
 
 		//Prevents warning messages since we have a lot of streams piping to the stdout/err streams.
