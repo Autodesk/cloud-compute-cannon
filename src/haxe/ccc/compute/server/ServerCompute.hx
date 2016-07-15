@@ -67,11 +67,10 @@ class ServerCompute
 
 	static function main()
 	{
-		var v = 'sdfsdfdsfsdsfsdfsssdfsdf';
 		//Required for source mapping
 		js.npm.SourceMapSupport;
 		//Embed various files
-		util.EmbedMacros.embedFiles('etc');
+		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
 		ErrorToJson;
 		runServer();
 	}

@@ -13,10 +13,28 @@ import haxe.macro.Printer;
 
 class EmbedMacros
 {
-	macro public static function embedFiles(dir :String) :Expr
+	macro public static function embedFiles(dir :String, exclude:Array<String>) :Expr//exclude:Array<ExprOf<String>>
 	{
 		var pos = Context.currentPos();
 		var files = getAllFiles(dir);
+
+		var regexes = exclude.map(function(s) return new EReg(s, ''));
+
+		var pathFilter = function(filePath :String) :Bool {
+			if (regexes.length == 0) {
+				return true;
+			} else {
+				var valid = true;
+				for (reg in regexes) {
+					if (reg.match(filePath)) {
+						valid = false;
+						break;
+					}
+				}
+				return valid;
+			}
+		}
+		files = files.filter(pathFilter);
 		for (f in files) {
 			Context.addResource(f, sys.io.File.getBytes(f));
 		}
