@@ -174,19 +174,9 @@ class CliMain
 				Node.process.exit(0);
 			});
 
-		if (Node.process.argv.slice(2).length == 0) {
+		program.parse(Node.process.argv);
+		if (program.args.length == 0) {
 			program.outputHelp();
-		} else {
-			//Long timeout so the process doesn't end automatically,
-			//since active Promises on the Promise stack do not prevent
-			//the node.js process from exiting.
-			Node.setTimeout(function() {
-				if (!isValidCommand) {
-					traceRed('Unknown command.');
-					Node.process.exit(1);
-				}
-			}, 50);
-			program.parse(Node.process.argv);
 		}
 	}
 
