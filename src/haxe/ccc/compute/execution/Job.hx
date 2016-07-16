@@ -44,24 +44,6 @@ using promhx.PromiseTools;
 using Lambda;
 using util.MapTools;
 
-enum JobEvent
-{
-	Initializing;
-	RegisteringWithDatabase;
-	CreatingDockerContainer;
-	StartedDockerContainer;
-	FinishedDockerContainer;
-}
-
-@:enum
-abstract JobExecutionState(String) {
-  var WaitingForExecution = "waiting";
-  var Executing = "executing";
-  var Aborted = "aborted";
-  var Finished = "finished";
-  var ResumingFromRestart = "resuming_from_restart";
-}
-
 class Job
 {
 	public static function writeJobResults(job :QueueJobDefinitionDocker, fs :ServiceStorage, batchJobResult :BatchJobResult, finishedStatus :JobFinishedStatus) :Promise<JobResult>
