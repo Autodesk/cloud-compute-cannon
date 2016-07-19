@@ -96,12 +96,6 @@ class TestServiceBatchCompute extends TestComputeBase
 							.pipe(function(jobResult) {
 								return Promise.promise(true);
 							});
-						// return Promise.promise(true);
-						// return ClientCompute.getJobResult(HOST, jobId)
-						// 	.pipe(function(jobResult) {
-						// 		trace('jobResult=${jobResult}');
-						// 		return Promise.promise(true);
-						// 	});
 					});
 			});
 	}
