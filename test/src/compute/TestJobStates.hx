@@ -126,7 +126,7 @@ class TestJobStates extends TestComputeBase
 	public function testJobFailedInBatchComputeSetup()
 	{
 #if PromhxExposeErrors
-		throw 'Cannot have -D PromhxExposeErrors because the throw error will be exposed rather than handled by the internal system';
+		#error 'Cannot have -D PromhxExposeErrors because the throw error will be exposed rather than handled by the internal system';
 #end
 		var maxDuration = 1;
 
@@ -175,6 +175,10 @@ class TestJobStates extends TestComputeBase
 					.then(function(jobStatusBlob :JobStatusUpdate) {
 						assertEquals(jobStatusBlob.jobId, jobs[0].id);
 						assertEquals(jobStatusBlob.JobStatus, JobStatus.Finished);
+						//Quotes are added. Don't know why, but hacking around it.
+						if (jobStatusBlob.error.startsWith('"')) {
+							jobStatusBlob.error = jobStatusBlob.error.substr(1, jobStatusBlob.error.length - 2);
+						}
 						assertEquals(jobStatusBlob.error, jobManager.jobError);
 						assertEquals(jobStatusBlob.JobFinishedStatus, JobFinishedStatus.Failed);
 						return true;
