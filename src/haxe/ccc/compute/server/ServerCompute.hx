@@ -90,13 +90,18 @@ class ServerCompute
 			Node.process.exit(1);
 		});
 
-		Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
-		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
-			Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));
+		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
+			untyped __js__('console.log = function() {}');
+			Logger.log.level(100);
+		} else {
+			Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
+			if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
+				Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));
+			}
+			trace({log_check:'haxe_trace'});
+			trace('trace_without_objectifying');
 		}
 
-		trace({log_check:'haxe_trace'});
-		trace('trace_without_objectifying');
 		Log.trace({log_check:'trace'});
 		Log.trace('trace');
 		Log.debug({log_check:'debug'});

@@ -9,13 +9,12 @@ import js.node.stream.Readable.ReadableEvent;
 #end
 
 import promhx.Deferred;
-import promhx.Promise;
 import promhx.CallbackPromise;
 import promhx.deferred.DeferredPromise;
 
-using StringTools;
+import util.DockerUrl;
+
 using promhx.PromiseTools;
-using Lambda;
 
 class DockerPromises
 {
@@ -34,6 +33,18 @@ class DockerPromises
 		var promise = new promhx.CallbackPromise();
 		docker.listImages(promise.cb2);
 		return promise;
+	}
+
+	public static function hasImage(docker :Docker, imageUrl :DockerUrl) :Promise<Bool>
+	{
+		return listImages(docker)
+			.then(function(images) {
+				return images.exists(function(e) {
+					return e.RepoTags.exists(function(tag :DockerUrl) {
+						return DockerUrlTools.matches(imageUrl, tag);
+					});
+				});
+			});
 	}
 
 	public static function push(image :DockerImage, ?opts :{?tag :String}, ?auth :Dynamic) :Promise<Bool>

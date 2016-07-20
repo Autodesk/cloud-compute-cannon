@@ -67,6 +67,15 @@ class ServiceStorageSftp
 		return copy;
 	}
 
+	override public function exists(path :String) :Promise<Bool>
+	{
+		path = getPath(path);
+		return __sshCommand('ls "$path"')
+			.then(function(result :ExecResult) {
+				return result.code == 0 && result.stderr == null;
+			});
+	}
+
 	override public function readFile(path :String) :Promise<IReadable>
 	{
 		path = getPath(path);
@@ -87,7 +96,7 @@ class ServiceStorageSftp
 
 	function mkdirInternal(path :String) :Promise<Bool>
 	{
-		return __sshCommand('mkdir -p ' + path)
+		return __sshCommand('mkdir -p "$path"')
 			.then(function(result :ExecResult) {
 				if (result.code != 0 || result.stderr != null) {
 					throw 'Error with "mkdir -p $path" on ${_sshCredentials.host} result=$result';
@@ -157,7 +166,7 @@ class ServiceStorageSftp
 	{
 		path = getPath(path);
 
-		return __sshCommand('rm -rf ' + path)
+		return __sshCommand('rm -rf "$path"')
 			.then(function(_) {
 				return true;
 			});
@@ -174,7 +183,7 @@ class ServiceStorageSftp
 		if (!path.endsWith('/')) {
 			path += '/';
 		}
-		return __sshCommand('find $path -type f')
+		return __sshCommand('find "$path" -type f')
 			.then(function(execResult) {
 				if (execResult.stdout != null) {
 					return execResult.stdout.trim().split('\n')

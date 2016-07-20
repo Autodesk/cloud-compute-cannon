@@ -39,7 +39,7 @@ using Lambda;
 using DateTools;
 using promhx.PromiseTools;
 
-class TestStorageSftp extends TestStorageBase
+class TestStorageSftp extends ccc.compute.server.tests.TestStorageBase
 {
 	var _container :DockerContainer;
 	var _sshPort = 2222;
@@ -66,19 +66,15 @@ class TestStorageSftp extends TestStorageBase
 			})
 			//Check for image
 			.pipe(function(_) {
-				trace('list images');
-				return DockerPromises.listImages(docker);
-			})
-			.pipe(function(imageData) {
-				trace('imageData=${imageData}');
-				var foundImage = imageData.find(function(i) return i.RepoTags.exists(function(s) return s == imageId));
-				trace('foundImage=${foundImage}');
-				if (foundImage != null) {
-					return Promise.promise(foundImage.Id);
-				} else {
-					trace('building image');
-					return DockerTools.buildDockerImage(docker, imageId, tarStream, null, Log.log);
-				}
+				// trace('list images');
+				return DockerPromises.hasImage(docker, imageId)
+					.pipe(function(foundImage) {
+					if (foundImage) {
+						return Promise.promise(imageId);
+					} else {
+						return DockerTools.buildDockerImage(docker, imageId, tarStream, null, Log.log);
+					}
+				});
 			})
 			//////////////////////////////////////////
 			//Stop, remove, and deleting existing containers
@@ -87,18 +83,14 @@ class TestStorageSftp extends TestStorageBase
 				//Containers stopped. Now remove
 				return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter(labelKey)})
 					.pipe(function(toRemove) {
-						trace('toRemove=${toRemove}');
 						return DockerTools.removeAll(docker, toRemove);
 					});
 			})
 			.pipe(function(_) {
-				trace('DockerTools.createContainer');
 				return DockerTools.createContainer(docker, {Image:imageId, Labels: containerLabel}, ports);
 			})
 			.pipe(function(container) {
 				_container = container;
-				trace('DockerTools.startContainer');
-				trace('container=${container}');
 				return DockerTools.startContainer(container, null, ports);
 			})
 			.thenTrue();
@@ -118,166 +110,34 @@ class TestStorageSftp extends TestStorageBase
 		return Promise.promise(true);
 	}
 
-	//TODO: this is way too long!!!
-	//There's a problem with the SFTP ServiceStorage
 	@timeout(120000)
-	public function DISABLEDtestSftpStorage()
+	public function testSftpStorage()
 	{
 		return Promise.promise(true)
 			.then(function(_) {
 				var host :String = ConnectionToolsDocker.getDockerHost();
-				var config = {type:StorageSourceType.Sftp, sshConfig:{host:host, port:_sshPort, username:'root', password:'screencast'}, rootPath:'/tmp'};
+				var config = {type:StorageSourceType.Sftp, credentials:{host:host, port:_sshPort, username:'root', password:'screencast'}, rootPath:'/tmp'};
 				_sftpFs = new ServiceStorageSftp()
 					.setConfig(config);
 				return _sftpFs;
 			})
 			.pipe(function(storage) {
-				return doServiceStorageTest(storage);
+				return doStorageTest(storage);
 			});
 	}
 
 	@timeout(120000)
 	public function testSshTools()
 	{
-		trace('testSshTools');
 		return Promise.promise(true)
 			.pipe(function(storage) {
 				var host :String = ConnectionToolsDocker.getDockerHost();
-				trace('host=${host}');
 				var sshConfig = {host:host, port:_sshPort, username:'root', password:'screencast'};
-				trace('sshConfig=${sshConfig}');
 				return SshTools.execute(sshConfig, 'find /some/made/up/path -type f', 10, 20)
 					.then(function(result) {
 						assertEquals(result.code, 1);
 						assertTrue(result.stderr != null && result.stderr.trim() == "find: `/some/made/up/path': No such file or directory");
 						return true;
-					});
-			});
-	}
-
-	// @timeout(1000)
-	// public function testSftpConfiguredCorrectly()
-	// {
-	// 	return WorkerProviderBoot2Docker.isSftpConfigInLocalDockerMachine()
-	// 		.then(function(ok) {
-	// 			assertTrue(ok);
-	// 			return true;
-	// 		});
-	// }
-
-	// @timeout(120000)
-	// public function testLocalStorageToSftpStorage()
-	// {
-	// 	var random = js.npm.ShortId.generate();
-	// 	var baseFileName = 'tempFile';
-	// 	var tempFilePath = '/tmp/some/made/up/dir/$random/$baseFileName';
-	// 	var tempFileContent = js.npm.ShortId.generate();
-	// 	var targetPath = '/tmp/some/made/up/dir/$random/$baseFileName';
-
-	// 	FsExtended.ensureDirSync(Path.dirname(tempFilePath));
-	// 	FsExtended.writeFileSync(tempFilePath, tempFileContent);
-
-	// 	var localStorage = ServiceStorageLocalFileSystem.getServiceWithRoot(Path.dirname(tempFilePath));
-	// 	var workerStorage = WorkerProviderBoot2Docker.getWorkerStorage();
-	// 	workerStorage = workerStorage.setRootPath(Path.dirname(targetPath));
-
-	// 	return DockerJobTools.copyInternal(localStorage, workerStorage)
-	// 		.pipe(function(ok) {
-	// 			return workerStorage.readFile(baseFileName)
-	// 				.pipe(StreamPromises.streamToString)
-	// 				.then(function(s) {
-	// 					assertEquals(s, tempFileContent);
-	// 					return true;
-	// 				});
-	// 		});
-	// }
-
-	@timeout(120000)
-	public function XtestSshStorageMethodsToLocalDockerHost()
-	{
-		var worker = WorkerProviderBoot2Docker.getLocalDockerWorker();
-		var docker = new Docker(worker.docker);
-		var sshConfig = worker.ssh;
-		var dateString = TestTools.getDateString();
-		var hostDirBase = '/tmp/testSshStorageMethodsToLocalDockerHost/$dateString';
-		var hostDir = '$hostDirBase/outputs';
-		var streams = {out:js.Node.process.stdout, err:js.Node.process.stderr};
-		var dataVolumeContainer;
-		return Promise.promise(true)
-			//Prepare test directory
-			.pipe(function(_) {
-				return Promise.promise(true)
-					.pipe(function(_) {
-						return SshTools.execute(sshConfig, 'sudo rm -rf $hostDirBase');
-					})
-					.pipe(function(result) {
-						assertTrue(result.code == 0);
-						return SshTools.execute(sshConfig, 'mkdir -p $hostDir');
-					})
-					.thenTrue();
-			})
-
-			//Build and run the test image that writes to the mounted directory
-			.pipe(function(_) {
-				var path = 'test/res/testSshStorageMethodsToLocalDockerHost/dockerContext';
-				var localStorage = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:path});
-				var tag = 'testsshlocaldockerhost';
-				return localStorage.readDir()
-					.pipe(function(stream) {
-						return DockerTools.buildDockerImage(docker, tag, stream, null)
-							.then(function(imageId) {
-								localStorage.close();//Not strictly necessary since it's local, but just always remember to do it
-								return imageId;
-							});
-					})
-					.pipe(function(imageId) {
-						// Log.info('Running container\n');
-						var mounts :Array<Mount> = [
-							{
-								Source: hostDir,
-								Destination: '/outputs',
-								Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
-								RW: true
-							}
-						];
-
-						var labels :Dynamic<String> = {};
-						return DockerJobTools.runDockerContainer(docker, 'fakeComputeJobId', imageId, null, mounts, null, labels, Log.log);
-					});
-			})
-			//Read and confirm data files written in the host directory
-			.pipe(function(_) {
-				var sftpFs = new ServiceStorageSftp()
-					.setConfig({type:StorageSourceType.Sftp, sshConfig:sshConfig, rootPath:hostDir});
-				return Promise.promise(true)
-					.pipe(function(_) {
-						return sftpFs.listDir(hostDir);
-					})
-					.pipe(function(files) {
-						///outputs/output1
-						assertTrue(files.has('output1'));
-						assertTrue(files.has('output2'));
-						return Promise.promise(true)
-							.pipe(function(_) {
-								return sftpFs.readFile('output1')
-									.pipe(function(readstream) {
-										return StreamPromises.streamToString(readstream);
-									})
-									.then(function(content) {
-										assertTrue(content.trim() == 'output1content');
-										return true;
-									});
-							})
-							.pipe(function(_) {
-								return sftpFs.readFile('output2')
-									.pipe(function(readstream) {
-										return StreamPromises.streamToString(readstream);
-									})
-									.then(function(content) {
-										assertTrue(content.trim() == 'output2content');
-										return true;
-									});
-							});
 					});
 			});
 	}

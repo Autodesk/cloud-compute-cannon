@@ -44,7 +44,7 @@ class ServiceStorageBase
 
 	public function exists(path :String) :Promise<Bool>
 	{
-		throw 'exists() Not implemented';
+		throw 'ServiceStorageBase.exists() Not implemented';
 		return null;
 	}
 

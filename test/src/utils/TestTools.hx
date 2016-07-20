@@ -33,7 +33,7 @@ typedef ServerCreationStuff = {
 
 class TestTools
 {
-	public static function forkServerCompute(?env :Dynamic) :Promise<js.node.child_process.ChildProcess>
+	public static function forkServerCompute(?env :Dynamic, ?disableLogging :Bool = true) :Promise<js.node.child_process.ChildProcess>
 	{
 		//Create a server in a forker process
 		var promise = new DeferredPromise();
@@ -45,7 +45,12 @@ class TestTools
 			return promise.boundPromise;
 		}
 
-		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: (env != null ? env : js.Node.process.env), silent:true});
+		env = env != null ? env : Reflect.copy(js.Node.process.env);
+		if (disableLogging) {
+			Reflect.setField(env, ENV_VAR_DISABLE_LOGGING, "true");
+		}
+
+		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: env, silent:true});
 		serverChildProcess.on(ChildProcessEvent.Message, function(message, sendHandle) {
 			if (message == IPC_MESSAGE_READY) {
 				promise.resolve(serverChildProcess);

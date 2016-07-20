@@ -50,6 +50,11 @@ class TestsIntegration
 
 	static function main()
 	{
+		runTests();
+	}
+
+	static function runTests()
+	{
 		TestMain.setupTestExecutable();
 
 		var isRedis = !isDisabled('REDIS');
@@ -73,30 +78,32 @@ class TestsIntegration
 
 		var runner = new PromiseTestRunner();
 
-		//Run the unit tests. These do not require any external dependencies
-		// if (isUnit) {
-			runner.add(new ccc.compute.server.tests.TestUnit());
-		// 	runner.add(new utils.TestPromiseQueue());
-		// 	runner.add(new utils.TestStreams());
-		// 	runner.add(new storage.TestStorageRestAPI());
-			// runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
-			// runner.add(new ccc.compute.server.tests.TestStorageS3());
-		// 	runner.add(new compute.TestRedisMock());
-		// 	if (isInternet) {
-		// 		// runner.add(new storage.TestStorageSftp());
-		// 	}
-		// }
+		//Disable these tests until we figure out how to inject S3 credentials outside of git
+		//and test the CLI
+		// runner.add(new ccc.compute.server.tests.TestStorageS3());
+		// runner.add(new compute.TestCLIRemoteServerInstallation());
+		// runner.add(new compute.TestCLISansServer());
+		// runner.add(new compute.TestCLI());
 
-		// if (isInternet) {
-		// 	runner.add(new storage.TestStorageS3());
-		// }
+		//Run the unit tests. These do not require any external dependencies
+		if (isUnit) {
+			runner.add(new ccc.compute.server.tests.TestUnit());
+			runner.add(new utils.TestPromiseQueue());
+			runner.add(new utils.TestStreams());
+			runner.add(new storage.TestStorageRestAPI());
+			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
+			runner.add(new compute.TestRedisMock());
+			if (isInternet) {
+				runner.add(new storage.TestStorageSftp());
+			}
+		}
 
 		if (isRedis) {
 			// These require a local redis db
 			runner.add(new compute.TestAutoscaling());
 			runner.add(new compute.TestRedis());
 
-			// //These require access to a local docker server
+			//These require access to a local docker server
 			if (isDockerProvider) {
 				ccc.compute.workers.WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
 				runner.add(new compute.TestScheduler());
@@ -110,12 +117,6 @@ class TestsIntegration
 				runner.add(new compute.TestDockerCompute());
 				runner.add(new compute.TestServiceBatchCompute());
 			}
-
-			// runner.add(new compute.TestCLIRemoteServerInstallation());
-			// runner.add(new compute.TestJobStates());
-			//CLI
-			// runner.add(new compute.TestCLISansServer());
-			// runner.add(new compute.TestCLI());
 		}
 
 		if (isVagrant && isRedis) {

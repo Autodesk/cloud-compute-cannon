@@ -201,13 +201,8 @@ class BatchComputeDocker
 						case Image:
 							var docker = job.worker.getInstance().docker();
 							var dockerImage = job.item.image.value;
-							promise = DockerPromises.listImages(docker)
-								.pipe(function(images) {
-									var imageExists = images.exists(function(e) {
-										return e.RepoTags.exists(function(tag :DockerUrl) {
-											return DockerUrlTools.matches(dockerImage, tag);
-										});
-									});
+							promise = DockerPromises.hasImage(docker, dockerImage)
+								.pipe(function(imageExists) {
 									if (imageExists) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);

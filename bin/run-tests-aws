@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 SERVER_HOST=$1
 SERVER_CONFIG_PATH=$2
-REMOTE_CCC_PATH="ccc"
+REMOTE_CCC_PATH="cloudcomputecannon"
 REMOTE_SERVER_CONFIG_FILE="serverconfig.yml"
 LOG_LEVEL=10
 if [ $# -eq 0 ]
@@ -10,16 +10,24 @@ if [ $# -eq 0 ]
 		echo "   run-tests-aws <HOST> <SERVER_CONFIG_PATH>"
 		exit 0
 fi
-if [ -z "$2" ]
-  then
-    echo "Missing server config path"
-    exit 1
-fi
+# if [ -z "$2" ]
+#   then
+#     echo "Missing server config path"
+#     exit 1
+# fi
 
 bin/sync-to-remote $SERVER_HOST
-scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/$REMOTE_SERVER_CONFIG_FILE
  #"/opt/bin/docker-compose"
 # DOCKER_COMPOSE="docker-compose"
 DOCKER_COMPOSE="/opt/bin/docker-compose"
-COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && LOG_LEVEL="$LOG_LEVEL" COMPUTE_CONFIG=\`cat $REMOTE_SERVER_CONFIG_FILE\` $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.remote.yml up --abort-on-container-exit"
+COMPUTE_SNIPPET=""
+COMPOSE_TEST_CONFIG="docker-compose.test.local.yml"
+if [ "$2" ]
+  then
+  	scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/$REMOTE_SERVER_CONFIG_FILE
+    COMPUTE_SNIPPET="COMPUTE_CONFIG=\`cat $REMOTE_SERVER_CONFIG_FILE\`"
+    COMPOSE_TEST_CONFIG="docker-compose.test.remote.yml"
+fi
+COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && LOG_LEVEL="$LOG_LEVEL" $COMPUTE_SNIPPET $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f $COMPOSE_TEST_CONFIG up --abort-on-container-exit"
+echo $COMMAND
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"
