@@ -208,6 +208,7 @@ class TestAutoscaling extends TestComputeBase
 							.pipe(function(_) {
 								return provider.whenFinishedCurrentChanges();
 							})
+							.thenWait(200)
 							.pipe(function(_) {
 								return InstancePool.toJson(redis)
 									.then(function(jsondump :InstancePoolJson) {
@@ -301,8 +302,10 @@ class TestAutoscaling extends TestComputeBase
 									.pipe(function(jsondump :InstancePoolJson) {
 										var promises = [];
 										for (machine in jsondump.getMachines()) {
-											for (computeJobId in machine.jobs) {
-												promises.push(ComputeQueue.removeComputeJob(redis, computeJobId));
+											if (machine.jobs != null) {
+												for (computeJobId in machine.jobs) {
+													promises.push(ComputeQueue.removeComputeJob(redis, computeJobId));
+												}
 											}
 										}
 										return Promise.whenAll(promises);

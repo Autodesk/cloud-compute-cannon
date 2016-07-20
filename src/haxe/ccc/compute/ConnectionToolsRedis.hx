@@ -1,7 +1,6 @@
 package ccc.compute;
 
 import js.npm.RedisClient;
-import js.npm.RedisClient;
 
 import ccc.compute.ConnectionToolsDocker;
 

@@ -106,7 +106,7 @@ class WorkerTools
 						})
 						.pipe(function(_) {
 							//Delete /computejobs files
-							return SshTools.execute(worker.ssh, 'sudo rm -rf $WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER/*');
+							return SshTools.execute(worker.ssh, 'sudo rm -rf "$WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER/*"');
 						})
 						.thenTrue();
 				} else {

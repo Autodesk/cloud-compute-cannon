@@ -1515,8 +1515,10 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 			if (pool.id == id) {
 				if (pool.instances != null) {
 					for (machine in pool.instances) {
-						for (jobId in machine.jobs) {
-							map.set(jobId, machine.id);
+						if (machine.jobs != null) {
+							for (jobId in machine.jobs) {
+								map.set(jobId, machine.id);
+							}
 						}
 					}
 				}

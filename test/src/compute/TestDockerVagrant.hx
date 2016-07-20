@@ -216,7 +216,7 @@ class TestDockerVagrant extends TestComputeBase
 			})
 			.pipe(function(connectedSsh :js.npm.Ssh.SshClient) {
 				ssh = connectedSsh;
-				return SshTools.execute(ssh, 'mkdir -p ' + testPath);
+				return SshTools.execute(ssh, 'mkdir -p "$testPath"');
 			})
 			.pipe(function(sshResult) {
 				return SshTools.sftp(ssh);

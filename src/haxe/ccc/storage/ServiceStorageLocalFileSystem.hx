@@ -110,7 +110,7 @@ class ServiceStorageLocalFileSystem
 			.pipe(function(_) {
 				var dir = Path.dirname(path);
 				if (dir != null) {
-					js.node.ChildProcess.execSync('mkdir -p $dir', {stdio:['ignore','pipe', untyped js.Node.process.stderr]});
+					js.node.ChildProcess.execSync('mkdir -p "$dir"', {stdio:['ignore','pipe', untyped js.Node.process.stderr]});
 					return Promise.promise(true);
 				} else {
 					return Promise.promise(true);

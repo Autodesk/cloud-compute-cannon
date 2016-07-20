@@ -148,13 +148,13 @@ class WorkerProviderTools
 							//Start the socket and restart docker
 							'sudo systemctl start docker-tcp.socket',
 							'sudo systemctl start docker',
-							'sudo mkdir -p $WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT',
-							'sudo chmod 777 $WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT'
+							'sudo mkdir -p "$WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT"',
+							'sudo chmod 777 "$WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT"'
 						]);
 					})
 					.pipe(function(_) {
 						//Validate by checking the last command
-						return SshTools.execute(sshOptions, 'ls $WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT', 3, 100)
+						return SshTools.execute(sshOptions, 'ls "$WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT"', 3, 100)
 							.then(function(execResult) {
 								if (execResult.code != 0) {
 									throw 'Failed to set up CoreOS worker';
