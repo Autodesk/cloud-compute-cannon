@@ -27,16 +27,16 @@ class ServiceTests
 		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
 		var runner = new PromiseTestRunner();
 
-		// runner.add(new TestUnit());
-		// runner.add(new TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
-		// var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
-		// switch(injectedStorage.type) {
-		// 	case Sftp: Log.warn('No Test for SFTP storage');
-		// 	case Local: //Already running local storage
-		// 	case Cloud:
-		// 		var test :PromiseTest = new TestStorageS3(cast injectedStorage);
-		// 		runner.add(test);
-		// }
+		runner.add(new TestUnit());
+		runner.add(new TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
+		var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
+		switch(injectedStorage.type) {
+			case Sftp: Log.warn('No Test for SFTP storage');
+			case Local: //Already running local storage
+			case Cloud:
+				var test :PromiseTest = new TestStorageS3(cast injectedStorage);
+				runner.add(test);
+		}
 
 		runner.add(new TestJobs(targetHost));
 		// runner.add(new TestRegistry(targetHost));
