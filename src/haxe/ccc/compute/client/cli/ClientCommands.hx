@@ -1122,37 +1122,6 @@ class ClientCommands
 		return InitConfigTools.ohGodGetConfigFromSomewhere();
 	}
 
-	static function processInputItem(itemString :String) :ComputeInputSource
-	{
-		var tokens = itemString.split('=');
-		var itemName = tokens.shift();
-		var itemRef = tokens.join('=');
-		if (itemRef.startsWith('@')) {
-			var filePath = itemRef.substr(1);
-			if (filePath.startsWith('http')) {
-				return {
-					type: InputSource.InputStream,
-					value: Request.get(filePath, null),
-					name: itemName,
-					encoding: 'base64'
-				}
-			} else {
-				return {
-					type: InputSource.InputStream,
-					value: Fs.createReadStream(filePath, {encoding:'base64'}),
-					name: itemName,
-					encoding: 'base64'
-				}
-			}
-		} else {
-			return {
-				type: InputSource.InputInline,
-				value: itemRef,
-				name: itemName
-			}
-		}
-	}
-
 	public static function validateServerAndClientVersions() :Promise<Bool>
 	{
 		return getVersions()
