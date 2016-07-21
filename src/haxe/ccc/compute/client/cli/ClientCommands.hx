@@ -602,6 +602,30 @@ class ClientCommands
 	})
 	public static function install(?config :String, ?host :HostName, ?key :String, ?username :String, ?force :Bool = false, ?uploadonly :Bool = false) :Promise<CLIResult>
 	{
+		//Docker version check
+		var incompatibleVersionError = 'Incompatible docker version. Needs 1.12.x';
+		try {
+			var stdout :js.node.Buffer = js.node.ChildProcess.execSync('docker --version', {stdio:['ignore','pipe','ignore']});
+			var versionString = stdout.toString('utf8').split(' ')[2];
+			var versionRegex = ~/(\d+)\.(\d+)\.(\*|\d+)/;
+			if (versionRegex.match(versionString)) {
+				var major = Std.parseInt(versionRegex.matched(1));
+				var minor = Std.parseInt(versionRegex.matched(2));
+				var patch = Std.parseInt(versionRegex.matched(3));
+				if (major != 1 || minor < 12) {
+					traceRed(incompatibleVersionError);
+					return Promise.promise(CLIResult.ExitCode(1));
+				}
+			} else {
+				//Cannot find version string
+				traceRed('Cannot parse or find docker version');
+				return Promise.promise(CLIResult.ExitCode(1));
+			}
+		} catch (ignored :Dynamic) {
+			traceRed(incompatibleVersionError);
+			return Promise.promise(CLIResult.ExitCode(1));
+		}
+
 		var path :CLIServerPathRoot = Node.process.cwd();
 
 		if (config != null) {
