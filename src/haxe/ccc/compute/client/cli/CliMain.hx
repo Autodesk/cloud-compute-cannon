@@ -53,7 +53,7 @@ class CliMain
 		var context = new t9.remoting.jsonrpc.Context();
 		context.rpc.add(function(r) {
 			var p :{verbose:Bool} = Node.require('commander');
-			if (p.verbose || true) {
+			if (p.verbose) {
 				trace(Json.stringify(r, null, '  '));
 			}
 		});
