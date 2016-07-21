@@ -3,6 +3,7 @@ import js.node.child_process.ChildProcess;
 
 import haxe.unit.async.PromiseTestRunner;
 
+import ccc.compute.ConnectionToolsDocker;
 import ccc.compute.InitConfigTools;
 
 using Lambda;
@@ -51,6 +52,11 @@ class TestsIntegration
 
 	static function main()
 	{
+		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
+			untyped __js__('console.log = function() {}');
+			Logger.log.level(100);
+		}
+
 		if (Sys.args().length == 0) {
 			runTests();
 		} else {
@@ -144,7 +150,7 @@ class TestsIntegration
 			runner.add(new storage.TestStorageRestAPI());
 			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
 			runner.add(new compute.TestRedisMock());
-			if (isInternet) {
+			if (isInternet && !ConnectionToolsDocker.isInsideContainer()) {
 				runner.add(new storage.TestStorageSftp());
 			}
 		}
