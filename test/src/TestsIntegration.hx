@@ -7,6 +7,7 @@ import ccc.compute.InitConfigTools;
 
 using Lambda;
 using StringTools;
+using promhx.PromiseTools;
 
 class TestsIntegration
 {
@@ -50,7 +51,57 @@ class TestsIntegration
 
 	static function main()
 	{
-		runTests();
+		if (Sys.args().length == 0) {
+			runTests();
+		} else {
+			var className = Sys.args()[0];
+			var cls = Type.resolveClass(className);
+			if (cls == null && className.split('.').length > 1) {
+				var tokens = className.split('.');
+				var methodName = tokens.pop();
+				className = tokens.join('.');
+				cls = Type.resolveClass(className);
+				if (cls != null) {
+					var ins :{setup:Void->Promise<Bool>,tearDown:Void->Promise<Bool>} = Type.createInstance(cls, []);
+					var testMethod = Reflect.field(ins, methodName);
+					if (testMethod != null) {
+						ins.setup()
+							.orTrue()
+							.pipe(function(_) {
+								var p :Promise<Bool> = Reflect.callMethod(ins, testMethod, []);
+								return p.orTrue();
+							})
+							.errorPipe(function(err) {
+								traceRed(err);
+								return Promise.promise(false);
+							})
+							.then(function(passed){
+								if (passed) {
+									traceGreen('Passed!');
+									Node.process.exit(0);
+								} else {
+									traceRed('Failed!');
+									Node.process.exit(1);
+								}
+								return true;
+							});
+					} else {
+						traceRed('No method ${className}.methodName');
+						Node.process.exit(1);
+					}
+				} else {
+					traceRed('No class ${className}');
+					Node.process.exit(1);
+				}
+			} else if (cls == null ) {
+				traceRed('No class ${className}');
+				Node.process.exit(1);
+			} else {
+				var runner = new PromiseTestRunner();
+				runner.add(Type.createInstance(cls, []));
+				runner.run();
+			}
+		}
 	}
 
 	static function runTests()

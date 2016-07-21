@@ -148,14 +148,7 @@ CloudComputeCannon is written in [Haxe](http://haxe.org/). To develop, you'll ne
 
 Steps for running the functional tests locally:
 
-1) Ensure docker-machine has a default machine:
-
-    ```
-    docker-machine create --driver virtualbox default
-
-    ```
-
-2) Clone the repo and install libraries, submodules, etc
+1) Clone the repo and install libraries, submodules, etc
 
 	git clone https://github.com/Autodesk/cloud-compute-cannon
 	cd cloud-compute-cannon
@@ -167,21 +160,25 @@ To compile, run:
 
 	haxe etc/hxml/build-all.hxml
 
-You'll need (at minimum) a running [Redis ](http://redis.io/) database. In a new terminal window in the cloud-compute-cannon directory run the following command. It assumes you have ([Docker](https://www.docker.com/) installed:
+To run you'll need the rest of the stack (database, registry, logging). In a new terminal window in the cloud-compute-cannon directory run the following command. It assumes you have ([Docker](https://www.docker.com/) installed:
 
-	npm run redis
+	./bin/run-stack-noserver
 
 Then in another terminal window, run:
 
 	haxe test/testsIntegration.hxml
 
-Some of the tests require [VirtualBox](https://www.virtualbox.org/wiki/Downloads), however these are optional (the availability of Virtualbox is detected at runtime).
+To run individual tests:
 
-### Contact
+  ./bin/test <full.class.name>[.optionalMethod]
+
+
+
+## Contact
 
 To contact the authors, please email: maintainers.bionano-cloudcomputecannon@autodesk.com or post an issue.
 
-### License
+## License
 
 Copyright 2015 Autodesk Inc.
 
