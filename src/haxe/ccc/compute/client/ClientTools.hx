@@ -24,7 +24,7 @@ class ClientTools
 			});
 	}
 
-	public static function isServerListening(host :Host, ?swallowErrors :Bool = true) :Promise<Bool>
+	public static function isServerListening(host :Host, ?swallowErrors :Bool = false) :Promise<Bool>
 	{
 		var url = 'http://${host}${SERVER_PATH_CHECKS}';
 		return RequestPromises.get(url)

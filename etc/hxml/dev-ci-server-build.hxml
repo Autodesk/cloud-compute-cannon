@@ -6,6 +6,6 @@ etc/hxml/base-nodejs.hxml
 
 -resource package.json@package.json
 
--main ccc.compute.server.tests.ServerCI
+-main ccc.compute.server.dev.ServerCI
 
 -js build/devci-server.js

@@ -19,11 +19,18 @@ class RequestPromises
 {
 	public static function get(url :String, ?timeout :Int = 0) :Promise<String>
 	{
+		return getBuffer(url, timeout)
+			.then(function(buffer) {
+				return buffer != null ? buffer.toString('utf8') : null;
+			});
+	}
+
+	public static function getBuffer(url :String, ?timeout :Int = 0) :Promise<Buffer>
+	{
 		var promise = new DeferredPromise();
 		var responseString = '';
 		var responseBuffer :Buffer = null;
 		var cb = function(res :IncomingMessage) {
-			res.setEncoding('utf8');
 			res.on(ReadableEvent.Error, function(err) {
 				if (!promise.boundPromise.isErroredOrFinished()) {
 					promise.boundPromise.reject({error:err, url:url});
@@ -41,10 +48,12 @@ class RequestPromises
 			});
 			res.on(ReadableEvent.End, function() {
 				if (!promise.isDeferredErroredOrFinished()) {
+					// res.setEncoding('utf8');
 					if (res.statusCode < 200 || res.statusCode > 299) {
-						promise.boundPromise.reject(responseBuffer != null ? responseBuffer.toString('utf8') : 'ERROR status code ${res.statusCode} url=$url');
+						// promise.boundPromise.reject(responseBuffer != null ? responseBuffer.toString('utf8') : 'ERROR status code ${res.statusCode} url=$url');
+						promise.boundPromise.reject(responseBuffer);
 					} else {
-						promise.resolve(responseBuffer != null ? responseBuffer.toString('utf8') : null);
+						promise.resolve(responseBuffer);
 					}
 				}
 			});
