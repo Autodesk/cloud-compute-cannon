@@ -1,4 +1,4 @@
-package ccc.compute.server.tests;
+package ccc.compute.server.dev;
 
 /**
  * Development server:
@@ -252,43 +252,16 @@ class ServerCI
 
 	static function runTestsOnHost(host :Host) :Promise<Bool>
 	{
-		var promise = new DeferredPromise();
-		var testScriptPath = 'bin/run-server-tests';
-		var testScriptExec = '$testScriptPath $host';
-		trace('Running tests="$testScriptExec"');
-		// var testprocess = ChildProcess.spawn(testScriptPath, [host]);
-		// testprocess.stdout.on(ReadableEvent.Data, function(data :Buffer) {
-		// 	Node.process.stdout.write(data);
-		// });
-
-		// testprocess.stderr.on(ReadableEvent.Data, function(data :Buffer) {
-		// 	Node.process.stderr.write(data);
-		// });
-
-		// testprocess.on(ChildProcessEvent.Close, function(code, signal) {
-		// 	trace('exited with code=$code');
-		// 	promise.resolve(code == 0);
-		// });
-
-		// testprocess.on(ChildProcessEvent.Error, function(err) {
-		// 	promise.boundPromise.reject(err);
-		// });
-
-		ChildProcess.exec(testScriptExec, function(error :Dynamic, stdout :String, stderr :String) {
-			if (error != null) {
-				promise.boundPromise.reject(error);
-				return;
-			}
-			if (stdout != null && stdout.length > 0) {
-				Node.process.stdout.write(stdout);
-			}
-			if (stderr != null && stderr.length > 0) {
-				Node.process.stderr.write(CliColor.red(stderr));
-			}
-			promise.resolve(true);
-		});
-
-		return promise.boundPromise;
+		var url = 'http://${host}${SERVER_RPC_URL}/server-tests';
+		return RequestPromises.get(url)
+			.then(function(result) {
+				trace(result);
+				return true;
+			})
+			.errorPipe(function(err) {
+				traceRed(err);
+				return Promise.promise(false);
+			});
 	}
 
 	static function reloadServer(host :Host, serverCode :String) :Promise<Bool>

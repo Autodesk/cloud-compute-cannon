@@ -5,6 +5,7 @@ package ccc.compute;
 	import t9.js.jsonrpc.Routes;
 
 	import js.Node;
+	import js.node.Buffer;
 	import js.node.Path;
 	import js.node.stream.Readable;
 	import js.node.Http;
@@ -79,8 +80,8 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
-		alias:'image-push',
-		doc:'Pushes a docker image (downloads it if needed) and tags it into the local registry for workers to consume.',
+		alias:'image-pull',
+		doc:'Pulls a docker image and tags it into the local registry for workers to consume.',
 		args:{
 			tag: {doc: 'Custom tag for the image', short:'t'},
 			opts: {doc: 'ADD ME', short:'o'}
@@ -96,8 +97,8 @@ class ServiceBatchCompute
 		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
 		args:{
 			'command': {'doc':'Command to run in the docker container. E.g. --command=\'["echo", "foo"]\''},
-			'image': {'doc': 'Docker image name [ubuntu:14.04].'},
-			'inputs': {'doc': 'Docker image name [ubuntu:14.04].'},
+			'image': {'doc': 'Docker image name [busybox].'},
+			'inputs': {'doc': 'Array of input source objects {type:[url|inline(default)], name:<filename>, value:<string>, encoding:[utf8(default)|base64|ascii|hex]} See https://nodejs.org/api/buffer.html for more info about supported encodings.'},
 			'workingDir': {'doc': 'The current working directory for the process in the docker container.'},
 			'cpus': {'doc': 'Minimum number of CPUs required for this process.'},
 			'maxDuration': {'doc': 'Maximum time (in seconds) this job will be allowed to run before being terminated.'},
@@ -241,7 +242,6 @@ class ServiceBatchCompute
 					getJobStats(_redis, job)
 						.then(function(stats) {
 							if (stats != null) {
-								// var now = Date.now().getTime();
 								return stats != null ? stats.toJson() : null;
 								var enqueueTime = stats.enqueueTime;
 								var finishTime = stats.finishTime;
@@ -254,63 +254,8 @@ class ServiceBatchCompute
 								return null;
 							}
 						});
-				// case Stdout:
-				// 	getJobResults(job)
-				// 		.pipe(function(jobResults) {
-				// 			if (jobResults == null) {
-				// 				return Promise.promise(null);
-				// 			} else {
-				// 				return ComputeQueue.getJob(_redis, job)
-				// 					.pipe(function(jobDef :DockerJobDefinition) {
-				// 						var externalBaseUrl = fs.getExternalUrl();
-				// 						if (externalBaseUrl == null || externalBaseUrl == '') {
-				// 							_fs.
-				// 						} else {
-
-				// 						}
-				// 						trace('jobDef=${jobDef}');
-				// 					});
 				case Definition:
 					getJobDefinition(_redis, _fs, job);
-				// trace('Description');
-				// return ComputeQueue.getStatus(_redis, job)
-				// 	// .pipe(function(status) {
-				// 	// 	return 
-				// 		getJobDefinition(jobId)
-				// 			.pipe(function(jobdef :DockerJobDefinition) {
-								
-				// 				var jobDefCopy = Reflect.copy(jobdef);
-				// 				jobDefCopy.inputsPath = _fs.getExternalUrl(JobTools.inputDir(jobdef));
-				// 				jobDefCopy.outputsPath = _fs.getExternalUrl(JobTools.outputDir(jobdef));
-				// 				jobDefCopy.resultsPath = _fs.getExternalUrl(JobTools.resultDir(jobdef));
-				// 				var result :JobDescriptionComplete = {
-				// 					definition: jobDefCopy,
-				// 					status: status
-				// 				}
-				// 				trace('  result=$result');
-
-				// 				var resultsJsonPath = JobTools.resultJsonPath(jobDefCopy);
-				// 				return _fs.exists(resultsJsonPath)
-				// 					.pipe(function(exists) {
-				// 						if (exists) {
-				// 							return _fs.readFile(resultsJsonPath)
-				// 								.pipe(function(stream) {
-				// 									if (stream != null) {
-				// 										return StreamPromises.streamToString(stream)
-				// 											.then(function(resultJsonString) {
-				// 												result.result = Json.parse(resultJsonString);
-				// 												return result;
-				// 											});
-				// 									} else {
-				// 										return Promise.promise(result);
-				// 									}
-				// 								});
-				// 						} else {
-				// 							return Promise.promise(result);
-				// 						}
-				// 					});
-				// 			});
-				// 	});
 			}
 		}
 
@@ -322,56 +267,6 @@ class ServiceBatchCompute
 				}
 				return result;
 			});
-
-		// return switch(command) {
-		// 	case Kill:
-				
-
-		
-			// case Description:
-			// 	trace('getJobDefinition');
-			// 	return ComputeQueue.getStatus(_redis, job)
-			// 		.pipe(function(status) {
-			// 			return getJobDefinition(jobId)
-			// 				.pipe(function(jobdef :DockerJobDefinition) {
-								
-			// 					var jobDefCopy = Reflect.copy(jobdef);
-			// 					jobDefCopy.inputsPath = _fs.getExternalUrl(JobTools.inputDir(jobdef));
-			// 					jobDefCopy.outputsPath = _fs.getExternalUrl(JobTools.outputDir(jobdef));
-			// 					jobDefCopy.resultsPath = _fs.getExternalUrl(JobTools.resultDir(jobdef));
-			// 					var result :JobDescriptionComplete = {
-			// 						definition: jobDefCopy,
-			// 						status: status
-			// 					}
-			// 					trace('  result=$result');
-
-			// 					var resultsJsonPath = JobTools.resultJsonPath(jobDefCopy);
-			// 					return _fs.exists(resultsJsonPath)
-			// 						.pipe(function(exists) {
-			// 							if (exists) {
-			// 								return _fs.readFile(resultsJsonPath)
-			// 									.pipe(function(stream) {
-			// 										if (stream != null) {
-			// 											return StreamPromises.streamToString(stream)
-			// 												.then(function(resultJsonString) {
-			// 													result.result = Json.parse(resultJsonString);
-			// 													return result;
-			// 												});
-			// 										} else {
-			// 											return Promise.promise(result);
-			// 										}
-			// 									});
-			// 							} else {
-			// 								return Promise.promise(result);
-			// 							}
-			// 						});
-			// 				});
-			// 		});
-		// 	default:
-		// 		// Log.error('Unrecognized job subcommand=$command. Allowed [results]');
-		// 		throw 'Unrecognized job subcommand=$command. Allowed [kill|results]';
-		// 		Promise.promise(null);
-		// }
 #else
 		return Promise.promise(null);
 #end
@@ -540,11 +435,12 @@ class ServiceBatchCompute
 			.errorPipe(function(err) {
 				Log.error('Got error, deleting inputs for jobId=$jobId err=$err');
 				error = err;
-				deleteInputs()
-					.then(function(_) {
-						Log.error('Deleted inputs for jobId=$jobId err=$err');
-					});
-
+				if (deleteInputs != null) {
+					deleteInputs()
+						.then(function(_) {
+							Log.error('Deleted inputs for jobId=$jobId err=$err');
+						});
+				}
 				return Promise.promise(true);
 			})
 			.then(function(_) {
@@ -762,15 +658,20 @@ class ServiceBatchCompute
 		if (inputDescriptions != null) {
 			for (input in inputDescriptions) {
 				var inputFilePath = Path.join(inputsPath, input.name);
-				var type :InputSource = input.type;
+				var type :InputSource = input.type == null ? InputSource.InputInline : input.type;
+				var encoding :InputEncoding = input.encoding == null ? InputEncoding.utf8 : input.encoding;
+				switch(encoding) {
+					case utf8,base64,ascii,utf16le,ucs2,binary,hex:
+					default: throw 'Unsupported input encoding=$encoding';
+				}
 				switch(type) {
 					case InputInline:
-						// Log.info('Got input "${input.name}" inline=${input.value}');
-						promises.push(_fs.writeFile(inputFilePath, Streamifier.createReadStream(input.value)));
+						var buffer = new Buffer(input.value, encoding);
+						promises.push(_fs.writeFile(inputFilePath, Streamifier.createReadStream(buffer)));//{encoding:encoding}
 						inputNames.push(input.name);
 					case InputUrl:
 						if (input.value == null) {
-							throw '{}.value is null for $input';
+							throw 'input.value is null for $input';
 						}
 						var url :String = input.value;
 						if (url.startsWith('http')) {
