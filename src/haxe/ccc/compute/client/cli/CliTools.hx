@@ -145,6 +145,8 @@ class CliTools
 		if (Reflect.hasField(program, 'server')) {
 			var host :Host = Reflect.field(program, 'server');
 			return host;
+		} else if (Reflect.hasField(program, 'public')) {
+			return SERVER_PUBLIC_HOST;
 		} else {
 			return null;
 		}
@@ -186,10 +188,13 @@ class CliTools
 				if (config != null) {
 					var host :Host = getHostFromServerConfig(config);
 					return host;
+				} else {
+					throw 'configPath=$configPath is not null, but cannot get server connection from configuration';
 				}
+			} else {
+				return SERVER_PUBLIC_HOST;
 			}
 		}
-		return null;
 	}
 
 	inline public static function getHostFromServerConfig(config :ServerConnectionBlob) :Host

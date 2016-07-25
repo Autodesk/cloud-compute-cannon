@@ -58,6 +58,7 @@ class Constants
 	public static var REGISTRY :Host;
 	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
 	inline public static var SERVER_DEFAULT_PORT = 9000;
+	public static var SERVER_PUBLIC_HOST = new Host(new HostName('ccc.bionano.autodesk.com'), new Port(SERVER_DEFAULT_PORT));
 	//This port will be open to linked containers via HTTP (not HTTPS)
 	inline public static var SERVER_HTTP_PORT = 9001;
 	inline public static var SERVER_RELOADER_PORT = 9002;
