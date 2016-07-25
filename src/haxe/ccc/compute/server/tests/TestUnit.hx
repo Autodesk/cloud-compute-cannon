@@ -46,15 +46,6 @@ class TestUnit extends haxe.unit.async.PromiseTest
 	public function testDockerUrlParsing()
 	{
 		// https://regex101.com/
-		// localhost:5001/lmvconverter:5b2be4e42396
-		// quay.io:80/bionano/lmvconverter
-		// bionano/lmvconverter
-		// quay.io/bionano/lmvconverter:latest
-		// localhost:5001/lmvconverter:latest
-		// quay.io:80/bionano/lmvconverter:c955c37
-		// bionano/lmvconverter:c955c37
-		// lmvconverter:c955c37
-		// lmvconverter
 		for (e in [
 			'quay.io:80/bionano/lmvconverter',
 			'bionano/lmvconverter',
@@ -65,7 +56,8 @@ class TestUnit extends haxe.unit.async.PromiseTest
 			'lmvconverter:c955c37',
 			'lmvconverter',
 			'localhost:5001/lmvconverter:5b2be4e42396',
-			'quay.io/bionano/computeworker_nanodesign:1b41fba'
+			'quay.io/bionano/computeworker_nanodesign:1b41fba',
+			'autodesk/moldesign:moldesign_complete-0.7.1'
 		]) {
 			assertEquals(e, DockerUrlTools.joinDockerUrl(DockerUrlTools.parseDockerUrl(e)));
 		}
@@ -89,6 +81,9 @@ class TestUnit extends haxe.unit.async.PromiseTest
 		assertEquals(another3.name, 'computeworker_nanodesign');
 		assertEquals(another3.tag, '1b41fba');
 		assertEquals(another3.registryhost, 'quay.io');
+
+		var another4 :DockerUrl = 'autodesk/moldesign:moldesign_complete-0.7.1';
+		assertEquals(another4.tag, 'moldesign_complete-0.7.1');
 
 		return Promise.promise(true);
 	}
