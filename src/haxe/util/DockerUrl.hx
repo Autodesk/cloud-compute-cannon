@@ -29,6 +29,11 @@ abstract DockerUrl(String) to String from String
 		return DockerUrlTools.joinDockerUrl(u);
 	}
 
+	inline public function blob() :DockerUrlBlob
+	{
+		return DockerUrlTools.parseDockerUrl(this);
+	}
+
 	inline public function get_repository() :String
 	{
 		var u = DockerUrlTools.parseDockerUrl(this);
@@ -118,7 +123,7 @@ class DockerUrlTools
 	public static function parseDockerUrl(s :String) :DockerUrlBlob
 	{
 		s = s.trim();
-		var r = ~/(.*\/)?([a-z0-9_]+)(:[a-z0-9_]+)?/i;
+		var r = ~/(.*\/)?([a-z0-9_]+)(:[a-z0-9_\.-]+)?/i;
 		r.match(s);
 		var registryAndUsername = r.matched(1);
 		var name = r.matched(2);
