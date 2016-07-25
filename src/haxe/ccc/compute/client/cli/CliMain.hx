@@ -36,6 +36,7 @@ class CliMain
 
 		program = program.option('-S, --server <server>', 'Set server host here rather than via configuration');//'localhost:9000'
 		program = program.option('-v, --verbose', 'Show the JSON-RPC call to the server');
+		program = program.option('-p, --public', 'Use the public server (ccc.bionano.autodesk.com:9000)');
 		program = program.option('-c, --check', 'Check server and client version before making remote API call');
 
 		var address = null;
