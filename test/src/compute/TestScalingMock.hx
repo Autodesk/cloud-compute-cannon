@@ -7,7 +7,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -104,7 +104,7 @@ class TestScalingMock extends TestScalingBase
 		MockWorkerProvider.TIME_MS_WORKER_CREATION = 50;
 		var provider :MockWorkerProvider = cast _workerProvider;
 		var machineTargetCount = 2;
-		var config :ProviderConfigBase = {
+		var config :ServiceConfigurationWorkerProvider = {
 			priority: 1,
 			maxWorkers: 3,
 			minWorkers: 0,

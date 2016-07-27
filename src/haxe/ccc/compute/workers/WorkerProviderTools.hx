@@ -9,12 +9,12 @@ import js.Node;
 import js.node.Path;
 import js.node.Fs;
 
-import js.npm.Docker;
-import js.npm.FsExtended;
+import js.npm.docker.Docker;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Vagrant;
+import js.npm.ssh2.Ssh;
+import js.npm.vagrant.Vagrant;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
@@ -48,11 +48,10 @@ class WorkerProviderTools
 	{
 		return switch(config.type) {
 			case pkgcloud:
-				var pkgcloudConfig :ServiceConfigurationWorkerProviderPkgCloud = cast config;
-				return WorkerProviderPkgCloud.getPublicHostName(pkgcloudConfig);
+				return WorkerProviderPkgCloud.getPublicHostName(config);
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
-			case vagrant,mock:
+			default:
 				throw 'Not yet implemented';
 		}
 	}
@@ -61,11 +60,10 @@ class WorkerProviderTools
 	{
 		return switch(config.type) {
 			case pkgcloud:
-				var pkgcloudConfig :ServiceConfigurationWorkerProviderPkgCloud = cast config;
-				return WorkerProviderPkgCloud.getPrivateHostName(pkgcloudConfig);
+				return WorkerProviderPkgCloud.getPrivateHostName(config);
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
-			case vagrant,mock:
+			default:
 				throw 'Not yet implemented';
 		}
 	}
@@ -88,7 +86,7 @@ class WorkerProviderTools
 			.thenTrue();
 	}
 
-	public static function getWorkerParameters(opts :ConstructorOpts) :Promise<WorkerParameters>
+	public static function getWorkerParameters(opts :DockerConnectionOpts) :Promise<WorkerParameters>
 	{
 		return DockerPromises.info(new Docker(opts))
 			.then(function(dockerinfo :DockerInfo) {

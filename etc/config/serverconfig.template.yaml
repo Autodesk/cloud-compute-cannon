@@ -1,7 +1,6 @@
-server:
-  storage:
-    type: "local"
-    rootPath: "data/ServiceStorageLocalFileSystem"
+storage:
+  type: "local"
+  rootPath: "data/ServiceStorageLocalFileSystem"
 
 providers:
   - type: "Boot2Docker"
@@ -9,4 +8,4 @@ providers:
     minWorkers: 1
     priority: 1
     #billingIncrement is measured in minutes
-    billingIncrementMs: 0
+    billingIncrement: 0

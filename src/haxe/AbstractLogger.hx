@@ -1,8 +1,8 @@
-abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogger from js.npm.Bunyan.BunyanLogger
+abstract AbstractLogger(js.npm.bunyan.Bunyan.BunyanLogger) to js.npm.bunyan.Bunyan.BunyanLogger from js.npm.bunyan.Bunyan.BunyanLogger
 {
 	inline public function new(fields :Dynamic)
 	{
-		this = js.npm.Bunyan.createLogger(fields);
+		this = js.npm.bunyan.Bunyan.createLogger(fields);
 	}
 
 	inline public function child(fields :Dynamic) :AbstractLogger
@@ -115,11 +115,11 @@ abstract AbstractLogger(js.npm.Bunyan.BunyanLogger) to js.npm.Bunyan.BunyanLogge
 
 // 		var s = '${pos.fileName}:${pos.lineNumber} ${haxe.Json.stringify(msg)}';
 // 		return switch(logCode) {
-// 			case 100: js.npm.CliColor.redBright(s);
-// 			case 200: js.npm.CliColor.red(s);
-// 			case 300: js.npm.CliColor.magenta(s);
-// 			case 400: js.npm.CliColor.green(s);
-// 			case 500: js.npm.CliColor.yellow(s);
+// 			case 100: js.npm.clicolor.CliColor.redBright(s);
+// 			case 200: js.npm.clicolor.CliColor.red(s);
+// 			case 300: js.npm.clicolor.CliColor.magenta(s);
+// 			case 400: js.npm.clicolor.CliColor.green(s);
+// 			case 500: js.npm.clicolor.CliColor.yellow(s);
 // 			case 600: s;
 // 			default:s;
 // 		}

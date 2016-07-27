@@ -19,7 +19,7 @@ interface WorkerProvider
 	var ready (get, null) :Promise<Bool>;
 	var log (default, null) :AbstractLogger;
 
-	function updateConfig(config :ProviderConfigBase) :Promise<Bool>;
+	function updateConfig(config :ServiceConfigurationWorkerProvider) :Promise<Bool>;
 
 	function setPriority(val :Int) :Promise<Bool>;
 	function setMaxWorkerCount(val :WorkerCount) :Promise<Bool>;

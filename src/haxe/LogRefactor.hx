@@ -1,8 +1,8 @@
-// abstract AbstractLogger(js.npm.Bunyan.Logger) to js.npm.Bunyan.Logger from js.npm.Bunyan.Logger
+// abstract AbstractLogger(js.npm.bunyan.Bunyan.Logger) to js.npm.bunyan.Bunyan.Logger from js.npm.bunyan.Bunyan.Logger
 // {
 // 	inline public function new(fields :Dynamic)
 // 	{
-// 		this = js.npm.Bunyan.createLogger(fields);
+// 		this = js.npm.bunyan.Bunyan.createLogger(fields);
 // 	}
 
 // 	inline public function child(fields :Dynamic) :AbstractLogger
@@ -88,11 +88,11 @@ class LogTools
 	public static function colorizeLogMessage(s :String, level :LogLevel)
 	{
 		return switch(level) {
-			case Critical: js.npm.CliColor.redBright(s);
-			case Error: js.npm.CliColor.red(s);
-			case Warn: js.npm.CliColor.magenta(s);
-			case Info: js.npm.CliColor.green(s);
-			case Debug: js.npm.CliColor.yellow(s);
+			case Critical: js.npm.clicolor.CliColor.redBright(s);
+			case Error: js.npm.clicolor.CliColor.red(s);
+			case Warn: js.npm.clicolor.CliColor.magenta(s);
+			case Info: js.npm.clicolor.CliColor.green(s);
+			case Debug: js.npm.clicolor.CliColor.yellow(s);
 			case Trace: s;
 			default:s;
 		}
@@ -133,11 +133,11 @@ abstract AbstractLogger(LoggerDef)
 
 		var s = '${pos.fileName}:${pos.lineNumber} ${haxe.Json.stringify(msg)}';
 		return switch(logCode) {
-			case 100: js.npm.CliColor.redBright(s);
-			case 200: js.npm.CliColor.red(s);
-			case 300: js.npm.CliColor.magenta(s);
-			case 400: js.npm.CliColor.green(s);
-			case 500: js.npm.CliColor.yellow(s);
+			case 100: js.npm.clicolor.CliColor.redBright(s);
+			case 200: js.npm.clicolor.CliColor.red(s);
+			case 300: js.npm.clicolor.CliColor.magenta(s);
+			case 400: js.npm.clicolor.CliColor.green(s);
+			case 500: js.npm.clicolor.CliColor.yellow(s);
 			case 600: s;
 			default:s;
 		}
@@ -229,11 +229,11 @@ class LoggerNodeConsole
 
 class LoggerBunyan
 {
-	public var bunyan :js.npm.Bunyan.BunyanLogger;
+	public var bunyan :js.npm.bunyan.Bunyan.BunyanLogger;
 
 	public function new(?fields :Dynamic)
 	{
-		this.bunyan = js.npm.Bunyan.createLogger(fields);
+		this.bunyan = js.npm.bunyan.Bunyan.createLogger(fields);
 	}
 
 	public function child(fields :Dynamic)

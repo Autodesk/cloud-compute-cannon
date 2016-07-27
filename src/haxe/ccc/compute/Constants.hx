@@ -47,7 +47,11 @@ class Constants
 	inline public static var ENV_VAR_ADDRESS_REGISTRY = 'REGISTRY';
 	inline public static var ENV_VAR_AWS_PROVIDER_CONFIG = 'AWS_PROVIDER_CONFIG';
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
+	inline public static var ENV_VAR_COMPUTE_CONFIG_PATH = 'CONFIG_PATH';
 	/* Env vars for running tests*/
+	inline public static var ENV_AWS_KEY = 'AWS_KEY';
+	inline public static var ENV_AWS_KEYID = 'AWS_KEYID';
+	inline public static var ENV_AWS_REGION = 'AWS_REGION';
 	inline public static var ENV_VAR_CCC_ADDRESS = 'CCC_ADDRESS';
 	inline public static var ENV_DISABLE_SERVER_CHECKS = 'DISABLE_SERVER_CHECKS';
 	inline public static var ENV_LOG_LEVEL = 'LOG_LEVEL';

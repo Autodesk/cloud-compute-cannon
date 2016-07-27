@@ -17,7 +17,6 @@ import js.node.stream.Readable;
 @:enum
 abstract ProviderType(String) {
   var amazon = 'amazon';
-  var google = 'google';
 }
 
 //https://github.com/pkgcloud/pkgcloud/blob/master/docs/providers/amazon.md#using-compute

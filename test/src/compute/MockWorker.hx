@@ -9,5 +9,5 @@ class MockWorker extends Worker
 		super(def);
 	}
 
-	override function startPoll() {}
+	override function startMonitor() {}
 }

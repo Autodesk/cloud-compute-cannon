@@ -8,9 +8,9 @@ import js.Error;
 import js.Node;
 import js.node.stream.Readable;
 import js.node.Path;
-import js.npm.Docker;
-import js.npm.Ssh;
-import js.npm.Ssh;
+import js.npm.docker.Docker;
+import js.npm.ssh2.Ssh;
+import js.npm.ssh2.Ssh;
 
 import promhx.Promise;
 import promhx.PromiseTools;

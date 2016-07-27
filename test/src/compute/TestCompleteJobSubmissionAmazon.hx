@@ -28,13 +28,13 @@ class TestCompleteJobSubmissionAmazon extends TestCompleteJobSubmissionBase
 		return super.setup()
 			.pipe(function(_) {
 				var config :ServiceConfiguration = InitConfigTools.ohGodGetConfigFromSomewhere();
-				if(config.server.storage != null) {
-					var storageConfig = config.server.storage;//StorageTools.getConfigFromServiceConfiguration(config);
+				if(config.storage != null) {
+					var storageConfig = config.storage;//StorageTools.getConfigFromServiceConfiguration(config);
 					Log.info('Configuration specifies a Storage Definition of type: ${storageConfig.type}');
 					_storageService = StorageTools.getStorage(storageConfig);
 				}
 
-				var workerConfig :ServiceConfigurationWorkerProviderPkgCloud = TestPkgCloudAws.getConfig(config);
+				var workerConfig :ServiceConfigurationWorkerProvider = TestPkgCloudAws.getConfig(config);
 				assertTrue(workerConfig != null);
 				var provider = new WorkerProviderPkgCloud(workerConfig);
 				_injector.injectInto(provider);

@@ -3,8 +3,8 @@ package ccc.storage;
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-import js.npm.TarGz;
-import js.npm.Ssh;
+import js.npm.targz.TarGz;
+import js.npm.ssh2.Ssh;
 
 import promhx.Promise;
 import promhx.CallbackPromise;

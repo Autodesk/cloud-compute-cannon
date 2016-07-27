@@ -48,7 +48,8 @@ class TestComputeBase extends TestBase
 			.then(function(_) {
 				//Add local storage in case it's needed.
 				var config = InitConfigTools.getDefaultConfig();
-				var storageConfig = config.server.storage;//StorageTools.getConfigFromServiceConfiguration(config);
+				trace('config=${config}');
+				var storageConfig = config.storage;
 				_injector.map('ccc.storage.StorageDefinition').toValue(storageConfig);
 				var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
 				Assert.notNull(storage);

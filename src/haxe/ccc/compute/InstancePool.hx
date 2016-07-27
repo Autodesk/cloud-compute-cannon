@@ -89,9 +89,9 @@ typedef JobSubmissionResult = {
 	@:optional var failureReason :SubmissionFailure;
 }
 
-typedef ProviderConfig = {>ProviderConfigBase,
-	var id :MachinePoolId;
-}
+// typedef ProviderConfig = {>ProviderConfigBase,
+// 	var id :MachinePoolId;
+// }
 
 class InstancePool
 {
@@ -105,7 +105,7 @@ class InstancePool
 			['zadd', REDIS_KEY_WORKER_POOL_PRIORITY, priority, pool],
 			['hset', REDIS_KEY_WORKER_POOL_MAX_INSTANCES, pool, maxInstances + ''],
 			['hset', REDIS_KEY_WORKER_POOL_MIN_INSTANCES, pool, minInstances + ''],
-			['hset', REDIS_KEY_WORKER_POOL_BILIING_INCREMENT, pool, billingIncrement.toFloat() + '']
+			['hset', REDIS_KEY_WORKER_POOL_BILLING_INCREMENT, pool, billingIncrement.toFloat() + '']
 			]).exec(promise.cb2);
 
 		return promise.pipe(function(_) {
@@ -113,17 +113,17 @@ class InstancePool
 		});
 	}
 
-	public static function getProviderConfig(client :RedisClient, providerId :MachinePoolId) :Promise<ProviderConfig>
+	public static function getProviderConfig(client :RedisClient, providerId :ServiceWorkerProviderType) :Promise<ServiceConfigurationWorkerProvider>
 	{
 		var promise = new promhx.deferred.DeferredPromise();
 		client.multi([
 			['zscore', REDIS_KEY_WORKER_POOL_PRIORITY, providerId],
 			['hget', REDIS_KEY_WORKER_POOL_MAX_INSTANCES, providerId],
 			['hget', REDIS_KEY_WORKER_POOL_MIN_INSTANCES, providerId],
-			['hget', REDIS_KEY_WORKER_POOL_BILIING_INCREMENT, providerId],
+			['hget', REDIS_KEY_WORKER_POOL_BILLING_INCREMENT, providerId],
 			]).exec(function(err, multireply) {
-				var config :ProviderConfig = {
-					id: providerId,
+				var config :ServiceConfigurationWorkerProvider = {
+					type: providerId,
 					priority: multireply[0],
 					maxWorkers: multireply[1],
 					minWorkers: multireply[2],
@@ -505,7 +505,7 @@ class InstancePool
 	inline static var REDIS_KEY_WORKER_POOL_PRIORITY = '${INSTANCE_POOL_PREFIX}worker_pool_priority';//SortedSet<MachinePoolId>
 	inline static var REDIS_KEY_WORKER_POOL_MAX_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_max_instances';//Hash<MachinePoolId, Int>
 	inline static var REDIS_KEY_WORKER_POOL_MIN_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_min_instances';//Hash<MachinePoolId, Int>
-	inline static var REDIS_KEY_WORKER_POOL_BILIING_INCREMENT = '${INSTANCE_POOL_PREFIX}worker_pool_billing_increment';//Hash<MachinePoolId, Float>
+	inline static var REDIS_KEY_WORKER_POOL_BILLING_INCREMENT = '${INSTANCE_POOL_PREFIX}worker_pool_billing_increment';//Hash<MachinePoolId, Float>
 	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances';//Hash<MachinePoolId, Int>
 	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES_TOTAL = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances_total';//Key
 	inline static var REDIS_KEY_WORKER_POOL_MAP = '${INSTANCE_POOL_PREFIX}worker_pool';//HASH <MachineId, MachinePoolId>
@@ -691,7 +691,6 @@ redis.call("PUBLISH", channel, "update")
 	inline public static var SNIPPET_REMOVE_JOB =
 //Expects computeJobId
 '
-print("InstancePool.SNIPPET_REMOVE_JOB " .. computeJobId)
 local machineId = redis.call("HGET", "$REDIS_KEY_WORKER_JOB_MACHINE_MAP", computeJobId)
 if not machineId then
 	return {err="Job " .. computeJobId .. " does not exist"}
@@ -955,7 +954,6 @@ for hashkey,rediskey in pairs({${WORKER_HASHES.keys().array().map(function(k) re
 		elseif hashkey == "workers" or hashkey == "workerParameters" then
 			local workerDef = cjson.decode(all[i+1])
 			--Remove the key text because it is useless when inspecting
-			print("workerDef.ssh=" .. tostring(workerDef.ssh))
 			if workerDef.ssh then
 				workerDef.ssh.privateKey = nil
 			end
@@ -1264,8 +1262,6 @@ $SNIPPET_UPDATE_WORKER_COUNTS
 
 			SCRIPT_SET_WORKER_DEFERRED_TIMEOUT =>
 '
-print("ARGV[1]=" .. tostring(ARGV[1]))
-print("ARGV[2]=" .. tostring(ARGV[2]))
 local machineId = ARGV[1]
 local time = tonumber(ARGV[2])
 local status = "${MachineStatus.Deferred}"

@@ -695,7 +695,6 @@ $SNIPPET_SET_JOB_FINISHED_STATUS
 //Expects jobId
 '
 local statusBlobString = redis.call("HGET", "$REDIS_KEY_STATUS", jobId)
-print("REMOVE JOB RECORD " .. jobId .. ", status=" .. statusBlobString)
 if not statusBlobString then
 	print("Job already removed " .. jobId)
 	return --Job already removed

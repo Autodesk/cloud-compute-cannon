@@ -6,7 +6,7 @@ import js.Node;
 import js.node.Fs;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import js.node.stream.Readable;
 import js.node.stream.Writable;

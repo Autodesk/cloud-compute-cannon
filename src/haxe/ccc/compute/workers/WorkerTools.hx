@@ -1,9 +1,9 @@
 package ccc.compute.workers;
 
 import js.Node;
-import js.npm.Ssh;
+import js.npm.ssh2.Ssh;
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import promhx.CallbackPromise;
 import promhx.Promise;
@@ -120,30 +120,16 @@ class WorkerTools
 		return Promise.promise(true);
 	}
 
-	public function createDockerPoll(docker :Docker, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
-	{
-		return poll(
-			function() {
-				var promise = new CallbackPromise();
-				docker.ping(promise.cb1);
-				return promise;
-			},
-			pollIntervalMilliseconds,
-			maxRetries,
-			doublingRetryIntervalMilliseconds);
-	}
 
 	/**
-	 * Returns a Stream that if a false value is returned, means that
-	 * the connection failed (allowing for the configured retries).
-	 * After a single failure (return of false), the Stream object is disposed.
-	 * To dispose prior, call stream.end().
+	 * Returns a Stream that returns a value. If the polling for the
+	 * value fails, the stream is ended.
 	 * @param  connection                   :Void->Bool   [description]
 	 * @param  maxRetries                   :Int          [description]
 	 * @param  doublingIntervalMilliseconds :Int          [description]
 	 * @return                              [description]
 	 */
-	public static function poll(connection :Void->Promise<Dynamic>, pollInterval :Int, maxRetries :Int, doublingRetryIntervalMilliseconds :Int) :Stream<Bool>
+	public static function pollValue<T>(connection :Void->Promise<T>, pollInterval :Int, maxRetries :Int, doublingRetryIntervalMilliseconds :Int) :Stream<T>
 	{
 		var stream = new promhx.deferred.DeferredStream();
 		var ended = false;
@@ -157,17 +143,11 @@ class WorkerTools
 			if (ended) {
 				return;
 			}
-			promhx.RetryPromise.pollDecayingInterval(connection, maxRetries, doublingRetryIntervalMilliseconds, 'WorkerTools.poll')
-				.then(function(_) {
+			promhx.RetryPromise.pollDecayingInterval(connection, maxRetries, doublingRetryIntervalMilliseconds, 'WorkerTools.pollValue')
+				.then(function(val) {
 					if (!ended) {
-						stream.resolve(true);
+						stream.resolve(val);
 						haxe.Timer.delay(poll, pollInterval);
-					}
-				})
-				.catchError(function(err) {
-					if (!ended) {
-						stream.resolve(false);
-						stream.boundStream.end();
 					}
 				});
 		}

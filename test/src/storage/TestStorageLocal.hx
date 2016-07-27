@@ -9,7 +9,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.Deferred;

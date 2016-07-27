@@ -3,7 +3,7 @@ package util;
 import haxe.Resource;
 
 import js.node.stream.Readable;
-import js.npm.TarStream;
+import js.npm.tarstream.TarStream;
 
 import promhx.Promise;
 
@@ -24,7 +24,7 @@ class TarTools
 
 	public static function createTarStreamFromResources(prefix :String, removePrefix :Bool = true) :IReadable
 	{
-		var tarStream = js.npm.TarStream.pack();
+		var tarStream = js.npm.tarstream.TarStream.pack();
 		Resource.listNames()
 			.filter(Predicates.startsWith(prefix))
 			.iter(function(resourceName) {

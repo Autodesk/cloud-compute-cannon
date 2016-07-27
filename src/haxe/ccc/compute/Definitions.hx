@@ -1,8 +1,12 @@
 package ccc.compute;
 
+import haxe.DynamicAccess;
+
+import util.ObjectTools;
+
 #if (nodejs && !macro)
-	import js.npm.Docker;
-	import js.npm.Ssh;
+	import js.npm.docker.Docker;
+	import js.npm.ssh2.Ssh;
 	import js.npm.PkgCloud.ProviderCredentials;
 
 	import ccc.storage.ServiceStorage;
@@ -159,20 +163,13 @@ typedef DockerJobDefinition = {>DockerBatchComputeJob,
 
 /********************************************/
 
-typedef ProviderConfigBase = {
-	var maxWorkers :Int;
-	var minWorkers :Int;
-	var priority :Int;
-	var billingIncrement :Minutes;
-}
-
 typedef InstanceDefinition = {
 	var id :MachineId;
 	var hostPublic :HostName;
 	var hostPrivate :HostName;
 #if nodejs
 	var ssh :ConnectOptions;
-	var docker :ConstructorOpts;
+	var docker :DockerConnectionOpts;
 #else
 	var ssh :Dynamic;
 	var docker :Dynamic;
@@ -471,8 +468,6 @@ abstract CLIServerPathRoot(String) from String
 		}
 	}
 
-	
-
 	public function toString() :String
 	{
 		return this;
@@ -490,7 +485,7 @@ typedef ServerCheckResult = {
 }
 
 typedef ServiceConfiguration = {
-	@:optional var server: ServiceConfigurationServer;
+	@:optional var storage: StorageDefinition;
 	@:optional var providers: Array<ServiceConfigurationWorkerProvider>;
 }
 
@@ -500,27 +495,100 @@ typedef ENV = {
 	@:optional var REDIS_HOST: String;
 }
 
-typedef ServiceConfigurationServer = {
-	@:optional var storage: StorageDefinition;
-}
-
-// typedef ServiceConfigurationStorage = {
-// 	var type: String;
-// 	@:optional var rootPath: String;
-// 	@:optional var container :String;
-// 	@:optional var credentials :#if nodejs ProviderCredentials #else Dynamic #end;
-// 	@:optional var httpAccessUrl :String;
-// }
-
 /* This is only used when creating worker providers in code */
 @:enum
-abstract ServiceWorkerProviderType(String) {
-  var boot2docker = "Boot2Docker";
-  var vagrant = "Vagrant";
-  var pkgcloud = "PkgCloud";
-  var mock = "Mock";
+abstract ServiceWorkerProviderType(MachinePoolId) from MachinePoolId to MachinePoolId {
+  var boot2docker = new MachinePoolId("Boot2Docker");
+  var vagrant = new MachinePoolId("Vagrant");
+  var pkgcloud = new MachinePoolId("PkgCloud");
+  var mock = new MachinePoolId("Mock");
+  var test1 = new MachinePoolId("test1");
+  var test2 = new MachinePoolId("test2");
 }
 
-typedef ServiceConfigurationWorkerProvider = {>ProviderConfigBase,
-	var type: ServiceWorkerProviderType;
+typedef ProviderInstanceDefinition = {
+	/* Workers typically are not exposed to the internet, while servers are */
+	@:optional var public_ip :Bool;
+	/* Not all platforms support tagging */
+	@:optional var tags :DynamicAccess<String>;
+	/* These are specific to the provider e.g. AWS */
+	@:optional var options :Dynamic;
+	/* SSH key for this machine. May be defined in parent (shared with other definitions) */
+	@:optional var key :String;
+}
+
+@:enum
+abstract MachineType(String) from String to String {
+  var server = "server";
+  var worker = "worker";
+}
+
+@:forward
+abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigurationWorkerProvider to ServiceConfigurationWorkerProvider
+{
+	inline function new (val: ServiceConfigurationWorkerProvider)
+		this = val;
+
+	/**
+	 * Some fields are in the parent object as shared defaults, so
+	 * make sure to copy them
+	 * @param  key :String       [description]
+	 * @return     [description]
+	 */
+	inline public function getMachineDefinition(machineType :String) :ProviderInstanceDefinition
+	{
+		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
+		if (instanceDefinition == null) {
+			return null;
+		}
+		instanceDefinition = Json.parse(Json.stringify(instanceDefinition));
+		instanceDefinition.public_ip = instanceDefinition.public_ip == true;
+		instanceDefinition.tags = instanceDefinition.tags == null ? {} : instanceDefinition.tags;
+		instanceDefinition.tags = ObjectTools.mergeDeepCopy(
+			instanceDefinition.tags == null ? {} : instanceDefinition.tags,
+			this.tags);
+		instanceDefinition.options = ObjectTools.mergeDeepCopy(
+			instanceDefinition.options == null ? {} : instanceDefinition.options,
+			this.options);
+		return instanceDefinition;
+	}
+
+	inline public function getMachineKey(machineType :String) :String
+	{
+		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
+		if (instanceDefinition == null) {
+			throw 'Missing definition for machine="$machineType", cannot get key';
+		}
+		if (instanceDefinition.key != null) {
+			return instanceDefinition.key;
+		} else {
+			//Assuming AWS
+			var keyname = instanceDefinition.options.KeyName;
+			if (keyname == null) {
+				keyname = this.options.KeyName;
+			}
+			if (keyname == null) {
+				throw 'No key name defined anywhere.';
+			}
+			return this.keys[keyname];
+		}
+	}
+}
+
+typedef ServiceConfigurationWorkerProvider = {
+	var maxWorkers :Int;
+	var minWorkers :Int;
+	var priority :Int;
+	var billingIncrement :Minutes;
+	/* This is only optional if it has been previously set, and you are adjusting the above values only */
+	@:optional var type: ServiceWorkerProviderType;
+	/* Credentials to pass to third party libraries to access provider API */
+	@:optional var credentials :Dynamic;
+	/* Not all platforms support tagging instances yet. These tags are applied to all instances */
+	@:optional var tags :DynamicAccess<String>;
+	/* These options are common to all instances */
+	@:optional var options :Dynamic;
+	/* SSH keys for connecting to the instances */
+	@:optional var keys :DynamicAccess<String>;
+	@:optional var machines :DynamicAccess<ProviderInstanceDefinition>;
 }

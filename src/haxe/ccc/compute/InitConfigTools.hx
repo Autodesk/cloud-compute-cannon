@@ -28,6 +28,21 @@ using Lambda;
 
 class InitConfigTools
 {
+	public static function getConfig() :ServiceConfiguration
+	{
+		var env = Node.process.env;
+		var config :ServiceConfiguration = null;
+		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE;
+		Log.debug({'CONFIG_PATH':CONFIG_PATH});
+		if (Reflect.field(env, ENV_CLIENT_DEPLOYMENT) == 'true') {
+			Log.debug('Loading config from mounted file=$CONFIG_PATH');
+			config = InitConfigTools.getConfigFromFile(CONFIG_PATH);
+		} else {
+			config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
+		}
+		return config;
+	}
+
 	public static function getDefaultConfig() :ServiceConfiguration
 	{
 		Assert.notNull(haxe.Resource.getString('etc/config/serverconfig.template.yaml'), 'getDefaultConfig() Missing Resource=etc/config/serverconfig.template.yaml');
@@ -115,12 +130,12 @@ class InitConfigTools
 		});
 	}
 
-	public static function getConfig(?path :String) :ServiceConfiguration
-	{
-		var config = path != null ? getConfigFromFile(path) : cast({}:ServiceConfiguration);
-		config = getEnvironmentalConfig(config);
-		return config;
-	}
+	// public static function getConfig(?path :String) :ServiceConfiguration
+	// {
+	// 	var config = path != null ? getConfigFromFile(path) : cast({}:ServiceConfiguration);
+	// 	config = getEnvironmentalConfig(config);
+	// 	return config;
+	// }
 
 	public static function getConfigFromFile(path :String) :ServiceConfiguration
 	{

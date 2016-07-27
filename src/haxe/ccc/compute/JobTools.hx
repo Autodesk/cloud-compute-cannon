@@ -6,7 +6,7 @@ import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
-import js.npm.CliColor;
+import js.npm.clicolor.CliColor;
 
 
 import promhx.Promise;

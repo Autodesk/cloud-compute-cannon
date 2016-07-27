@@ -10,7 +10,7 @@ import js.node.ChildProcess;
 import js.node.Os;
 import js.node.Path;
 
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;

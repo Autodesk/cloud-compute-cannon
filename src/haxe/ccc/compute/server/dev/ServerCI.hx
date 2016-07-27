@@ -25,8 +25,8 @@ import js.node.Http;
 import js.node.Url;
 import js.node.events.EventEmitter;
 import js.node.stream.Readable;
-import js.npm.Commander;
-import js.npm.CliColor;
+import js.npm.commander.Commander;
+import js.npm.clicolor.CliColor;
 
 import promhx.RequestPromises;
 import promhx.RetryPromise;
@@ -39,7 +39,7 @@ class ServerCI
 	static function main()
 	{
 		//Required for source mapping
-		js.npm.SourceMapSupport;
+		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
 		ErrorToJson;
 		runServer();

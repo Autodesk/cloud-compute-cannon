@@ -18,8 +18,8 @@ import js.node.ChildProcess;
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.Fs;
-import js.npm.FsExtended;
-import js.npm.Request;
+import js.npm.fsextended.FsExtended;
+import js.npm.request.Request;
 
 import promhx.Promise;
 import promhx.RequestPromises;
@@ -277,7 +277,7 @@ class ClientCommands
 	{
 		trace('buildDockerImage path=$path repository=$repository');
 		var host = getHost();
-		var tarStream = js.npm.TarFs.pack(path);
+		var tarStream = js.npm.tarfs.TarFs.pack(path);
 		var url = 'http://${host}$SERVER_URL_API_DOCKER_IMAGE_BUILD/$repository';
 		function onError(err) {
 			Log.error(err);
@@ -1189,7 +1189,7 @@ class ClientCommands
 	inline static function warn(message :Dynamic)
 	{
 #if nodejs
-		js.Node.console.log(js.npm.CliColor.bold(js.npm.CliColor.red(message)));
+		js.Node.console.log(js.npm.clicolor.CliColor.bold(js.npm.clicolor.CliColor.red(message)));
 #else
 		trace(message);
 #end

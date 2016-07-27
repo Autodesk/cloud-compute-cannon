@@ -8,7 +8,7 @@ import js.Node;
 import js.node.Path;
 
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import promhx.Promise;
 import promhx.Stream;
@@ -197,12 +197,14 @@ class BatchComputeDocker
 				if (jobWorkingStatus == JobWorkingStatus.CopyingImage) {
 					//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
 					var promise = null;
+					trace('job.item.image=${job.item.image}');
 					switch(job.item.image.type) {
 						case Image:
 							var docker = job.worker.getInstance().docker();
 							var dockerImage = job.item.image.value;
 							promise = DockerPromises.hasImage(docker, dockerImage)
 								.pipe(function(imageExists) {
+									trace('imageExists=${imageExists}');
 									if (imageExists) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);
@@ -212,6 +214,7 @@ class BatchComputeDocker
 									}
 								});
 						case Context:
+							trace('Context');
 							var path = job.item.image.value;
 							Assert.notNull(path, 'Context to build docker image is missing the local path');
 							var localStorage = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:path});

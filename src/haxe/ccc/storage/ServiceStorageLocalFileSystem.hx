@@ -5,10 +5,10 @@ import js.node.Fs;
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
-import js.npm.TarGz;
-import js.npm.TarFs;
+import js.npm.targz.TarGz;
+import js.npm.tarfs.TarFs;
 
 import promhx.Promise;
 import promhx.CallbackPromise;

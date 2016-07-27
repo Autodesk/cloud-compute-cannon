@@ -1,7 +1,7 @@
 package compute;
 
 import js.npm.RedisClient;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.StreamPromises;

@@ -42,8 +42,8 @@ class ClientCompute
 				Reflect.setField(formData, f, Reflect.field(forms, f));
 			}
 		}
-		js.npm.Request.post({url:host.rpcUrl(), formData:formData},
-			function(err :js.Error, httpResponse :js.npm.Request.HttpResponse, body:js.npm.Request.Body) {
+		js.npm.request.Request.post({url:host.rpcUrl(), formData:formData},
+			function(err :js.Error, httpResponse :js.npm.request.Request.HttpResponse, body:js.npm.request.Request.Body) {
 				if (err != null) {
 					Log.error(err);
 					promise.boundPromise.reject(err);

@@ -7,8 +7,8 @@ import js.node.Path;
 import js.node.Fs;
 
 import js.npm.PkgCloud;
-import js.npm.Docker;
-import js.npm.Ssh;
+import js.npm.docker.Docker;
+import js.npm.ssh2.Ssh;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -112,7 +112,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		return new Docker(getLocalDockerWorker().docker);
 	}
 
-	// public static function getSshConfig() :js.npm.Ssh.ConnectOptions
+	// public static function getSshConfig() :js.npm.ssh2.Ssh.ConnectOptions
 	// {
 	// 	return {
 	// 		host: ConnectionToolsDocker.getDockerHost(),

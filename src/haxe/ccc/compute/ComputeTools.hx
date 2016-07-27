@@ -13,7 +13,7 @@ class ComputeTools
 	inline public static function createUniqueId() :String
 	{
 #if js
-		return js.npm.ShortId.generate();
+		return js.npm.shortid.ShortId.generate();
 #else
 		#throw 'Not yet supported';
 #end
