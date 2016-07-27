@@ -8,7 +8,7 @@ import js.Node;
 import js.node.stream.Readable;
 import js.node.Http;
 import js.node.http.*;
-import js.npm.Streamifier;
+import js.npm.streamifier.Streamifier;
 
 import promhx.Promise;
 
@@ -35,7 +35,7 @@ class ServiceBatchComputeTools
 		var errStream = RedisTools.createPublishStream(redis, ComputeQueue.REDIS_CHANNEL_LOG_ERROR);
 		errStream
 			.then(function(msg) {
-				streams.err.write(errconvert(js.npm.CliColor.red('[REDIS] ' + msg + '\n')));
+				streams.err.write(errconvert(js.npm.clicolor.CliColor.red('[REDIS] ' + msg + '\n')));
 			});
 	}
 

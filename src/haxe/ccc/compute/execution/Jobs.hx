@@ -13,8 +13,8 @@ import haxe.Json;
 
 import js.Node;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Docker;
+import js.npm.ssh2.Ssh;
+import js.npm.docker.Docker;
 
 import minject.Injector;
 

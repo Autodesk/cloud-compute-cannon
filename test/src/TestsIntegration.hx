@@ -52,6 +52,7 @@ class TestsIntegration
 
 	static function main()
 	{
+		Node.require('dotenv').config({path: '.env.test'});
 		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
 			Logger.log.level(100);
@@ -157,8 +158,8 @@ class TestsIntegration
 
 		if (isRedis) {
 			// These require a local redis db
-			runner.add(new compute.TestAutoscaling());
-			runner.add(new compute.TestRedis());
+			// runner.add(new compute.TestAutoscaling());
+			// runner.add(new compute.TestRedis());
 
 			//These require access to a local docker server
 			if (isDockerProvider) {
@@ -184,6 +185,7 @@ class TestsIntegration
 		}
 
 		if (isAws) {
+			runner.add(new ccc.compute.server.tests.TestWorkerMonitoring());
 			runner.add(new compute.TestPkgCloudAws());
 			runner.add(new compute.TestScalingAmazon());
 			runner.add(new compute.TestCompleteJobSubmissionAmazon());

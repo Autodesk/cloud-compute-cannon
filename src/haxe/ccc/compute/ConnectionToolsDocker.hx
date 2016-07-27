@@ -3,7 +3,7 @@ package ccc.compute;
 import js.Node;
 import js.node.Fs;
 import js.node.Path;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
@@ -95,7 +95,7 @@ class ConnectionToolsDocker
 		}
 	}
 
-	public static function getDockerConfig() :ConstructorOpts
+	public static function getDockerConfig() :DockerConnectionOpts
 	{
 		return getLocalDockerOpts();
 	}
@@ -124,7 +124,7 @@ class ConnectionToolsDocker
 		}
 	}
 
-	static function getLocalDockerOpts() :ConstructorOpts
+	static function getLocalDockerOpts() :DockerConnectionOpts
 	{
 		return {socketPath:'/var/run/docker.sock'};
 	}

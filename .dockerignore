@@ -1,6 +1,7 @@
 *.sublime-*
 .aws
 .DS_Store
+.env*
 #.git
 .haxelib
 /build.hxml

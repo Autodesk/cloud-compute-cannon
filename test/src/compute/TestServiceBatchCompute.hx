@@ -5,7 +5,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -47,8 +47,8 @@ class TestServiceBatchCompute extends TestComputeBase
 				var out = untyped __js__('require("child_process").execSync("haxe etc/hxml/cli-build.hxml")');
 				//Create a server in a forker process
 				var envCopy = Reflect.copy(js.Node.process.env);
-				Reflect.setField(envCopy, ENV_LOG_LEVEL, "70");//js.npm.Bunyan.WARN);
-               	Reflect.setField(envCopy, ENV_VAR_DISABLE_LOGGING, "true");//js.npm.Bunyan.WARN);
+				Reflect.setField(envCopy, ENV_LOG_LEVEL, "70");//js.npm.bunyan.Bunyan.WARN);
+               	Reflect.setField(envCopy, ENV_VAR_DISABLE_LOGGING, "true");//js.npm.bunyan.Bunyan.WARN);
 				return TestTools.forkServerCompute(envCopy)
 					.then(function(serverprocess) {
 						_childProcess = serverprocess;

@@ -6,12 +6,12 @@ import js.Node;
 import js.node.Http;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.Docker;
-import js.npm.FsExtended;
+import js.npm.docker.Docker;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
 import js.npm.RedisClient;
 import js.npm.HttpPromises;
-import js.npm.Ssh;
+import js.npm.ssh2.Ssh;
 
 import promhx.Promise;
 import promhx.Deferred;
@@ -127,7 +127,7 @@ class TestDockerVagrant extends TestComputeBase
 	@timeout(120000)
 	public function XXtestBuildDockerJob()
 	{
-		var tarStream = js.npm.TarFs.pack('server/compute/test/res/testDockerImage1');
+		var tarStream = js.npm.tarfs.TarFs.pack('server/compute/test/res/testDockerImage1');
 
 		var workerDef;
 		var ssh;
@@ -214,7 +214,7 @@ class TestDockerVagrant extends TestComputeBase
 				workerDef = out;
 				return workerDef.getInstance().ssh();
 			})
-			.pipe(function(connectedSsh :js.npm.Ssh.SshClient) {
+			.pipe(function(connectedSsh :js.npm.ssh2.Ssh.SshClient) {
 				ssh = connectedSsh;
 				return SshTools.execute(ssh, 'mkdir -p "$testPath"');
 			})

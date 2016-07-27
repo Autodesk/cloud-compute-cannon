@@ -12,7 +12,7 @@ class TestRestartAfterCrashLocalDocker extends TestRestartAfterCrashBase
 		return super.setup()
 			.then(function(_) {
 				_env = cast Reflect.copy(js.Node.process.env);
-				Reflect.setField(_env, ENV_LOG_LEVEL, 70);//js.npm.Bunyan.WARN);
+				Reflect.setField(_env, ENV_LOG_LEVEL, 70);//js.npm.bunyan.Bunyan.WARN);
 				_env.remove(ENV_VAR_COMPUTE_CONFIG);
 				return true;
 			});

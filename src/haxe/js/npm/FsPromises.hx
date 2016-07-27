@@ -3,7 +3,7 @@ package js.npm;
 import js.Node;
 import js.node.Fs;
 import js.node.Path;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;

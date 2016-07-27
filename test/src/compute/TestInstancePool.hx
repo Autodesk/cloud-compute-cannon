@@ -20,8 +20,8 @@ class TestInstancePool extends TestComputeBase
 
 	public function testRegistration()
 	{
-		var providerConfig :ProviderConfig = {
-			id: 'testProviderId',
+		var providerConfig :ServiceConfigurationWorkerProvider = {
+			type: ServiceWorkerProviderType.test1,
 			maxWorkers: 3,
 			minWorkers: 1,
 			priority: 2,
@@ -36,14 +36,14 @@ class TestInstancePool extends TestComputeBase
 				return ComputeQueue.setAutoscaling(redis, false);
 			})
 			.pipe(function(_) {
-				return InstancePool.registerComputePool(redis, providerConfig.id, providerConfig.priority, providerConfig.maxWorkers, providerConfig.minWorkers, providerConfig.billingIncrement);
+				return InstancePool.registerComputePool(redis, providerConfig.type, providerConfig.priority, providerConfig.maxWorkers, providerConfig.minWorkers, providerConfig.billingIncrement);
 			})
 			.pipe(function(_) {
-				return InstancePool.getProviderConfig(redis, providerConfig.id);
+				return InstancePool.getProviderConfig(redis, providerConfig.type);
 			})
 			.then(function(out) {
 				assertNotNull(out);
-				assertEquals(out.id, providerConfig.id);
+				assertEquals(out.type, providerConfig.type);
 				assertEquals(out.maxWorkers, providerConfig.maxWorkers);
 				assertEquals(out.minWorkers, providerConfig.minWorkers);
 				assertEquals(out.priority, providerConfig.priority);

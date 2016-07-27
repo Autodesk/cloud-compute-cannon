@@ -18,7 +18,7 @@ using promhx.PromiseTools;
 
 class TestPkgCloudAws extends TestComputeBase
 {
-	public static function getConfig(?config :ServiceConfiguration) :ServiceConfigurationWorkerProviderPkgCloud
+	public static function getConfig(?config :ServiceConfiguration) :ServiceConfigurationWorkerProvider
 	{
 		if(config == null) {
 			config = InitConfigTools.ohGodGetConfigFromSomewhere();
@@ -27,8 +27,9 @@ class TestPkgCloudAws extends TestComputeBase
 
 		if (config != null) {
 			return cast config.providers.find(function(p) {
-				var awsCredentials :ServiceConfigurationWorkerProviderPkgCloud = cast p;
-				return awsCredentials != null && awsCredentials.credentials != null && awsCredentials.credentials.provider == ProviderType.amazon;
+				var awsProvider :ServiceConfigurationWorkerProvider = cast p;
+				var credentials :ClientOptionsAmazon = awsProvider.credentials;
+				return credentials != null && credentials.provider == ProviderType.amazon;
 			});
 		} else {
 			return null;

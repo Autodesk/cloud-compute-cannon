@@ -10,7 +10,7 @@ import js.node.ChildProcess;
 import js.node.Fs;
 import js.node.Path;
 
-import js.npm.Commander;
+import js.npm.commander.Commander;
 
 import t9.remoting.jsonrpc.cli.CommanderTools;
 
@@ -23,7 +23,7 @@ class CliMain
 {
 	public static function main()
 	{
-		js.npm.SourceMapSupport;
+		js.npm.sourcemapsupport.SourceMapSupport;
 		ErrorToJson;
 		var bunyanLogger = Logger.log;
 		untyped bunyanLogger.level(40);

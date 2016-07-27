@@ -3,7 +3,7 @@ package promhx;
 import haxe.Json;
 
 #if nodejs
-import js.npm.Docker;
+import js.npm.docker.Docker;
 import js.node.stream.Readable;
 import js.node.stream.Readable.ReadableEvent;
 #end
@@ -160,6 +160,7 @@ class DockerPromises
 			if (err != null) {
 				Log.error('encountered error when pulling image: $image error: $err');
 				promise.boundPromise.reject(err);
+				promise = null;
 				return;
 			}
 
@@ -168,7 +169,10 @@ class DockerPromises
 			// stream.on('close', function () {
 			// it doesn't send the 'close' event - DEH 20151221
 			stream.on(ReadableEvent.End, function () {
-				promise.resolve(!errorEncounteredInStream);
+				if (promise != null) {
+					promise.resolve(!errorEncounteredInStream);
+					promise = null;
+				}
 			});
 
 			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
@@ -190,5 +194,13 @@ class DockerPromises
 		});
 
 		return promise.boundPromise;
+	}
+
+	public static function ping(docker :Docker) :Promise<Bool>
+	{
+		var promise = new CallbackPromise();
+		trace('docker ping');
+		docker.ping(promise.cb1);
+		return promise.thenTrue();
 	}
 }

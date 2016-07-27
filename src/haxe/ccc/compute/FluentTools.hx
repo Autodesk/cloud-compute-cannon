@@ -1,7 +1,7 @@
 package ccc.compute;
 
 
-import js.npm.FluentLogger;
+import js.npm.fluentlogger.FluentLogger;
 
 class FluentTools
 {

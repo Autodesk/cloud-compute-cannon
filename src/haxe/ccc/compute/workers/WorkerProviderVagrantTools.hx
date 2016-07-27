@@ -7,12 +7,12 @@ import js.Node;
 import js.node.Path;
 import js.node.Fs;
 
-import js.npm.Docker;
-import js.npm.FsExtended;
+import js.npm.docker.Docker;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Vagrant;
+import js.npm.ssh2.Ssh;
+import js.npm.vagrant.Vagrant;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
@@ -270,13 +270,13 @@ class WorkerProviderVagrantTools
 			});
 	}
 
-	public static function getDockerConfig(path :VagrantPath) :Promise<ConstructorOpts>
+	public static function getDockerConfig(path :VagrantPath) :Promise<DockerConnectionOpts>
 	{
 		var ssh;
 		var sshConfig;
 		return getSshConfig(path)
 			.then(function(config :ConnectOptions) {
-				var dockerDef :ConstructorOpts = {
+				var dockerDef :DockerConnectionOpts = {
 					host: config.host,
 					port: 2375,
 					protocol: 'http'
@@ -494,7 +494,7 @@ class WorkerProviderVagrantTools
 	public static function getVagrantStatus(path :VagrantPath) :Promise<VagrantStatus>
 	{
 		return VagrantTools.getMachineStatus(path)
-			.then(function(status :js.npm.Vagrant.StatusResult) {
+			.then(function(status :js.npm.vagrant.Vagrant.StatusResult) {
 				return {id:path.getMachineId(), path:path, status:status.status};
 			});
 	}

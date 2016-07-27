@@ -7,7 +7,7 @@ import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import ccc.compute.ComputeQueue;
 import ccc.compute.InstancePool;

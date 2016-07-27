@@ -42,7 +42,7 @@ class WorkerProviderBase
 
 	@inject public var _redis :RedisClient;
 	#if debug public #end
-	var _config :ProviderConfigBase;
+	var _config :ServiceConfigurationWorkerProvider;
 	var _streamMachineCount :Stream<TargetMachineCount>;
 	var _streamMachineStatus :Stream<Array<StatusResult>>;
 	var _ready :Promise<Bool> = Promise.promise(true);
@@ -399,7 +399,7 @@ class WorkerProviderBase
 		});
 	}
 
-	public function updateConfig(config :ProviderConfigBase) :Promise<Bool>
+	public function updateConfig(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
 	{
 		Assert.notNull(config);
 		Assert.notNull(config.maxWorkers);
@@ -409,7 +409,7 @@ class WorkerProviderBase
 			config.billingIncrement = new Minutes(0);
 		}
 		if (_config == null) {
-			_config = config;
+			_config = cast config;
 		} else {
 			_config.maxWorkers = config.maxWorkers;
 			_config.minWorkers = config.minWorkers;

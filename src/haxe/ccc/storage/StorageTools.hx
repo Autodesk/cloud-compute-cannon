@@ -6,7 +6,7 @@ import ccc.compute.Definitions;
 
 import js.npm.PkgCloud;
 import js.npm.PkgCloud.StorageClientP;
-import js.npm.Ssh.ConnectOptions;
+import js.npm.ssh2.Ssh.ConnectOptions;
 
 using StringTools;
 

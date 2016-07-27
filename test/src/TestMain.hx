@@ -17,12 +17,12 @@ class TestMain
 		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
 			Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));
 		} else {
-			Logger.log.level(js.npm.Bunyan.WARN);
+			Logger.log.level(js.npm.bunyan.Bunyan.WARN);
 		}
 		// trace('Log.level=${Logger.log.level()}');
 
 		//Required for source mapping
-		js.npm.SourceMapSupport;
+		js.npm.sourcemapsupport.SourceMapSupport;
 		util.EmbedMacros.embedFiles('etc', ['etc/hxml/.*']);
 		ErrorToJson;
 

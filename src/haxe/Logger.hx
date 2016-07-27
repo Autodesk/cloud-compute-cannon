@@ -1,4 +1,4 @@
-import js.npm.Bunyan;
+import js.npm.bunyan.Bunyan;
 
 /**
  * This is the root logger.
@@ -75,7 +75,7 @@ class Logger
 // 			//Colorize job specific log messages for easier debugging
 // 			if (Reflect.hasField(logObj, 'jobid')) {
 // 				var color = util.CliColors.colorFromString(Reflect.field(logObj, 'jobid'));
-// 				var f :String->String = Reflect.field(js.npm.CliColor, color);
+// 				var f :String->String = Reflect.field(js.npm.clicolor.CliColor, color);
 // 				s = f(s);
 // 			}
 // 			s += '\n';

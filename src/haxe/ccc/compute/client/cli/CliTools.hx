@@ -9,8 +9,8 @@ import js.Node;
 import js.node.Fs;
 import js.node.Os;
 import js.node.Path;
-import js.npm.FsExtended;
-import js.npm.Ssh;
+import js.npm.fsextended.FsExtended;
+import js.npm.ssh2.Ssh;
 
 import promhx.Promise;
 import promhx.RequestPromises;
@@ -141,7 +141,7 @@ class CliTools
 
 	public static function getServerHostInCLI() :Host
 	{
-		var program :js.npm.Commander = js.Node.require('commander');
+		var program :js.npm.commander.Commander = js.Node.require('commander');
 		if (Reflect.hasField(program, 'server')) {
 			var host :Host = Reflect.field(program, 'server');
 			return host;

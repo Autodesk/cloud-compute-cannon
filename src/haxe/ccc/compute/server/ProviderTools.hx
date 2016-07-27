@@ -16,9 +16,9 @@ import haxe.Template;
 import js.Node;
 import js.node.Os;
 import js.node.Path;
-import js.npm.FsExtended;
-import js.npm.Docker;
-import js.npm.Ssh;
+import js.npm.fsextended.FsExtended;
+import js.npm.docker.Docker;
+import js.npm.ssh2.Ssh;
 
 import promhx.Promise;
 import promhx.RequestPromises;
@@ -161,7 +161,7 @@ class ProviderTools
 				// trace('provider=${provider}');
 				trace('createIndependentWorker');
 				return provider.createServer();
-			case mock:
+			default:
 				return Promise.promise(null);
 		}
 	}
@@ -385,7 +385,7 @@ class ProviderTools
 			])
 		.pipe(function(_) {
 			trace('Redis and registry containers running...');
-			var tarStream = js.npm.TarFs.pack(dockerDir);//Build docker image, create tar stream
+			var tarStream = js.npm.tarfs.TarFs.pack(dockerDir);//Build docker image, create tar stream
 			trace('building server docker image');
 			//Perhaps incorporate a unique key, so that others cannot access the internal server
 			return DockerTools.buildDockerImage(docker, APP_NAME_COMPACT, tarStream, null)

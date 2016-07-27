@@ -10,11 +10,11 @@ package ccc.compute;
 	import js.node.stream.Readable;
 	import js.node.Http;
 	import js.node.http.*;
-	import js.npm.Docker;
-	import js.npm.Busboy;
-	import js.npm.Ssh;
+	import js.npm.docker.Docker;
+	import js.npm.busboy.Busboy;
+	import js.npm.ssh2.Ssh;
 	import js.npm.RedisClient;
-	import js.npm.Streamifier;
+	import js.npm.streamifier.Streamifier;
 
 	import promhx.deferred.DeferredPromise;
 	import promhx.RedisPromises;
@@ -25,6 +25,7 @@ package ccc.compute;
 	import ccc.compute.server.ServerCommands;
 	import ccc.compute.server.ServerCommands.*;
 	import ccc.compute.workers.WorkerProvider;
+	import ccc.compute.InstancePool;
 
 	import ccc.storage.ServiceStorage;
 	import ccc.storage.StorageDefinition;
@@ -77,6 +78,16 @@ class ServiceBatchCompute
 	public function serverReset() :Promise<Bool>
 	{
 		return ServerCommands.serverReset(_redis, _fs);
+	}
+
+	@rpc({
+		alias:'worker-remove',
+		doc:'Removes a worker'
+	})
+	public function workerRemove(id :MachineId) :Promise<Bool>
+	{
+		Assert.notNull(id);
+		return ccc.compute.InstancePool.workerFailed(_redis, id);
 	}
 
 	@rpc({

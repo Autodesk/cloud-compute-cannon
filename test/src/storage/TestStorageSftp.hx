@@ -9,9 +9,9 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.Ssh;
-import js.npm.Docker;
-import js.npm.FsExtended;
+import js.npm.ssh2.Ssh;
+import js.npm.docker.Docker;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.Deferred;
@@ -49,7 +49,7 @@ class TestStorageSftp extends ccc.compute.server.tests.TestStorageBase
 
 	override public function setup() :Null<Promise<Bool>>
 	{
-		var tarStream = js.npm.TarFs.pack('test/res/sshserver');
+		var tarStream = js.npm.tarfs.TarFs.pack('test/res/sshserver');
 		var imageId = 'sshserver:latest';
 		var labelKey = 'TestSftpStorage';
 		var containerLabel = {};

@@ -12,7 +12,7 @@ import js.node.Http;
 import js.node.Url;
 import js.node.stream.Readable;
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 import js.npm.Express;
 import js.npm.express.BodyParser;
 import js.npm.JsonRpcExpressTools;
@@ -67,8 +67,9 @@ class ServerCompute
 
 	static function main()
 	{
+		cloud.MachineMonitor;
 		//Required for source mapping
-		js.npm.SourceMapSupport;
+		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
 		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
 		ErrorToJson;
@@ -79,6 +80,8 @@ class ServerCompute
 	{
 		js.Node.process.stdout.setMaxListeners(100);
 		js.Node.process.stderr.setMaxListeners(100);
+
+		var env = Node.process.env;
 
 		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
 		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
@@ -111,26 +114,16 @@ class ServerCompute
 		Log.warn({log_check:'warn'});
 		Log.error({log_check:'error'});
 
-		var env = Node.process.env;
-
 		//Sanity checks
 		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
 			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
 			js.Node.process.exit(-1);
 		}
 
-		var config :ServiceConfiguration = null;
-		var CONFIG_PATH :String = Reflect.hasField(env, 'CONFIG_PATH') ? Reflect.field(env, 'CONFIG_PATH') : SERVER_MOUNTED_CONFIG_FILE;
-		Log.debug({'CONFIG_PATH':CONFIG_PATH});
-		if (Reflect.field(env, ENV_CLIENT_DEPLOYMENT) == 'true') {
-			Log.debug('Loading config from mounted file=$CONFIG_PATH');
-			config = InitConfigTools.getConfigFromFile(CONFIG_PATH);
-		} else {
-			config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
-		}
-
+		var config :ServiceConfiguration = InitConfigTools.getConfig();
 		Assert.notNull(config);
-		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:Node.process.env['HOST_PWD']});
+		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE;
+		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
 
 		var status = ServerStatus.Booting_1_4;
 		var injector = new Injector();
@@ -143,9 +136,8 @@ class ServerCompute
 		}
 
 		/* Storage*/
-		Assert.notNull(config.server);
-		Assert.notNull(config.server.storage);
-		var storageConfig :StorageDefinition = config.server.storage;
+		Assert.notNull(config.storage);
+		var storageConfig :StorageDefinition = config.storage;
 		var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
 		Assert.notNull(storage);
 		StorageService = storage;
@@ -334,8 +326,8 @@ class ServerCompute
 				//This is nice for local development
 				if (storageConfig.type == StorageSourceType.Local) {
 					// Show a nice browser for the local file system.
-					Log.debug('Setting up static file server for output from Local Storage System at: ${config.server.storage.rootPath}');
-					app.use('/', Node.require('serve-index')(config.server.storage.rootPath, {'icons': true}));
+					Log.debug('Setting up static file server for output from Local Storage System at: ${config.storage.rootPath}');
+					app.use('/', Node.require('serve-index')(config.storage.rootPath, {'icons': true}));
 				}
 				//Setup a static file server to serve job results
 				app.use('/', StorageRestApi.staticFileRouter(storage));

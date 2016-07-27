@@ -7,12 +7,12 @@ import js.node.Http;
 import js.node.Path;
 import js.node.Fs;
 import js.node.stream.Readable;
-import js.npm.Docker;
-import js.npm.FsExtended;
+import js.npm.docker.Docker;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.TarFs;
+import js.npm.ssh2.Ssh;
+import js.npm.tarfs.TarFs;
 
 import promhx.Promise;
 import promhx.Deferred;
@@ -197,7 +197,7 @@ class TestDockerCompute extends TestComputeBase
 	{
 		var workerDef = _worker;
 
-		var tarStream = js.npm.TarFs.pack('test/res/testDockerImage1');
+		var tarStream = js.npm.tarfs.TarFs.pack('test/res/testDockerImage1');
 
 		var workerDef = _worker;
 		var ssh;
