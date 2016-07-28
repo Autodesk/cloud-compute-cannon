@@ -67,7 +67,6 @@ class ServerCompute
 
 	static function main()
 	{
-		cloud.MachineMonitor;
 		//Required for source mapping
 		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
@@ -81,6 +80,9 @@ class ServerCompute
 		js.Node.process.stdout.setMaxListeners(100);
 		js.Node.process.stderr.setMaxListeners(100);
 
+		//Load env vars from an .env file if present
+		Node.require('dotenv').config({path: '/config/.env', silent: true});
+
 		var env = Node.process.env;
 
 		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
@@ -93,17 +95,20 @@ class ServerCompute
 			Node.process.exit(1);
 		});
 
-		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
+		if (Reflect.field(env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
 			Logger.log.level(100);
 		} else {
-			Log.info('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
-			if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
-				Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));
+			Log.info('$ENV_LOG_LEVEL=${Reflect.field(env, ENV_LOG_LEVEL)}');
+			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
+				var newLogLevel = Std.int(Reflect.field(env, ENV_LOG_LEVEL));
+				Logger.log.level(newLogLevel);
 			}
 			trace({log_check:'haxe_trace'});
 			trace('trace_without_objectifying');
 		}
+
+		Log.info('CCC server start');
 
 		Log.trace({log_check:'trace'});
 		Log.trace('trace');
@@ -143,7 +148,6 @@ class ServerCompute
 		StorageService = storage;
 		injector.map('ccc.storage.StorageDefinition').toValue(storageConfig);
 		injector.map(ccc.storage.ServiceStorage).toValue(storage);
-		trace('injector.getValue(ccc.storage.ServiceStorage)=${injector.getValue(ccc.storage.ServiceStorage)}');
 
 		var ROOT = Path.dirname(Path.dirname(Path.dirname(Node.__dirname)));
 

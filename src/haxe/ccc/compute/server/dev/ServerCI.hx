@@ -13,6 +13,7 @@ import haxe.Json;
 import haxe.remoting.JsonRpc;
 
 import ccc.compute.client.ClientTools;
+import ccc.compute.client.cli.CliTools;
 
 import js.Node;
 import js.node.Buffer;
@@ -49,7 +50,6 @@ class ServerCI
 	{
 		try {
 			var hostname = ConnectionToolsDocker.getDockerHost();
-			trace('hostname=${hostname}');
 			return new Host(hostname, new Port(SERVER_DEFAULT_PORT));
 		} catch(err :Dynamic) {
 			trace('err=${err}');
@@ -62,9 +62,11 @@ class ServerCI
 		var process = ChildProcess.spawn('./bin/run-stack-local-dev');
 
 		function traceOut(data :js.node.Buffer) {
-			var s = data.toString('utf8');
-			s = s.substr(0, s.length - 1);
-			trace(s);
+			if (data != null) {
+				var s = data.toString('utf8');
+				s = s.substr(0, s.length - 1);
+				trace(s);
+			}
 		}
 
 		process.stdout.addListener(ReadableEvent.Data, traceOut);
@@ -111,14 +113,17 @@ class ServerCI
 			.version(Json.parse(Fs.readFileSync('package.json', 'utf8')).version)
 			.option('-s, --server [address]',
 				'Host address to push new builds (e.g. 192.168.50.1:9001)',
-				function collect(val :String, memo :Array<String>) {
-					memo.push(val);
+				function collect(val :HostName, memo :Array<HostName>) {
+					var hostName :HostName = val;
+					hostName = CliTools.getHostCheckSshConfig(hostName);
+					// var host = new Host(hostName, new Port(SERVER_DEFAULT_PORT));
+					memo.push(hostName);
 					return memo;
 				}, [])
 			.option('-l, --local', 'Ensure a local stack running in the local docker daemon')
 			.parse(Node.process.argv);
 
-		untyped program.local = true;
+		// untyped program. local = true;
 		Promise.promise(true)
 			.pipe(function(_) {
 				if (untyped program.local == true) {
@@ -129,13 +134,13 @@ class ServerCI
 							.pipe(function(isListening) {
 								if (isListening) {
 									trace('Existing stack listening on $localhost');
-									return Promise.promise([localhost]);
+									return Promise.promise([localhost.getHostname()]);
 								} else {
 									trace('No existing local stack, booting up...');
 									return runLocalDevStack()
 										.then(function(_) {
 											trace('New stack ready!');
-											return [localhost];
+											return [localhost.getHostname()];
 										});
 								}
 							});
@@ -153,7 +158,7 @@ class ServerCI
 			});
 	}
 
-	static function startFileWatcher(servers :Array<Host>)
+	static function startFileWatcher(servers :Array<HostName>)
 	{
 		var serverFilePath = 'build/$APP_SERVER_FILE';
 		var watchPaths = [
@@ -238,13 +243,16 @@ class ServerCI
 		maybeReload();
 	}
 
-	static function reloadAndRunTests(hosts :Array<Host>, serverCode :String) :Promise<Bool>
+	static function reloadAndRunTests(hosts :Array<HostName>, serverCode :String) :Promise<Bool>
 	{
-		return Promise.whenAll(hosts.map(function(host) {
-			var reloadHost = new Host(host.getHostname(), new Port(SERVER_RELOADER_PORT));
+		return Promise.whenAll(hosts.map(function(hostName) {
+			// var hostName :HostName = host.getHostname();
+			// hostName = CliTools.getHostCheckSshConfig(hostName);
+			var reloadHost = new Host(hostName, new Port(SERVER_RELOADER_PORT));
+			var mainHost = new Host(hostName, new Port(SERVER_DEFAULT_PORT));
 			return reloadServer(reloadHost, serverCode)
 				.pipe(function(_) {
-					return runTestsOnHost(host);
+					return runTestsOnHost(mainHost);
 				});
 		}))
 		.thenTrue();
