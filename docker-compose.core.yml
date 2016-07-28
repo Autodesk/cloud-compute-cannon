@@ -21,7 +21,7 @@ compute:
     #the container. Only used for local docker providers (not cloud)
     HOST_PWD: "$PWD"
     #Sets the max log level (bunyan where 10=trace 40=warn)
-    LOG_LEVEL: "$LOG_LEVEL"
+    # LOG_LEVEL: "$LOG_LEVEL"
     #If the client CLI installed this stack, se this true.
     #Then the servers expects a mounted config file, and if missing, logs an error.
     CLIENT_DEPLOYMENT: "false"

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+REMOTE_CCC_PATH="cloudcomputecannon"
+if [ $# -eq 0 ]
+	then
+		echo "./bin/reloading-stack-sync <host> <path_to_serverconfig>"
+	exit 0
+fi
+SERVER_HOST=$1
+SERVER_CONFIG_PATH=$2
+
+if test -f ".env"; then
+	scp ".env" "$SERVER_HOST:$REMOTE_CCC_PATH/.env" ;
+fi
+
+scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/serverconfig.yml
+bin/sync-to-remote $1

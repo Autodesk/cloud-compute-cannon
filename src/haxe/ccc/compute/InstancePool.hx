@@ -345,7 +345,6 @@ class InstancePool
 		return promise
 			.then(function(out) {
 				var data :haxe.DynamicAccess<WorkerDefinition> = cast out;
-				trace('data=${data}');
 				var result :Array<WorkerDefinition> = [];
 				for (key in data.keys()) {
 					result.push(data[key]);

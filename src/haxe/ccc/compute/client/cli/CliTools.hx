@@ -197,6 +197,12 @@ class CliTools
 		}
 	}
 
+	public static function getHostCheckSshConfig(host :HostName) :HostName
+	{
+		var sshConfig = getSSHConfigHostData(host);
+		return sshConfig != null ? new HostName(sshConfig.host) : host;
+	}
+
 	inline public static function getHostFromServerConfig(config :ServerConnectionBlob) :Host
 	{
 		if (config.host != null) {

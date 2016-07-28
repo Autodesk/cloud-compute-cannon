@@ -318,7 +318,6 @@ class ServiceBatchCompute
 		serverContext.registerService(this);
 		//Remote tests
 		var serviceTests = new ccc.compute.server.tests.ServiceTests();
-		trace('_injector.injectInto(serviceTests);');
 		_injector.injectInto(serviceTests);
 		serverContext.registerService(serviceTests);
 		serverContext.registerService(ccc.compute.server.ServerCommands);

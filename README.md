@@ -173,6 +173,24 @@ To run individual tests:
   ./bin/test <full.class.name>[.optionalMethod]
 
 
+### Running tests on cloud providers
+
+1) Set up an instance on e.g. AWS. Map the IP address to an entry in your ~/.ssh/config for passwordless operations. We'll call our alias "dev".
+
+2) Create your serverconfig.yml
+
+3)
+
+  ./bin/reloading-stack-deploy <ssh alias (dev)> <path to serverconfig.yml>
+
+4) On server compiles
+
+  ./bin/reloading-stack-sync <ssh alias (dev)> <path to serverconfig.yml>
+
+The server code and config will be copied over and the server restarted. Restaring means running the tests.
+
+Optionally create an .env file in the root of the repo, this will be consumed by the reloading server.
+
 
 ## Contact
 

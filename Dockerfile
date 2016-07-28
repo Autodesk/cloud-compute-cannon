@@ -22,7 +22,7 @@ RUN apt-get update && \
 	mkdir /root/neko && \
 	wget -O - http://nekovm.org/_media/neko-2.0.0-linux64.tar.gz | tar xzf - --strip=1 -C "/root/neko"
 
-RUN npm install -g forever bunyan
+RUN npm install -g forever nodemon bunyan
 
 ENV APP /app
 RUN mkdir -p $APP
