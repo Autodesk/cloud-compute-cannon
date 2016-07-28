@@ -41,6 +41,34 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			});
 	}
 
+	@timeout(10000)//10s
+	/**
+	 * Workers that do not exist should fail correctly
+	 */
+	public function testWorkerMissingOnStartup() :Promise<Bool>
+	{
+		var promise = new DeferredPromise();
+		var monitor = new MachineMonitor()
+			.monitorDocker({host: 'fakehost', port: 2375, protocol: 'http'});
+		monitor.status.then(function(status) {
+			switch(status) {
+				case Connecting:
+				case OK:
+					if (promise != null) {
+						promise.boundPromise.reject('Wrong status=${status}, should never be OK since the machine does not exist');
+						promise = null;
+					}
+				case CriticalFailure(failure):
+					assertEquals(failure, MachineFailureType.DockerConnectionLost);
+					if (promise != null) {
+						promise.resolve(true);
+						promise = null;
+					}
+			}
+		});
+		return promise.boundPromise;
+	}
+
 	/**
 	 * Creates a fake worker, monitors it, and then proceeds to
 	 * fill up the disk. It should register as failed when the
