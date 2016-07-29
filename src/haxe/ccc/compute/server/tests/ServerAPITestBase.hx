@@ -11,11 +11,11 @@ class ServerAPITestBase extends haxe.unit.async.PromiseTest
 		_serverHostRPCAPI = 'http://${_serverHost}${SERVER_RPC_URL}';
 	}
 
-	override public function setup() :Null<Promise<Bool>>
-	{
-		return super.setup()
-			.pipe(function(_) {
-				return ServerTestTools.resetRemoteServer(_serverHost);
-			});
-	}
+	// override public function setup() :Null<Promise<Bool>>
+	// {
+	// 	return super.setup()
+	// 		.pipe(function(_) {
+	// 			return ServerTestTools.resetRemoteServer(_serverHost);
+	// 		});
+	// }
 }

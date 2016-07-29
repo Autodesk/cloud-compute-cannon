@@ -3,6 +3,7 @@ package ccc.compute.server.tests;
 import haxe.io.*;
 
 import js.node.Buffer;
+import js.npm.shortid.ShortId;
 
 import util.DockerRegistryTools;
 
@@ -10,11 +11,13 @@ import promhx.RequestPromises;
 
 class TestJobs extends ServerAPITestBase
 {
+	static var TEST_BASE = 'tests';
+
 	@timeout(120000)
 	public function testWriteStdoutAndStderr() :Promise<Bool>
 	{
-		var outputValueStdout = 'out${Std.int(Math.random() * 100000000)}';
-		var outputValueStderr = 'out${Std.int(Math.random() * 100000000)}';
+		var outputValueStdout = 'out${ShortId.generate()}';
+		var outputValueStderr = 'out${ShortId.generate()}';
 		var script =
 '#!/bin/sh
 echo "$outputValueStdout"
@@ -27,7 +30,11 @@ echo "$outputValueStderr" >>/dev/stderr
 			name: scriptName
 		}
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input])
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testWriteStdoutAndStderr/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testWriteStdoutAndStderr/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testWriteStdoutAndStderr/$random/results';
+		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -73,7 +80,11 @@ echo "$outputValueStderr" >>/dev/stderr
 			value: inputValue,
 			name: inputName
 		}
-		return proxy.submitJob('busybox', ["cat", '/$DIRECTORY_INPUTS/$inputName'], [input])
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testReadInput/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testReadInput/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testReadInput/$random/results';
+		return proxy.submitJob('busybox', ["cat", '/$DIRECTORY_INPUTS/$inputName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -108,7 +119,11 @@ echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
 			name: scriptName
 		}
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input])
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testWriteOutput/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testWriteOutput/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testWriteOutput/$random/results';
+		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -170,7 +185,11 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 			encoding: InputEncoding.utf8 //Default
 		}
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [inputScript, inputBinaryValue1, inputBinaryValue2])
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/results';
+		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [inputScript, inputBinaryValue1, inputBinaryValue2], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})

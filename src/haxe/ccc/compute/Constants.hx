@@ -68,6 +68,7 @@ class Constants
 	inline public static var SERVER_RELOADER_PORT = 9002;
 	inline public static var REGISTRY_DEFAULT_PORT = 5001;
 	inline public static var REDIS_PORT = 6379;
+	inline public static var DOCKER_PORT = 2375;
 	inline public static var SERVER_PATH_CHECKS = '/checks';
 	inline public static var SERVER_PATH_CHECKS_OK = 'OK';
 	inline public static var SERVER_PATH_RELOAD = '/reload';
