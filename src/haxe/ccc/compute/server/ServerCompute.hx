@@ -263,6 +263,7 @@ class ServerCompute
 
 		Promise.promise(true)
 			.pipe(function(_) {
+				traceCyan('here1');
 				return ConnectionToolsRedis.getRedisClient()
 					.pipe(function(redis) {
 						//Pipe specific logs from redis since while developing
@@ -273,10 +274,12 @@ class ServerCompute
 			})
 			//Get public/private network addresses
 			.pipe(function(_) {
+				traceCyan('here2');
 				return Promise.promise(true)
 					.pipe(function(_) {
 						return WorkerProviderTools.getPrivateHostName(config.providers[0])
 							.then(function(hostname) {
+								trace('hostname=${hostname}');
 								Constants.SERVER_HOSTNAME_PRIVATE = hostname;
 								Log.debug({server_status:status, SERVER_HOSTNAME_PRIVATE:Constants.SERVER_HOSTNAME_PRIVATE});
 								return true;
@@ -285,6 +288,7 @@ class ServerCompute
 					.pipe(function(_) {
 						return WorkerProviderTools.getPublicHostName(config.providers[0])
 							.then(function(hostname) {
+								trace('hostname=${hostname}');
 								Constants.SERVER_HOSTNAME_PUBLIC = hostname;
 								Log.debug({server_status:status, SERVER_HOSTNAME_PUBLIC:Constants.SERVER_HOSTNAME_PUBLIC});
 								return true;
@@ -292,6 +296,7 @@ class ServerCompute
 					});
 			})
 			.then(function(_) {
+				traceCyan('here3');
 				status = ServerStatus.BuildingServices_3_4;
 				Log.debug({server_status:status});
 				//Build and inject the app logic
@@ -348,10 +353,13 @@ class ServerCompute
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
-							if (results.run == results.passed) {
-								Log.info({testResults:results, passed:true});
+							var result = results.result;
+							if (result.success) {
+								Log.info({TestResults:result});
+								traceGreen(Json.stringify(result, null, '  '));
 							} else {
-								Log.error({testResults:results, passed:false});
+								Log.error({TestResults:result});
+								traceRed(Json.stringify(result, null, '  '));
 							}
 						} catch(err :Dynamic) {
 							Log.error({error:err, message:'Failed to parse test results'});

@@ -58,10 +58,10 @@ class ServiceStorageBase
 		return null;
 	}
 
-	public function getFileWritable(path :String) :Promise<IWritable>
-	{
-		return null;
-	}
+	// public function getFileWritable(path :String) :Promise<IWritable>
+	// {
+	// 	return null;
+	// }
 
 	public function copyFile(source :String, target :String) :Promise<Bool>
 	{

@@ -4,6 +4,6 @@ package ccc.storage;
 abstract StorageSourceType(String) {
 	var Sftp = 'sftp';
 	var Local = 'local';
-	var Cloud = 'cloud';
-	//More coming
+	var PkgCloud = 'pkgcloud';
+	var S3 = 'S3';
 }

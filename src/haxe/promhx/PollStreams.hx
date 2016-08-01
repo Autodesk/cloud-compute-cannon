@@ -5,7 +5,7 @@ import promhx.base.AsyncBase;
 import promhx.deferred.DeferredPromise;
 import promhx.RetryPromise;
 
-class StreamTools
+class PollStreams
 {
 	/**
 	 * Returns a Stream that if a false value is returned, means that

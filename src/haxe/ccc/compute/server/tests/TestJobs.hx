@@ -14,6 +14,53 @@ class TestJobs extends ServerAPITestBase
 	static var TEST_BASE = 'tests';
 
 	@timeout(120000)
+	public function testReadMultilineStdout() :Promise<Bool>
+	{
+		var outputValueStdout = 'out${ShortId.generate()}';
+		var script =
+'#!/bin/sh
+echo "$outputValueStdout"
+echo "$outputValueStdout"
+echo foo
+echo "$outputValueStdout"
+';
+		var compareOutput = '$outputValueStdout\n$outputValueStdout\nfoo\n$outputValueStdout'.trim();
+		var scriptName = 'script.sh';
+		var input :ComputeInputSource = {
+			type: InputSource.InputInline,
+			value: script,
+			name: scriptName
+		}
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testReadMultilineStdout/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testReadMultilineStdout/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testReadMultilineStdout/$random/results';
+		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+			.pipe(function(out) {
+				return ServerTestTools.getJobResult(out.jobId);
+			})
+			.pipe(function(jobResult) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+
+				return Promise.promise(true)
+					.pipe(function(_) {
+						assertNotNull(jobResult.stdout);
+						var stdoutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+						assertNotNull(stdoutUrl);
+						return RequestPromises.get(stdoutUrl)
+							.then(function(stdout) {
+								stdout = stdout != null ? stdout.trim() : stdout;
+								assertEquals(stdout, compareOutput);
+								return true;
+							});
+					});
+			});
+	}
+
+	@timeout(120000)
 	public function testWriteStdoutAndStderr() :Promise<Bool>
 	{
 		var outputValueStdout = 'out${ShortId.generate()}';
@@ -96,7 +143,9 @@ echo "$outputValueStderr" >>/dev/stderr
 				assertNotNull(stdOutUrl);
 				return RequestPromises.get(stdOutUrl)
 					.then(function(stdout) {
-						stdout = stdout != null ? stdout.trim() : stdout;
+						assertNotNull(stdout);
+						stdout = stdout.trim();
+						assertEquals(stdout.length, inputValue.length);
 						assertEquals(stdout, inputValue);
 						return true;
 					});

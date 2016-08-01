@@ -47,22 +47,25 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	public static function getPublicHostName(config :ServiceConfigurationWorkerProvider) :Promise<HostName>
 	{
 		var credentials :ClientOptionsAmazon = config.credentials;
-		return switch(credentials.provider) {
+		var providerType :ProviderType = credentials.provider;
+		return switch(providerType) {
 			case amazon:
 				return getAWSPublicHostName();
-			case google:
-				throw 'Not yet implemented: google ip handling';
+			default:
+				return PromiseTools.error('getPrivateHostName() No other cloud providers implemented, do not know how to get private host name');
 		}
 	}
 
 	public static function getPrivateHostName(config :ServiceConfigurationWorkerProvider) :Promise<HostName>
 	{
 		var credentials :ClientOptionsAmazon = config.credentials;
-		return switch(credentials.provider) {
+		trace('credentials=${credentials}');
+		var providerType :ProviderType = credentials.provider;
+		return switch(providerType) {
 			case amazon:
 				return getAWSPrivateHostName();
-			// case google:
-			// 	throw 'Not yet implemented: google ip handling';
+			default:
+				return PromiseTools.error('getPrivateHostName() No other cloud providers implemented, do not know how to get private host name');
 		}
 	}
 

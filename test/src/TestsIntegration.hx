@@ -50,6 +50,41 @@ class TestsIntegration
 		}
 	}
 
+	static function tryToResolveClass(className :String) :Class<Dynamic>
+	{
+		var cls = Type.resolveClass(className);
+		if (cls != null) {
+			return cls;
+		} else if (Type.resolveClass('ccc.compute.server.tests.$className') != null) {
+			return Type.resolveClass('ccc.compute.server.tests.$className');
+		} else if (Type.resolveClass('compute.$className') != null) {
+			return Type.resolveClass('compute.$className');
+		} else if (Type.resolveClass('storage.$className') != null) {
+			return Type.resolveClass('storage.$className');
+		} else {
+			return null;
+		}
+	}
+
+	static function getClassAndMethod(s :String) :{cls :Class<Dynamic>, method :String}
+	{
+		var className = Sys.args()[0];
+		var cls = tryToResolveClass(className);
+		if (cls != null) {
+			return {cls:cls, method:null};
+		} else {
+			var tokens = className.split('.');
+			var methodName = tokens.pop();
+			className = tokens.join('.');
+			cls = tryToResolveClass(className);
+			if (cls != null) {
+				return {cls:cls, method:methodName};
+			} else {
+				return {cls:null, method:null};
+			}
+		}
+	}
+
 	static function main()
 	{
 		Node.require('dotenv').config({path: '.env.test'});
@@ -62,13 +97,11 @@ class TestsIntegration
 			runTests();
 		} else {
 			var className = Sys.args()[0];
-			var cls = Type.resolveClass(className);
-			if (cls == null && className.split('.').length > 1) {
-				var tokens = className.split('.');
-				var methodName = tokens.pop();
-				className = tokens.join('.');
-				cls = Type.resolveClass(className);
-				if (cls != null) {
+			var clsAndMethod = getClassAndMethod(className);
+			var cls = clsAndMethod.cls;
+			var methodName = clsAndMethod.method;
+			if (cls != null) {
+				if (methodName != null) {
 					var ins :{setup:Void->Promise<Bool>,tearDown:Void->Promise<Bool>} = Type.createInstance(cls, []);
 					var testMethod = Reflect.field(ins, methodName);
 					if (testMethod != null) {
@@ -93,20 +126,17 @@ class TestsIntegration
 								return true;
 							});
 					} else {
-						traceRed('No method ${className}.methodName');
+						traceRed('No method ${className}.$methodName');
 						Node.process.exit(1);
 					}
 				} else {
-					traceRed('No class ${className}');
-					Node.process.exit(1);
+					var runner = new PromiseTestRunner();
+					runner.add(Type.createInstance(cls, []));
+					runner.run();
 				}
-			} else if (cls == null ) {
+			} else {
 				traceRed('No class ${className}');
 				Node.process.exit(1);
-			} else {
-				var runner = new PromiseTestRunner();
-				runner.add(Type.createInstance(cls, []));
-				runner.run();
 			}
 		}
 	}

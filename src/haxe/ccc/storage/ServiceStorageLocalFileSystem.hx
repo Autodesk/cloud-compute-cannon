@@ -138,22 +138,22 @@ class ServiceStorageLocalFileSystem
 			});
 	}
 
-	override public function getFileWritable(path :String) :Promise<IWritable>
-	{
-		path = getPath(path);
-		return Promise.promise(true)
-			.pipe(function(_) {
-				var dir = Path.dirname(path);
-				if (dir != null) {
-					return FsPromises.mkdir(dir);
-				} else {
-					return Promise.promise(true);
-				}
-			})
-			.then(function(_) {
-				return cast Fs.createWriteStream(path);
-			});
-	}
+	// override public function getFileWritable(path :String) :Promise<IWritable>
+	// {
+	// 	path = getPath(path);
+	// 	return Promise.promise(true)
+	// 		.pipe(function(_) {
+	// 			var dir = Path.dirname(path);
+	// 			if (dir != null) {
+	// 				return FsPromises.mkdir(dir);
+	// 			} else {
+	// 				return Promise.promise(true);
+	// 			}
+	// 		})
+	// 		.then(function(_) {
+	// 			return cast Fs.createWriteStream(path);
+	// 		});
+	// }
 
 	override public function copyFile(source :String, target :String) :Promise<Bool>
 	{

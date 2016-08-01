@@ -1,89 +1,23 @@
 package ccc.compute.server.tests;
 
-import ccc.storage.ServiceStorageS3;
-import ccc.storage.StorageSourceType;
-
-import promhx.deferred.DeferredPromise;
 import promhx.RetryPromise;
 import promhx.RequestPromises;
 
 import util.streams.StreamTools;
 
-class TestStorageS3 extends TestStorageBase
+class TestStoragePkgCloud extends TestStorageBase
 {
-	public function new(?storage :ServiceStorageS3)
+	public function new(?storage :ccc.storage.ServiceStoragePkgCloud)
 	{
 		super(storage);
-	}
-
-	override public function setup() :Promise<Bool>
-	{
-		return super.setup()
-			.then(function(_) {
-				if (_storage == null) {
-					//Try to get if from config params
-					var config = InitConfigTools.getConfig();
-					if (config != null) {
-						_storage = ccc.storage.StorageTools.getStorage(config.storage);
-					}
-				}
-				return true;
-			});
-	}
-
-	@timeout(30000)
-	public function testS3Basic() :Promise<Bool>
-	{
-		// var promise = new DeferredPromise();
-		var credentials = {
-			type: StorageSourceType.S3,
-			credentials: {
-	    		provider: "amazon",
-	    		keyId: "AKIAIKTMFFVDVSEKWH6Q",
-	    		key: "VkULgcwfWMmQb2oacalsqeRn8PcgHN6yFpPRNUeT",
-	    		region: "us-west-1"
-	    	},
-	    	rootPath: "/",
-	    	container: "ccc-public-storage",
-	    	httpAccessUrl: "https://d3bt947tva2i1l.cloudfront.net"
-		};
-		// var S3 = new js.npm.aws.AWS.AWSS3(credentials);
-
-		var storage = new ServiceStorageS3().setConfig(credentials);
-
-		return storage.writeFile('testfile001', StreamTools.stringToStream('somecontents'))
-			.then(function(result) {
-				return result;
-			});
-
-		// S3.getBucketPolicy({Bucket:'ccc-public-storage____'}, function(err, data) {
-		// 	if (err != null) {
-		// 		traceRed(err);
-		// 		promise.resolve(true);
-		// 	} else {
-		// 		traceMagenta(data);
-		// 		promise.resolve(true);
-		// 	}
-		// });
-
-		// S3.listBuckets(function(err, data) {
-		// 	if (err != null) {
-		// 		traceRed(err);
-		// 		promise.resolve(true);
-		// 	} else {
-		// 		traceMagenta(data);
-		// 		promise.resolve(true);
-		// 	}
-		// });
-		// return promise.boundPromise;
 	}
 
 	@timeout(1000)
 	public function testPathsS3() :Promise<Bool>
 	{
-		return doPathParsing(new ccc.storage.ServiceStorageS3().setConfig(
+		return doPathParsing(new ccc.storage.ServiceStoragePkgCloud().setConfig(
 			{
-				type: ccc.storage.StorageSourceType.S3,
+				type: ccc.storage.StorageSourceType.PkgCloud,
 				container: 'somecontainer',
 				rootPath: null,
 				httpAccessUrl: 'http://foobar',
@@ -137,7 +71,7 @@ class TestStorageS3 extends TestStorageBase
 	public function XtestCloudPathParsingExternalUrl() :Promise<Bool>
 	{
 		var config = {
-			type: ccc.storage.StorageSourceType.S3,
+			type: ccc.storage.StorageSourceType.PkgCloud,
 			container: 'somecontainer',
 			rootPath: null,
 			httpAccessUrl: 'http://foobar',
@@ -148,7 +82,7 @@ class TestStorageS3 extends TestStorageBase
 				region: "us-west-1"
 			}
 		};
-		var s = new ccc.storage.ServiceStorageS3().setConfig(config);
+		var s = new ccc.storage.ServiceStoragePkgCloud().setConfig(config);
 
 		var rootPath = 'rootPathTest';
 		var storage :ccc.storage.ServiceStorageBase = cast s.clone();
@@ -164,14 +98,14 @@ class TestStorageS3 extends TestStorageBase
 	}
 
 	@timeout(30000)
-	public function testStorageTestS3() :Promise<Bool>
+	public function XtestStorageTestPkgCloud() :Promise<Bool>
 	{
 		Assert.notNull(_storage);
 		return doStorageTest(_storage);
 	}
 
 	@timeout(30000)
-	public function testS3ExternalUrl() :Promise<Bool>
+	public function XtestPkgCloudExternalUrl() :Promise<Bool>
 	{
 		Assert.notNull(_storage);
 		return Promise.promise(true)
@@ -197,7 +131,7 @@ class TestStorageS3 extends TestStorageBase
 	}
 
 	@timeout(30000)
-	public function testS3CopyEmptyFile() :Promise<Bool>
+	public function testPkgCloudCopyEmptyFile() :Promise<Bool>
 	{
 		Assert.notNull(_storage);
 		return Promise.promise(true)

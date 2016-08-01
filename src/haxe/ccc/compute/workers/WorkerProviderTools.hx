@@ -46,24 +46,28 @@ class WorkerProviderTools
 {
 	public static function getPublicHostName(config :ServiceConfigurationWorkerProvider) :Promise<HostName>
 	{
+		trace('getPublicHostName config.type=${config.type}');
 		return switch(config.type) {
 			case pkgcloud:
 				return WorkerProviderPkgCloud.getPublicHostName(config);
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
 			default:
+				traceRed('uh oh');
 				throw 'Not yet implemented';
 		}
 	}
 
 	public static function getPrivateHostName(config :ServiceConfigurationWorkerProvider) :Promise<HostName>
 	{
+		trace('getPrivateHostName config.type=${config.type}');
 		return switch(config.type) {
 			case pkgcloud:
 				return WorkerProviderPkgCloud.getPrivateHostName(config);
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
 			default:
+			traceRed('uh oh');
 				throw 'Not yet implemented';
 		}
 	}

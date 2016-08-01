@@ -132,29 +132,29 @@ class ServiceStorageSftp
 			});
 	}
 
-	override public function getFileWritable(path :String) :Promise<IWritable>
-	{
-		path = getPath(path);
-		var dir = Path.dirname(path);
-		return Promise.promise(true)
-			.pipe(function(_) {
-				return mkdirInternal(dir);
-			})
-			.pipe(function(_) {
-				return __getSftp();
-			})
-			.then(function(connections) {
-				var sftp = connections.sftp;
-				var writable = sftp.createWriteStream(path);
+	// override public function getFileWritable(path :String) :Promise<IWritable>
+	// {
+	// 	path = getPath(path);
+	// 	var dir = Path.dirname(path);
+	// 	return Promise.promise(true)
+	// 		.pipe(function(_) {
+	// 			return mkdirInternal(dir);
+	// 		})
+	// 		.pipe(function(_) {
+	// 			return __getSftp();
+	// 		})
+	// 		.then(function(connections) {
+	// 			var sftp = connections.sftp;
+	// 			var writable = sftp.createWriteStream(path);
 
-				writable.once(ReadableEvent.Close, function() {
-					js.Node.setImmediate(function() {
-						connections.ssh.end();
-					});
-				});
-				return writable;
-			});
-	}
+	// 			writable.once(ReadableEvent.Close, function() {
+	// 				js.Node.setImmediate(function() {
+	// 					connections.ssh.end();
+	// 				});
+	// 			});
+	// 			return writable;
+	// 		});
+	// }
 
 	override public function copyFile(source :String, target :String) :Promise<Bool>
 	{
