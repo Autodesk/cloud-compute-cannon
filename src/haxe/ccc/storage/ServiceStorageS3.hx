@@ -2,8 +2,7 @@ package ccc.storage;
 
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-
-import js.npm.PkgCloud;
+import js.npm.aws.AWS;
 
 import promhx.Promise;
 import promhx.PromiseTools;
@@ -18,11 +17,15 @@ import ccc.storage.StorageDefinition;
 using Lambda;
 using StringTools;
 
+
+
 class ServiceStorageS3 extends ServiceStorageBase
 {
 	var _containerName :String = "bionano-platform-test"; // we always need a bucket
-	var _client :StorageClientP;
 	var _httpAccessUrl :String;
+	var _S3 :AWSS3;
+	var _initialized :Promise<Bool>;
+
 
 	private static var precedingSlash = ~/^\/+/;
 	private static var endingSlash = ~/\/+$/;
@@ -40,9 +43,41 @@ class ServiceStorageS3 extends ServiceStorageBase
 		return '[StorageS3 _rootPath=$_rootPath container=${_containerName} externalUrlPrefix=${_httpAccessUrl}]';
 	}
 
-	private function getClient() :StorageClientP
+	function initialized() :Promise<Bool>
 	{
-		return _client;
+		if (_initialized == null) {
+			var promise = new DeferredPromise();
+			_S3.getBucketPolicy({Bucket:_containerName}, function(err, data) {
+				if (err != null) {
+					//No bucket exists, let's create one
+					var createBucketOptions = {
+						Bucket: _containerName,
+						ACL: 'public-read',
+						CreateBucketConfiguration: {
+							LocationConstraint: _config.credentials.region,
+						},
+						GrantFullControl: true
+					}
+					_S3.createBucket(createBucketOptions, function(err, result) {
+						if (err != null) {
+							promise.boundPromise.reject(err);
+						} else {
+							trace(result);
+							promise.resolve(true);
+						}
+					});
+				} else {
+					promise.resolve(true);
+				}
+			});
+			_initialized = promise.boundPromise;
+		}
+		return _initialized;
+	}
+
+	function getClient() :AWSS3
+	{
+		return _S3;
 	}
 
 	public function getContainerName(?options: Dynamic) :String
@@ -61,7 +96,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 		}
 
 		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl);
-		_client = PkgCloud.storage.createClient(config.credentials);
+		_S3 = new AWSS3(config.credentials);
 
 		return super.setConfig(config);
 	}
@@ -80,36 +115,27 @@ class ServiceStorageS3 extends ServiceStorageBase
 	override public function exists(path :String) :Promise<Bool>
 	{
 		path = getPath(path);
-		var client = getClient();
-		return client.getContainer(getContainerName())
-			.pipe(function(container) {
-				return client.getFile(container, path)
-					.then(function(file) {
-						return true;
-					})
-					.errorPipe(function(err) {
-						return Promise.promise(false);
-					});
+		return initialized()
+			.pipe(function(_) {
+				var promise = new DeferredPromise();
+				var params = {Bucket: _containerName, Key: path};
+				_S3.getObject(params, function(err, data) {
+					promise.resolve(err == null);
+				});
+				return promise.boundPromise;
 			});
 	}
 
 	override public function readFile(path :String) :Promise<IReadable>
 	{
 		path = getPath(path);
-		var client = this.getClient();
-		var options :Dynamic = {
-			container: this.getContainerName(),
-			remote: path
-		};
-		try {
-			var readStream = client.download(options);
-			readStream.on('error', function(err) {
-				Log.error('ERROR (THIS IS OUT OF THE PROMISE CHAIN) ServiceStorageS3.readFile path=$path err=$err');
+		return initialized()
+			.pipe(function(_) {
+				var promise = new DeferredPromise();
+				var params = {Bucket: _containerName, Key: path};
+				promise.resolve(_S3.getObject(params).createReadStream());
+				return promise.boundPromise;
 			});
-			return Promise.promise(readStream);
-		} catch(err :Dynamic) {
-			return PromiseTools.error(err);
-		}
 	}
 
 	override public function readDir(?path :String) :Promise<IReadable>
@@ -121,35 +147,24 @@ class ServiceStorageS3 extends ServiceStorageBase
 	override public function writeFile(path :String, data :IReadable) :Promise<Bool>
 	{
 		path = getPath(path);
-		return getFileWritableInternal(path)
-			.pipe(function(writeStream) {
-				return StreamPromises.pipe(data, writeStream, ['success'], 'ServiceStorageS3.writeFile path=$path');
-			});
-	}
+		return initialized()
+			.pipe(function(_) {
+				var promise = new DeferredPromise();
+				var params = {Bucket: _containerName, Key: path, Body: data};
 
-	override public function getFileWritable(path :String) :Promise<IWritable>
-	{
-		path = getPath(path);
-		return getFileWritableInternal(path);
-	}
-
-	function getFileWritableInternal(path :String) :Promise<IWritable>
-	{
-		var client = getClient();
-		var options :Dynamic = {
-			container: getContainerName(),
-			remote: path
-		};
-		try {
-			var writeStream = client.upload(options);
-			return Promise.promise(writeStream);
-		}  catch(err :Dynamic) {
-			return Promise.promise(true)
-				.then(function(_) {
-					throw err;
-					return null;
+				var eventDispatcher = _S3.upload(params, function(err, result) {
+					if (err != null) {
+						promise.boundPromise.reject(err);
+					} else {
+						promise.resolve(true);
+					}
 				});
-		}
+				// This can be integrated later
+				// eventDispatcher.on('httpUploadProgress', function(evt) {
+				// 	trace('Progress:', evt.loaded, '/', evt.total);
+				// });
+				return promise.boundPromise;
+			});
 	}
 
 	override public function copyFile(source :String, target :String) :Promise<Bool>
@@ -168,90 +183,97 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function deleteFile(path :String) :Promise<Bool>
 	{
-		Assert.notNull(path);
 		path = getPath(path);
-
-		var client = this.getClient();
-		return client.getContainer(this.getContainerName())
-			.pipe(function(container) {
-				return client.getFiles(container)
-					.then(function(files) {
-						return {
-							container: container,
-							files: files
-						};
-					});
-			})
-			.pipe(function(inputs) {
-				var files = inputs.files;
-				var file :File = files.find(function (File) {
-					return File.name == path;
+		return initialized()
+			.pipe(function(_) {
+				var promise = new DeferredPromise();
+				var params = {Bucket: _containerName, Key: path};
+				_S3.deleteObject(params, function(err, result) {
+					if (err != null) {
+						promise.boundPromise.reject(err);
+					} else {
+						promise.resolve(true);
+					}
 				});
-
-				if (file == null) {
-					return Promise.promise(false);
-				}
-
-				return client.removeFile(inputs.container, file);
+				return promise.boundPromise;
 			});
 	}
 
 	override public function deleteDir(?path :String) :Promise<Bool>
 	{
-		if (path == null) {
-			Log.error('deleteDir called with no path; ServiceStorageS3 does nothing in this case.');
-			return Promise.promise(true);
-		}
-
-		var client = this.getClient();
-
-		return client.getContainer(this.getContainerName())
-			.pipe(function (container) {
-				return client.getFiles(container)
-				.then(function (files) {
-					return {
-						container: container,
-						files: files
-					}
-				});
-			})
-			.then(function (inputs) {
-				var promises = [];
-				inputs.files.iter(function (file :File) {
-					promises.push(client.removeFile(inputs.container, file));
-				});
-				return promises;
-			})
-			.pipe(function (promises) {
-				return Promise.whenAll(promises);
-			})
-			.then(function (_) {
-				return true;
+		return listDirS3(path)
+			.pipe(function(fileList) {
+				if (fileList.length > 0) {
+					var promise = new DeferredPromise();
+					var params = {Bucket: _containerName,
+						Delete: {
+							Objects:fileList.map(function(f) {
+								return {
+									Key:f
+								}
+							})
+						}
+					};
+					_S3.deleteObjects(params, function(err, result) {
+						if (err != null) {
+							promise.boundPromise.reject(err);
+						} else {
+							promise.resolve(true);
+						}
+					});
+					return promise.boundPromise;
+				} else {
+					return Promise.promise(true);
+				}
 			});
 	}
 
 	override public function listDir(?path :String) :Promise<Array<String>>
 	{
 		path = getPath(path);
-		if (path != null && path.length == 0) {
-			path = null;
-		}
-		//S3/AWS only
-		path = ensureEndsWithSlash(path);
-		var client = this.getClient();
-		return client.getContainer(this.getContainerName())
-			.pipe(function(container) {
-				var options = {prefix:path};
-				return client.getFiles(container, options);
-			})
-			.then(function(files :Array<File>) {
-				return files.map(function (f) {
-					if (path != null) {
-						return f.name.substr(path.length);
-					} else {
-						return f.name;
+		return listDirS3(path)
+			.then(function(files) {
+				return files.map(function(f) {
+					f = path != null ? f.substr(path.length) : f;
+					if (f.startsWith('/')) {
+						f = f.substr(1);
 					}
+					return f;
 				});
+			});
+	}
+
+	function listDirS3(?path :String) :Promise<Array<String>>
+	{
+		return initialized()
+			.pipe(function(_) {
+				var promise = new DeferredPromise();
+				var params = {Bucket: _containerName, Prefix: path, ContinuationToken:null};
+				var continuationToken :String = null;
+
+				var fileList = [];
+
+				var getNext = null;
+				getNext = function() {
+					_S3.listObjectsV2(params, function(err, result) {
+						if (err != null) {
+							promise.boundPromise.reject(err);
+						} else {
+							var arr :Array<{Key:String}> = result.Contents;
+							for (f in arr) {
+								fileList.push(f.Key);
+							}
+							if (result.NextContinuationToken != null && result.IsTruncated) {
+								params.ContinuationToken = result.NextContinuationToken;
+								getNext();
+							} else {
+								promise.resolve(fileList);
+							}
+						}
+					});
+				}
+				getNext();
+				return promise.boundPromise;
 			});
 	}
 
@@ -297,6 +319,14 @@ class ServiceStorageS3 extends ServiceStorageBase
 		} else {
 			return path;
 		}
+	}
+
+	static function isBucket(s3 :AWSS3, bucket :String) :Promise<Bool>
+	{
+		var promise = new DeferredPromise();
+
+
+		return promise.boundPromise;
 	}
 
 	static function removePrecedingSlash(s :String) :String

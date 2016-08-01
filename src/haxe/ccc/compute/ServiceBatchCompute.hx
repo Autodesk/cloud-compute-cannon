@@ -446,10 +446,12 @@ class ServiceBatchCompute
 				Log.error('Got error, deleting inputs for jobId=$jobId err=$err');
 				error = err;
 				if (deleteInputs != null) {
-					deleteInputs()
-						.then(function(_) {
+					var deletePromise = deleteInputs();
+					if (deletePromise != null) {
+						deletePromise.then(function(_) {
 							Log.error('Deleted inputs for jobId=$jobId err=$err');
 						});
+					}
 				}
 				return Promise.promise(true);
 			})

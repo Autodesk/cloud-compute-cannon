@@ -48,7 +48,7 @@ class MachineMonitor
 	public static function createDockerPoll(credentials :DockerConnectionOpts, pollType :PollType, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
 	{
 		var docker = new Docker(credentials);
-		return StreamTools.pollForError(
+		return PollStreams.pollForError(
 			function() {
 				return DockerPromises.ping(docker);
 			},
@@ -64,7 +64,7 @@ class MachineMonitor
 		Assert.that(maxUsageCapacity > 0.0);
 		Assert.that(maxUsageCapacity <= 1.0);
 		var diskUse = ~/Filesystem.*Mounted on\n.+\s+.+\s+.+\s+([0-9]+)%.*/;
-		return StreamTools.pollForError(
+		return PollStreams.pollForError(
 			function() {
 				//   Filesystem      Size  Used Avail Use% Mounted on
 				//   /dev/xvda9      5.5G  1.3G  4.0G  24% /

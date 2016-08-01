@@ -4,6 +4,7 @@ import haxe.Json;
 
 import js.Node;
 import js.node.Fs;
+import js.node.Buffer;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.docker.Docker;
@@ -18,6 +19,8 @@ import promhx.RetryPromise;
 import promhx.deferred.DeferredPromise;
 
 import t9.abstracts.net.*;
+
+import util.streams.StreamTools;
 
 using promhx.PromiseTools;
 using Lambda;
@@ -482,6 +485,86 @@ class DockerTools
 			});
 		});
 
+		return promise.boundPromise;
+	}
+
+	public static function getContainerLogs(container :DockerContainer) :Promise<{stdout:IReadable,stderr:IReadable}>
+	{
+		var promise = new DeferredPromise();
+
+		container.logs({stdout:true, stderr:true}, function(err, stream) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+				return;
+			}
+			stream.once(ReadableEvent.Error, function(err) {
+				Log.error(err);
+				promise.boundPromise.reject(err);
+			});
+
+			var passThroughStdout :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+			var passThroughStderr :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+
+			var modem :Modem = untyped __js__('container.modem');
+			modem.demuxStream(stream, passThroughStdout, passThroughStderr);
+
+			stream.once(ReadableEvent.End, function() {
+				// stdout.end();
+				// stderr.end();
+				Node.setTimeout(function() {
+					passThroughStdout.end();
+					passThroughStderr.end();
+				}, 0);
+			});
+			promise.resolve({stdout:cast passThroughStdout, stderr: cast passThroughStderr});
+		});
+
+		return promise.boundPromise;
+	}
+
+	public static function getContainerStdout(container :DockerContainer) :Promise<IReadable>
+	{
+		return getContainerStdStream(container, true);
+	}
+
+	public static function getContainerStderr(container :DockerContainer) :Promise<IReadable>
+	{
+		return getContainerStdStream(container, false);
+	}
+
+	static function getContainerStdStream(container :DockerContainer, isStdOut :Bool) :Promise<IReadable>
+	{
+		var promise = new DeferredPromise();
+		//Filter the header
+		//https://docs.docker.com/engine/reference/api/docker_remote_api_v1.24/
+		container.logs({stdout:isStdOut, stderr:!isStdOut}, function(err, stream) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+				return;
+			} else {
+				var readable :IReadable = untyped __js__('new require("stream").PassThrough()');
+				var header :Buffer = null;
+				stream.on('readable', function() {
+					header = header != null ? header : stream.read(8);
+					while (untyped __strict_neq__(header, null)) {
+						var type = header.readUInt8(0);
+						var payload = stream.read(header.readUInt32BE(4));
+						if (untyped __strict_eq__(header, null)) {
+							break;
+						}
+						untyped __js__('{0}.push({1})', readable, payload);
+						header = stream.read(8);
+					}
+				});
+				stream.on(ReadableEvent.End, function() {
+					untyped __js__('{0}.push({1})', readable, null);
+				});
+				stream.on(ReadableEvent.Error, function(err) {
+					readable.emit(ReadableEvent.Error, err);
+				});
+				promise.resolve(cast readable);
+			}
+		});
 		return promise.boundPromise;
 	}
 

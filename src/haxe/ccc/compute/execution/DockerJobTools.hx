@@ -1,7 +1,5 @@
 package ccc.compute.execution;
 
-import util.DockerTools;
-
 import haxe.Json;
 
 import js.Error;
@@ -26,11 +24,18 @@ import ccc.storage.StorageSourceType;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
 
+import util.DockerTools;
+import util.streams.StreamTools;
+
 using ccc.compute.JobTools;
 using ccc.compute.workers.WorkerTools;
 using StringTools;
 using promhx.PromiseTools;
 
+typedef WroteLogs = {
+	var stdout :Bool;
+	var stderr :Bool;
+}
 /**
  * This class manages the lifecycle of a single
  * batch compute running in a docker container
@@ -276,55 +281,130 @@ class DockerJobTools
 		return deferredPromise.boundPromise;
 	}
 
-	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage, ?checkLogsReadable :Bool = true) :Promise<{stdout:Bool,stderr:Bool}>
+	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage, ?checkLogsReadable :Bool = true) :Promise<WroteLogs>
 	{
+		var result :WroteLogs = {stdout:false, stderr:false};
 		return getContainerId(docker, computeJobId)
 			.pipe(function(id) {
 				if (id == null) {
 					Log.error('Cannot find container with tag: "computeId=$computeJobId"');
-					return Promise.promise({stdout:false,stderr:false});
+					return Promise.promise(result);
 				} else {
-					return Promise.whenAll([fs.getFileWritable(STDOUT_FILE), fs.getFileWritable(STDERR_FILE)])
-						.pipe(function(pipes) {
-							var out = pipes[0];
-							var err = pipes[1];
-							return DockerTools.writeContainerLogs(docker.getContainer(id), out, err);
-						})
-						.pipe(function(stdFilesWritten) {
-							if (checkLogsReadable) {
-								var promises = [];
-								if (stdFilesWritten.stdout) {
-									promises.push(RetryPromise.pollRegular(function() {
-										return fs.exists(STDOUT_FILE)
-											.then(function(exists) {
-												if (exists) {
-													return true;
-												} else {
-													throw 'not yet found';
-													return false;
-												}
+					var container = docker.getContainer(id);
+					var promises = [
+						DockerTools.getContainerStdout(container)
+							.pipe(function(stream) {
+								var passThrough = StreamTools.createTransformStream(
+									function(data) {
+										if (data != null) {
+											result.stdout = true;
+										}
+										return data;
+									});
+								passThrough.setEncoding('utf8');
+								stream.pipe(passThrough);
+								return fs.writeFile(STDOUT_FILE, passThrough)
+									.pipe(function(_) {
+										if (result.stdout) {
+											//If there was data for the file,
+											//check it exists before returning
+											//since some systems e.g. S3 do not
+											//return a file immediately
+											return RetryPromise.pollRegular(function() {
+												return fs.exists(STDOUT_FILE)
+													.then(function(exists) {
+														if (exists) {
+															return true;
+														} else {
+															throw 'not yet found';
+															return false;
+														}
+													});
 											});
-									}));
-								}
-								if (stdFilesWritten.stderr) {
-									promises.push(RetryPromise.pollRegular(function() {
-										return fs.exists(STDERR_FILE)
-											.then(function(exists) {
-												if (exists) {
-													return true;
-												} else {
-													throw 'not yet found';
-													return false;
-												}
+										} else {
+											return Promise.promise(true);
+										}
+									});
+							}),
+						DockerTools.getContainerStderr(container)
+							.pipe(function(stream) {
+								var passThrough = StreamTools.createTransformStream(
+									function(data) {
+										if (data != null) {
+											result.stderr = true;
+										}
+										return data;
+									});
+								passThrough.setEncoding('utf8');
+								stream.pipe(passThrough);
+								return fs.writeFile(STDERR_FILE, passThrough)
+									.pipe(function(_) {
+										//If there was data for the file,
+										//check it exists before returning
+										//since some systems e.g. S3 do not
+										//return a file immediately
+										if (result.stderr) {
+											return RetryPromise.pollRegular(function() {
+												return fs.exists(STDERR_FILE)
+													.then(function(exists) {
+														if (exists) {
+															return true;
+														} else {
+															throw 'not yet found';
+															return false;
+														}
+													});
 											});
-									}));
-								}
-								return Promise.whenAll(promises)
-									.thenVal(stdFilesWritten);
-							} else {
-								return Promise.promise(stdFilesWritten);
-							}
+										} else {
+											return Promise.promise(true);
+										}
+									});
+							})
+					];
+
+					//Do both streams concurrently
+					return Promise.whenAll(promises)
+						.then(function(_) {
+							return result;
 						});
+						// //Don't return unless requests return the files on the
+						// //storage service, for some services e.g. S3 the files
+						// //take some time to be available.
+						// .pipe(function(_) {
+						// 	if (result.stderr || result.stdout) {
+						// 		var promises = [];
+						// 		if (result.stdout) {
+						// 			promises.push(RetryPromise.pollRegular(function() {
+						// 				return fs.exists(STDOUT_FILE)
+						// 					.then(function(exists) {
+						// 						if (exists) {
+						// 							return true;
+						// 						} else {
+						// 							throw 'not yet found';
+						// 							return false;
+						// 						}
+						// 					});
+						// 			}));
+						// 		}
+						// 		if (result.stderr) {
+						// 			promises.push(RetryPromise.pollRegular(function() {
+						// 				return fs.exists(STDERR_FILE)
+						// 					.then(function(exists) {
+						// 						if (exists) {
+						// 							return true;
+						// 						} else {
+						// 							throw 'not yet found';
+						// 							return false;
+						// 						}
+						// 					});
+						// 			}));
+						// 		}
+						// 		return Promise.whenAll(promises)
+						// 			.thenVal(result);
+						// 	} else {
+						// 		return Promise.promise(result);
+						// 	}
+						// });
 				}
 			});
 	}

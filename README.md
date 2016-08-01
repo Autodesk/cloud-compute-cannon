@@ -76,10 +76,9 @@ Yaml config example:
 
 ```yaml
 
-server:
-  storage:
-    type: "local"
-    rootPath: "data/ServiceStorageLocalFileSystem"
+storage:
+  type: "local"
+  rootPath: "data/ServiceStorageLocalFileSystem"
 
 providers:
   - type: "PkgCloud"
@@ -120,6 +119,27 @@ providers:
 ```
 
 In the above configuration, only the `credentials.keyId` and `credentials.key` values need to be modified to run under your own AWS account.
+
+### Storage providers
+
+```
+  storage:
+    type: "local"
+    rootPath: "data/ServiceStorageLocalFileSystem"
+```
+
+```
+  storage:
+      type: "S3"
+      rootPath: "/"
+      container: "bucket-name"
+      httpAccessUrl: "https://d3bt947tva2i1l.cloudfront.net"
+      credentials:
+        provider: "amazon"
+        keyId: "your keyId"
+        key: "your key"
+        region: "us-west-1"
+```
 
 ## Testing
 
