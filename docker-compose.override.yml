@@ -7,6 +7,8 @@ compute:
     - redis
     - registry
     - fluentd
+  log_driver: "json-file"
+  log_opt: {}
 
 
 redis:
@@ -30,6 +32,8 @@ registry:
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
   links:
     - fluentd
+  log_driver: "none"
+  log_opt: {}
 
 
 fluentd:
@@ -39,13 +43,15 @@ fluentd:
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
+  log_driver: "none"
+  log_opt: {}
 
 
 elasticsearch:
   extends:
     file: docker-compose.core.yml
     service: elasticsearch
-  log_driver: "json-file"
+  log_driver: "none"
   log_opt: {}
 
 

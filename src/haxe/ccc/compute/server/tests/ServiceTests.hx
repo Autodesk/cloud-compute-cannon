@@ -31,7 +31,6 @@ class ServiceTests
 			runner.add(new TestUnit());
 			runner.add(new TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
 			var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
-			trace('injectedStorage.type=${injectedStorage.type}');
 			switch(injectedStorage.type) {
 				case Sftp: Log.warn('No Test for SFTP storage');
 				case Local: //Already running local storage

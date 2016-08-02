@@ -1,5 +1,5 @@
 storage:
-  type: "cloud"
+  type: "s3"
   rootPath: "/"
   defaultContainer: "cloud-cannon-test"
   httpAccessUrl: "https://s3-us-west-1.amazonaws.com"
