@@ -1,13 +1,18 @@
 package ccc.compute.server.tests;
 
+import haxe.DynamicAccess;
 import haxe.io.*;
+
+import haxe.remoting.JsonRpc;
 
 import js.node.Buffer;
 import js.npm.shortid.ShortId;
 
-import util.DockerRegistryTools;
-
 import promhx.RequestPromises;
+import promhx.deferred.DeferredPromise;
+
+import util.DockerRegistryTools;
+import util.streams.StreamTools;
 
 class TestJobs extends ServerAPITestBase
 {
@@ -198,7 +203,7 @@ echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
 	{
 		// Create bytes for inputs. We'll test the output bytes
 		// against these
-		var bytes1 = new Buffer([31, 33, 73]);
+		var bytes1 = new Buffer([Std.int(Math.random() * 1000), Std.int(Math.random() * 1000), Std.int(Math.random() * 1000)]);
 		var inputName1 = 'in${Std.int(Math.random() * 100000000)}';
 		var outputName1 = 'out${Std.int(Math.random() * 100000000)}';
 
@@ -220,7 +225,7 @@ echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
 			encoding: InputEncoding.base64
 		}
 
-		//A scrit that copies the inputs to outputs
+		//A script that copies the inputs to outputs
 		var script =
 '#!/bin/sh
 cp /$DIRECTORY_INPUTS/$inputName1 /$DIRECTORY_OUTPUTS/$outputName1
@@ -263,6 +268,106 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 							});
 					});
 			});
+	}
+
+	@timeout(120000)
+	public function testMultipartRPCSubmission() :Promise<Bool>
+	{
+		var url = 'http://${_serverHost}${SERVER_RPC_URL}';
+
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/results';
+
+		// Create bytes for inputs. We'll test the output bytes
+		// against these
+		var bytes1 = new Buffer([Std.int(Math.random() * 1000), Std.int(Math.random() * 1000), Std.int(Math.random() * 1000)]);
+		var inputName1 = 'in${Std.int(Math.random() * 100000000)}';
+		var outputName1 = 'out${Std.int(Math.random() * 100000000)}';
+
+		var bytes2 = new Buffer('somestring${Std.int(Math.random() * 100000000)}', 'utf8');
+		var inputName2 = 'in${Std.int(Math.random() * 100000000)}';
+		var outputName2 = 'out${Std.int(Math.random() * 100000000)}';
+
+		//A script that copies the inputs to outputs
+		var script =
+'#!/bin/sh
+cp /$DIRECTORY_INPUTS/$inputName1 /$DIRECTORY_OUTPUTS/$outputName1
+cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
+';
+		var scriptName = 'script.sh';
+
+		var jobSubmissionOptions :BasicBatchProcessRequest = {
+			image: 'busybox',
+			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
+			inputs: [], //inputs are part of the multipart message (formStreams)
+			parameters: {cpus:1, maxDuration:20*60*100000},
+			//Custom paths
+			outputsPath: customOutputsPath,
+			inputsPath: customInputsPath,
+			resultsPath: customResultsPath,
+		};
+
+		var formData :DynamicAccess<Dynamic> = {};
+		formData[JsonRpcConstants.MULTIPART_JSONRPC_KEY] = Json.stringify(
+			{
+				method: RPC_METHOD_JOB_SUBMIT,
+				params: jobSubmissionOptions,
+				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2
+
+			});
+		formData[scriptName] = script;
+		formData[inputName1] = bytes1;
+		formData[inputName2] = bytes2;
+
+		var promise = new DeferredPromise();
+		js.npm.request.Request.post({url:url, formData: formData},
+			function(err, httpResponse, body) {
+				if (err != null) {
+					promise.boundPromise.reject(err);
+					return;
+				}
+				if (httpResponse.statusCode == 200) {
+					try {
+						Promise.promise(true)
+							.pipe(function(out) {
+								var jobIdResult :{result:{jobId:String}} = Json.parse(body);
+								return ServerTestTools.getJobResult(jobIdResult.result.jobId);
+							})
+							.pipe(function(jobResult) {
+								if (jobResult == null) {
+									throw 'jobResult should not be null. Check the above section';
+								}
+								var outputUrl = jobResult.outputsBaseUrl;
+								var outputs = jobResult.outputs != null ? jobResult.outputs : [];
+								assertTrue(outputs.length == 2);
+								var outputUrl1 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}${outputName1}';
+								return RequestPromises.getBuffer(outputUrl1)
+									.pipe(function(out1) {
+										assertNotNull(out1);
+										assertEquals(out1.compare(bytes1), 0);
+										var outputUrl2 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}${outputName2}';
+										return RequestPromises.getBuffer(outputUrl2)
+											.then(function(out2) {
+												assertNotNull(out2);
+												assertEquals(out2.compare(bytes2), 0);
+												return true;
+											});
+									});
+							})
+							.then(function(passed) {
+								promise.resolve(passed);
+							});
+					} catch (err :Dynamic) {
+						promise.boundPromise.reject(err);
+					}
+				} else {
+					promise.boundPromise.reject('non-200 response body=' + body);
+				}
+			});
+
+		return promise.boundPromise;
 	}
 
 	public function new(targetHost :Host)

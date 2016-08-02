@@ -44,4 +44,12 @@ class StreamTools
 		untyped __js__('{0}.push(null)', stream);
 		return stream;
 	}
+
+	inline public static function bufferToStream(b :Buffer) :Readable<Dynamic>
+	{
+		var stream :Readable<Dynamic> = untyped __js__('new require("stream").Readable()');
+		untyped __js__('{0}.push({1})', stream, b);
+		untyped __js__('{0}.push(null)', stream);
+		return stream;
+	}
 }
