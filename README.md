@@ -90,7 +90,7 @@ providers:
     credentials:
       provider: "amazon"
       keyId: "AKIAIWJON3HDJ"
-      key: "SLV3lNIPbGwv6oSyqXHoA5aIE7A"
+      key: "SLV3lNIPbGwv6oSy"
       region: "us-west-1"
     server:
       Tags:
@@ -130,37 +130,31 @@ In the above configuration, only the `credentials.keyId` and `credentials.key` v
 
 ```
   storage:
-      type: "S3"
-      rootPath: "/"
-      container: "bucket-name"
-      httpAccessUrl: "https://d3bt947tva2i1l.cloudfront.net"
-      credentials:
-        provider: "amazon"
-        keyId: "your keyId"
-        key: "your key"
-        region: "us-west-1"
+    type: "S3"
+    rootPath: "/"
+    container: "bucket-name"
+    # You can use the S3 url or the cloudfront. The httpAccessUrl
+    # is prepended to the file path.
+    #httpAccessUrl: "https://s3-us-west-1.amazonaws.com/bucket-name"
+    httpAccessUrl: "https://d3bt947tva2i1l.cloudfront.net"
+    credentials:
+      provider: "amazon"
+      #You can use keyId/key or accessKeyId/secretAccessKey field names
+      keyId: "your keyId"
+      key: "your key"
+      region: "us-west-1"
 ```
+
+More coming soon!
 
 ## Testing
 
-If you have a running server (let's assume here at *localhost:9000*), you can test if via `curl` by sending this JSON-RPC data (located in the file test/res/jsonrpctest.json).
+Call the this API endpoint to run the suite of internal functional end-to-end tests:
 
+  curl <HOST:PORT>/api/rpc/server-tests
 
-```
-	{
-		"jsonrpc":"2.0",
-		"method":"cloudcomputecannon.run",
-		"params":{
-			"job": {
-				"image":"elyase/staticpython",
-				"cmd": ["python", "-c", "print('Hello World!')"],
-				"parameters": {"cpus":1, "maxDuration":6000000}
-			}
-		}
-	}
-```
+This will return the tests results in JSON and a status of 200 if the tests pass, or a 500 status if any test fails.
 
-	`curl -H "Content-Type: application/json-rpc" -X POST -d @test/res/jsonrpctest.json http://localhost:9000/api/rpc`
 
 ## Developers
 
@@ -197,7 +191,7 @@ To run individual tests:
 
 1) Set up an instance on e.g. AWS. Map the IP address to an entry in your ~/.ssh/config for passwordless operations. We'll call our alias "dev".
 
-2) Create your serverconfig.yml
+2) Create your serverconfig.yml (see above).
 
 3)
 

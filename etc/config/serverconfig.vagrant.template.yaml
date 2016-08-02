@@ -1,6 +1,6 @@
 storage:
-    type: "local"
-    rootPath: "data/ServiceStorageLocalFileSystem"
+  type: "local"
+  rootPath: "data/ServiceStorageLocalFileSystem"
 
 providers:
   - type: "Vagrant"

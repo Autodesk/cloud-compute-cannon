@@ -31,69 +31,10 @@ class TestStorageS3 extends TestStorageBase
 			});
 	}
 
-	@timeout(30000)
-	public function testS3Basic() :Promise<Bool>
-	{
-		// var promise = new DeferredPromise();
-		var credentials = {
-			type: StorageSourceType.S3,
-			credentials: {
-	    		provider: "amazon",
-	    		keyId: "AKIAIKTMFFVDVSEKWH6Q",
-	    		key: "VkULgcwfWMmQb2oacalsqeRn8PcgHN6yFpPRNUeT",
-	    		region: "us-west-1"
-	    	},
-	    	rootPath: "/",
-	    	container: "ccc-public-storage",
-	    	httpAccessUrl: "https://d3bt947tva2i1l.cloudfront.net"
-		};
-		// var S3 = new js.npm.aws.AWS.AWSS3(credentials);
-
-		var storage = new ServiceStorageS3().setConfig(credentials);
-
-		return storage.writeFile('testfile001', StreamTools.stringToStream('somecontents'))
-			.then(function(result) {
-				return result;
-			});
-
-		// S3.getBucketPolicy({Bucket:'ccc-public-storage____'}, function(err, data) {
-		// 	if (err != null) {
-		// 		traceRed(err);
-		// 		promise.resolve(true);
-		// 	} else {
-		// 		traceMagenta(data);
-		// 		promise.resolve(true);
-		// 	}
-		// });
-
-		// S3.listBuckets(function(err, data) {
-		// 	if (err != null) {
-		// 		traceRed(err);
-		// 		promise.resolve(true);
-		// 	} else {
-		// 		traceMagenta(data);
-		// 		promise.resolve(true);
-		// 	}
-		// });
-		// return promise.boundPromise;
-	}
-
 	@timeout(1000)
 	public function testPathsS3() :Promise<Bool>
 	{
-		return doPathParsing(new ccc.storage.ServiceStorageS3().setConfig(
-			{
-				type: ccc.storage.StorageSourceType.S3,
-				container: 'somecontainer',
-				rootPath: null,
-				httpAccessUrl: 'http://foobar',
-				credentials: {
-					provider: "amazon",
-					keyId: "AKIA",
-					key: "F5yk",
-					region: "us-west-1"
-				}
-			}));
+		return doPathParsing(_storage);
 	}
 
 	// AWS S3 allows path-like object names

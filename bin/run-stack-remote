@@ -10,6 +10,6 @@ bin/sync-to-remote $1
 REMOTE_CCC_PATH="cloudcomputecannon"
 scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/serverconfig.yml
 DOCKER_COMPOSE="/opt/bin/docker-compose"
-COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` COMPUTE_CONFIG=\`cat serverconfig.yml\` $DOCKER_COMPOSE up"
+COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` COMPUTE_CONFIG=\`cat serverconfig.yml\` $DOCKER_COMPOSE up"
 echo $COMMAND
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"

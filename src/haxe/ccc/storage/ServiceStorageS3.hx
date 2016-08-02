@@ -40,13 +40,14 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function toString()
 	{
-		return '[StorageS3 _rootPath=$_rootPath container=${_containerName} externalUrlPrefix=${_httpAccessUrl}]';
+		return '[StorageS3 _rootPath=$_rootPath container=${_containerName} _httpAccessUrl=${_httpAccessUrl}]';
 	}
 
 	function initialized() :Promise<Bool>
 	{
 		if (_initialized == null) {
 			var promise = new DeferredPromise();
+			_initialized = promise.boundPromise;
 			_S3.getBucketPolicy({Bucket:_containerName}, function(err, data) {
 				if (err != null) {
 					//No bucket exists, let's create one
@@ -56,13 +57,12 @@ class ServiceStorageS3 extends ServiceStorageBase
 						CreateBucketConfiguration: {
 							LocationConstraint: _config.credentials.region,
 						},
-						GrantFullControl: true
+						GrantFullControl: 'FULL_CONTROL'
 					}
 					_S3.createBucket(createBucketOptions, function(err, result) {
 						if (err != null) {
 							promise.boundPromise.reject(err);
 						} else {
-							trace(result);
 							promise.resolve(true);
 						}
 					});
@@ -70,7 +70,6 @@ class ServiceStorageS3 extends ServiceStorageBase
 					promise.resolve(true);
 				}
 			});
-			_initialized = promise.boundPromise;
 		}
 		return _initialized;
 	}
@@ -95,8 +94,18 @@ class ServiceStorageS3 extends ServiceStorageBase
 			_containerName = config.container;
 		}
 
+		var awsConfig = {
+			accessKeyId: config.credentials.accessKeyId != null ? config.credentials.accessKeyId : config.credentials.keyId,
+			secretAccessKey: config.credentials.secretAccessKey != null ? config.credentials.secretAccessKey : config.credentials.key,
+			region: config.credentials.region
+		}
+
+		Assert.notNull(awsConfig.region);
+		Assert.notNull(awsConfig.accessKeyId);
+		Assert.notNull(awsConfig.secretAccessKey);
+
 		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl);
-		_S3 = new AWSS3(config.credentials);
+		_S3 = new AWSS3(awsConfig);
 
 		return super.setConfig(config);
 	}
@@ -108,6 +117,10 @@ class ServiceStorageS3 extends ServiceStorageBase
 		config.httpAccessUrl = _httpAccessUrl;
 		config.container = _containerName;
 		config.rootPath = _rootPath;
+		// copy._S3 = _S3;
+		// copy._initialized = _initialized;
+		// copy._httpAccessUrl = _httpAccessUrl;
+		// copy._containerName = _containerName;
 		copy.setConfig(config);
 		return copy;
 	}
