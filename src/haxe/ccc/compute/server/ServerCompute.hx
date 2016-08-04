@@ -220,7 +220,7 @@ class ServerCompute
 		status = ServerStatus.ConnectingToRedis_2_4;
 		Log.info({server_status:status});
 
-		var workerProviders = config.providers.map(WorkerProviderTools.getProvider);
+		var workerProviders :Array<ccc.compute.workers.WorkerProvider> = [];
 
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
@@ -243,12 +243,18 @@ class ServerCompute
 			closing = true;
 			untyped server.close(function() {
 				untyped serverHTTP.close(function() {
-					return Promise.whenAll(workerProviders.map(function(workerProvider) {
-						return workerProvider.dispose();
-					}))
-					.then(function(_) {
+					if (workerProviders != null) {
+						return Promise.whenAll(workerProviders.map(function(workerProvider) {
+							return workerProvider.dispose();
+						}))
+						.then(function(_) {
+							Node.process.exit(0);
+							return true;
+						});
+					} else {
 						Node.process.exit(0);
-					});
+						return Promise.promise(true);
+					}
 				});
 			});
 		});
@@ -263,7 +269,6 @@ class ServerCompute
 
 		Promise.promise(true)
 			.pipe(function(_) {
-				traceCyan('here1');
 				return ConnectionToolsRedis.getRedisClient()
 					.pipe(function(redis) {
 						//Pipe specific logs from redis since while developing
@@ -274,7 +279,6 @@ class ServerCompute
 			})
 			//Get public/private network addresses
 			.pipe(function(_) {
-				traceCyan('here2');
 				return Promise.promise(true)
 					.pipe(function(_) {
 						return WorkerProviderTools.getPrivateHostName(config.providers[0])
@@ -296,11 +300,11 @@ class ServerCompute
 					});
 			})
 			.then(function(_) {
-				traceCyan('here3');
 				status = ServerStatus.BuildingServices_3_4;
 				Log.debug({server_status:status});
 				//Build and inject the app logic
 				//Create services
+				workerProviders = config.providers.map(WorkerProviderTools.getProvider);
 				WorkerProvider = workerProviders[0];
 
 				//The queue manager

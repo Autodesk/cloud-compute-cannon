@@ -69,7 +69,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		var dockerHost = ConnectionToolsDocker.getDockerHost();
 		// var ssh = getSshConfig();
 		var boot2docker :WorkerDefinition = {
-			id: 'dockermachinedefault',
+			id: ID,
 			hostPublic: dockerHost,
 			hostPrivate: dockerHost,
 			docker: ConnectionToolsDocker.getDockerConfig(),
