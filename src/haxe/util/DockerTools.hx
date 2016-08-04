@@ -552,7 +552,15 @@ class DockerTools
 						if (untyped __strict_eq__(header, null)) {
 							break;
 						}
-						untyped __js__('{0}.push({1})', readable, payload);
+						if (type == 2) {
+							if (!isStdOut) {
+								untyped __js__('{0}.push({1})', readable, payload);
+							}
+						} else {
+							if (isStdOut) {
+								untyped __js__('{0}.push({1})', readable, payload);
+							}
+						}
 						header = stream.read(8);
 					}
 				});

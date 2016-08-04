@@ -557,7 +557,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 					throw 'Could not find public IP in server=$server';
 				}
 
-				Assert.notNull(provider.getMachineKey(machineType), 'Cannot find ssh key');
+				Assert.notNull(provider.getMachineKey(machineType), 'Cannot find ssh key in $provider for machine type $machineType');
 				var sshOptions :ConnectOptions = {
 					host: host,
 					port: 22,
