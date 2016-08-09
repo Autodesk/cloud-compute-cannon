@@ -421,6 +421,12 @@ class InstancePool
 			.then(Json.parse);
 	}
 
+	public static function toRawJson(client :RedisClient) :Promise<Dynamic>
+	{
+		return evaluateLuaScript(client, SCRIPT_GET_RAW_JSON)
+			.then(Json.parse);
+	}
+
 	public static function dumpJson(client :RedisClient) :Promise<InstancePoolJsonDump>
 	{
 		return toJson(client)
@@ -505,7 +511,7 @@ class InstancePool
 	inline static var REDIS_KEY_WORKER_POOL_MAX_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_max_instances';//Hash<MachinePoolId, Int>
 	inline static var REDIS_KEY_WORKER_POOL_MIN_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_min_instances';//Hash<MachinePoolId, Int>
 	inline static var REDIS_KEY_WORKER_POOL_BILLING_INCREMENT = '${INSTANCE_POOL_PREFIX}worker_pool_billing_increment';//Hash<MachinePoolId, Float>
-	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances';//Hash<MachinePoolId, Int>
+	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances';//Key
 	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES_TOTAL = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances_total';//Key
 	inline static var REDIS_KEY_WORKER_POOL_MAP = '${INSTANCE_POOL_PREFIX}worker_pool';//HASH <MachineId, MachinePoolId>
 	inline static var REDIS_KEY_WORKER_AVAILABLE_CPUS = '${INSTANCE_POOL_PREFIX}worker_available_cpus';//HASH <MachineId, Int>
@@ -513,7 +519,7 @@ class InstancePool
 	//The first machine added to the pool adds the parameters to this set
 	//so that scaling requirements can be accurately computed
 	inline static var REDIS_KEY_POOL_WORKER_PARAMETERS = '${INSTANCE_POOL_PREFIX}pool_worker_parameters';//HASH <MachinePoolId, InstanceJobParams>
-	inline static var REDIS_KEY_WORKER_JOB_MACHINE_MAP = '${INSTANCE_POOL_PREFIX}job_machine';//HASH <ComputeJobId, MachineId>
+	public inline static var REDIS_KEY_WORKER_JOB_MACHINE_MAP = '${INSTANCE_POOL_PREFIX}job_machine';//HASH <ComputeJobId, MachineId>
 	inline static var REDIS_KEY_WORKER_JOB_DEFINITION = '${INSTANCE_POOL_PREFIX}jobs';//HASH <ComputeJobId, JobParams>
 	inline public static var REDIS_CHANNEL_KEY_WORKERS_UPDATE = '${INSTANCE_POOL_PREFIX}workers_updated';//channel
 
@@ -534,6 +540,7 @@ class InstancePool
 		"cpus"=>REDIS_KEY_WORKER_AVAILABLE_CPUS,
 		"workerParameters"=>REDIS_KEY_WORKER_PARAMETERS,
 		"status"=>REDIS_KEY_WORKER_STATUS,
+		"available_status"=>REDIS_KEY_WORKER_AVAILABLE_STATUS
 	];
 	static var WORKER_HASHES_STRING_LUA = WORKER_HASHES.keys().array().map(function(k) return k + '="' + WORKER_HASHES[k] + '"').join(", ");
 
@@ -547,6 +554,7 @@ class InstancePool
 	inline static var SCRIPT_ADD_JOB_TO_MACHINE = '${INSTANCE_POOL_PREFIX}submitJobToMachine';
 	inline static var SCRIPT_REMOVE_JOB = '${INSTANCE_POOL_PREFIX}removeJob';
 	inline static var SCRIPT_GET_JSON = '${INSTANCE_POOL_PREFIX}getJson';
+	inline static var SCRIPT_GET_RAW_JSON = '${INSTANCE_POOL_PREFIX}getRawJson';
 	inline static var SCRIPT_GET_WORKERS_IN_POOL = '${INSTANCE_POOL_PREFIX}getWorkersInPool';
 	inline static var SCRIPT_REMOVE_WORKERS = '${INSTANCE_POOL_PREFIX}removeWorkers';
 	// inline static var SCRIPT_MARK_MACHINE_DOWN = '${INSTANCE_POOL_PREFIX}markMachineDown';
@@ -1005,6 +1013,13 @@ end
 result.totalTargetInstances = tonumber(redis.call("GET", "$REDIS_KEY_WORKER_POOL_TARGET_INSTANCES_TOTAL")) or 0
 
 result.available = redis.call("SMEMBERS", "$REDIS_KEY_WORKER_STATUS_AVAILABLE")
+
+local workerStatus = {}
+local all = redis.call("HGETALL", "$REDIS_KEY_WORKER_STATUS")
+for i=1,#all, 2 do
+	workerStatus[all[i]] = all[i+1]
+end
+result.status = workerStatus
 ';
 
 /* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
@@ -1121,24 +1136,32 @@ if redis.call("HEXISTS", "$REDIS_KEY_WORKERS", machineId) == 0 then
 	return
 end
 
-local status = "${MachineStatus.Removing}"
+local status = redis.call("HGET", "$REDIS_KEY_WORKER_STATUS", machineId)
+
+--Idempotent
+if status == "${MachineStatus.Failed}" then
+	return
+end
+--Already removing
+if status == "${MachineStatus.Removing}" then
+	return
+end
+--Now set the status
+status = "${MachineStatus.Removing}"
 $SNIPPET_UPDATE_MACHINE_STATUS
 
 local worker = redis.call("HGET", "$REDIS_KEY_WORKERS", machineId)
 local poolId = redis.call("HGET", "$REDIS_KEY_WORKER_POOL_MAP", machineId)
 
-print("worker=" .. tostring(worker))
-print("poolId=" .. tostring(poolId))
-
 local computeJobIds = redis.call("SMEMBERS", "$REDIS_KEY_WORKER_JOBS_PREFIX" .. machineId)
-print("computeJobIds=" .. tostring(computeJobIds))
-print("computeJobIds.type=" .. type(computeJobIds))
 for index,computeJobId in ipairs(computeJobIds) do
 	print("Requeuing " .. tostring(computeJobId))
 	${ComputeQueue.SNIPPET_REQUEUE_COMPUTE_JOB}
 end
 
 --$ SNIPPET_REMOVE_WORKER
+
+${ComputeQueue.SNIPPET_PROCESS_PENDING}
 
 $SNIPPET_UPDATE_MACHINE_CHANNEL
 ',
@@ -1186,6 +1209,59 @@ $SNIPPET_REMOVE_JOB
 $SNIPPET_GET_JSON
 return cjson.encode(result)
 ',
+
+
+			SCRIPT_GET_RAW_JSON =>
+'
+local hashes = {"$REDIS_KEY_WORKER_STATUS", "$REDIS_KEY_WORKER_AVAILABLE_STATUS", "$REDIS_KEY_WORKERS", "$REDIS_KEY_WORKER_POOL_MAX_INSTANCES", "$REDIS_KEY_WORKER_POOL_MIN_INSTANCES", "$REDIS_KEY_WORKER_POOL_BILLING_INCREMENT", "$REDIS_KEY_WORKER_POOL_MAP", "$REDIS_KEY_WORKER_AVAILABLE_CPUS", "$REDIS_KEY_WORKER_PARAMETERS", "$REDIS_KEY_POOL_WORKER_PARAMETERS", "$REDIS_KEY_WORKER_JOB_MACHINE_MAP", "$REDIS_KEY_WORKER_JOB_DEFINITION"}
+local sets = {"$REDIS_KEY_WORKER_STATUS_AVAILABLE", "$REDIS_KEY_WORKER_AVAILABLE_STATUS_IDLE", "$REDIS_KEY_WORKER_AVAILABLE_STATUS_WORKING", "$REDIS_KEY_WORKER_AVAILABLE_STATUS_MAXCAPACITY", "$REDIS_KEY_WORKER_POOLS_AVAILABLE_PREFIX"}
+local sortedSets = {"$REDIS_KEY_WORKER_DEFERRED_TIME", "$REDIS_KEY_WORKER_POOL_PRIORITY"}
+local sortedSetPrefixes = {}
+local setKeyPrefixes = {"$REDIS_KEY_WORKER_JOBS_PREFIX", "$REDIS_KEY_POOL_JOBS_PREFIX", "$REDIS_KEY_WORKER_POOLS_SET_PREFIX"}--, "$REDIS_KEY_WORKER_POOLS_PREFIX"}
+
+local result = {}
+
+for i,hashKey in ipairs(hashes) do
+	local all = redis.call("HGETALL", hashKey)
+	result[hashKey] = {}
+	for i=1,#all, 2 do
+		result[hashKey][all[i]] = all[i+1]
+	end
+end
+
+for i,setKey in ipairs(sets) do
+	result[setKey] = redis.call("SMEMBERS", setKey)
+end
+
+for i,setPrefix in ipairs(setKeyPrefixes) do
+	local keys = redis.call("KEYS", setPrefix .. "*")
+	for j,setKey in ipairs(keys) do
+		result[setKey] = redis.call("SMEMBERS", setKey)
+	end
+end
+
+for i,sortedSetKey in ipairs(sortedSets) do
+	local sortedKeyTable = redis.call("ZRANGE", sortedSetKey, 0, -1)
+	result[sortedSetKey] = {}
+	for index,key in ipairs(sortedKeyTable) do
+		result[sortedSetKey][index] = key
+	end
+end
+
+for i,sortedSetPrefix in ipairs(sortedSetPrefixes) do
+	local keys = redis.call("KEYS", sortedSetPrefix .. "*")
+	for j,sortedSetKey in ipairs(keys) do
+		local sortedKeyTable = redis.call("ZRANGE", sortedSetKey, 0, -1)
+		result[sortedSetKey] = {}
+		for index,key in ipairs(sortedKeyTable) do
+			result[sortedSetKey][index] = key
+		end
+	end
+end
+
+return cjson.encode(result)
+',
+
 
 			SCRIPT_GET_WORKERS_IN_POOL =>
 '

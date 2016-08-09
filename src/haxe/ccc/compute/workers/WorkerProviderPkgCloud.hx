@@ -59,7 +59,6 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	public static function getPrivateHostName(config :ServiceConfigurationWorkerProvider) :Promise<HostName>
 	{
 		var credentials :ClientOptionsAmazon = config.credentials;
-		trace('credentials=${credentials}');
 		var providerType :ProviderType = credentials.provider;
 		return switch(providerType) {
 			case amazon:
@@ -245,7 +244,6 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						 */
 						var billingIncrement :Minutes = _config.billingIncrement;
 						if (billingIncrement == null || billingIncrement.toFloat() == 0) {
-							trace('billingIncrement=${billingIncrement} so returning delay=0');
 							return new Minutes(0);
 						} else {
 							var awsServer :PkgCloudServerAws = cast worker;
@@ -255,8 +253,6 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							var now = TimeStamp.now();
 							var minutesSinceLaunch = (now - launchTimeSince1970).toMinutes();
 							var remainingMinutesTheIncrement = minutesSinceLaunch % billingIncrement;
-							trace('minutesSinceLaunch % billingIncrement ($minutesSinceLaunch % $billingIncrement) = ${minutesSinceLaunch % billingIncrement}');
-							trace('FLOAT minutesSinceLaunch % billingIncrement ($minutesSinceLaunch % $billingIncrement) = ${minutesSinceLaunch.toFloat() % billingIncrement.toFloat()}');
 							var delay = billingIncrement - remainingMinutesTheIncrement;
 							if (delay < new Minutes(0)) {
 								delay = new Minutes(0);

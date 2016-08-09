@@ -49,7 +49,9 @@ class ServiceTests
 		}
 
 		if (worker || all) {
-			runner.add(new TestWorkerMonitoring());
+			var testWorkers = new TestWorkerMonitoring();
+			_injector.injectInto(testWorkers);
+			runner.add(testWorkers);
 		}
 
 		var exitOnFinish = false;

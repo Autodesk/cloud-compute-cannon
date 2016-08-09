@@ -142,7 +142,6 @@ class BatchComputeDocker
 			.pipe(function(_) {
 				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingInputs) {
-					var inputStorage = fs.clone().appendToRootPath(job.item.inputDir());
 					if (job.item.inputsPath != null) {
 						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Reading from custom inputs path=' + job.item.inputsPath});
 					}

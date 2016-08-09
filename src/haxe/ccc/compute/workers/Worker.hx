@@ -66,7 +66,7 @@ class Worker
 		Assert.notNull(_redis.connectionOption);
 		_id = _definition.id;
 
-		var machineStateChannel = InstancePool.REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX + _id;
+		var machineStateChannel = '${InstancePool.REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX}_id';
 		_stateChangeStream = RedisTools.createStreamFromHash(_redis, machineStateChannel, InstancePool.REDIS_KEY_WORKER_STATUS, _id);
 		_stateChangeStream.then(function(status) {
 			if (status != null && status != _computeStatus) {
@@ -103,7 +103,7 @@ class Worker
 	 */
 	function onMachineFailure(?failureType :Dynamic) :Promise<Bool>
 	{
-		log.error({'status':_computeStatus, state:'FAILURE', 'log':'Machine failure, removing from InstancePool'});
+		log.error({'status':_computeStatus, state:'FAILURE', 'log':'Machine failure, removing from InstancePool', reason:Json.stringify(failureType)});
 		return InstancePool.workerFailed(_redis, _id);
 	}
 

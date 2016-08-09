@@ -32,6 +32,7 @@ import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 import promhx.RedisPromises;
+import promhx.DockerPromises;
 
 import util.streams.StreamTools;
 import util.SshTools;
@@ -262,14 +263,38 @@ class Job
 						var executecallResult = executeJob();
 						executecallResult.promise.catchError(function(err) {
 							_cancelWorkingJob = null;
-							var batchJobResult = {exitCode:-1, error:err, copiedLogs:false};
-							log.error({exitCode:-1, error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
-							if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
-								writeJobResults(_job, _fs, batchJobResult, JobFinishedStatus.Failed)
-									.then(function(_) {
-										return finishJob(JobFinishedStatus.Failed, Std.string(err));
-									});
+
+							function writeFailure() {
+								//Write job as a failure
+								//This should actually never happen, or the failure
+								//should be handled
+								var batchJobResult = {exitCode:-1, error:err, copiedLogs:false};
+								log.error({exitCode:-1, error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
+								if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
+									writeJobResults(_job, _fs, batchJobResult, JobFinishedStatus.Failed)
+										.then(function(_) {
+											return finishJob(JobFinishedStatus.Failed, Std.string(err));
+										});
+								}
 							}
+							//Check if we can reach the worker. If not, then the
+							//worker died at an inconvenient time, so we requeue
+							//this job
+							var docker = new Docker(_job.worker.docker);
+							DockerPromises.ping(docker)
+								.then(function(_) {
+									writeFailure();
+								})
+								.catchError(function(pingErr) {
+									if (_redis != null) {
+										log.warn('Job failed but cannot reach worker, so requeuing job');
+										ComputeQueue.requeueJob(_redis, _job.computeJobId);
+										dispose();
+									} else {
+										log.error('Job failed but in a really bad state: failed, but could not reach worker, but also is disposed err=$err');
+										writeFailure();
+									}
+								});
 						});
 						//This can be called in case the job is killed
 						_cancelWorkingJob = executecallResult.cancel;
@@ -287,16 +312,6 @@ class Job
 									return Promise.promise(true);
 								}
 							});
-							// .then(function(_) {
-							// 	try {
-							// 		if (_redis != null) {
-							// 			logStdStreamsToElasticSearch(_redis, _fs, _job.id);
-							// 		}
-							// 	} catch (err :Dynamic) {
-							// 		Log.error({error:err});
-							// 	}
-							// 	return true;
-							// });
 					});
 				p.catchError(function(err) {
 					// This is no longer needed

@@ -90,7 +90,7 @@ class WorkerProviderBase
 				return updateConfig(_config);
 			})
 			.then(function(_) {
-				log.debug({f:'postInjection', log:'RedisTools.createJsonStream'});
+				// log.debug({f:'postInjection', log:'RedisTools.createJsonStream'});
 				_streamMachineCount = RedisTools.createJsonStream(_redis, InstancePool.REDIS_KEY_WORKER_POOL_TARGET_INSTANCES);
 				_streamMachineCount
 					.then(function(counts :TargetMachineCount) {

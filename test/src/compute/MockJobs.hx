@@ -14,7 +14,10 @@ class MockJobs extends Jobs
 	public var jobExitCode :Int = 0;
 	public var workingStatus :JobWorkingStatus = JobWorkingStatus.FinishedWorking;
 
-	public function new() {super();}
+	public function new()
+	{
+		super();
+	}
 
 	override function createJob(computeJobId :ComputeJobId)
 	{

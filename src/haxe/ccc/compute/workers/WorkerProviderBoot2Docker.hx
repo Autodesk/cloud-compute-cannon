@@ -67,7 +67,6 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 	public static function getLocalDockerWorker()
 	{
 		var dockerHost = ConnectionToolsDocker.getDockerHost();
-		// var ssh = getSshConfig();
 		var boot2docker :WorkerDefinition = {
 			id: ID,
 			hostPublic: dockerHost,
@@ -81,46 +80,10 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		return boot2docker;
 	}
 
-	/**
-	 * This method should be obsolete since file access on local docker
-	 * providers are now using direct file access with mounted local volumes.
-	 * @param  ?throwIfMissing :Bool         [description]
-	 * @return                 [description]
-	 */
-	// @deprecated
-	// public static function OBSOLETEisSftpConfigInLocalDockerMachine(?throwIfMissing :Bool = true) :Promise<Bool>
-	// {
-	// 	var config :StorageDefinition = {
-	// 		type: StorageSourceType.Sftp,
-	// 		rootPath: '/',
-	// 		sshConfig: getSshConfig()
-	// 	};
-	// 	var storage = StorageTools.getStorage(config);
-	// 	return storage.readFile(LOCAL_DOCKER_SSH_CONFIG_PATH)
-	// 		.pipe(StreamPromises.streamToString)
-	// 		.then(function(s) {
-	// 			return s.indexOf(DOCKER_SSH_CONFIG_SFTP_ADDITION) > -1;
-	// 		})
-	// 		.errorPipe(function(err) {
-	// 			Log.error(err);
-	// 			return Promise.promise(false);
-	// 		});
-	// }
-
 	public static function getLocalDocker() :Docker
 	{
 		return new Docker(getLocalDockerWorker().docker);
 	}
-
-	// public static function getSshConfig() :js.npm.ssh2.Ssh.ConnectOptions
-	// {
-	// 	return {
-	// 		host: ConnectionToolsDocker.getDockerHost(),
-	// 		port: 22,
-	// 		username: 'docker',
-	// 		password: 'tcuser'
-	// 	};
-	// }
 
 	inline static var ID = 'dockermachinedefault';
 

@@ -25,9 +25,13 @@ class TestComputeBase extends TestBase
 	var _workerProvider :WorkerProviderBase;
 	var _workerManager :WorkerManager;
 	var _jobsManager :Jobs;
+	var _stack :ccc.compute.Stack;
 	var _fs :ServiceStorage;
 	var _redis :RedisClient;
 
+	/**
+	 * Most important thing: this deletes all keys in redis
+	 */
 	override public function setup() :Null<Promise<Bool>>
 	{
 		_injector = new minject.Injector();
@@ -48,7 +52,6 @@ class TestComputeBase extends TestBase
 			.then(function(_) {
 				//Add local storage in case it's needed.
 				var config = InitConfigTools.getDefaultConfig();
-				trace('config=${config}');
 				var storageConfig = config.storage;
 				_injector.map('ccc.storage.StorageDefinition').toValue(storageConfig);
 				var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
@@ -72,6 +75,9 @@ class TestComputeBase extends TestBase
 					return e == null ? Promise.promise(true) : e.dispose();
 				});
 				return Promise.whenAll(promises);
+			})
+			.pipe(function(_) {
+				return _stack != null ? _stack.dispose() : Promise.promise(true);
 			})
 			.pipe(function(_) {
 				if (_childProcess != null) {
