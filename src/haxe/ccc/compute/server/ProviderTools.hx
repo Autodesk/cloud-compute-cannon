@@ -541,7 +541,7 @@ class ProviderTools
 		var storage = ccc.storage.ServiceStorageSftp.fromInstance(instance).appendToRootPath(Constants.APP_NAME_COMPACT);
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return storage.writeFile('$SERVER_MOUNTED_CONFIG_FILE', StreamTools.stringToStream(Json.stringify(serverBlob.provider, null, '\t')));
+				return storage.writeFile('$SERVER_MOUNTED_CONFIG_FILE_NAME', StreamTools.stringToStream(Json.stringify(serverBlob.provider, null, '\t')));
 			})
 			.pipe(function(_) {
 				return copyServerFiles(storage);
@@ -553,8 +553,8 @@ class ProviderTools
 		var localStorage = ServiceStorageLocalFileSystem.getService(path);
 		return ProviderTools.copyServerFiles(localStorage)
 			.pipe(function(_) {
-				var defaultServerConfigString = Json.stringify(InitConfigTools.getDefaultConfig(), null, '\t');
-				return localStorage.writeFile('serverconfig.json', StreamTools.stringToStream(defaultServerConfigString));
+				var defaultServerConfigString = Yaml.render(InitConfigTools.getDefaultConfig());
+				return localStorage.writeFile(SERVER_MOUNTED_CONFIG_FILE_NAME, StreamTools.stringToStream(defaultServerConfigString));
 			})
 			.pipe(function(_) {
 				var promises = [

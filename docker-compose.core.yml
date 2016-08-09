@@ -9,7 +9,7 @@ compute:
   environment:
     PORT: "9000"
     # OPTIONAL: Path to the mounted configuration file
-    # CONFIG_PATH: "/app/serverconfig.yml"
+    # CONFIG_PATH: "/app/ccc.yml"
     #If the REGISTRY field is set, it will override REGISTRY_PORT
     # REGISTRY_ADDRESS: "5001"
     # OPTIONAL

@@ -442,12 +442,12 @@ abstract CLIServerPathRoot(String) from String
 	inline public function new(s :String)
 		this = s;
 
-	inline public function getServerJsonConfigPath() :String
+	inline public function getServerYamlConfigPath() :String
 	{
 		return js.node.Path.join(this, Constants.LOCAL_CONFIG_DIR, Constants.SERVER_CONNECTION_FILE);
 	}
 
-	inline public function getServerJsonConfigPathDir() :String
+	inline public function getServerYamlConfigPathDir() :String
 	{
 		return js.node.Path.join(this, Constants.LOCAL_CONFIG_DIR);
 	}

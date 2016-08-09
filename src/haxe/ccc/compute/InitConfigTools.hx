@@ -32,10 +32,10 @@ class InitConfigTools
 	{
 		var env = Node.process.env;
 		var config :ServiceConfiguration = null;
-		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE;
+		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
 		Log.debug({'CONFIG_PATH':CONFIG_PATH});
 		if (Reflect.field(env, ENV_CLIENT_DEPLOYMENT) == 'true') {
-			Log.debug('Loading config from mounted file=$CONFIG_PATH');
+			Log.warn('Loading config from mounted file=$CONFIG_PATH');
 			config = InitConfigTools.getConfigFromFile(CONFIG_PATH);
 		} else {
 			config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
@@ -94,7 +94,7 @@ class InitConfigTools
 	{
 		var env = js.Node.process.env;
 		if (Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG) != null && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG) != '') {
-			Log.debug({server_status:'get_config', message:'Getting config from $ENV_VAR_COMPUTE_CONFIG env var'});
+			Log.warn({server_status:'get_config', message:'Getting config from $ENV_VAR_COMPUTE_CONFIG env var'});
 			return Yaml.parse(Reflect.field(env, ENV_VAR_COMPUTE_CONFIG), DEFAULT_YAML_OPTIONS);
 		} else {
 			Log.debug({server_status:'get_config', message:'no $ENV_VAR_COMPUTE_CONFIG in env, path=$path'});
@@ -102,6 +102,7 @@ class InitConfigTools
 				//This will throw an error if it doesnt' exist
 				try {
 					Fs.statSync(path);
+					Log.warn('Loading config from file=$path');
 					return getConfigFromFile(path);
 				} catch (_ :Dynamic) {
 					//Swallow errors
@@ -109,6 +110,7 @@ class InitConfigTools
 				}
 			}
 			Log.debug({server_status:'get_config', message:'using default config'});
+			Log.warn('Loading default config');
 			return getDefaultConfig();
 		}
 	}
@@ -249,5 +251,5 @@ class InitConfigTools
 		return existing;
 	}
 
-	public static var DEFAULT_YAML_OPTIONS = new yaml.Parser.ParserOptions().useObjects().strictMode();
+	public static var DEFAULT_YAML_OPTIONS = new yaml.Parser.ParserOptions().useObjects().strictMode(false);
 }

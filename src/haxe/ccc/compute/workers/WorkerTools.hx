@@ -24,15 +24,6 @@ typedef Instance = {
 	function docker() :Docker;
 }
 
-/**
- * Notes: the boot2docker machine needs to have sftp enabled:
- * Add
- * 	Subsystem sftp internal-sftp
- * to /var/lib/boot2docker/ssh/sshd_config
- *
- * This is meant to work, but I couldn't find the script (/etc/rc.d/sshd restart)
- * so I just restarted the damn machine.
- */
 class WorkerTools
 {
 	public static function getInstance(def :WorkerDefinition) :Instance
@@ -51,7 +42,7 @@ class WorkerTools
 	{
 		return new Docker({
 			host: ssh.host,
-			port: 2375,
+			port: DOCKER_PORT,
 			protocol: 'http'
 		});
 	}
@@ -119,7 +110,6 @@ class WorkerTools
 	{
 		return Promise.promise(true);
 	}
-
 
 	/**
 	 * Returns a Stream that returns a value. If the polling for the

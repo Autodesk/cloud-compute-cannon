@@ -197,8 +197,25 @@ class Job
 					return ComputeQueue.getJobDescriptionFromComputeId(redis, computeJobId);
 				}
 			})
+			.errorPipe(function(err) {
+				log.error({error:err, message:'Failed to initialized job, removing'});
+				if (_redis != null) {
+					return ComputeQueue.jobFinalized(_redis, computeJobId)
+						.errorPipe(function(err) {
+							log.error({log:'ComputeQueue.jobFinalized after failing to load', error:err});
+							return Promise.promise(true);
+						})
+						.pipe(function(_) {
+							return dispose()
+								.thenVal(null);
+						});
+				} else {
+					return dispose()
+						.thenVal(null);
+				}
+			})
 			.then(function(job :QueueJobDefinitionDocker) {
-				if (!_disposed) {
+				if (!_disposed && job != null) {
 					_job = job;
 					log = log.child({jobid:job.id});
 					if (_job.item.inputs != null) {
@@ -229,6 +246,7 @@ class Job
 				rootPath: WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
 				credentials: _job.worker.ssh
 			};
+			traceGreen(_job);
 			StorageTools.getStorage(workerStorageConfig);
 		}
 		return BatchComputeDocker.executeJob(_redis, _job, _fs, workerStorage, log);
@@ -416,17 +434,21 @@ class Job
 			return Promise.promise(true);
 		} else {
 			_removedFromDockerHost = true;
-			var docker = _job.worker.getInstance().docker();
-			var suppressErrorIfContainerNotFound = true;
-			return DockerJobTools.removeContainer(docker, id, suppressErrorIfContainerNotFound)
-				.then(function(_) {
-					log.debug({log:'Removed container from docker'});
-					return true;
-				})
-				.errorPipe(function(err) {
-					Log.error({log:'Failed to remove container from docker, perhaps it was never created', error:err});
-					return Promise.promise(false);
-				});
+			if (_job != null && _job.worker != null) {
+				var docker = _job.worker.getInstance().docker();
+				var suppressErrorIfContainerNotFound = true;
+				return DockerJobTools.removeContainer(docker, id, suppressErrorIfContainerNotFound)
+					.then(function(_) {
+						log.debug({log:'Removed container from docker'});
+						return true;
+					})
+					.errorPipe(function(err) {
+						Log.error({log:'Failed to remove container from docker, perhaps it was never created', error:err});
+						return Promise.promise(false);
+					});
+			} else {
+				return Promise.promise(false);
+			}
 		}
 	}
 

@@ -12,5 +12,5 @@ if test -f ".env"; then
 	scp ".env" "$SERVER_HOST:$REMOTE_CCC_PATH/.env" ;
 fi
 
-scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/serverconfig.yml
+scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/ccc.yml
 bin/sync-to-remote $1

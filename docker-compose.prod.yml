@@ -5,7 +5,8 @@ compute:
     - ./data/computejobs:/computejobs
     - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
     - ./data/registry:/app/data/registry
-    - ./serverconfig.json:/app/serverconfig.json
+    #TODO: this is bad
+    - ./ccc.yml:/app/ccc.yml
   links:
     - redis
     - registry

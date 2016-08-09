@@ -2,7 +2,7 @@
 SERVER_HOST=$1
 SERVER_CONFIG_PATH=$2
 REMOTE_CCC_PATH="cloudcomputecannon"
-REMOTE_SERVER_CONFIG_FILE="serverconfig.yml"
+REMOTE_SERVER_CONFIG_FILE="ccc.yml"
 LOG_LEVEL=10
 if [ $# -eq 0 ]
 	then

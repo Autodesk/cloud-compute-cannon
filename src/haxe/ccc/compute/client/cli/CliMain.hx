@@ -125,7 +125,8 @@ class CliMain
 							Node.process.exit(-1);
 					}
 				}).catchError(function(err) {
-					Log.error('ERROR from $requestDef\nError:\n$err');
+					err = Json.stringify(err, null, '\t');
+					traceRed('ERROR from $requestDef\nError:\n${err}');
 					Node.process.exit(1);
 				});
 		}
