@@ -129,7 +129,7 @@ class WorkerManager
 						promises.push(InstancePool.getWorker(_redis, id)
 							.then(function(workerDef) {
 								if (workerDef == null) {
-									Log.warn('InstancePool.getWorker(id=$id) workerDef result==null');
+									Log.warn('InstancePool.getWorker(id=$id) workerDef result==null workers(redis)=$workerIds workers(here)=${_workers.keys()}');
 									return;
 								}
 								if (_workers == null) {

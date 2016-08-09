@@ -5,17 +5,18 @@ import ccc.compute.workers.WorkerProviderPkgCloud;
 import cloud.MachineMonitor;
 
 import js.npm.PkgCloud;
+import js.npm.RedisClient;
 import js.npm.ssh2.Ssh;
 
-import promhx.deferred.*;
+import minject.Injector;
 
 import util.SshTools;
-
-using Lambda;
 
 class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 {
 	var _config :ServiceConfigurationWorkerProvider;
+	@inject public var _injector :Injector;
+	@inject public var _redis :RedisClient;
 
 	public function new()
 	{
@@ -31,7 +32,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	 * Parallelize these tests for speed
 	 * @return [description]
 	 */
-	public function testWorkerMonitor() :Promise<Bool>
+	public function XtestWorkerMonitor() :Promise<Bool>
 	{
 		var promises = [_testWorkerDockerMonitor(), _testWorkerDiskFull()];
 
@@ -41,15 +42,104 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			});
 	}
 
+	/**
+	 * A job is assigned to a worker, the worker is killed, then the job
+	 * should be rescheduled (and not failed).
+	 */
+	@timeout(600000)//10m
+	public function testJobRescheduledAfterWorkerFailure() :Promise<Bool>
+	{
+		var promise = new DeferredPromise();
+		var provider :ccc.compute.workers.WorkerProviderPkgCloud = _injector.getValue(ccc.compute.workers.WorkerProvider);
+		if (Type.getClass(provider) != WorkerProviderPkgCloud) {
+			return Promise.promise(false);
+		}
+		var serverHostRPCAPI = 'http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}';
+		var proxy = ServerTestTools.getProxy(serverHostRPCAPI);
+
+		//Submit a long running job
+		var jobId :JobId = null;
+		var workerId :MachineId = null;
+		return proxy.submitJob('busybox', ['sleep', '40'])
+			.pipe(function(out) {
+				jobId = out.jobId;
+				//Kill the machine the job is on
+
+				//First wait until it is assigned a worker, then get the worker id
+				return PromiseTools.untilTrue(function() {
+					return proxy.status()
+						.then(function(systemStatus :SystemStatus) {
+							if (!systemStatus.pending.has(jobId)) {
+								//Get the worker
+								var worker = systemStatus.workers.find(function(w) {
+									return w.jobs.exists(function(j) {
+										return j.id == jobId;
+									});
+								});
+								if (worker == null) {
+									traceRed('jobId=$jobId');
+									traceRed(Json.stringify(systemStatus, null, '\t'));
+								}
+								assertNotNull(worker);
+								workerId = worker.id;
+								return true;
+							} else {
+								return false;
+							}
+						});
+				})
+				.then(function(_) {
+					return workerId;
+				});
+			})
+			//Then kill the worker
+			.pipe(function(workerId) {
+				return proxy.workerRemove(workerId);
+			})
+			.thenWait(400)
+			//There should be no trace of the worker in the InstancePool
+			.pipe(function(_) {
+				return InstancePool.toJson(_redis)
+					.then(function(instancePoolJsonDump) {
+						if (Json.stringify(instancePoolJsonDump).indexOf(workerId) != -1) {
+							traceRed(Json.stringify(instancePoolJsonDump, null, '\t'));
+						}
+						assertTrue(Json.stringify(instancePoolJsonDump).indexOf(workerId) == -1);
+						return true;
+					});
+			})
+			.pipe(function(_) {
+				return PromiseTools.untilTrue(function() {
+					return proxy.status()
+						.then(function(systemStatus :SystemStatus) {
+							if (!systemStatus.pending.has(jobId)) {
+								//Get the worker
+								var worker = systemStatus.workers.find(function(w) {
+									return w.jobs.exists(function(j) {
+										return j.id == jobId;
+									});
+								});
+								assertNotNull(worker);
+								assertNotEquals(worker.id, workerId);
+								return true;
+							} else {
+								return false;
+							}
+						});
+				});
+			})
+			.thenTrue();
+	}
+
 	@timeout(10000)//10s
 	/**
 	 * Workers that do not exist should fail correctly
 	 */
-	public function testWorkerMissingOnStartup() :Promise<Bool>
+	public function XtestWorkerMissingOnStartup() :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
 		var monitor = new MachineMonitor()
-			.monitorDocker({host: 'fakehost', port: 2375, protocol: 'http'});
+			.monitorDocker({host: '70.87.168.45', port: 2375, protocol: 'http'});
 		monitor.status.then(function(status) {
 			switch(status) {
 				case Connecting:
@@ -85,7 +175,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			traceYellow('Cannot run ${Type.getClassName(Type.getClass(this)).split('.').pop()}.testWorkerDockerMonitor: missing worker definition "test"');
 			return Promise.promise(true);
 		} else {
-			return testWorkerMonitorDockerPing(_config);
+			return internalTestWorkerMonitorDockerPing(_config);
 		}
 	}
 
@@ -100,11 +190,11 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			traceYellow('Cannot run ${Type.getClassName(Type.getClass(this)).split('.').pop()}.testWorkerDiskFull: missing worker definition "test"');
 			return Promise.promise(true);
 		} else {
-			return testWorkerMonitorDiskCapacity(_config);
+			return internalTestWorkerMonitorDiskCapacity(_config);
 		}
 	}
 
-	static function testWorkerMonitorDockerPing(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
+	static function internalTestWorkerMonitorDockerPing(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
 	{
 		var machineType = 'test';
 		var monitor :MachineMonitor;
@@ -186,7 +276,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			});
 	}
 
-	static function testWorkerMonitorDiskCapacity(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
+	static function internalTestWorkerMonitorDiskCapacity(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
 	{
 		var machineType = 'test';
 		var monitor :MachineMonitor;

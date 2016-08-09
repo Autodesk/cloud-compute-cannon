@@ -156,7 +156,7 @@ class MachineMonitor
 		}
 	}
 
-	public function monitorDocker(cred :DockerConnectionOpts, ?pollIntervalMilliseconds :Int = 1000, ?maxRetries :Int = 3, ?doublingRetryIntervalMilliseconds :Int = 500)
+	public function monitorDocker(cred :DockerConnectionOpts, ?pollIntervalMilliseconds :Int = 1000, ?maxRetries :Int = 3, ?doublingRetryIntervalMilliseconds :Int = 1000)
 	{
 		Assert.notNull(cred);
 		if (_dockerPoll != null) {

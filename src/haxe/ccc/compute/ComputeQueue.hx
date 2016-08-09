@@ -264,6 +264,18 @@ class ComputeQueue
 			});
 	}
 
+	public static function getWorkerIdForJob(redis :RedisClient, jobId :JobId) :Promise<MachineId>
+	{
+		return RedisPromises.hget(redis, REDIS_KEY_JOB_ID_TO_COMPUTE_ID, jobId)
+			.pipe(function(computeJobId :ComputeJobId) {
+				if (computeJobId != null) {
+					return RedisPromises.hget(redis, InstancePool.REDIS_KEY_WORKER_JOB_MACHINE_MAP, computeJobId);
+				} else {
+					return Promise.promise(null);
+				}
+			});
+	}
+
 	public static function removeJob<T>(redis :RedisClient, jobId :JobId) :Promise<QueueObject<T>>
 	{
 		Assert.notNull(jobId);
@@ -321,9 +333,9 @@ class ComputeQueue
 		return RedisPromises.hget(redis, REDIS_KEY_COMPUTEJOB_WORKING_STATE, computeJobId);
 	}
 
-	public static function requeueJob<T>(redis :RedisClient, jobId :JobId, computeJobId :ComputeJobId) :Promise<Stats>
+	public static function requeueJob<T>(redis :RedisClient, computeJobId :ComputeJobId) :Promise<Stats>
 	{
-		return evaluateLuaScript(redis, SCRIPT_REQUEUE, [jobId, computeJobId, Date.now().getTime()])
+		return evaluateLuaScript(redis, SCRIPT_REQUEUE, [computeJobId, Date.now().getTime()])
 			.then(function(s :String) {
 				var obj = Json.parse(s);
 				return obj;
@@ -734,115 +746,86 @@ local jobId = redis.call("HGET", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId
 if not jobId then
 	local message = "Requeuing but no jobId for computeId=" .. tostring(computeJobId)
 	$SNIPPET_ERROR
-end
+else
+	if redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId) ~= computeJobId then
+		local message = "job (" .. jobId .. ") has a new computeJobId(" .. computeJobId .. "), this job has already been requeued"
+		$SNIPPET_ERROR
+	else
+		local jobStatus = redis.call("HGET", "$REDIS_KEY_STATUS", jobId)
+		if jobStatus == "${JobStatus.Finished}" then
+			local message = "job (" .. jobId .. ") has already finished, cannot be requeued"
+			$SNIPPET_ERROR
+		else
+			local message = "Requeuing job=" .. jobId .. " computeJobId=" .. computeJobId
+			$SNIPPET_INFO
 
-local message = "Requeuing job=" .. jobId .. " computeJobId=" .. computeJobId
-$SNIPPET_INFO
+			--Push the jobId back on the pending queue, but at the FRONT of the queue,
+			--not the back since this is a reqeue, and should be prioritized before currend pending jobs
+			redis.call("RPUSH", "$REDIS_KEY_PENDING", jobId)
+			--Delete from the working set
+			redis.call("ZREM", "$REDIS_KEY_WORKING", jobId)
+			--Update the stats object with this change
+			$SNIPPET_GET_STATSOBJECT
+			stats[${Stats.INDEX_REQUEUE_COUNT}] = stats[${Stats.INDEX_REQUEUE_COUNT}] + 1
+			stats[${Stats.INDEX_LAST_REQUEUE_TIME}] = time
+			redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(stats))
+			--Remove the computeJobId, so that if it comes back, there will be no job matching this version
+			--Remove the job from the pool?
+			redis.call("HDEL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
+			redis.call("HDEL", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
+			${InstancePool.SNIPPET_REMOVE_JOB}
 
---Push the jobId back on the pending queue, but at the FRONT of the queue,
---not the back since this is a reqeue, and should be prioritized before currend pending jobs
-redis.call("RPUSH", "$REDIS_KEY_PENDING", jobId)
---Delete from the working set
-redis.call("ZREM", "$REDIS_KEY_WORKING", jobId)
---Update the stats object with this change
-$SNIPPET_GET_STATSOBJECT
-stats[${Stats.INDEX_REQUEUE_COUNT}] = stats[${Stats.INDEX_REQUEUE_COUNT}] + 1
-stats[${Stats.INDEX_LAST_REQUEUE_TIME}] = time
-redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(stats))
---Remove the computeJobId, so that if it comes back, there will be no job matching this version
---Remove the job from the pool?
-redis.call("HDEL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-redis.call("HDEL", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
-${InstancePool.SNIPPET_REMOVE_JOB}
-
-local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
-local jobStatus = "${JobStatus.Pending}"
-$SNIPPET_SET_JOB_STATUS
-';
+			local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
+			local jobStatus = "${JobStatus.Pending}"
+			$SNIPPET_SET_JOB_STATUS
+			end
+		end
+	end
+	';
 
 
-	/* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
-	static var scripts :Map<String, String> = [
-		SCRIPT_ENQUEUE =>
-'
-local job = cjson.decode(ARGV[1])
+		/* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
+		static var scripts :Map<String, String> = [
+			SCRIPT_ENQUEUE =>
+	'
+	local job = cjson.decode(ARGV[1])
+	local time = tonumber(ARGV[2])
+	local jobId = job.id
+
+	redis.call("HSET", "$REDIS_KEY_VALUES", jobId, cjson.encode(job.item))
+	redis.call("HSET", "$REDIS_KEY_PARAMETERS", jobId, cjson.encode(job.parameters))
+	redis.call("LPUSH", "$REDIS_KEY_PENDING", jobId)
+	redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(job.stats))
+
+	local statusBlob = {jobId=jobId,JobStatus="${JobStatus.Pending}",JobFinishedStatus="${JobFinishedStatus.None}"}
+	$SNIPPET_SET_JOB_STATUS_BLOB
+	$SNIPPET_PROCESS_PENDING
+	',
+
+	/**
+	 * Takes jobs off the queue if it can match them with slots in the compute
+	 * pool. If they are taken off the queue, a {jobId:jobId, workerId:workderId}
+	 * object is posted to a list that is then subsequently consumed and the
+	 * actual job started.
+	 */
+			SCRIPT_PROCESS_PENDING =>
+	'
+	local time = tonumber(ARGV[1])
+
+	$SNIPPET_PROCESS_PENDING
+
+	return cjson.encode({assigned=jobsAssigned, remaining=jobsWithoutWorkers})
+	',
+			SCRIPT_REQUEUE =>
+	'
+local computeJobId = ARGV[1]
 local time = tonumber(ARGV[2])
-local jobId = job.id
-
-redis.call("HSET", "$REDIS_KEY_VALUES", jobId, cjson.encode(job.item))
-redis.call("HSET", "$REDIS_KEY_PARAMETERS", jobId, cjson.encode(job.parameters))
-redis.call("LPUSH", "$REDIS_KEY_PENDING", jobId)
-redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(job.stats))
-
-local statusBlob = {jobId=jobId,JobStatus="${JobStatus.Pending}",JobFinishedStatus="${JobFinishedStatus.None}"}
-$SNIPPET_SET_JOB_STATUS_BLOB
-$SNIPPET_PROCESS_PENDING
-',
-
-/**
- * Takes jobs off the queue if it can match them with slots in the compute
- * pool. If they are taken off the queue, a {jobId:jobId, workerId:workderId}
- * object is posted to a list that is then subsequently consumed and the
- * actual job started.
- */
-		SCRIPT_PROCESS_PENDING =>
-'
-local time = tonumber(ARGV[1])
-
-$SNIPPET_PROCESS_PENDING
-
-return cjson.encode({assigned=jobsAssigned, remaining=jobsWithoutWorkers})
-',
-		SCRIPT_REQUEUE =>
-'
-local jobId = ARGV[1]
-local computeJobId = ARGV[2]
-local time = tonumber(ARGV[3])
-
-if not jobId and not computeJobId then
-	return {err="Must supply either a jobId or a computeId"}
-end
 
 if not computeJobId then
-	computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
+	return {err="Must provide computeJobId"}
 end
 
-if not jobId then
-	jobId = redis.call("HGET", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
-end
-
-if not jobId then
-	local message = "Requeuing but no jobId for computeId=" .. tostring(computeJobId)
-	$SNIPPET_ERROR
-	return {err="No jobId for computeId=" .. tostring(computeJobId)}
-end
-
-local message = "Requeuing job=" .. jobId .. " computeJobId=" .. computeJobId
-$SNIPPET_INFO
-
-
---Push the jobId back on the pending queue, but at the FRONT of the queue,
---not the back since this is a reqeue, and should be prioritized before currend pending jobs
-redis.call("RPUSH", "$REDIS_KEY_PENDING", jobId)
---Delete from the working set
-redis.call("ZREM", "$REDIS_KEY_WORKING", jobId)
---Update the stats object with this change
-$SNIPPET_GET_STATSOBJECT
-stats[${Stats.INDEX_REQUEUE_COUNT}] = stats[${Stats.INDEX_REQUEUE_COUNT}] + 1
-stats[${Stats.INDEX_LAST_REQUEUE_TIME}] = time
-redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(stats))
---Remove the computeJobId, so that if it comes back, there will be no job matching this version
---Remove the job from the pool?
-if computeJobId then
-	--local computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-	redis.call("HDEL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-	redis.call("HDEL", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
-
-	${InstancePool.SNIPPET_REMOVE_JOB}
-end
-
-local jobStatus = "${JobStatus.Pending}"
-$SNIPPET_SET_JOB_STATUS
+$SNIPPET_REQUEUE_COMPUTE_JOB
 
 $SNIPPET_PROCESS_PENDING
 
@@ -1234,7 +1217,9 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 			return {};
 		} else {
 			var results :TypedDynamicObject<JobFinishedStatus,Array<JobId>> = {};
-			for (jobId in this.jobStatus.keys()) {
+			var jobids = this.jobStatus.keys();
+			jobids.sort(Reflect.compare);
+			for (jobId in jobids) {
 				var statusUpdate :JobStatusUpdate = this.jobStatus[jobId];
 				if (statusUpdate.JobStatus == JobStatus.Finished) {
 					var finishedStatus :String = statusUpdate.JobFinishedStatus;

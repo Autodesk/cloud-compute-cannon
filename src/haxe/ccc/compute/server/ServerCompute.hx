@@ -279,11 +279,15 @@ class ServerCompute
 			})
 			//Get public/private network addresses
 			.pipe(function(_) {
+				var redis :RedisClient = injector.getValue(RedisClient);
+				// ServerCommands.status(redis)
+				// 	.then(function(blob) {
+				// 		traceGreen(Json.stringify(blob, null, '\t'));
+				// 	});
 				return Promise.promise(true)
 					.pipe(function(_) {
 						return WorkerProviderTools.getPrivateHostName(config.providers[0])
 							.then(function(hostname) {
-								trace('hostname=${hostname}');
 								Constants.SERVER_HOSTNAME_PRIVATE = hostname;
 								Log.debug({server_status:status, SERVER_HOSTNAME_PRIVATE:Constants.SERVER_HOSTNAME_PRIVATE});
 								return true;
@@ -292,7 +296,6 @@ class ServerCompute
 					.pipe(function(_) {
 						return WorkerProviderTools.getPublicHostName(config.providers[0])
 							.then(function(hostname) {
-								trace('hostname=${hostname}');
 								Constants.SERVER_HOSTNAME_PUBLIC = hostname;
 								Log.debug({server_status:status, SERVER_HOSTNAME_PUBLIC:Constants.SERVER_HOSTNAME_PUBLIC});
 								return true;
@@ -306,6 +309,7 @@ class ServerCompute
 				//Create services
 				workerProviders = config.providers.map(WorkerProviderTools.getProvider);
 				WorkerProvider = workerProviders[0];
+				injector.map(ccc.compute.workers.WorkerProvider).toValue(WorkerProvider);
 
 				//The queue manager
 				var schedulingService = new ccc.compute.ServiceBatchCompute();
@@ -353,7 +357,7 @@ class ServerCompute
 
 				//Run internal tests
 				Log.debug('Running server functional tests');
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?core=true&worker=false')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);

@@ -28,7 +28,6 @@ class MockWorkerProvider extends WorkerProviderBase
 
 	public function new(?config :ServiceConfigurationWorkerProvider)
 	{
-		this.id = ID;
 		if (config == null) {
 			config = {
 				type: ServiceWorkerProviderType.mock,
@@ -38,6 +37,7 @@ class MockWorkerProvider extends WorkerProviderBase
 				billingIncrement: 0
 			};
 		}
+		this.id = config.type;
 		super(config);
 	}
 

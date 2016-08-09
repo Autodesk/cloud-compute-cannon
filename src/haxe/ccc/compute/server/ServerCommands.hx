@@ -36,6 +36,15 @@ using DateTools;
  */
 class ServerCommands
 {
+	/** For debugging */
+	public static function traceStatus(redis :RedisClient) :Promise<Bool>
+	{
+		return status(redis)
+			.then(function(statusBlob) {
+				traceMagenta(Json.stringify(statusBlob, null, "  "));
+				return true;
+			});
+	}
 	public static function status(redis :RedisClient) :Promise<SystemStatus>
 	{
 		return InstancePool.toJson(redis)
@@ -63,9 +72,8 @@ class ServerCommands
 									cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
 								};
 							}),
-							// jobsJson:jobsJson,
-							// workerJson: workerJson,
-							finished: jobsJson.getFinishedAndStatus()
+							finished: jobsJson.getFinishedAndStatus(),
+							workerJson: workerJson
 						};
 					});
 			});
@@ -280,6 +288,7 @@ class ServerCommands
 	{
 		return ComputeQueue.getJob(redis, jobId)
 			.pipe(function(jobdef :DockerJobDefinition) {
+				traceCyan(jobdef);
 				if (jobdef == null) {
 					return Promise.promise('unknown_job');
 				} else {

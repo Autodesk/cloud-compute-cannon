@@ -38,7 +38,7 @@ class PollStreams
 			if (ended) {
 				return;
 			}
-			promhx.RetryPromise.poll(connection, type, maxRetries, doublingRetryIntervalMs, logPrefix, supressLogs)
+			RetryPromise.poll(connection, type, maxRetries, doublingRetryIntervalMs, logPrefix, supressLogs)
 				.then(function(val) {
 					if (!ended) {
 						stream.resolve(val);

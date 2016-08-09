@@ -336,8 +336,8 @@ typedef JobResult = {
 
 typedef SystemStatus = {
 	var pending :Array<JobId>;
-	// var working :TypedDynamicObject<JobId,String>;
-	// var workers :TypedDynamicObject<MachineId,>;
+	var workers :Array<{id :MachineId, jobs:Array<{id:JobId,enqueued:String,started:String,duration:String}>,cpus:String}>;
+	var finished :TypedDynamicObject<JobFinishedStatus,Array<JobId>>;
 }
 
 /**

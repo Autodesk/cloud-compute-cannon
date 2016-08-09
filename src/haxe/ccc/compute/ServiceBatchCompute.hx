@@ -54,6 +54,15 @@ package ccc.compute;
 class ServiceBatchCompute
 {
 	@rpc({
+		alias:'nudge',
+		doc:'Force the model to check pending jobs'
+	})
+	public function nudge() :Promise<ProcessResult>
+	{
+		return ComputeQueue.processPending(_redis);
+	}
+
+	@rpc({
 		alias:'status',
 		doc:'Get the running status of the system: pending jobs, running jobs, worker machines'
 	})

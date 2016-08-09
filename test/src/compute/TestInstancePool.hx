@@ -7,6 +7,10 @@ import promhx.Promise;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
+import ccc.compute.server.ServerCommands;
+import ccc.compute.workers.WorkerManager;
+import ccc.compute.workers.WorkerProvider;
+import ccc.compute.execution.Jobs;
 
 import t9.abstracts.time.*;
 import t9.abstracts.net.*;
@@ -17,6 +21,86 @@ using ccc.compute.InstancePool;
 class TestInstancePool extends TestComputeBase
 {
 	public function new() {}
+
+	public function testWorkerFailureCycle()
+	{
+		var providerConfig :ServiceConfigurationWorkerProvider = {
+			type: ServiceWorkerProviderType.mock,
+			maxWorkers: 3,
+			minWorkers: 1,
+			priority: 2,
+			billingIncrement: new Minutes(0)
+		}
+
+		var redis = _redis;
+		Assert.notNull(redis);
+
+		var jobId :JobId = 'jobIsFOOBAR';
+		var job :QueueJob<MockJobBlob> = {
+			id: jobId,
+			parameters: {cpus:1, maxDuration:100000},
+			item: {stuff: jobId, jobId: jobId}
+		};
+
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return MockTools.createMockStack(_injector, providerConfig)
+					.then(function(stack) {
+						_stack = stack;
+						var jobs :MockJobs = cast _stack.jobs;
+						jobs.jobDuration = 2000;
+						return true;
+					});
+			})
+			.pipe(function(_) {
+				return InstancePool.registerComputePool(redis, providerConfig.type, providerConfig.priority, providerConfig.maxWorkers, providerConfig.minWorkers, providerConfig.billingIncrement);
+			})
+			.thenWait(100)
+			.pipe(function(_) {
+				return _stack.provider.whenFinishedCurrentChanges();
+			})
+			.pipe(function(_) {
+				//Start a long running job
+				return ComputeQueue.enqueue(redis, job);
+			})
+			// .pipe(function(_) {
+			// 	return ServerCommands.traceStatus(redis);
+			// })
+			.thenWait(50)
+			// .pipe(function(_) {
+			// 	return ServerCommands.traceStatus(redis);
+			// })
+			// .pipe(function(_) {
+			// 	return ComputeQueue.toJson(redis)
+			// 		.then(function(blob) {
+			// 			trace('blob=${Json.stringify(blob, null, "  ")}');
+			// 			return true;
+			// 		});
+			// })
+			.pipe(function(_) {
+				//Get the machine associated with the job and fail it
+				return ComputeQueue.getWorkerIdForJob(redis, job.id)
+					.pipe(function(workerId) {
+						assertNotNull(workerId);
+						trace('workerId=$workerId setting failed');
+						return InstancePool.workerFailed(redis, workerId)
+							.thenWait(50)
+							.pipe(function(_) {
+								return InstancePool.toRawJson(redis);
+							})
+							.then(function(blob) {
+								var blobString = Json.stringify(blob, null, "\t");
+								trace('blobString=${blobString}');
+								assertEquals(blobString.indexOf(workerId), -1);
+								return true;
+							});
+					});
+			})
+			// .pipe(function(_) {
+			// 	return ServerCommands.traceStatus(redis);
+			// })
+			.thenTrue();
+	}
 
 	public function testRegistration()
 	{
