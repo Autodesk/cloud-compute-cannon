@@ -4,6 +4,7 @@ import haxe.Json;
 
 import js.Node;
 import js.npm.RedisClient;
+import js.npm.docker.Docker;
 
 import ccc.compute.InstancePool;
 
@@ -12,6 +13,7 @@ import promhx.Promise;
 import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.CallbackPromise;
+import promhx.DockerPromises;
 
 import t9.abstracts.net.*;
 import t9.abstracts.time.*;
@@ -83,6 +85,45 @@ class WorkerProviderBase
 							}
 						}
 						return true;
+					});
+			})
+			//Check all workers. No retrying allowed, if a worker does not
+			//respond immediately, remove it
+			.pipe(function(_) {
+				log.debug({f:'postInjection', log:'check all existing workers id=$id'});
+				return InstancePool.getInstancesInPool(_redis, id)
+					.pipe(function(workerStatus :Array<StatusResult>) {
+						log.debug('workerStatus=${workerStatus}');
+						var promises = [];
+						for (workerStatus in workerStatus) {
+							switch(workerStatus.status) {
+								case Available,Deferred:
+									log.debug('checking ${workerStatus.id}');
+									promises.push(
+										InstancePool.getWorker(_redis, workerStatus.id)
+											.pipe(function(workerDef) {
+												return DockerPromises.ping(new Docker(workerDef.docker));
+											})
+											.then(function(ok) {
+												//Instance is ok
+												log.debug('${workerStatus.id} docker ping OK');
+												return false;
+											})
+											.errorPipe(function(err) {
+												log.warning('${workerStatus.id} docker ping FAILED');
+												return InstancePool.workerFailed(_redis, workerStatus.id)
+													.errorPipe(function(err) {
+														log.error({message: 'Failed to fail worker that we cannot reach', error:err});
+														return Promise.promise(true);
+													});
+											}));
+								case WaitingForRemoval,Removing,Failed://Ignored
+							}
+						}
+
+
+						return Promise.whenAll(promises)
+							.thenTrue();
 					});
 			})
 			.pipe(function(_) {

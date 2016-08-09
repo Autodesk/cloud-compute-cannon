@@ -191,19 +191,29 @@ To run individual tests:
 
 1) Set up an instance on e.g. AWS. Map the IP address to an entry in your ~/.ssh/config for passwordless operations. We'll call our alias "dev".
 
-2) Create your serverconfig.yml (see above).
+2) Create your server configuration file (default name="ccc.yml", see above).
 
 3)
 
-  ./bin/reloading-stack-deploy <ssh alias (dev)> <path to serverconfig.yml>
+  ./bin/reloading-stack-deploy <ssh alias (dev)> <path to ccc.yml>
 
 4) On server compiles
 
-  ./bin/reloading-stack-sync <ssh alias (dev)> <path to serverconfig.yml>
+  ./bin/reloading-stack-sync <ssh alias (dev)> <path to ccc.yml>
 
 The server code and config will be copied over and the server restarted. Restaring means running the tests.
 
 Optionally create an .env file in the root of the repo, this will be consumed by the reloading server.
+
+### Developing locally and having compiled server builds automatically uploaded to a remote server and restarted
+
+1) Set up an instance on e.g. AWS. Map the IP address to an entry in your ~/.ssh/config for passwordless operations. We'll call our alias "dev".
+
+2)
+
+  ./bin/run-stack-remote-dev <host> <ccc.yml>
+
+3) Code and build! Updates are automatically pushed to the remote server!
 
 
 ## Contact

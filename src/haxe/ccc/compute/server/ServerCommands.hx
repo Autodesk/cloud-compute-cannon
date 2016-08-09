@@ -47,35 +47,56 @@ class ServerCommands
 	}
 	public static function status(redis :RedisClient) :Promise<SystemStatus>
 	{
-		return InstancePool.toJson(redis)
-			.pipe(function(workerJson :InstancePoolJson) {
-				return ComputeQueue.toJson(redis)
-					.then(function(jobsJson :QueueJson) {
-						var now = Date.now();
-						return {
-							pending: jobsJson.pending,
-							workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
-								return {
-									id :m.id,
-									jobs: m.jobs != null ? m.jobs.map(function(computeJobId) {
-										var jobId = jobsJson.getJobId(computeJobId);
-										var stats = jobsJson.getStats(jobId);
-										var enqueued = Date.fromTime(stats.enqueueTime);
-										var dequeued = Date.fromTime(stats.lastDequeueTime);
-										return {
-											id: jobId,
-											enqueued: enqueued.toString(),
-											started: dequeued.toString(),
-											duration: DateFormatTools.getShortStringOfDateDiff(dequeued, now)
-										}
-									}) : [],
-									cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
-								};
+		var workerJson :InstancePoolJson = null;
+		var jobsJson :QueueJson = null;
+		var workerJsonRaw :Dynamic = null;
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return Promise.whenAll(
+					[
+						InstancePool.toJson(redis)
+							.then(function(out) {
+								workerJson = out;
+								return true;
 							}),
-							finished: jobsJson.getFinishedAndStatus(),
-							workerJson: workerJson
+						ComputeQueue.toJson(redis)
+							.then(function(out) {
+								jobsJson = out;
+								return true;
+							}),
+						InstancePool.toRawJson(redis)
+							.then(function(out) {
+								workerJsonRaw = out;
+								return true;
+							})
+					]);
+			})
+			.then(function(_) {
+				var now = Date.now();
+				return {
+					pending: jobsJson.pending,
+					workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
+						return {
+							id :m.id,
+							jobs: m.jobs != null ? m.jobs.map(function(computeJobId) {
+								var jobId = jobsJson.getJobId(computeJobId);
+								var stats = jobsJson.getStats(jobId);
+								var enqueued = Date.fromTime(stats.enqueueTime);
+								var dequeued = Date.fromTime(stats.lastDequeueTime);
+								return {
+									id: jobId,
+									enqueued: enqueued.toString(),
+									started: dequeued.toString(),
+									duration: DateFormatTools.getShortStringOfDateDiff(dequeued, now)
+								}
+							}) : [],
+							cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
 						};
-					});
+					}),
+					finished: jobsJson.getFinishedAndStatus(),
+					workerJson: workerJson,
+					workerJsonRaw: workerJsonRaw
+				};
 			});
 	}
 

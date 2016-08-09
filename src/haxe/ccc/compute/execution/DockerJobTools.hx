@@ -301,7 +301,6 @@ class DockerJobTools
 										}
 										return data;
 									});
-								passThrough.setEncoding('utf8');
 								stream.pipe(passThrough);
 								return fs.writeFile(STDOUT_FILE, passThrough)
 									.pipe(function(_) {
@@ -335,7 +334,6 @@ class DockerJobTools
 										}
 										return data;
 									});
-								passThrough.setEncoding('utf8');
 								stream.pipe(passThrough);
 								return fs.writeFile(STDERR_FILE, passThrough)
 									.pipe(function(_) {

@@ -429,7 +429,7 @@ class ClientCommands
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
-			log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
+			log('No server configuration @${path.getServerYamlConfigPath()}. Nothing to shut down.');
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
@@ -463,7 +463,7 @@ class ClientCommands
 				.then(function(_) {
 					trace('deleting connection file');
 					deleteServerConnection(path);
-					FsExtended.deleteDirSync(path.getServerJsonConfigPathDir());
+					FsExtended.deleteDirSync(path.getServerYamlConfigPathDir());
 					return CLIResult.Success;
 				});
 		} else {
@@ -488,7 +488,7 @@ class ClientCommands
 	{
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
-			log('No server configuration @${path.getServerJsonConfigPath()}. Nothing to shut down.');
+			log('No server configuration @${path.getServerYamlConfigPath()}. Nothing to shut down.');
 			return Promise.promise(CLIResult.Success);
 		}
 		var serverBlob :ServerConnectionBlob = readServerConnection(path);
@@ -523,7 +523,7 @@ class ClientCommands
 		}
 
 		if (!isServerConnection(path)) {
-			log('No existing installation @${path.getServerJsonConfigPath()}. Have you run "$CLI_COMMAND install"?');
+			log('No existing installation @${path.getServerYamlConfigPath()}. Have you run "$CLI_COMMAND install"?');
 			return Promise.promise(CLIResult.PrintHelpExit1);
 		}
 
@@ -636,7 +636,7 @@ class ClientCommands
 			}
 
 			if (isServerConnection(path)) {
-				log('Existing installation @${path.getServerJsonConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
+				log('Existing installation @${path.getServerYamlConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
 				return Promise.promise(CLIResult.PrintHelpExit1);
 			}
 
@@ -702,7 +702,7 @@ class ClientCommands
 						return ProviderTools.createServerInstance(providerConfig)
 							.then(function(instanceDef) {
 								var serverBlob :ServerConnectionBlob = {
-									host: new Host(new HostName(instanceDef.ssh.host), new Port(SERVER_DEFAULT_PORT)),
+									host: new Host(new HostName(instanceDef.hostPublic), new Port(SERVER_DEFAULT_PORT)),
 									server: instanceDef,
 									provider: serverConfig
 								};
@@ -822,7 +822,7 @@ class ClientCommands
 
 		var result = {
 			config: serverBlob,
-			path: configPath != null ? configPath.getServerJsonConfigPath() : null
+			path: configPath != null ? configPath.getServerYamlConfigPath() : null
 		}
 		if (json) {
 			log(jsonString(result));
@@ -850,7 +850,7 @@ class ClientCommands
 		}
 		return ProviderTools.serverCheck(connection)
 			.then(function(result) {
-				result.connection_file_path = configPath.getServerJsonConfigPath();
+				result.connection_file_path = configPath.getServerYamlConfigPath();
 				return result;
 			})
 			.pipe(function(result) {

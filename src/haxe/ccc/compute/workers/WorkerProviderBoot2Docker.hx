@@ -126,7 +126,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		//It does introduce some awkwardness regarding figuring out the correct
 		//ServiceStorage for the 'worker'.
 		var workerStorage = ServiceStorageLocalFileSystem.getService(_localJobData);
-		_injector.map(ServiceStorage, BOOT2DOCKER_PROVIDER_STORAGE_PATH).toValue(workerStorage);
+		_injector.map(ServiceStorage, SERVER_MOUNTED_CONFIG_FILE_NAME).toValue(workerStorage);
 		return super.postInjection();
 	}
 

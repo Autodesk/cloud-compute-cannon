@@ -12,7 +12,7 @@ build
 node_modules
 npm-debug.log
 platform
-serverconfig.yml
+ccc.yml
 tmp
 data/computejobs/[a-zA-Z0-9_]*
 data/registry/[a-zA-Z0-9_]*

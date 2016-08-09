@@ -2,8 +2,8 @@ package ccc.compute.client.cli;
 
 import ccc.compute.server.ProviderTools;
 import ccc.compute.server.ProviderTools.*;
+import ccc.compute.InitConfigTools.*;
 
-import haxe.Json;
 
 import js.Node;
 import js.node.Fs;
@@ -12,12 +12,9 @@ import js.node.Path;
 import js.npm.fsextended.FsExtended;
 import js.npm.ssh2.Ssh;
 
-import promhx.Promise;
 import promhx.RequestPromises;
 
-import t9.abstracts.net.*;
-
-using StringTools;
+import yaml.Yaml;
 
 /**
  * CLI tools for client/server/proxies.
@@ -67,7 +64,7 @@ class CliTools
 		if (!pathString.startsWith(ROOT)) {
 			path = Path.join(Node.process.cwd(), pathString);
 		}
-		if (FsExtended.existsSync(path.getServerJsonConfigPath())) {
+		if (FsExtended.existsSync(path.getServerYamlConfigPath())) {
 			return path;
 		} else {
 			if (path == ROOT) {
@@ -89,7 +86,8 @@ class CliTools
 	 */
 	public static function readServerConnection(configPath :CLIServerPathRoot) :ServerConnectionBlob
 	{
-		var serverDef :ServerConnectionBlob = Json.parse(FsExtended.readFileSync(configPath.getServerJsonConfigPath(), {}));
+		var serverDefString :String = FsExtended.readFileSync(configPath.getServerYamlConfigPath(), {encoding:'utf8'});
+		var serverDef :ServerConnectionBlob = Yaml.parse(serverDefString, DEFAULT_YAML_OPTIONS);
 		if (serverDef.server == null) {
 			var hostName = serverDef.host.getHostname();
 			var sshConfig = CliTools.getSSHConfigHostData(hostName);
@@ -109,7 +107,7 @@ class CliTools
 
 	public static function isServerConnection(configPath :CLIServerPathRoot) :Bool
 	{
-		return FsExtended.existsSync(configPath.getServerJsonConfigPath());
+		return FsExtended.existsSync(configPath.getServerYamlConfigPath());
 	}
 
 	public static function writeServerConnection(config :ServerConnectionBlob, ?path :CLIServerPathRoot)
@@ -124,14 +122,14 @@ class CliTools
 			config.server = null;
 		}
 
-		var configString = Json.stringify(config, null, '\t');
-		FsExtended.ensureDirSync(path.getServerJsonConfigPathDir());
-		FsExtended.writeFileSync(path.getServerJsonConfigPath(), configString);
+		var configString = Yaml.render(config);
+		FsExtended.ensureDirSync(path.getServerYamlConfigPathDir());
+		FsExtended.writeFileSync(path.getServerYamlConfigPath(), configString);
 	}
 
 	public static function deleteServerConnection(path :CLIServerPathRoot)
 	{
-		FsExtended.unlinkSync(path.getServerJsonConfigPath());
+		FsExtended.unlinkSync(path.getServerYamlConfigPath());
 	}
 
 	public static function hasServerHostInCLI() :Bool

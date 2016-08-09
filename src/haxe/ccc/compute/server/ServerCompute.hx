@@ -95,6 +95,27 @@ class ServerCompute
 			Node.process.exit(1);
 		});
 
+		//Sanity checks
+		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
+			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
+			js.Node.process.exit(-1);
+		}
+
+		var config :ServiceConfiguration = InitConfigTools.getConfig();
+		Assert.notNull(config);
+		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
+		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
+
+		var status = ServerStatus.Booting_1_4;
+		var injector = new Injector();
+		injector.map(Injector).toValue(injector); //Map itself
+
+		for (key in Reflect.fields(config)) {
+			if (key != 'storage' && key != 'providers') {
+				Reflect.setField(env, key, Reflect.field(config, key));
+			}
+		}
+
 		if (Reflect.field(env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
 			Logger.log.level(100);
@@ -118,21 +139,6 @@ class ServerCompute
 		Log.info('info');
 		Log.warn({log_check:'warn'});
 		Log.error({log_check:'error'});
-
-		//Sanity checks
-		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
-			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
-			js.Node.process.exit(-1);
-		}
-
-		var config :ServiceConfiguration = InitConfigTools.getConfig();
-		Assert.notNull(config);
-		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE;
-		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
-
-		var status = ServerStatus.Booting_1_4;
-		var injector = new Injector();
-		injector.map(Injector).toValue(injector); //Map itself
 
 		injector.map('ServiceConfiguration').toValue(config);
 

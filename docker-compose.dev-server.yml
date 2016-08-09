@@ -1,11 +1,11 @@
 compute:
   # command: ["node", "src/js/server-reloading.js"]
-  command: ["nodemon", "-w", "build/", "-w", "serverconfig.yml", "build/cloud-compute-cannon-server.js"]
+  command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/cloud-compute-cannon-server.js"]
   volumes:
     - ./:/config
     - ./build:/app/build
-  # environment:
-  #   LOG_LEVEL: "40"
+  environment:
+    LOG_LEVEL: "${LOG_LEVEL}"
   log_driver: "json-file"
   log_opt: {}
 
