@@ -110,7 +110,7 @@ class WorkerProviderBase
 												return false;
 											})
 											.errorPipe(function(err) {
-												log.warning('${workerStatus.id} docker ping FAILED');
+												log.warn('${workerStatus.id} docker ping FAILED');
 												return InstancePool.workerFailed(_redis, workerStatus.id)
 													.errorPipe(function(err) {
 														log.error({message: 'Failed to fail worker that we cannot reach', error:err});
