@@ -371,17 +371,28 @@ class BatchComputeDocker
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
 				//The job is now finished. Clean up the temp worker storage,
 				// out of the promise chain (for speed)
-				inputStorageWorker.deleteDir()
-					.pipe(function(_) {
-						log.info('Deleted ${inputStorageWorker.toString()}');
-						return outputStorageWorker.deleteDir();
-					})
-					.then(function(_) {
-						log.info('Deleted ${outputStorageWorker.toString()}');
-					})
-					.catchError(function(err) {
-						log.error('Problem deleting ${outputStorageWorker.toString()} or ${inputStorageWorker.toString()} err=${err}');
-					});
+				Promise.whenAll(
+					[
+						inputStorageWorker.deleteDir()
+							.then(function(_) {
+								log.info('Deleted ${inputStorageWorker.toString()}');
+								return true;
+							})
+							.errorPipe(function(err) {
+								log.error('Problem deleting ${inputStorageWorker.toString()} err=${err}');
+								return Promise.promise(false);
+							}),
+						outputStorageWorker.deleteDir()
+							.then(function(_) {
+								log.info('Deleted ${outputStorageWorker.toString()}');
+								return true;
+							})
+							.errorPipe(function(err) {
+								log.error('Problem deleting ${outputStorageWorker.toString()} err=${err}');
+								return Promise.promise(false);
+							})
+
+					]);
 				return jobResult;
 			});
 

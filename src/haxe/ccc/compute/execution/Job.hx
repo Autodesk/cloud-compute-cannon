@@ -246,7 +246,6 @@ class Job
 				rootPath: WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
 				credentials: _job.worker.ssh
 			};
-			traceGreen(_job);
 			StorageTools.getStorage(workerStorageConfig);
 		}
 		return BatchComputeDocker.executeJob(_redis, _job, _fs, workerStorage, log);
@@ -295,22 +294,20 @@ class Job
 										});
 								}
 							}
+
 							//Check if we can reach the worker. If not, then the
 							//worker died at an inconvenient time, so we requeue
 							//this job
-							var docker = new Docker(_job.worker.docker);
-							DockerPromises.ping(docker)
-								.then(function(_) {
-									writeFailure();
-								})
-								.catchError(function(pingErr) {
+							cloud.MachineMonitor.checkMachine(_job.worker.docker, _job.worker.ssh)
+								.then(function(ok) {
 									if (_redis != null) {
-										log.warn('Job failed but cannot reach worker, so requeuing job');
-										ComputeQueue.requeueJob(_redis, _job.computeJobId);
-										dispose();
-									} else {
-										log.error('Job failed but in a really bad state: failed, but could not reach worker, but also is disposed err=$err');
-										writeFailure();
+										if (ok) {
+											writeFailure();
+										} else {
+											log.warn('Job failed but worker failed check, so requeuing job');
+											ComputeQueue.requeueJob(_redis, _job.computeJobId);
+											dispose();
+										}
 									}
 								});
 						});

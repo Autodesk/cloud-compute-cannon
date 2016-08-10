@@ -73,7 +73,7 @@ class ServerCommands
 			})
 			.then(function(_) {
 				var now = Date.now();
-				return {
+				var result = {
 					pending: jobsJson.pending,
 					workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
 						return {
@@ -94,9 +94,39 @@ class ServerCommands
 						};
 					}),
 					finished: jobsJson.getFinishedAndStatus(),
-					workerJson: workerJson,
-					workerJsonRaw: workerJsonRaw
+					// workerJson: workerJson,
+					// workerJsonRaw: workerJsonRaw
 				};
+				return result;
+			})
+			.pipe(function(result) {
+				var promises = workerJson.getMachines().map(
+					function(m) {
+						return InstancePool.getWorker(redis, m.id)
+							.pipe(function(workerDef) {
+								if (workerDef.ssh != null) {
+									return cloud.MachineMonitor.getDiskUsage(workerDef.ssh)
+										.then(function(usage) {
+											result.workers.iter(function(blob) {
+												if (blob.id == m.id) {
+													Reflect.setField(blob, 'disk', usage);
+												}
+											});
+											return true;
+										})
+										.errorPipe(function(err) {
+											Log.error({error:err, message:'Failed to get disk space for worker=${m.id}'});
+											return Promise.promise(false);
+										});
+								} else {
+									return Promise.promise(true);
+								}
+							});
+					});
+				return Promise.whenAll(promises)
+					.then(function(_) {
+						return result;
+					});
 			});
 	}
 

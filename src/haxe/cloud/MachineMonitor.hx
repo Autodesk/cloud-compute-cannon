@@ -45,6 +45,67 @@ enum MachineConnectionStatus {
 
 class MachineMonitor
 {
+	public static function checkMachine(docker :DockerConnectionOpts, ssh :ConnectOptions) :Promise<Bool>
+	{
+		return DockerPromises.ping(new Docker(docker))
+			.pipe(function(ok) {
+				if (ssh != null) {
+					return checkDiskSpace(ssh)
+						.errorPipe(function(err) {
+							return Promise.promise(false);
+						});
+				} else {
+					return Promise.promise(true);
+				}
+			})
+			.errorPipe(function(err) {
+				return Promise.promise(false);
+			});
+	}
+
+	public static function checkDocker(docker :Docker) :Promise<Bool>
+	{
+		return DockerPromises.ping(docker)
+			.then(function(ok) {
+				return true;
+			})
+			.errorPipe(function(err) {
+				return Promise.promise(false);
+			});
+	}
+
+	public static function getDiskUsage(credentials :ConnectOptions) :Promise<Float>
+	{
+		var diskUse = ~/Filesystem.*Mounted on\n.+\s+.+\s+.+\s+([0-9]+)%.*/;
+		//   Filesystem      Size  Used Avail Use% Mounted on
+		//   /dev/xvda9      5.5G  1.3G  4.0G  24% /
+		return SshTools.execute(credentials, 'df -h /var/lib/docker/', 1)
+			.then(function(out) {
+				if (out.code == 0 && diskUse.match(out.stdout)) {
+					return Std.parseFloat(diskUse.matched(1)) / 100.0;
+				} else {
+					throw 'Non-zero exit code: $out';
+				}
+			});
+	}
+
+	public static function checkDiskSpace(credentials :ConnectOptions, ?maxUsageCapacity :Float = 0.85) :Promise<Bool>
+	{
+		Assert.that(maxUsageCapacity != null);
+		Assert.that(maxUsageCapacity > 0.0);
+		Assert.that(maxUsageCapacity <= 1.0);
+		var diskUse = ~/Filesystem.*Mounted on\n.+\s+.+\s+.+\s+([0-9]+)%.*/;
+		//   Filesystem      Size  Used Avail Use% Mounted on
+		//   /dev/xvda9      5.5G  1.3G  4.0G  24% /
+		return getDiskUsage(credentials)
+			.then(function(fractionUsed) {
+				return fractionUsed <= maxUsageCapacity;
+			})
+			.errorPipe(function(err) {
+				return Promise.promise(false);
+			});
+	}
+
 	public static function createDockerPoll(credentials :DockerConnectionOpts, pollType :PollType, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
 	{
 		var docker = new Docker(credentials);
