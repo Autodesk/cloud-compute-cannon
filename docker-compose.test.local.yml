@@ -5,6 +5,9 @@ compute:
     DOCKER: "true"
     VAGRANT: "false"
 
+fluentd:
+  log_driver: "none"
+
 redis:
   log_driver: "none"
 

@@ -4,7 +4,7 @@ import haxe.Json;
 
 import js.node.Fs;
 import js.node.stream.Readable;
-import js.npm.Ssh;
+import js.npm.ssh2.Ssh;
 
 import js.node.stream.Readable;
 import js.node.stream.Writable;
@@ -201,7 +201,7 @@ class SshTools
 					}, 0);
 				});
 
-				var base64Converter = js.npm.Base64Stream.decode();
+				var base64Converter = js.npm.base64stream.Base64Stream.decode();
 
 				//Pass errors along to the downstream stream.
 				readStream.on(ReadableEvent.Error, function(err) {

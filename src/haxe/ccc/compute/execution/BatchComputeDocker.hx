@@ -8,7 +8,7 @@ import js.Node;
 import js.node.Path;
 
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import promhx.Promise;
 import promhx.Stream;
@@ -20,8 +20,6 @@ import promhx.RequestPromises;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.LogStreams;
 import ccc.compute.execution.DockerJobTools;
 
@@ -29,6 +27,8 @@ import ccc.storage.StorageTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
+
+import util.DockerUrl;
 
 using ccc.compute.JobTools;
 using ccc.compute.workers.WorkerTools;
@@ -58,9 +58,12 @@ class BatchComputeDocker
 		Assert.notNull(workerStorage);
 		Assert.notNull(job.computeJobId);
 
-		log = log.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
+		var parentLog = log;
+		log = parentLog.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
+		untyped log._level = parentLog._level;
 
-		log.info({log:'executeJob', fs:fs, job:LogTools.removePrivateKeys(job)});
+		// log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
+		log.info({log:'executeJob', job:LogTools.removePrivateKeys(job)});
 
 		var computeJobId = job.computeJobId;
 		var docker = job.worker.getInstance().docker();
@@ -137,10 +140,8 @@ class BatchComputeDocker
 			//Pipe logs to file streams
 			//Copy the files to the remote worker
 			.pipe(function(_) {
-				trace('!!!HERE 1 $jobWorkingStatus');
 				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingInputs) {
-					var inputStorage = fs.clone().appendToRootPath(job.item.inputDir());
 					if (job.item.inputsPath != null) {
 						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Reading from custom inputs path=' + job.item.inputsPath});
 					}
@@ -199,9 +200,9 @@ class BatchComputeDocker
 						case Image:
 							var docker = job.worker.getInstance().docker();
 							var dockerImage = job.item.image.value;
-							promise = DockerPromises.listImages(docker)
-								.pipe(function(images) {
-									if (images.exists(function(e) return e.RepoTags.has(dockerImage))) {
+							promise = DockerPromises.hasImage(docker, dockerImage)
+								.pipe(function(imageExists) {
+									if (imageExists) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);
 									} else {
@@ -258,21 +259,19 @@ class BatchComputeDocker
 								 */
 								var mounts :Array<Mount> = [
 									{
-										// Source: Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, job.computeJobId, DIRECTORY_INPUTS),
-										Source: inputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
+										Source: DockerJobTools.getDockerHostMountablePath(inputStorageWorker.getRootPath()),
 										Destination: '/${DIRECTORY_INPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									},
 									{
-										// Source: Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, job.computeJobId, DIRECTORY_OUTPUTS),//job.computeJobId.workerOutputDir(),
-										Source: outputStorageWorker.getRootPath().replace('/$DIRECTORY_NAME_WORKER_OUTPUT', JOB_DATA_DIRECTORY_HOST_MOUNT),
+										Source: DockerJobTools.getDockerHostMountablePath(outputStorageWorker.getRootPath()),
 										Destination: '/${DIRECTORY_OUTPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									}
 								];
-								trace('mounts=${mounts}');
+
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
 
 								var labels :Dynamic<String> = {
@@ -285,6 +284,7 @@ class BatchComputeDocker
 									case Context:
 										job.id;
 								}
+
 								return DockerJobTools.runDockerContainer(docker, job.computeJobId, imageId, job.item.command, mounts, job.item.workingDir, labels, log)
 									.pipe(function(containerunResult) {
 										error = containerunResult.error;
@@ -327,8 +327,12 @@ class BatchComputeDocker
 					return outputStorageWorker.listDir()
 						.pipe(function(files) {
 							outputFiles = files;
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
-							return DockerJobTools.copyInternal(outputStorageWorker, outputStorageRemote);
+							//log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
+							if (outputFiles != null && outputFiles.length > 0) {
+								return DockerJobTools.copyInternal(outputStorageWorker, outputStorageRemote);
+							} else {
+								return Promise.promise(true);
+							}
 						})
 						.pipe(function(_) {
 							return setStatus(JobWorkingStatus.CopyingLogs);
@@ -365,6 +369,30 @@ class BatchComputeDocker
 			})
 			.then(function(_) {
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
+				//The job is now finished. Clean up the temp worker storage,
+				// out of the promise chain (for speed)
+				Promise.whenAll(
+					[
+						inputStorageWorker.deleteDir()
+							.then(function(_) {
+								log.info('Deleted ${inputStorageWorker.toString()}');
+								return true;
+							})
+							.errorPipe(function(err) {
+								log.error('Problem deleting ${inputStorageWorker.toString()} err=${err}');
+								return Promise.promise(false);
+							}),
+						outputStorageWorker.deleteDir()
+							.then(function(_) {
+								log.info('Deleted ${outputStorageWorker.toString()}');
+								return true;
+							})
+							.errorPipe(function(err) {
+								log.error('Problem deleting ${outputStorageWorker.toString()} err=${err}');
+								return Promise.promise(false);
+							})
+
+					]);
 				return jobResult;
 			});
 

@@ -1,7 +1,7 @@
 package compute;
 
 import js.npm.RedisClient;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.StreamPromises;
@@ -10,7 +10,6 @@ import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
 import ccc.compute.ConnectionToolsRedis;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;
@@ -93,11 +92,12 @@ class TestCompleteJobSubmissionBase extends TestComputeBase
 
 		// assume tester wants to user local file system if a service implementation isn't passed in
 		if (jobOutputStorage == null) {
-			var localStorageConfig :StorageDefinition = {
-				type: StorageSourceType.Local,
-				rootPath: ''
-			};
-			jobOutputStorage = StorageTools.getStorage(localStorageConfig);
+			jobOutputStorage = ServiceStorageLocalFileSystem.getService();
+			// var localStorageConfig :StorageDefinition = {
+			// 	type: StorageSourceType.Local,
+			// 	rootPath: ''
+			// };
+			// jobOutputStorage = StorageTools.getStorage(localStorageConfig);
 		}
 
 		var jobs = [];

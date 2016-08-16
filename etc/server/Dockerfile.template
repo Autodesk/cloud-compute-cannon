@@ -12,10 +12,10 @@ RUN apk add --no-cache nodejs && \
 	npm install && \
 	apk del make gcc g++ python linux-headers udev
 
-COPY build/::APP_SERVER_FILE:: $APP/
-COPY build/::APP_SERVER_FILE::.map $APP/
+COPY ::APP_SERVER_FILE:: $APP/
+COPY ::APP_SERVER_FILE::.map $APP/
 
 ENV PORT 9000
 EXPOSE $PORT
 
-CMD node cloud-compute-cannon-server.js
+CMD node ::APP_SERVER_FILE::

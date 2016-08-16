@@ -3,14 +3,13 @@ package compute;
 import haxe.Json;
 
 import js.npm.RedisClient;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
@@ -44,16 +43,6 @@ class TestCompleteJobSubmissionLocalDocker extends TestCompleteJobSubmissionBase
 				_workerProvider = new WorkerProviderBoot2Docker(config);
 				_injector.injectInto(_workerProvider);
 				return _workerProvider.ready;
-			});
-	}
-
-	@timeout(1000)
-	public function testSftpConfiguredCorrectly()
-	{
-		return WorkerProviderBoot2Docker.isSftpConfigInLocalDockerMachine()
-			.then(function(ok) {
-				assertTrue(ok);
-				return true;
 			});
 	}
 

@@ -13,7 +13,7 @@ interface ServiceStorage
 	/* Returns a tgz stream */
 	function readDir(?uri :String) :Promise<IReadable>;
 	function writeFile(uri :String, data :IReadable) :Promise<Bool>;
-	function getFileWritable(uri :String) :Promise<IWritable>;
+	// function getFileWritable(uri :String) :Promise<IWritable>;
 	function deleteFile(uri :String) :Promise<Bool>;
 	function deleteDir(?uri :String) :Promise<Bool>;
 	function listDir(?uri :String) :Promise<Array<String>>;

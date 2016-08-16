@@ -1,16 +1,10 @@
-package storage;
-
-import util.DockerTools;
-
-import utils.TestTools;
+package ccc.compute.server.tests;
 
 import haxe.Json;
 
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.Ssh;
-import js.npm.Docker;
 
 import promhx.Promise;
 import promhx.Deferred;
@@ -20,6 +14,7 @@ import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
 import ccc.storage.ServiceStorage;
+import ccc.storage.ServiceStorageBase;
 
 import util.streams.StreamTools;
 
@@ -30,16 +25,41 @@ using promhx.PromiseTools;
 
 class TestStorageBase extends haxe.unit.async.PromiseTest
 {
-	function doServiceStorageTest(storage :ServiceStorage) :Promise<Bool>
+	public var _storage :ServiceStorage;
+
+	public function new(?storage :ServiceStorage)
+	{
+		if (storage != null) {
+			_storage = storage;
+			var date = DateTools.format(Date.now(), '%Y%m%d-%H%M%S');
+			_storage = _storage.appendToRootPath('tests/$date');
+		}
+	}
+
+	function doPathParsing(s :ServiceStorage) :Promise<Bool>
+	{
+		var rootPath = 'rootPathTest/';
+		var storage :ServiceStorageBase = cast s.clone();
+
+		storage.setRootPath(rootPath);
+
+		var filePath = 'some/file/path';
+
+		assertEquals(storage.getPath(filePath), '${storage.getRootPath()}${filePath}');
+
+		return Promise.promise(true);
+	}
+
+	function doStorageTest(storage :ServiceStorage) :Promise<Bool>
 	{
 		Assert.notNull(storage);
-		var testFileContent1 = 'This is an example: 久有归天愿.';
-		var testFilePath1 = 'storage_test_file';
+		var testFileContent1 = 'This is an example: 久有归天愿.${Math.floor(Math.random() * 1000000)}';
+		var testFilePath1 = 'tests/storage_test_file';
 
-		var testFileContent2 = 'This is another example: 天愿.';
-		var testFilePath2 = 'somePath${Math.floor(Math.random() * 1000000)}/storage_testfile2';
+		var testFileContent2 = 'This is another example: 天愿.${Math.floor(Math.random() * 1000000)}';
+		var testFilePath2 = 'tests/somePath${Math.floor(Math.random() * 1000000)}/storage_testfile2';
 
-		var testdir = 'somedir${Math.floor(Math.random() * 1000000)}/withchild';
+		var testdir = 'tests/somedir${Math.floor(Math.random() * 1000000)}/withchild';
 
 		return Promise.promise(true)
 			//Write and read a file
@@ -53,9 +73,14 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 			.pipe(function(readStream) {
 				return promhx.StreamPromises.streamToString(readStream);
 			})
-			.then(function(val) {
+			.pipe(function(val) {
 				assertEquals(val, testFileContent1);
-				return true;
+				//Also test .exists(filename)
+				return storage.exists(testFilePath1)
+					.then(function(exists) {
+						assertTrue(exists);
+						return true;
+					});
 			})
 			.pipe(function(_) {
 				return storage.listDir(Path.dirname(testFilePath1));
@@ -123,11 +148,43 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 				return true;
 			})
 
+
+			//Test copying the storage object, appending paths, checking
+			//if the objects are stored correctly
+			//Also check listDir after appending paths
+			.pipe(function(_) {
+				var pathToken1 = 'fooPathToken${Math.floor(Math.random() * 1000000)}';
+				var filePathFoo = 'fooFile${Math.floor(Math.random() * 1000000)}';
+				var fileContentFoo = 'fooFileContent${Math.floor(Math.random() * 1000000)}';
+
+				var storage2 = storage.appendToRootPath(pathToken1);
+				assertEquals('${storage.getRootPath()}$pathToken1/', storage2.getRootPath());
+				return storage2.writeFile(filePathFoo, StreamTools.stringToStream(fileContentFoo))
+					.pipe(function(_) {
+						return storage.readFile('${pathToken1}/${filePathFoo}')
+							.pipe(function(readStream) {
+								return promhx.StreamPromises.streamToString(readStream);
+							})
+							.then(function(out) {
+								assertEquals(fileContentFoo, out);
+								return true;
+							})
+							.pipe(function(_) {
+								return storage2.listDir()
+									.pipe(function(list1) {
+										return storage.listDir(pathToken1)
+											.then(function(list2) {
+												assertEquals(list1.length, list2.length);
+												assertEquals(list1[0], list2[0]);
+												return true;
+											});
+									});
+							});
+					});
+			})
 			.then(function(_) {
 				storage.close();
 				return true;
 			});
 	}
-
-	public function new() {}
 }

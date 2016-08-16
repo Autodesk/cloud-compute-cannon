@@ -31,19 +31,34 @@ class StorageRestApi
 		storage.readFile(file)
 			.then(function(stream) {
 				stream.once('error', function(err) {
-					res.status(500)
-						.send(Json.stringify({
-							error: err
+					stream.unpipe(res);
+					Log.error({error:err, file:file, message:'Error reading file'});
+					if (!res.headersSent) {
+						res.status(500);
+					}
+					if (!untyped __js__('{0}.finished', res)) {
+						res.send(Json.stringify({
+							file: file,
+							message: 'Could not read file',
+							error: Std.string(err)
 						}));
+					}
 				});
 				stream.pipe(res);
 			})
 			.catchError(function(err) {
-				res.setHeader('Content-Type', 'application/json');
-				res.status(500)
-					.send(Json.stringify({
-						error: err
+				Log.error({error:err, file:file, message:'Error reading file'});
+				if (!res.headersSent) {
+					res.setHeader('Content-Type', 'application/json');
+					res.status(500);
+				}
+				if (!untyped __js__('{0}.finished', res)) {
+					res.send(Json.stringify({
+						file: file,
+						message: 'Could not read file',
+						error: Std.string(err)
 					}));
+				}
 			});
 	}
 
@@ -72,11 +87,15 @@ class StorageRestApi
 				res.status(200).send(RESPONSE_OK);
 			})
 			.catchError(function(err) {
-				res.setHeader('Content-Type', 'application/json');
-				res.status(500)
-					.send(Json.stringify({
+				if (!res.headersSent) {
+					res.setHeader('Content-Type', 'application/json');
+					res.status(500);
+				}
+				if (!untyped __js__('{0}.finished', res)) {
+					res.send(Json.stringify({
 						error: err
 					}));
+				}
 			});
 	}
 

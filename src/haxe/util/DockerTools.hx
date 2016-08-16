@@ -4,9 +4,10 @@ import haxe.Json;
 
 import js.Node;
 import js.node.Fs;
+import js.node.Buffer;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import js.node.stream.Readable;
 import js.node.stream.Writable;
@@ -19,6 +20,8 @@ import promhx.deferred.DeferredPromise;
 
 import t9.abstracts.net.*;
 
+import util.streams.StreamTools;
+
 using promhx.PromiseTools;
 using Lambda;
 using StringTools;
@@ -27,152 +30,8 @@ typedef Modem = {
 	function demuxStream(stream :IReadable, out :IWritable, err :IWritable) :Void;
 }
 
-typedef DockerUrlBlob = {
-	var name:String;
-	@:optional var username :String;
-	@:optional var registryhost :Host;
-	@:optional var tag :String;
-}
-
-abstract DockerUrl(String) to String from String
-{
-	inline public function new (s :String)
-		this = s;
-
-	public var tag(get, set) :String;
-	public var registryhost(get, set) :Host;
-	public var username(get, set) :String;
-	public var name(get, set) :String;
-	public var repository(get, never) :String;
-
-	inline public function noTag() :DockerUrl
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		u.tag = null;
-		return DockerTools.joinDockerUrl(u);
-	}
-
-	inline public function get_repository() :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		u.tag = null;
-		u.registryhost = null;
-		return DockerTools.joinDockerUrl(u);
-	}
-
-	inline public function set_tag(tag :String) :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		u.tag = tag;
-		this = DockerTools.joinDockerUrl(u);
-		return tag;
-	}
-
-	inline public function get_tag() :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		return u.tag;
-	}
-
-	inline public function set_registryhost(registryhost :Host) :Host
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		u.registryhost = registryhost;
-		this = DockerTools.joinDockerUrl(u);
-		return tag;
-	}
-
-	inline public function get_registryhost() :Host
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		return u.registryhost;
-	}
-
-	inline public function set_username(username :String) :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		u.username = username;
-		this = DockerTools.joinDockerUrl(u);
-		return tag;
-	}
-
-	inline public function get_username() :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		return u.username;
-	}
-
-	inline public function set_name(name :String) :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		u.name = name;
-		this = DockerTools.joinDockerUrl(u);
-		return tag;
-	}
-
-	inline public function get_name() :String
-	{
-		var u = DockerTools.parseDockerUrl(this);
-		return u.name;
-	}
-}
-
 class DockerTools
 {
-	public static function joinDockerUrl(u :DockerUrlBlob, ?includeTag :Bool = true) :String
-	{
-		return (u.registryhost != null ? u.registryhost + '/' : '')
-			+ (u.username != null ? u.username + '/' : '')
-			+ u.name
-			+ (u.tag != null && includeTag ? ':' + u.tag : '');
-	}
-
-	public static function getRepository(u :DockerUrlBlob, ?includeTag :Bool = true) :String
-	{
-		return (u.registryhost != null ? u.registryhost + '/' : '')
-			+ (u.username != null ? u.username + '/' : '')
-			+ u.name
-			+ (u.tag != null && includeTag ? ':' + u.tag : '');
-	}
-
-	public static function parseDockerUrl(s :String) :DockerUrlBlob
-	{
-		s = s.trim();
-		var r = ~/(.*\/)?([a-z0-9_]+)(:[a-z0-9_]+)?/i;
-		r.match(s);
-		var registryAndUsername = r.matched(1);
-		var name = r.matched(2);
-		var tag = r.matched(3);
-		if (tag != null) {
-			tag = tag.substr(1);
-		}
-		registryAndUsername = registryAndUsername != null ?registryAndUsername.substr(0, registryAndUsername.length - 1) : null;
-		var username :String = null;
-		var registryHost :Host = null;
-		if (registryAndUsername != null) {
-			var tokens = registryAndUsername.split('/');
-			if (tokens.length > 1) {
-				username = tokens.pop();
-				registryHost = tokens.length > 0 ? tokens.join('/') : null;
-			} else {
-				registryHost = tokens.join('/');
-			}
-		}
-		var url :DockerUrlBlob = {
-			name: name
-		}
-		if (tag != null) {
-			url.tag = tag;
-		}
-		if (username != null) {
-			url.username = username;
-		}
-		if (registryHost != null) {
-			url.registryhost = registryHost;
-		}
-		return url;
-	}
-
 	/**
 	 * Given a docker image name (and optional tags) ensures
 	 * that there is an image with that name and tag running.
@@ -303,8 +162,9 @@ class DockerTools
 	{
 		log = Logger.ensureLog(log, {f:'buildDockerImage'});
 		log = log.child({image:id, dockerhost:docker.modem.host});
+
 		var promise = new DeferredPromise();
-		log.info('build_image');
+		log.debug('build_image');
 		docker.buildImage(image, {t:id}, function(err, stream: IReadable) {
 			if (err != null) {
 				log.error({log:'Error on building image', error:err});
@@ -329,32 +189,47 @@ class DockerTools
 				log.error({log:'Error on building image', type:'readable_stream_error', error:err});
 				promise.boundPromise.reject(err);
 			});
+
+			function processLine(line :String) {
+				if (line == null) {
+					return;
+				}
+				line = line.trim();
+				if (line.length == 0) {
+					return;
+				}
+				var data :ResponseStreamObject;
+				try {
+					data = Json.parse(line);
+				} catch (err :Dynamic) {
+					log.error({log:'Maybe not the end of the world, but cannot json parse bufferString', data:bufferString, error:err});
+					return;
+				}
+				if (data.stream != null) {
+					// log.trace({log:data.stream});
+					if (data.stream.startsWith('Successfully built')) {
+						imageId = data.stream.replace('Successfully built', '').trim();
+					}
+				} else if (data.status != null) {
+					// log.trace({log:bufferString});
+				} else if (data.error != null) {
+					log.error({log:'Stream data contains an error entry', data:bufferString, error:data.error});
+					errorEncounteredInStream = true;
+					mostRecentError = data;
+				} else {
+					log.warn({log:'Cannot handle stream data', data:bufferString});
+				}
+			}
+
 			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
 				if (resultStream != null && buf != null) {
 					resultStream.write(buf);
 				}
 				if (buf != null) {
 					var bufferString = buf.toString();
-					var data :ResponseStreamObject;
-					try {
-						data = Json.parse(bufferString);
-					} catch (err :Dynamic) {
-						log.error({log:'Maybe not the end of the world, but cannot json parse bufferString', data:bufferString, error:err});
-						return;
-					}
-					if (data.stream != null) {
-						// log.trace({log:data.stream});
-						if (data.stream.startsWith('Successfully built')) {
-							imageId = data.stream.replace('Successfully built', '').trim();
-						}
-					} else if (data.status != null) {
-						// log.trace({log:bufferString});
-					} else if (data.error != null) {
-						log.error({log:'Stream data contains an error entry', data:bufferString, error:data.error});
-						errorEncounteredInStream = true;
-						mostRecentError = data;
-					} else {
-						log.warn({log:'Cannot handle stream data', data:bufferString});
+					var lines = bufferString.split('\n');
+					for (line in lines) {
+						processLine(line);
 					}
 				}
 			});
@@ -394,8 +269,6 @@ class DockerTools
 				if (resultStream != null && buf != null) {
 					resultStream.write(buf);
 				}
-				var bufferString = buf.toString();
-				// log.trace({log:bufferString});
 			});
 		});
 		return promise.boundPromise;
@@ -450,28 +323,43 @@ class DockerTools
 				log.error({log:'Error on getting image', error:err});
 				promise.boundPromise.reject(err);
 			});
+
+
+			function processLine(line :String) {
+				if (line == null) {
+					return;
+				}
+				line = line.trim();
+				if (line.length == 0) {
+					return;
+				}
+				line = line.replace('\\"', '"');
+				try {
+					var data :ResponseStreamObject = Json.parse(line);
+					if (data.stream != null) {
+						log.trace({log:data.stream});
+						if (data.stream.startsWith('Successfully built')) {
+							imageId = data.stream.replace('Successfully built', '').trim();
+						}
+					} else if (data.status != null) {
+					} else if (data.error != null) {
+						log.error({log:'Error on stream getting image', error:data});
+						errorEncounteredInStream = true;
+						mostRecentError = data;
+					} else {
+						log.warn({log:'Cannot handle stream data', data:data});
+					}
+				} catch (err :Dynamic) {
+					log.error({log:'Cannot JSON.parse bufferString', error:err, data:line});
+				}
+			}
+
 			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
 				if (buf != null) {
 					var bufferString = buf.toString();
-					bufferString = bufferString.replace('\\"', '"');
-					try {
-						var data :ResponseStreamObject = Json.parse(bufferString);
-						if (data.stream != null) {
-							log.trace({log:data.stream});
-							if (data.stream.startsWith('Successfully built')) {
-								imageId = data.stream.replace('Successfully built', '').trim();
-							}
-						} else if (data.status != null) {
-							// log.trace({log:bufferString});
-						} else if (data.error != null) {
-							log.error({log:'Error on stream getting image', error:data});
-							errorEncounteredInStream = true;
-							mostRecentError = data;
-						} else {
-							log.warn({log:'Cannot handle stream data', data:data});
-						}
-					} catch (err :Dynamic) {
-						log.error({log:'Cannot JSON.parse bufferString', error:err, data:bufferString});
+					var lines = bufferString.split('\n');
+					for (line in lines) {
+						processLine(line);
 					}
 				}
 			});
@@ -499,9 +387,7 @@ class DockerTools
 			exposedPortsObj = {};
 			for (port in ports.keys()) {
 				exposedPortsObj['${port}/tcp'] = {};
-				// exposedPortsObj['${port}/tcp'] = [{HostPort:Std.string(ports[port])}];
 			}
-			// trace('exposedPortsObj=${exposedPortsObj}');
 			opts.ExposedPorts = exposedPortsObj;
 
 			if (!Reflect.hasField(opts, 'HostConfig')) {
@@ -518,6 +404,7 @@ class DockerTools
 
 	public static function startContainer(container :DockerContainer, ?opts :StartContainerOptions, ?ports :Map<Int,Int>) :Promise<DockerContainer>
 	{
+		//TODO: clean this up once tested.
 		var promise = new promhx.CallbackPromise();
 
 		if (ports == null) {
@@ -536,12 +423,12 @@ class DockerTools
 				Reflect.setField(opts.PortBindings, '${port}/tcp', [{HostPort:Std.string(ports[port])}]);
 			}
 		}
-		container.start(opts, promise.cb2);
+		container.start(promise.cb2);
 		return promise
 			.thenVal(container);
 	}
 
-	public static function writeContainerLogs(container :DockerContainer, stdout :IWritable, stderr :IWritable) :Promise<Bool>
+	public static function writeContainerLogs(container :DockerContainer, stdout :IWritable, stderr :IWritable) :Promise<{stdout:Bool,stderr:Bool}>
 	{
 		var promise = new DeferredPromise();
 
@@ -554,15 +441,33 @@ class DockerTools
 				Log.error(err);
 				promise.boundPromise.reject(err);
 			});
+
+
+			var passThroughStdout :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+			var passThroughStderr :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+
+			passThroughStdout.pipe(stdout);
+			passThroughStderr.pipe(stderr);
+
 			var modem :Modem = untyped __js__('container.modem');
-			modem.demuxStream(stream, stdout, stderr);
+			modem.demuxStream(stream, passThroughStdout, passThroughStderr);
+
+			var isStdOutWritten = false;
+			var isStdErrWritten = false;
+
+			passThroughStdout.on(ReadableEvent.Data, function(data) {
+				isStdOutWritten = true;
+			});
+			passThroughStderr.on(ReadableEvent.Data, function(data) {
+				isStdErrWritten = true;
+			});
 
 			stream.once(ReadableEvent.End, function() {
 				var stdoutFinished = false;
 				var stderrFinished = false;
 				function check() {
 					if (stdoutFinished && stderrFinished) {
-						promise.resolve(true);
+						promise.resolve({stdout:isStdOutWritten,stderr:isStdErrWritten});
 					}
 				}
 
@@ -580,6 +485,94 @@ class DockerTools
 			});
 		});
 
+		return promise.boundPromise;
+	}
+
+	public static function getContainerLogs(container :DockerContainer) :Promise<{stdout:IReadable,stderr:IReadable}>
+	{
+		var promise = new DeferredPromise();
+
+		container.logs({stdout:true, stderr:true}, function(err, stream) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+				return;
+			}
+			stream.once(ReadableEvent.Error, function(err) {
+				Log.error(err);
+				promise.boundPromise.reject(err);
+			});
+
+			var passThroughStdout :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+			var passThroughStderr :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+
+			var modem :Modem = untyped __js__('container.modem');
+			modem.demuxStream(stream, passThroughStdout, passThroughStderr);
+
+			stream.once(ReadableEvent.End, function() {
+				// stdout.end();
+				// stderr.end();
+				Node.setTimeout(function() {
+					passThroughStdout.end();
+					passThroughStderr.end();
+				}, 0);
+			});
+			promise.resolve({stdout:cast passThroughStdout, stderr: cast passThroughStderr});
+		});
+
+		return promise.boundPromise;
+	}
+
+	public static function getContainerStdout(container :DockerContainer) :Promise<IReadable>
+	{
+		return getContainerStdStream(container, true);
+	}
+
+	public static function getContainerStderr(container :DockerContainer) :Promise<IReadable>
+	{
+		return getContainerStdStream(container, false);
+	}
+
+	static function getContainerStdStream(container :DockerContainer, isStdOut :Bool) :Promise<IReadable>
+	{
+		var promise = new DeferredPromise();
+		//Filter the header
+		//https://docs.docker.com/engine/reference/api/docker_remote_api_v1.24/
+		container.logs({stdout:isStdOut, stderr:!isStdOut}, function(err, stream) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+				return;
+			} else {
+				var readable :IReadable = untyped __js__('new require("stream").PassThrough()');
+				var header :Buffer = null;
+				stream.on('readable', function() {
+					header = header != null ? header : stream.read(8);
+					while (untyped __strict_neq__(header, null)) {
+						var type = header.readUInt8(0);
+						var payload = stream.read(header.readUInt32BE(4));
+						if (untyped __strict_eq__(header, null)) {
+							break;
+						}
+						if (type == 2) {
+							if (!isStdOut) {
+								untyped __js__('{0}.push({1})', readable, payload);
+							}
+						} else {
+							if (isStdOut) {
+								untyped __js__('{0}.push({1})', readable, payload);
+							}
+						}
+						header = stream.read(8);
+					}
+				});
+				stream.on(ReadableEvent.End, function() {
+					untyped __js__('{0}.push({1})', readable, null);
+				});
+				stream.on(ReadableEvent.Error, function(err) {
+					readable.emit(ReadableEvent.Error, err);
+				});
+				promise.resolve(cast readable);
+			}
+		});
 		return promise.boundPromise;
 	}
 

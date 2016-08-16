@@ -1,13 +1,14 @@
 package ccc.storage;
 
+import js.Error;
 import js.node.Fs;
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
-import js.npm.TarGz;
-import js.npm.TarFs;
+import js.npm.targz.TarGz;
+import js.npm.tarfs.TarFs;
 
 import promhx.Promise;
 import promhx.CallbackPromise;
@@ -22,9 +23,9 @@ using StringTools;
 class ServiceStorageLocalFileSystem
 	extends ServiceStorageBase
 {
-	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'data/ServiceStorageLocalFileSystem';
+	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'data/ServiceStorageLocalFileSystem/';
 
-	public static function getService(?path :String) :ServiceStorage
+	public static function getService(?path :String) :ServiceStorageLocalFileSystem
 	{
 		path = path == null ? STORAGE_LOCAL_DEFAULT_PATH : path;
 		return new ServiceStorageLocalFileSystem().setRootPath(path);
@@ -38,8 +39,7 @@ class ServiceStorageLocalFileSystem
 	@post
 	override public function postInjection()
 	{
-		Assert.notNull(_config);
-		_rootPath = _config.rootPath;
+		super.postInjection();
 		_rootPath = _rootPath == null ? STORAGE_LOCAL_DEFAULT_PATH : _rootPath;
 	}
 
@@ -59,9 +59,13 @@ class ServiceStorageLocalFileSystem
 				path = Path.join(js.Node.process.cwd(), path);
 			}
 			if (err.code == 'ENOENT') {
-				throw 'Missing file $localPath not found at $path';
+				var promise = new Promise();
+				promise.reject('Missing file $localPath not found at $path');
+				return promise;
 			} else {
-				throw 'readFile but Fs.statSync($path) threw $err';
+				var promise = new Promise();
+				promise.reject(err);
+				return promise;
 			}
 		}
 #end
@@ -106,7 +110,7 @@ class ServiceStorageLocalFileSystem
 			.pipe(function(_) {
 				var dir = Path.dirname(path);
 				if (dir != null) {
-					js.node.ChildProcess.execSync('mkdir -p $dir', {stdio:['ignore','pipe', untyped js.Node.process.stderr]});
+					js.node.ChildProcess.execSync('mkdir -p "$dir"', {stdio:['ignore','pipe', untyped js.Node.process.stderr]});
 					return Promise.promise(true);
 				} else {
 					return Promise.promise(true);
@@ -134,22 +138,22 @@ class ServiceStorageLocalFileSystem
 			});
 	}
 
-	override public function getFileWritable(path :String) :Promise<IWritable>
-	{
-		path = getPath(path);
-		return Promise.promise(true)
-			.pipe(function(_) {
-				var dir = Path.dirname(path);
-				if (dir != null) {
-					return FsPromises.mkdir(dir);
-				} else {
-					return Promise.promise(true);
-				}
-			})
-			.then(function(_) {
-				return cast Fs.createWriteStream(path);
-			});
-	}
+	// override public function getFileWritable(path :String) :Promise<IWritable>
+	// {
+	// 	path = getPath(path);
+	// 	return Promise.promise(true)
+	// 		.pipe(function(_) {
+	// 			var dir = Path.dirname(path);
+	// 			if (dir != null) {
+	// 				return FsPromises.mkdir(dir);
+	// 			} else {
+	// 				return Promise.promise(true);
+	// 			}
+	// 		})
+	// 		.then(function(_) {
+	// 			return cast Fs.createWriteStream(path);
+	// 		});
+	// }
 
 	override public function copyFile(source :String, target :String) :Promise<Bool>
 	{
@@ -208,12 +212,13 @@ class ServiceStorageLocalFileSystem
 
 	override public function setRootPath(val :String)
 	{
-		_rootPath = val;
+		super.setRootPath(val);
 		//This breaks the clean package separation maintained until now.
 		//But it's only used testing.
 		if (!ccc.compute.ConnectionToolsDocker.isInsideContainer()) {
 			_rootPath = js.node.Path.resolve(_rootPath);
 		}
+		_rootPath = ensureEndsWithSlash(_rootPath);
 		return this;
 	}
 

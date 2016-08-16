@@ -7,7 +7,7 @@ import js.node.Path;
 import js.node.Fs;
 import js.node.Http;
 import js.npm.FsPromises;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -16,8 +16,6 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.RequestPromises;
 
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.JobTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
@@ -35,15 +33,26 @@ typedef ServerCreationStuff = {
 
 class TestTools
 {
-	public static function forkServerCompute(?env :Dynamic) :Promise<js.node.child_process.ChildProcess>
+	public static function forkServerCompute(?env :Dynamic, ?disableLogging :Bool = true) :Promise<js.node.child_process.ChildProcess>
 	{
 		//Create a server in a forker process
 		var promise = new DeferredPromise();
 		var command = 'haxe etc/hxml/server-build.hxml';
-		var out = ChildProcess.execSync(command);
-		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: (env != null ? env : js.Node.process.env), silent:true});
+		try{
+			var out = ChildProcess.execSync(command);
+		} catch (err :Dynamic) {
+			promise.boundPromise.reject(err);
+			return promise.boundPromise;
+		}
+
+		env = env != null ? env : Reflect.copy(js.Node.process.env);
+		if (disableLogging) {
+			Reflect.setField(env, ENV_VAR_DISABLE_LOGGING, "true");
+		}
+
+		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: env, silent:true});
 		serverChildProcess.on(ChildProcessEvent.Message, function(message, sendHandle) {
-			if (message == Constants.IPC_MESSAGE_READY) {
+			if (message == IPC_MESSAGE_READY) {
 				promise.resolve(serverChildProcess);
 			}
 		});

@@ -1,6 +1,5 @@
 package ccc.compute;
 
-import ccc.compute.Definitions.Constants.*;
 
 import t9.abstracts.net.*;
 

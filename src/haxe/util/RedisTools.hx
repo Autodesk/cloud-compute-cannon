@@ -61,18 +61,22 @@ class RedisTools
 		Assert.notNull(subscribeClient);
 		Assert.notNull(channelKey);
 
-		var deferred = new promhx.deferred.DeferredStream<T>();
+		var deferred = new DeferredStream<T>();
 		var unsubscribed = false;
 
 		function getAndSend(message :Dynamic) {
 			if (!unsubscribed) {
 				if (getter != null) {
-					getter(message)
-						.then(function(val :T) {
+					var promise = getter(message);
+					if (promise != null) {
+						promise.then(function(val :T) {
 							if (val != null) {
 								deferred.resolve(val);
 							}
 						});
+					} else {
+						Log.error('createStreamCustomInternal channelKey=$channelKey getter returned null');
+					}
 				} else {
 					deferred.resolve(message);
 				}
@@ -127,79 +131,16 @@ class RedisTools
 	public static function createStream<T>(redis :RedisClient, key :String) :Stream<T>
 	{
 		return createStreamCustom(redis, key);
-		// var client = RedisClient.createClient(redis.port, redis.host);
-		// return createStreamInternal(client, key);
 	}
 
 	public static function createPublishStream<T>(redis :RedisClient, channelKey :String, ?usePatterns :Bool = false) :Stream<T>
 	{
-		return createStreamCustom(redis, channelKey, function(message) return message, usePatterns);
-
-		// var subscribeClient = RedisClient.createClient(redis.connectionOption.port, redis.connectionOption.host);
-		// var deferred = new promhx.deferred.DeferredStream<T>();
-		// if (usePatterns) {
-		// 	subscribeClient.on(RedisClient.EVENT_PMESSAGE, function (pattern, channel, message) {
-		// 		if (pattern == channelKey) {
-		// 			deferred.resolve(message);
-		// 		}
-		// 	});
-		// } else {
-		// 	subscribeClient.on(RedisClient.EVENT_MESSAGE, function (channel, message) {
-		// 		if (channel == channelKey) {
-		// 			deferred.resolve(message);
-		// 		}
-		// 	});
-		// }
-
-		// if (usePatterns) {
-		// 	subscribeClient.psubscribe(channelKey);
-		// } else {
-		// 	subscribeClient.subscribe(channelKey);
-		// }
-
-		// deferred.boundStream.endThen(function(_) {
-		// 	if (usePatterns) {
-		// 		subscribeClient.punsubscribe(channelKey);
-		// 	} else {
-		// 		subscribeClient.unsubscribe(channelKey);
-		// 	}
-		// 	subscribeClient.quit();
-		// });
-
-		// return deferred.boundStream;
+		return createStreamCustom(redis, channelKey, function(message) return Promise.promise(message), usePatterns);
 	}
-
-	// public static function createStreamInternal<T>(redis :RedisClient, key :String, ?usePatterns :Bool = false) :Stream<T>
-	// {
-	// 	var deferred = new promhx.deferred.DeferredStream<T>();
-	// 	redis.once(RedisClient.EVENT_SUBSCRIBE, function (channel, count) {
-	// 		// Log.info('Streaming $key');
-	// 	});
-	// 	redis.on(RedisClient.EVENT_MESSAGE, function (channel, message) {
-	// 		if (channel == key) {
-	// 			deferred.resolve(message);
-	// 		}
-	// 	});
-	// 	redis.get(key, function(err :Dynamic, val) {
-	// 		if (err != null) {
-	// 			deferred.throwError(err);
-	// 			return;
-	// 		}
-	// 		deferred.resolve(cast val);
-	// 	});
-	// 	redis.subscribe(key);
-
-	// 	deferred.boundStream.endThen(function(_) {
-	// 		redis.unsubscribe(key);
-	// 		redis.quit();
-	// 	});
-
-	// 	return deferred.boundStream;
-	// }
 
 	public static function sendStreamedValue(client :RedisClient, key :String, val :Dynamic) :Promise<Bool>
 	{
-		var deferred = new promhx.deferred.DeferredPromise<Bool>();
+		var deferred = new DeferredPromise<Bool>();
 		client.set(key, val, function(err, success) {
 			if (err != null) {
 				deferred.boundPromise.reject(err);
@@ -217,7 +158,7 @@ class RedisTools
 			redisKey = channelKey;
 		}
 		return createStreamCustom(redis, channelKey, function(message) {
-				var promise = new promhx.deferred.DeferredPromise<T>(#if debug pos #end);
+				var promise = new DeferredPromise<T>(#if debug pos #end);
 				redis.get(redisKey, function(err :Dynamic, val) {
 					if (err != null) {
 						promise.boundPromise.reject(err);
@@ -231,7 +172,7 @@ class RedisTools
 
 	public static function sendJsonStreamedValue(client :RedisClient, key :String, val :Dynamic) :Promise<Bool>
 	{
-		var deferred = new promhx.deferred.DeferredPromise<Bool>();
+		var deferred = new DeferredPromise<Bool>();
 		var s = Json.stringify(val);
 		client.set(key, s, function(err, success) {
 			if (err != null) {

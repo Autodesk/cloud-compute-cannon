@@ -18,7 +18,6 @@ import promhx.deferred.DeferredPromise;
 import promhx.RedisPromises;
 
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 
 import t9.abstracts.time.*;
 
@@ -90,9 +89,9 @@ typedef JobSubmissionResult = {
 	@:optional var failureReason :SubmissionFailure;
 }
 
-typedef ProviderConfig = {>ProviderConfigBase,
-	var id :MachinePoolId;
-}
+// typedef ProviderConfig = {>ProviderConfigBase,
+// 	var id :MachinePoolId;
+// }
 
 class InstancePool
 {
@@ -106,7 +105,7 @@ class InstancePool
 			['zadd', REDIS_KEY_WORKER_POOL_PRIORITY, priority, pool],
 			['hset', REDIS_KEY_WORKER_POOL_MAX_INSTANCES, pool, maxInstances + ''],
 			['hset', REDIS_KEY_WORKER_POOL_MIN_INSTANCES, pool, minInstances + ''],
-			['hset', REDIS_KEY_WORKER_POOL_BILIING_INCREMENT, pool, billingIncrement.toFloat() + '']
+			['hset', REDIS_KEY_WORKER_POOL_BILLING_INCREMENT, pool, billingIncrement.toFloat() + '']
 			]).exec(promise.cb2);
 
 		return promise.pipe(function(_) {
@@ -114,17 +113,17 @@ class InstancePool
 		});
 	}
 
-	public static function getProviderConfig(client :RedisClient, providerId :MachinePoolId) :Promise<ProviderConfig>
+	public static function getProviderConfig(client :RedisClient, providerId :ServiceWorkerProviderType) :Promise<ServiceConfigurationWorkerProvider>
 	{
 		var promise = new promhx.deferred.DeferredPromise();
 		client.multi([
 			['zscore', REDIS_KEY_WORKER_POOL_PRIORITY, providerId],
 			['hget', REDIS_KEY_WORKER_POOL_MAX_INSTANCES, providerId],
 			['hget', REDIS_KEY_WORKER_POOL_MIN_INSTANCES, providerId],
-			['hget', REDIS_KEY_WORKER_POOL_BILIING_INCREMENT, providerId],
+			['hget', REDIS_KEY_WORKER_POOL_BILLING_INCREMENT, providerId],
 			]).exec(function(err, multireply) {
-				var config :ProviderConfig = {
-					id: providerId,
+				var config :ServiceConfigurationWorkerProvider = {
+					type: providerId,
 					priority: multireply[0],
 					maxWorkers: multireply[1],
 					minWorkers: multireply[2],
@@ -292,9 +291,9 @@ class InstancePool
 
 	public static function addInstance(client :RedisClient, poolId :MachinePoolId, worker :WorkerDefinition, parameters :WorkerParameters, ?state :MachineStatus = MachineStatus.Available) :Promise<Bool>
 	{
-		Assert.notNull(worker.ssh);
-		Assert.notNull(worker.ssh.host);
-		Assert.that(worker.ssh.host != '', worker.ssh + '');
+		// Assert.notNull(worker.ssh);
+		// Assert.notNull(worker.ssh.host);
+		// Assert.that(worker.ssh.host != '', worker.ssh + '');
 		Assert.notNull(worker.docker);
 		// Assert.notNull(worker.docker.host);
 		Assert.that(worker.docker.host != '');
@@ -339,6 +338,21 @@ class InstancePool
 		return promise;
 	}
 
+	public static function getAllWorkers(client :RedisClient) :Promise<Array<WorkerDefinition>>
+	{
+		var promise = new promhx.CallbackPromise();
+		client.hgetall(REDIS_KEY_WORKERS, promise.cb2);
+		return promise
+			.then(function(out) {
+				var data :haxe.DynamicAccess<WorkerDefinition> = cast out;
+				var result :Array<WorkerDefinition> = [];
+				for (key in data.keys()) {
+					result.push(data[key]);
+				}
+				return result;
+			});
+	}
+
 	public static function setWorkerTimeout(client :RedisClient, id :MachineId, time :TimeStamp) :Promise<Bool>
 	{
 		return evaluateLuaScript(client, SCRIPT_SET_WORKER_DEFERRED_TIMEOUT, [id, time.toFloat()])
@@ -351,9 +365,6 @@ class InstancePool
 	{
 		return evaluateLuaScript(client, SCRIPT_GET_ALL_WORKER_TIMEOUTS, [providerId])
 			.then(Json.parse);
-			// .then(function(result :Array<{id:MachineId, time:Float}>) {
-
-			// });
 	}
 
 	public static function getJobCountOnMachine(client :RedisClient, id :MachineId) :Promise<Int>
@@ -407,6 +418,12 @@ class InstancePool
 	public static function toJson(client :RedisClient) :Promise<InstancePoolJsonDump>
 	{
 		return evaluateLuaScript(client, SCRIPT_GET_JSON)
+			.then(Json.parse);
+	}
+
+	public static function toRawJson(client :RedisClient) :Promise<Dynamic>
+	{
+		return evaluateLuaScript(client, SCRIPT_GET_RAW_JSON)
 			.then(Json.parse);
 	}
 
@@ -493,8 +510,8 @@ class InstancePool
 	inline static var REDIS_KEY_WORKER_POOL_PRIORITY = '${INSTANCE_POOL_PREFIX}worker_pool_priority';//SortedSet<MachinePoolId>
 	inline static var REDIS_KEY_WORKER_POOL_MAX_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_max_instances';//Hash<MachinePoolId, Int>
 	inline static var REDIS_KEY_WORKER_POOL_MIN_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_min_instances';//Hash<MachinePoolId, Int>
-	inline static var REDIS_KEY_WORKER_POOL_BILIING_INCREMENT = '${INSTANCE_POOL_PREFIX}worker_pool_billing_increment';//Hash<MachinePoolId, Float>
-	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances';//Hash<MachinePoolId, Int>
+	inline static var REDIS_KEY_WORKER_POOL_BILLING_INCREMENT = '${INSTANCE_POOL_PREFIX}worker_pool_billing_increment';//Hash<MachinePoolId, Float>
+	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances';//Key
 	inline public static var REDIS_KEY_WORKER_POOL_TARGET_INSTANCES_TOTAL = '${INSTANCE_POOL_PREFIX}worker_pool_target_instances_total';//Key
 	inline static var REDIS_KEY_WORKER_POOL_MAP = '${INSTANCE_POOL_PREFIX}worker_pool';//HASH <MachineId, MachinePoolId>
 	inline static var REDIS_KEY_WORKER_AVAILABLE_CPUS = '${INSTANCE_POOL_PREFIX}worker_available_cpus';//HASH <MachineId, Int>
@@ -502,7 +519,7 @@ class InstancePool
 	//The first machine added to the pool adds the parameters to this set
 	//so that scaling requirements can be accurately computed
 	inline static var REDIS_KEY_POOL_WORKER_PARAMETERS = '${INSTANCE_POOL_PREFIX}pool_worker_parameters';//HASH <MachinePoolId, InstanceJobParams>
-	inline static var REDIS_KEY_WORKER_JOB_MACHINE_MAP = '${INSTANCE_POOL_PREFIX}job_machine';//HASH <ComputeJobId, MachineId>
+	public inline static var REDIS_KEY_WORKER_JOB_MACHINE_MAP = '${INSTANCE_POOL_PREFIX}job_machine';//HASH <ComputeJobId, MachineId>
 	inline static var REDIS_KEY_WORKER_JOB_DEFINITION = '${INSTANCE_POOL_PREFIX}jobs';//HASH <ComputeJobId, JobParams>
 	inline public static var REDIS_CHANNEL_KEY_WORKERS_UPDATE = '${INSTANCE_POOL_PREFIX}workers_updated';//channel
 
@@ -523,6 +540,7 @@ class InstancePool
 		"cpus"=>REDIS_KEY_WORKER_AVAILABLE_CPUS,
 		"workerParameters"=>REDIS_KEY_WORKER_PARAMETERS,
 		"status"=>REDIS_KEY_WORKER_STATUS,
+		"available_status"=>REDIS_KEY_WORKER_AVAILABLE_STATUS
 	];
 	static var WORKER_HASHES_STRING_LUA = WORKER_HASHES.keys().array().map(function(k) return k + '="' + WORKER_HASHES[k] + '"').join(", ");
 
@@ -536,6 +554,7 @@ class InstancePool
 	inline static var SCRIPT_ADD_JOB_TO_MACHINE = '${INSTANCE_POOL_PREFIX}submitJobToMachine';
 	inline static var SCRIPT_REMOVE_JOB = '${INSTANCE_POOL_PREFIX}removeJob';
 	inline static var SCRIPT_GET_JSON = '${INSTANCE_POOL_PREFIX}getJson';
+	inline static var SCRIPT_GET_RAW_JSON = '${INSTANCE_POOL_PREFIX}getRawJson';
 	inline static var SCRIPT_GET_WORKERS_IN_POOL = '${INSTANCE_POOL_PREFIX}getWorkersInPool';
 	inline static var SCRIPT_REMOVE_WORKERS = '${INSTANCE_POOL_PREFIX}removeWorkers';
 	// inline static var SCRIPT_MARK_MACHINE_DOWN = '${INSTANCE_POOL_PREFIX}markMachineDown';
@@ -679,7 +698,6 @@ redis.call("PUBLISH", channel, "update")
 	inline public static var SNIPPET_REMOVE_JOB =
 //Expects computeJobId
 '
-print("InstancePool.SNIPPET_REMOVE_JOB " .. computeJobId)
 local machineId = redis.call("HGET", "$REDIS_KEY_WORKER_JOB_MACHINE_MAP", computeJobId)
 if not machineId then
 	return {err="Job " .. computeJobId .. " does not exist"}
@@ -905,7 +923,6 @@ redis.call("ZREM", "$REDIS_KEY_WORKER_DEFERRED_TIME", machineId)
 ';
 
 public static var SNIPPET_GET_JSON =
-	//Counts idle machines and reduces the target machines by that amount
 '
 local machinePoolKeys = redis.call("ZRANGE", "$REDIS_KEY_WORKER_POOL_PRIORITY", 0, -1)
 local result = {pools={}}
@@ -913,18 +930,26 @@ for index,poolId in ipairs(machinePoolKeys) do
 	local pool = "$REDIS_KEY_WORKER_POOLS_PREFIX" .. poolId
 	local instanceList = {}
 	local poolScore = redis.call("ZSCORE", "$REDIS_KEY_WORKER_POOL_PRIORITY", poolId)
-	table.insert(result.pools, {id=poolId, score=tonumber(poolScore), instances=instanceList})
+	--local poolEntry = {id=poolId, score=tonumber(poolScore), instances=instanceList}
+	local poolEntry = {id=poolId, score=tonumber(poolScore)}
+	table.insert(result.pools, poolEntry)
 	local machines = redis.call("ZRANGE", pool, 0, -1)
 	for index,machineId in ipairs(machines) do
 		local jobs = {}
-		local machineDescription = {id=machineId, jobs=jobs}
+		local machineDescription = {id=machineId}
 		table.insert(instanceList, machineDescription)
 		local jobIds = redis.call("SMEMBERS", "$REDIS_KEY_WORKER_JOBS_PREFIX" .. machineId)
 		for index,jobId in ipairs(jobIds) do
 			table.insert(jobs, jobId)
 		end
+		if #jobs > 0 then
+			machineDescription.jobs = jobs
+		end
 		local cpus = tonumber(redis.call("HGET", "$REDIS_KEY_WORKER_AVAILABLE_CPUS", machineId))
 		machineDescription.cpus = cpus
+	end
+	if #instanceList > 0 then
+		poolEntry.instances = instanceList
 	end
 end
 for hashkey,rediskey in pairs({${WORKER_HASHES.keys().array().map(function(k) return k + '=\"' + WORKER_HASHES[k] + '\"').join(", ")}}) do
@@ -988,6 +1013,13 @@ end
 result.totalTargetInstances = tonumber(redis.call("GET", "$REDIS_KEY_WORKER_POOL_TARGET_INSTANCES_TOTAL")) or 0
 
 result.available = redis.call("SMEMBERS", "$REDIS_KEY_WORKER_STATUS_AVAILABLE")
+
+local workerStatus = {}
+local all = redis.call("HGETALL", "$REDIS_KEY_WORKER_STATUS")
+for i=1,#all, 2 do
+	workerStatus[all[i]] = all[i+1]
+end
+result.status = workerStatus
 ';
 
 /* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
@@ -1104,24 +1136,32 @@ if redis.call("HEXISTS", "$REDIS_KEY_WORKERS", machineId) == 0 then
 	return
 end
 
-local status = "${MachineStatus.Removing}"
+local status = redis.call("HGET", "$REDIS_KEY_WORKER_STATUS", machineId)
+
+--Idempotent
+if status == "${MachineStatus.Failed}" then
+	return
+end
+--Already removing
+if status == "${MachineStatus.Removing}" then
+	return
+end
+--Now set the status
+status = "${MachineStatus.Removing}"
 $SNIPPET_UPDATE_MACHINE_STATUS
 
 local worker = redis.call("HGET", "$REDIS_KEY_WORKERS", machineId)
 local poolId = redis.call("HGET", "$REDIS_KEY_WORKER_POOL_MAP", machineId)
 
-print("worker=" .. tostring(worker))
-print("poolId=" .. tostring(poolId))
-
 local computeJobIds = redis.call("SMEMBERS", "$REDIS_KEY_WORKER_JOBS_PREFIX" .. machineId)
-print("computeJobIds=" .. tostring(computeJobIds))
-print("computeJobIds.type=" .. type(computeJobIds))
 for index,computeJobId in ipairs(computeJobIds) do
 	print("Requeuing " .. tostring(computeJobId))
 	${ComputeQueue.SNIPPET_REQUEUE_COMPUTE_JOB}
 end
 
 --$ SNIPPET_REMOVE_WORKER
+
+${ComputeQueue.SNIPPET_PROCESS_PENDING}
 
 $SNIPPET_UPDATE_MACHINE_CHANNEL
 ',
@@ -1169,6 +1209,59 @@ $SNIPPET_REMOVE_JOB
 $SNIPPET_GET_JSON
 return cjson.encode(result)
 ',
+
+
+			SCRIPT_GET_RAW_JSON =>
+'
+local hashes = {"$REDIS_KEY_WORKER_STATUS", "$REDIS_KEY_WORKER_AVAILABLE_STATUS", "$REDIS_KEY_WORKERS", "$REDIS_KEY_WORKER_POOL_MAX_INSTANCES", "$REDIS_KEY_WORKER_POOL_MIN_INSTANCES", "$REDIS_KEY_WORKER_POOL_BILLING_INCREMENT", "$REDIS_KEY_WORKER_POOL_MAP", "$REDIS_KEY_WORKER_AVAILABLE_CPUS", "$REDIS_KEY_WORKER_PARAMETERS", "$REDIS_KEY_POOL_WORKER_PARAMETERS", "$REDIS_KEY_WORKER_JOB_MACHINE_MAP", "$REDIS_KEY_WORKER_JOB_DEFINITION"}
+local sets = {"$REDIS_KEY_WORKER_STATUS_AVAILABLE", "$REDIS_KEY_WORKER_AVAILABLE_STATUS_IDLE", "$REDIS_KEY_WORKER_AVAILABLE_STATUS_WORKING", "$REDIS_KEY_WORKER_AVAILABLE_STATUS_MAXCAPACITY", "$REDIS_KEY_WORKER_POOLS_AVAILABLE_PREFIX"}
+local sortedSets = {"$REDIS_KEY_WORKER_DEFERRED_TIME", "$REDIS_KEY_WORKER_POOL_PRIORITY"}
+local sortedSetPrefixes = {}
+local setKeyPrefixes = {"$REDIS_KEY_WORKER_JOBS_PREFIX", "$REDIS_KEY_POOL_JOBS_PREFIX", "$REDIS_KEY_WORKER_POOLS_SET_PREFIX"}--, "$REDIS_KEY_WORKER_POOLS_PREFIX"}
+
+local result = {}
+
+for i,hashKey in ipairs(hashes) do
+	local all = redis.call("HGETALL", hashKey)
+	result[hashKey] = {}
+	for i=1,#all, 2 do
+		result[hashKey][all[i]] = all[i+1]
+	end
+end
+
+for i,setKey in ipairs(sets) do
+	result[setKey] = redis.call("SMEMBERS", setKey)
+end
+
+for i,setPrefix in ipairs(setKeyPrefixes) do
+	local keys = redis.call("KEYS", setPrefix .. "*")
+	for j,setKey in ipairs(keys) do
+		result[setKey] = redis.call("SMEMBERS", setKey)
+	end
+end
+
+for i,sortedSetKey in ipairs(sortedSets) do
+	local sortedKeyTable = redis.call("ZRANGE", sortedSetKey, 0, -1)
+	result[sortedSetKey] = {}
+	for index,key in ipairs(sortedKeyTable) do
+		result[sortedSetKey][index] = key
+	end
+end
+
+for i,sortedSetPrefix in ipairs(sortedSetPrefixes) do
+	local keys = redis.call("KEYS", sortedSetPrefix .. "*")
+	for j,sortedSetKey in ipairs(keys) do
+		local sortedKeyTable = redis.call("ZRANGE", sortedSetKey, 0, -1)
+		result[sortedSetKey] = {}
+		for index,key in ipairs(sortedKeyTable) do
+			result[sortedSetKey][index] = key
+		end
+	end
+end
+
+return cjson.encode(result)
+',
+
 
 			SCRIPT_GET_WORKERS_IN_POOL =>
 '
@@ -1345,9 +1438,11 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 	inline public function getMachine(id :MachineId) :JsonDumpInstance
 	{
 		for (pool in this.pools) {
-			for (machine in pool.instances) {
-				if (machine.id == id) {
-					return machine;
+			if (pool.instances != null) {
+				for (machine in pool.instances) {
+					if (machine.id == id) {
+						return machine;
+					}
 				}
 			}
 		}
@@ -1363,7 +1458,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 	{
 		var arr = [];
 		for (pool in this.pools) {
-			arr = arr.concat(pool.instances);
+			arr = arr.concat(pool.instances != null ? pool.instances : []);
 		}
 		return arr;
 	}
@@ -1373,7 +1468,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var arr = [];
 		for (pool in this.pools) {
 			if (pool.id == poolId) {
-				arr = pool.instances.map(function(i) return i.id);
+				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
 		}
 		return arr;
@@ -1384,7 +1479,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var arr :Array<MachineId> = [];
 		for (pool in this.pools) {
 			if (pool.id == poolId) {
-				arr = pool.instances.map(function(i) return i.id);
+				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
 		}
 		var activeStatuses = [MachineStatus.Available];
@@ -1403,7 +1498,7 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var arr :Array<MachineId> = [];
 		for (pool in this.pools) {
 			if (pool.id == poolId) {
-				arr = pool.instances.map(function(i) return i.id);
+				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
 		}
 		var activeStatuses = [MachineStatus.Available, MachineStatus.WaitingForRemoval, MachineStatus.Deferred];
@@ -1452,6 +1547,11 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		return Reflect.field(Reflect.field(this, 'cpus'), id);
 	}
 
+	inline public function getTotalCpus(id :MachineId) :Int
+	{
+		return Reflect.field(Reflect.field(this, 'workerParameters'), id).cpus;
+	}
+
 	inline public function getAllAvailableCpus() :Int
 	{
 		// var cpus = Reflect.field(this, 'cpus');
@@ -1466,10 +1566,12 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 	public function getMachineRunningJob(id :ComputeJobId) :JsonDumpInstance
 	{
 		for (pool in this.pools) {
-			for (machine in pool.instances) {
-				for (jobId in machine.jobs) {
-					if (id == jobId) {
-						return machine;
+			if (pool.instances != null) {
+				for (machine in pool.instances) {
+					for (jobId in machine.jobs) {
+						if (id == jobId) {
+							return machine;
+						}
 					}
 				}
 			}
@@ -1482,9 +1584,13 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 		var map = new Map<ComputeJobId, MachineId>();
 		for (pool in this.pools) {
 			if (pool.id == id) {
-				for (machine in pool.instances) {
-					for (jobId in machine.jobs) {
-						map.set(jobId, machine.id);
+				if (pool.instances != null) {
+					for (machine in pool.instances) {
+						if (machine.jobs != null) {
+							for (jobId in machine.jobs) {
+								map.set(jobId, machine.id);
+							}
+						}
 					}
 				}
 			}

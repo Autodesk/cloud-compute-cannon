@@ -1,6 +1,5 @@
 package compute;
 
-import ccc.compute.Definitions;
 import ccc.compute.workers.Worker;
 
 class MockWorker extends Worker
@@ -10,5 +9,5 @@ class MockWorker extends Worker
 		super(def);
 	}
 
-	override function startPoll() {}
+	override function startMonitor() {}
 }

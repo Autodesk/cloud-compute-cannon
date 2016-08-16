@@ -7,7 +7,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -20,7 +20,6 @@ import promhx.RedisPromises;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderVagrant;
@@ -45,6 +44,12 @@ class TestScalingMock extends TestScalingBase
 		return super.setup()
 			.pipe(function(_) {
 				return _workerManager.dispose();
+			})
+			.pipe(function(_) {
+				return _workerManager != null ? _workerManager.dispose() : Promise.promise(true);
+			})
+			.pipe(function(_) {
+				return _workerProvider != null ? _workerProvider.dispose() : Promise.promise(true);
 			})
 			.pipe(function(_) {
 				_workerManager = new MockWorkerManager();
@@ -99,7 +104,7 @@ class TestScalingMock extends TestScalingBase
 		MockWorkerProvider.TIME_MS_WORKER_CREATION = 50;
 		var provider :MockWorkerProvider = cast _workerProvider;
 		var machineTargetCount = 2;
-		var config :ProviderConfigBase = {
+		var config :ServiceConfigurationWorkerProvider = {
 			priority: 1,
 			maxWorkers: 3,
 			minWorkers: 0,
@@ -194,7 +199,7 @@ class TestScalingMock extends TestScalingBase
 						return provider.onceOnCountEquals(machineTargetCount);
 					});
 			})
-			.thenWait(config.billingIncrement.toMilliseconds().toInt() + 20)
+			.thenWait(config.billingIncrement.toMilliseconds().toInt() + 50)
 			.then(function(_) {
 				assertEquals(provider.getDeferredWorkerIds().length, 0);
 				return true;
@@ -224,7 +229,7 @@ class TestScalingMock extends TestScalingBase
 	}
 
 	@timeout(120000)
-	public function testScalingMock()
+	public function XXtestScalingMock()
 	{
 		return baseTestScalingMachines();
 	}

@@ -34,13 +34,15 @@ Cloud-compute-cannon installs globally.
 
 	npm install -g cloud-compute-cannon
 
-This installs the `cloudcannon` executable.
+This installs the `ccc` executable.
 
 ## Running
 
 ### 'Hello world' example
 
-	cloudcannon run --image=python --command="python -c print('Hello world!')" --output=./localOutputDir
+--command=\'["python", "-c", "print(\\\"Hello World!\\\")"]
+
+	ccc run --image=elyase/staticpython --command='["python", "-c", "print(\"Hello World!\")"]' --output=./localOutputDir
 
 This assumes you have docker installed on the local machine, since we haven't specified any cloud provider, such as AWS. It instructs a worker to pull the python docker image, creates a container that runs the python command. The `output` option instructs cloudcannon to copy the results (here only the stdout) to the directory.
 
@@ -52,7 +54,7 @@ There are many other options that are documented below.
 
 You can see logs for the entire stack at:
 
-http://<host>:9200
+http://<host>:5601
 
 The first time you'll need to configure Kibana:
 
@@ -60,37 +62,23 @@ Click on settings in the top-line menu, choose indices and then make sure that t
 
 To confirm there are indices go to:
 
-http://<host>:9200/_cat/indices
+http://<host>:5601/_cat/indices
 
 and you should see logstash-*** indices.
 
 ## Configuration
 
-Deploying to a remote machine, or deploying anywhere that uses real cloud providers (e.g. AWS, GCE) requires passing in environmental variables *and* also a yaml config file.
-
-E.g.
-
-	COMPUTE_CONFIG=`cat serverconfig.yaml` docker-compose up
-
-The other environment variables are specified in the docker-compose.yml file.
+Deploying to a remote machine, or deploying anywhere that uses real cloud providers (e.g. AWS, GCE) requires passing in a configuration file.
 
 Example config yaml files are found in `compute/servers/etc`.
-
-The full list of environment variables used by the compute queue:
-
-	PORT=9000
-	REDIS_PORT=6379
-	REDIS_HOST=redis
-	COMPUTE_CONFIG=`cat serverconfig.yaml`
 
 Yaml config example:
 
 ```yaml
 
-server:
-  storage:
-    type: "local"
-    rootPath: "data/ServiceStorageLocalFileSystem"
+storage:
+  type: "local"
+  rootPath: "data/ServiceStorageLocalFileSystem"
 
 providers:
   - type: "PkgCloud"
@@ -98,74 +86,83 @@ providers:
     minWorkers: 0
     priority: 1
     #billingIncrement are measured in MINUTES. AWS defaults to 60 if this is not set
-    billingIncrement: 60
+    billingIncrement: 58
     credentials:
       provider: "amazon"
-      keyId: "AKIAIWJON3HDJNRFHCQQ"
-      key: "exampleKey"
+      keyId: "AKIAIWJON3HDJ"
+      key: "SLV3lNIPbGwv6oSy"
       region: "us-west-1"
-      SecurityGroupId: "sg-a3eae4e7"
-    worker:
-      #You can set arbitrary tags here. This relies on the AWS permissions allowing tagging.
-      #Tagging is not used internally, so these are optional.
+    server:
       Tags:
         - Key: "Name"
-          Value: "APlatformWorker_DionsTest"
-        - Key: "PlatformId"
-          Value: "DionsTest"
-      InstanceType: "m4.large"
-      #https://coreos.com/dist/aws/aws-stable.json
-      ImageId: "ami-c2e490a2"
-      #If you want to run the compute server outside the network where the workers are allocated, e.g. 
-      #for testing, set this to true.
-      usePublicIp: false
-      SubnetId: "subnet-828f7ee7"
-      #This is optional, it will use the default VPC security group.
-      SecurityGroup: "platform-test-security-group"
-      KeyName: "platform-test-keypair"
-        Key: |
-          -----BEGIN RSA PRIVATE KEY-----
-          MIIEowIBAAKCAQEAhmr9lnVKTkk5p/Z/MFgPXHlTYyGt8EBqrXlmusPwBiSJsGtS9Pd+YFyFEsMy
-          7SNAljfJrv/PaRWtOwHDIizHBkeEqQoZTOaNbieN152VwKJm/Lfe3wS2+BjyViV97iD8WBxcOWS+
-          ...
-          -----END RSA PRIVATE KEY-----
+          Value: "CCC_Server"
+      InstanceType: "m3.medium"
+      ImageId: "ami-652c5505"
+      KeyName: "ccc-keypair"
+      Key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+        JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+        -----END RSA PRIVATE KEY-----
+    worker:
+      Tags:
+        - Key: "Name"
+          Value: "CCC_Worker"
+      InstanceType: "m3.medium"
+      ImageId: "ami-61e99101"
+      KeyName: "ccc-keypair"
+      Key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+        JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+        -----END RSA PRIVATE KEY-----
 ```
+
+In the above configuration, only the `credentials.keyId` and `credentials.key` values need to be modified to run under your own AWS account.
+
+### Storage providers
+
+```
+  storage:
+    type: "local"
+    rootPath: "data/ServiceStorageLocalFileSystem"
+```
+
+```
+  storage:
+    type: "S3"
+    rootPath: "/"
+    container: "bucket-name"
+    # You can use the S3 url or the cloudfront. The httpAccessUrl
+    # is prepended to the file path.
+    #httpAccessUrl: "https://s3-us-west-1.amazonaws.com/bucket-name"
+    httpAccessUrl: "https://d3bt947tva2i1l.cloudfront.net"
+    credentials:
+      provider: "amazon"
+      #You can use keyId/key or accessKeyId/secretAccessKey field names
+      keyId: "your keyId"
+      key: "your key"
+      region: "us-west-1"
+```
+
+More coming soon!
 
 ## Testing
 
-If you have a running server (let's assume here at *localhost:9000*), you can test if via `curl` by sending this JSON-RPC data (located in the file test/res/jsonrpctest.json).
+Call the this API endpoint to run the suite of internal functional end-to-end tests:
 
+  curl <HOST:PORT>/api/rpc/server-tests
 
-```
-	{
-		"jsonrpc":"2.0",
-		"method":"cloudcomputecannon.run",
-		"params":{
-			"job": {
-				"image":"elyase/staticpython",
-				"cmd": ["python", "-c", "print('Hello World!')"],
-				"parameters": {"cpus":1, "maxDuration":6000000}
-			}
-		}
-	}
-```
+This will return the tests results in JSON and a status of 200 if the tests pass, or a 500 status if any test fails.
 
-	`curl -H "Content-Type: application/json-rpc" -X POST -d @test/res/jsonrpctest.json http://localhost:9000/api/rpc`
 
 ## Developers
 
-CloudComputeCannon is written in [Haxe](http://haxe.org/). To develop, you'll need to install Haxe, ([Docker](https://www.docker.com/), and [Node+NPM](http://nodejs.org/).
+CloudComputeCannon is written in [Haxe](http://haxe.org/). To develop, you'll need to install Haxe, ([Docker](https://www.docker.com/) +1.12, and [Node+NPM](http://nodejs.org/).
 
 Steps for running the functional tests locally:
 
-1) Ensure docker-machine has a default machine:
-
-    ```
-    docker-machine create --driver virtualbox default
-
-    ```
-
-2) Clone the repo and install libraries, submodules, etc
+1) Clone the repo and install libraries, submodules, etc
 
 	git clone https://github.com/Autodesk/cloud-compute-cannon
 	cd cloud-compute-cannon
@@ -177,21 +174,53 @@ To compile, run:
 
 	haxe etc/hxml/build-all.hxml
 
-You'll need (at minimum) a running [Redis ](http://redis.io/) database. In a new terminal window in the cloud-compute-cannon directory run the following command. It assumes you have ([Docker](https://www.docker.com/) installed:
+To run you'll need the rest of the stack (database, registry, logging). In a new terminal window in the cloud-compute-cannon directory run the following command. It assumes you have ([Docker](https://www.docker.com/) installed:
 
-	npm run redis
+	./bin/run-stack-noserver
 
 Then in another terminal window, run:
 
 	haxe test/testsIntegration.hxml
 
-Some of the tests require [VirtualBox](https://www.virtualbox.org/wiki/Downloads), however these are optional (the availability of Virtualbox is detected at runtime).
+To run individual tests:
 
-### Contact
+  ./bin/test <full.class.name>[.optionalMethod]
+
+
+### Running tests on cloud providers
+
+1) Set up an instance on e.g. AWS. Map the IP address to an entry in your ~/.ssh/config for passwordless operations. We'll call our alias "dev".
+
+2) Create your server configuration file (default name="ccc.yml", see above).
+
+3)
+
+  ./bin/reloading-stack-deploy <ssh alias (dev)> <path to ccc.yml>
+
+4) On server compiles
+
+  ./bin/reloading-stack-sync <ssh alias (dev)> <path to ccc.yml>
+
+The server code and config will be copied over and the server restarted. Restaring means running the tests.
+
+Optionally create an .env file in the root of the repo, this will be consumed by the reloading server.
+
+### Developing locally and having compiled server builds automatically uploaded to a remote server and restarted
+
+1) Set up an instance on e.g. AWS. Map the IP address to an entry in your ~/.ssh/config for passwordless operations. We'll call our alias "dev".
+
+2)
+
+  ./bin/run-stack-remote-dev <host> <ccc.yml>
+
+3) Code and build! Updates are automatically pushed to the remote server!
+
+
+## Contact
 
 To contact the authors, please email: maintainers.bionano-cloudcomputecannon@autodesk.com or post an issue.
 
-### License
+## License
 
 Copyright 2015 Autodesk Inc.
 

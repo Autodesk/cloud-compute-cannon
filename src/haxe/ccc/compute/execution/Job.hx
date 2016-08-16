@@ -12,13 +12,11 @@ import haxe.Json;
 
 import js.Node;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Docker;
+import js.npm.ssh2.Ssh;
+import js.npm.docker.Docker;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.ComputeQueue;
 import ccc.compute.LogStreams;
 import ccc.compute.execution.BatchComputeDocker;
@@ -34,6 +32,7 @@ import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 import promhx.RedisPromises;
+import promhx.DockerPromises;
 
 import util.streams.StreamTools;
 import util.SshTools;
@@ -45,24 +44,6 @@ using ccc.compute.workers.WorkerTools;
 using promhx.PromiseTools;
 using Lambda;
 using util.MapTools;
-
-enum JobEvent
-{
-	Initializing;
-	RegisteringWithDatabase;
-	CreatingDockerContainer;
-	StartedDockerContainer;
-	FinishedDockerContainer;
-}
-
-@:enum
-abstract JobExecutionState(String) {
-  var WaitingForExecution = "waiting";
-  var Executing = "executing";
-  var Aborted = "aborted";
-  var Finished = "finished";
-  var ResumingFromRestart = "resuming_from_restart";
-}
 
 class Job
 {
@@ -76,8 +57,8 @@ class Job
 			id: job.id,
 			status: finishedStatus,
 			exitCode: batchJobResult.exitCode,
-			stdout: externalBaseUrl + job.item.resultDir() + STDOUT_FILE,
-			stderr: externalBaseUrl + job.item.resultDir() + STDERR_FILE,
+			stdout: fs.getExternalUrl(job.item.stdoutPath()),
+			stderr: fs.getExternalUrl(job.item.stderrPath()),
 			resultJson: externalBaseUrl + job.item.resultJsonPath(),
 			inputsBaseUrl: externalBaseUrl + job.item.inputDir(),
 			outputsBaseUrl: externalBaseUrl + job.item.outputDir(),
@@ -85,16 +66,19 @@ class Job
 			outputs: batchJobResult.outputFiles,
 			error: batchJobResult.error,
 		};
-		jobStorage = jobStorage.appendToRootPath(job.item.resultDir());
+
+		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
+		var jobResultsStorage = jobStorage.appendToRootPath(job.item.resultDir());
 		return Promise.promise(true)
 			.pipe(function(_) {
 				if (batchJobResult.copiedLogs) {
-					return jobStorage.exists(STDOUT_FILE)
+
+					return jobResultsStorage.exists(STDOUT_FILE)
 						.pipe(function(exists) {
 							if (!exists) {
 								jobResult.stdout = null;
 							}
-							return jobStorage.exists(STDERR_FILE);
+							return jobResultsStorage.exists(STDERR_FILE);
 						})
 						.then(function(exists) {
 							if (!exists) {
@@ -109,12 +93,12 @@ class Job
 				}
 			})
 			.pipe(function(_) {
-				return jobStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
+				return jobResultsStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
 			})
 			.pipe(function(_) {
 				if (externalBaseUrl != '') {
 					return promhx.RetryPromise.pollRegular(function() {
-						return jobStorage.readFile(RESULTS_JSON_FILE)
+						return jobResultsStorage.readFile(RESULTS_JSON_FILE)
 							.pipe(function(readable) {
 								return StreamPromises.streamToString(readable);
 							})
@@ -213,8 +197,25 @@ class Job
 					return ComputeQueue.getJobDescriptionFromComputeId(redis, computeJobId);
 				}
 			})
+			.errorPipe(function(err) {
+				log.error({error:err, message:'Failed to initialized job, removing'});
+				if (_redis != null) {
+					return ComputeQueue.jobFinalized(_redis, computeJobId)
+						.errorPipe(function(err) {
+							log.error({log:'ComputeQueue.jobFinalized after failing to load', error:err});
+							return Promise.promise(true);
+						})
+						.pipe(function(_) {
+							return dispose()
+								.thenVal(null);
+						});
+				} else {
+					return dispose()
+						.thenVal(null);
+				}
+			})
 			.then(function(job :QueueJobDefinitionDocker) {
-				if (!_disposed) {
+				if (!_disposed && job != null) {
 					_job = job;
 					log = log.child({jobid:job.id});
 					if (_job.item.inputs != null) {
@@ -242,8 +243,8 @@ class Job
 		} else {
 			var workerStorageConfig :StorageDefinition = {
 				type: StorageSourceType.Sftp,
-				rootPath: JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
-				sshConfig: _job.worker.ssh
+				rootPath: WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER,
+				credentials: _job.worker.ssh
 			};
 			StorageTools.getStorage(workerStorageConfig);
 		}
@@ -279,14 +280,36 @@ class Job
 						var executecallResult = executeJob();
 						executecallResult.promise.catchError(function(err) {
 							_cancelWorkingJob = null;
-							var batchJobResult = {exitCode:-1, error:err, copiedLogs:false};
-							log.error({exitCode:-1, error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
-							if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
-								writeJobResults(_job, _fs, batchJobResult, JobFinishedStatus.Failed)
-									.then(function(_) {
-										return finishJob(JobFinishedStatus.Failed, Std.string(err));
-									});
+
+							function writeFailure() {
+								//Write job as a failure
+								//This should actually never happen, or the failure
+								//should be handled
+								var batchJobResult = {exitCode:-1, error:err, copiedLogs:false};
+								log.error({exitCode:-1, error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
+								if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
+									writeJobResults(_job, _fs, batchJobResult, JobFinishedStatus.Failed)
+										.then(function(_) {
+											return finishJob(JobFinishedStatus.Failed, Std.string(err));
+										});
+								}
 							}
+
+							//Check if we can reach the worker. If not, then the
+							//worker died at an inconvenient time, so we requeue
+							//this job
+							cloud.MachineMonitor.checkMachine(_job.worker.docker, _job.worker.ssh)
+								.then(function(ok) {
+									if (_redis != null) {
+										if (ok) {
+											writeFailure();
+										} else {
+											log.warn('Job failed but worker failed check, so requeuing job');
+											ComputeQueue.requeueJob(_redis, _job.computeJobId);
+											dispose();
+										}
+									}
+								});
 						});
 						//This can be called in case the job is killed
 						_cancelWorkingJob = executecallResult.cancel;
@@ -303,16 +326,6 @@ class Job
 								} else {
 									return Promise.promise(true);
 								}
-							})
-							.then(function(_) {
-								try {
-									if (_redis != null) {
-										logStdStreamsToElasticSearch(_redis, _fs, _job.id);
-									}
-								} catch (err :Dynamic) {
-									Log.error({error:err});
-								}
-								return true;
 							});
 					});
 				p.catchError(function(err) {
@@ -325,6 +338,9 @@ class Job
 						writeJobResults(_job, _fs, batchJobResult, finishedStatus)
 							.then(function(_) {
 								finishJob(finishedStatus, Std.string(err));
+							})
+							.catchError(function(err) {
+								log.error({error:err, state:_currentInternalState, message:'Failed to write job results'});
 							});
 					}
 				});
@@ -380,10 +396,24 @@ class Job
 							return Promise.promise(true);
 						})
 						.pipe(function(_) {
-							return ComputeQueue.processPending(_redis);
+							//We may already be shut down
+							if (_redis != null) {
+								return ComputeQueue.processPending(_redis)
+									.thenTrue();
+							} else {
+								return Promise.promise(true);
+							}
+						})
+						.errorPipe(function(err) {
+							log.error({error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
+							return Promise.promise(true);
 						})
 						.pipe(function(_) {
 							return dispose()
+								.errorPipe(function(err) {
+									log.error({error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
+									return Promise.promise(true);
+								})
 								.thenTrue();
 						});
 				} else {
@@ -401,17 +431,21 @@ class Job
 			return Promise.promise(true);
 		} else {
 			_removedFromDockerHost = true;
-			var docker = _job.worker.getInstance().docker();
-			var suppressErrorIfContainerNotFound = true;
-			return DockerJobTools.removeContainer(docker, id, suppressErrorIfContainerNotFound)
-				.then(function(_) {
-					log.debug({log:'Removed container from docker'});
-					return true;
-				})
-				.errorPipe(function(err) {
-					Log.error({log:'Failed to remove container from docker, perhaps it was never created', error:err});
-					return Promise.promise(false);
-				});
+			if (_job != null && _job.worker != null) {
+				var docker = _job.worker.getInstance().docker();
+				var suppressErrorIfContainerNotFound = true;
+				return DockerJobTools.removeContainer(docker, id, suppressErrorIfContainerNotFound)
+					.then(function(_) {
+						log.debug({log:'Removed container from docker'});
+						return true;
+					})
+					.errorPipe(function(err) {
+						Log.error({log:'Failed to remove container from docker, perhaps it was never created', error:err});
+						return Promise.promise(false);
+					});
+			} else {
+				return Promise.promise(false);
+			}
 		}
 	}
 

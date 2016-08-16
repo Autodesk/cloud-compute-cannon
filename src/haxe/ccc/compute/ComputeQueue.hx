@@ -1,5 +1,6 @@
 package ccc.compute;
 
+import haxe.DynamicAccess;
 import haxe.Json;
 import haxe.io.Bytes;
 
@@ -14,7 +15,6 @@ import promhx.RedisPromises;
 import promhx.deferred.DeferredPromise;
 
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 
 using Lambda;
@@ -246,6 +246,36 @@ class ComputeQueue
 			});
 	}
 
+	public static function getJobStatus(redis :RedisClient, jobId :JobId) :Promise<JobStatusBlob>
+	{
+		return evaluateLuaScript(redis, SCRIPT_JOB_STATUS, [jobId])
+			.then(function(s) {
+				var obj = Json.parse(s);
+				return cast obj;
+			});
+	}
+
+	public static function getJobStatuses(redis :RedisClient) :Promise<TypedDynamicObject<JobId,JobStatusBlob>>
+	{
+		return evaluateLuaScript(redis, SCRIPT_JOB_STATUSES, [])
+			.then(function(s :String) {
+				var obj = Json.parse(s);
+				return obj;
+			});
+	}
+
+	public static function getWorkerIdForJob(redis :RedisClient, jobId :JobId) :Promise<MachineId>
+	{
+		return RedisPromises.hget(redis, REDIS_KEY_JOB_ID_TO_COMPUTE_ID, jobId)
+			.pipe(function(computeJobId :ComputeJobId) {
+				if (computeJobId != null) {
+					return RedisPromises.hget(redis, InstancePool.REDIS_KEY_WORKER_JOB_MACHINE_MAP, computeJobId);
+				} else {
+					return Promise.promise(null);
+				}
+			});
+	}
+
 	public static function removeJob<T>(redis :RedisClient, jobId :JobId) :Promise<QueueObject<T>>
 	{
 		Assert.notNull(jobId);
@@ -283,6 +313,9 @@ class ComputeQueue
 
 	public static function finishComputeJob<T>(redis :RedisClient, computeJobId :ComputeJobId, status :JobFinishedStatus, ?error :Dynamic) :Promise<QueueJobDefinitionDocker>
 	{
+		if (error != null) {
+			error = Json.stringify(error);
+		}
 		return evaluateLuaScript(redis, SCRIPT_FINISHED_COMPUTE_JOB, [computeJobId, status, Date.now().getTime(), error])
 			.then(function(s :String) {
 				var obj = Json.parse(s);
@@ -300,9 +333,9 @@ class ComputeQueue
 		return RedisPromises.hget(redis, REDIS_KEY_COMPUTEJOB_WORKING_STATE, computeJobId);
 	}
 
-	public static function requeueJob<T>(redis :RedisClient, jobId :JobId, computeJobId :ComputeJobId) :Promise<Stats>
+	public static function requeueJob<T>(redis :RedisClient, computeJobId :ComputeJobId) :Promise<Stats>
 	{
-		return evaluateLuaScript(redis, SCRIPT_REQUEUE, [jobId, computeJobId, Date.now().getTime()])
+		return evaluateLuaScript(redis, SCRIPT_REQUEUE, [computeJobId, Date.now().getTime()])
 			.then(function(s :String) {
 				var obj = Json.parse(s);
 				return obj;
@@ -455,6 +488,8 @@ class ComputeQueue
 	inline static var SCRIPT_GET_JOB_DEFINITION = '${PREFIX}get_job_definition';
 	inline static var SCRIPT_GET_JOB_DEFINITION_FROM_COMPUTE_ID = '${PREFIX}get_job_definition_from_compute_id';
 	inline static var SCRIPT_REMOVE_ALL_JOB_DATA = '${PREFIX}remove_job_data';
+	inline static var SCRIPT_JOB_STATUSES = '${PREFIX}get_job_statuses';
+	inline static var SCRIPT_JOB_STATUS = '${PREFIX}get_job_status';
 
 	/**
 	 * Re-used snippets of Lua code
@@ -470,7 +505,6 @@ statusBlob.computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", 
 statusBlob.jobId = jobId
 statusBlob.job = cjson.decode(redis.call("HGET", "$REDIS_KEY_VALUES", jobId))
 local statusBlobString = cjson.encode(statusBlob)
-print("SETTING " .. jobId .. " status=" .. statusBlobString)
 redis.call("HSET", "$REDIS_KEY_STATUS", jobId, statusBlobString)
 redis.call("SET", "$REDIS_CHANNEL_STATUS", statusBlobString)
 redis.call("PUBLISH", "$REDIS_CHANNEL_STATUS", statusBlobString) --JobStatusUpdate
@@ -507,14 +541,6 @@ end
 
 statusBlob.JobFinishedStatus = jobFinishedStatus
 statusBlob.JobStatus = "${JobStatus.Finalizing}"
-
-print("jobFinishedStatus=" .. jobFinishedStatus)
-
-if jobFinishedError then
-	print("YEP THERS jobFinishedError" .. tostring(jobFinishedError))
-else
-	print("NOPE NO jobFinishedError")
-end
 
 local jobFinishedError = jobFinishedError or nil
 statusBlob.error = jobFinishedError or nil
@@ -640,7 +666,7 @@ end
 if (redis.call("GET", "$REDIS_KEY_AUTOSCALING_ENABLED") or "true") == "true" then
 	--local message = "Autoscaling..."
 	--$ SNIPPET_INFO
-	print("pending count=" .. tostring(redis.call("LLEN", "$REDIS_KEY_PENDING")))
+	--print("pending count=" .. tostring(redis.call("LLEN", "$REDIS_KEY_PENDING")))
 	if redis.call("LLEN", "$REDIS_KEY_PENDING") > 0 then
 		local pendingJobs = redis.call("LRANGE", "$REDIS_KEY_PENDING", 0, -1)
 		local required = {cpus=0}
@@ -658,14 +684,13 @@ end
 	static var SNIPPET_FINISH_JOB =
 //Expects jobId,jobFinishedStatus,time,jobFinishedError
 '
-print("SNIPPET_FINISH_JOB "  .. jobId)
 if not redis.call("ZRANK", "$REDIS_KEY_WORKING", jobId) then
 	return {err="Job " .. jobId .. " is not in working mode"}
 end
 
 local computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-local message = "Finishing job=" .. jobId .. " computeJobId=" .. computeJobId .. "   jobFinishedStatus=" .. jobFinishedStatus
-$SNIPPET_INFO
+--local message = "Finishing job=" .. jobId .. " computeJobId=" .. computeJobId .. "   jobFinishedStatus=" .. jobFinishedStatus
+-- $ SNIPPET_INFO
 
 --Update the stats object
 $SNIPPET_GET_STATSOBJECT
@@ -682,7 +707,6 @@ $SNIPPET_SET_JOB_FINISHED_STATUS
 //Expects jobId
 '
 local statusBlobString = redis.call("HGET", "$REDIS_KEY_STATUS", jobId)
-print("REMOVE JOB RECORD " .. jobId .. ", status=" .. statusBlobString)
 if not statusBlobString then
 	print("Job already removed " .. jobId)
 	return --Job already removed
@@ -722,115 +746,86 @@ local jobId = redis.call("HGET", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId
 if not jobId then
 	local message = "Requeuing but no jobId for computeId=" .. tostring(computeJobId)
 	$SNIPPET_ERROR
-end
+else
+	if redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId) ~= computeJobId then
+		local message = "job (" .. jobId .. ") has a new computeJobId(" .. computeJobId .. "), this job has already been requeued"
+		$SNIPPET_ERROR
+	else
+		local jobStatus = redis.call("HGET", "$REDIS_KEY_STATUS", jobId)
+		if jobStatus == "${JobStatus.Finished}" then
+			local message = "job (" .. jobId .. ") has already finished, cannot be requeued"
+			$SNIPPET_ERROR
+		else
+			local message = "Requeuing job=" .. jobId .. " computeJobId=" .. computeJobId
+			$SNIPPET_INFO
 
-local message = "Requeuing job=" .. jobId .. " computeJobId=" .. computeJobId
-$SNIPPET_INFO
+			--Push the jobId back on the pending queue, but at the FRONT of the queue,
+			--not the back since this is a reqeue, and should be prioritized before currend pending jobs
+			redis.call("RPUSH", "$REDIS_KEY_PENDING", jobId)
+			--Delete from the working set
+			redis.call("ZREM", "$REDIS_KEY_WORKING", jobId)
+			--Update the stats object with this change
+			$SNIPPET_GET_STATSOBJECT
+			stats[${Stats.INDEX_REQUEUE_COUNT}] = stats[${Stats.INDEX_REQUEUE_COUNT}] + 1
+			stats[${Stats.INDEX_LAST_REQUEUE_TIME}] = time
+			redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(stats))
+			--Remove the computeJobId, so that if it comes back, there will be no job matching this version
+			--Remove the job from the pool?
+			redis.call("HDEL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
+			redis.call("HDEL", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
+			${InstancePool.SNIPPET_REMOVE_JOB}
 
---Push the jobId back on the pending queue, but at the FRONT of the queue,
---not the back since this is a reqeue, and should be prioritized before currend pending jobs
-redis.call("RPUSH", "$REDIS_KEY_PENDING", jobId)
---Delete from the working set
-redis.call("ZREM", "$REDIS_KEY_WORKING", jobId)
---Update the stats object with this change
-$SNIPPET_GET_STATSOBJECT
-stats[${Stats.INDEX_REQUEUE_COUNT}] = stats[${Stats.INDEX_REQUEUE_COUNT}] + 1
-stats[${Stats.INDEX_LAST_REQUEUE_TIME}] = time
-redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(stats))
---Remove the computeJobId, so that if it comes back, there will be no job matching this version
---Remove the job from the pool?
-redis.call("HDEL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-redis.call("HDEL", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
-${InstancePool.SNIPPET_REMOVE_JOB}
-
-local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
-local jobStatus = "${JobStatus.Pending}"
-$SNIPPET_SET_JOB_STATUS
-';
+			local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
+			local jobStatus = "${JobStatus.Pending}"
+			$SNIPPET_SET_JOB_STATUS
+			end
+		end
+	end
+	';
 
 
-	/* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
-	static var scripts :Map<String, String> = [
-		SCRIPT_ENQUEUE =>
-'
-local job = cjson.decode(ARGV[1])
+		/* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
+		static var scripts :Map<String, String> = [
+			SCRIPT_ENQUEUE =>
+	'
+	local job = cjson.decode(ARGV[1])
+	local time = tonumber(ARGV[2])
+	local jobId = job.id
+
+	redis.call("HSET", "$REDIS_KEY_VALUES", jobId, cjson.encode(job.item))
+	redis.call("HSET", "$REDIS_KEY_PARAMETERS", jobId, cjson.encode(job.parameters))
+	redis.call("LPUSH", "$REDIS_KEY_PENDING", jobId)
+	redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(job.stats))
+
+	local statusBlob = {jobId=jobId,JobStatus="${JobStatus.Pending}",JobFinishedStatus="${JobFinishedStatus.None}"}
+	$SNIPPET_SET_JOB_STATUS_BLOB
+	$SNIPPET_PROCESS_PENDING
+	',
+
+	/**
+	 * Takes jobs off the queue if it can match them with slots in the compute
+	 * pool. If they are taken off the queue, a {jobId:jobId, workerId:workderId}
+	 * object is posted to a list that is then subsequently consumed and the
+	 * actual job started.
+	 */
+			SCRIPT_PROCESS_PENDING =>
+	'
+	local time = tonumber(ARGV[1])
+
+	$SNIPPET_PROCESS_PENDING
+
+	return cjson.encode({assigned=jobsAssigned, remaining=jobsWithoutWorkers})
+	',
+			SCRIPT_REQUEUE =>
+	'
+local computeJobId = ARGV[1]
 local time = tonumber(ARGV[2])
-local jobId = job.id
-
-redis.call("HSET", "$REDIS_KEY_VALUES", jobId, cjson.encode(job.item))
-redis.call("HSET", "$REDIS_KEY_PARAMETERS", jobId, cjson.encode(job.parameters))
-redis.call("LPUSH", "$REDIS_KEY_PENDING", jobId)
-redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(job.stats))
-
-local statusBlob = {jobId=jobId,JobStatus="${JobStatus.Pending}",JobFinishedStatus="${JobFinishedStatus.None}"}
-$SNIPPET_SET_JOB_STATUS_BLOB
-$SNIPPET_PROCESS_PENDING
-',
-
-/**
- * Takes jobs off the queue if it can match them with slots in the compute
- * pool. If they are taken off the queue, a {jobId:jobId, workerId:workderId}
- * object is posted to a list that is then subsequently consumed and the
- * actual job started.
- */
-		SCRIPT_PROCESS_PENDING =>
-'
-local time = tonumber(ARGV[1])
-
-$SNIPPET_PROCESS_PENDING
-
-return cjson.encode({assigned=jobsAssigned, remaining=jobsWithoutWorkers})
-',
-		SCRIPT_REQUEUE =>
-'
-local jobId = ARGV[1]
-local computeJobId = ARGV[2]
-local time = tonumber(ARGV[3])
-
-if not jobId and not computeJobId then
-	return {err="Must supply either a jobId or a computeId"}
-end
 
 if not computeJobId then
-	computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
+	return {err="Must provide computeJobId"}
 end
 
-if not jobId then
-	jobId = redis.call("HGET", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
-end
-
-if not jobId then
-	local message = "Requeuing but no jobId for computeId=" .. tostring(computeJobId)
-	$SNIPPET_ERROR
-	return {err="No jobId for computeId=" .. tostring(computeJobId)}
-end
-
-local message = "Requeuing job=" .. jobId .. " computeJobId=" .. computeJobId
-$SNIPPET_INFO
-
-
---Push the jobId back on the pending queue, but at the FRONT of the queue,
---not the back since this is a reqeue, and should be prioritized before currend pending jobs
-redis.call("RPUSH", "$REDIS_KEY_PENDING", jobId)
---Delete from the working set
-redis.call("ZREM", "$REDIS_KEY_WORKING", jobId)
---Update the stats object with this change
-$SNIPPET_GET_STATSOBJECT
-stats[${Stats.INDEX_REQUEUE_COUNT}] = stats[${Stats.INDEX_REQUEUE_COUNT}] + 1
-stats[${Stats.INDEX_LAST_REQUEUE_TIME}] = time
-redis.call("HSET", "$REDIS_KEY_STATS", jobId, cmsgpack.pack(stats))
---Remove the computeJobId, so that if it comes back, there will be no job matching this version
---Remove the job from the pool?
-if computeJobId then
-	--local computeJobId = redis.call("HGET", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-	redis.call("HDEL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID", jobId)
-	redis.call("HDEL", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
-
-	${InstancePool.SNIPPET_REMOVE_JOB}
-end
-
-local jobStatus = "${JobStatus.Pending}"
-$SNIPPET_SET_JOB_STATUS
+$SNIPPET_REQUEUE_COMPUTE_JOB
 
 $SNIPPET_PROCESS_PENDING
 
@@ -912,8 +907,8 @@ if not jobId then
 	return {err=message}
 end
 
-local message = "Finished called for computeId=" .. tostring(computeJobId) .. " jobId=" .. jobId
-$SNIPPET_INFO
+--local message = "Finished called for computeId=" .. tostring(computeJobId) .. " jobId=" .. jobId
+--$ SNIPPET_INFO
 
 $SNIPPET_FINISH_JOB
 $SNIPPET_PROCESS_PENDING
@@ -1001,6 +996,36 @@ local jobId = ARGV[1]
 $SNIPPET_GET_STATSOBJECT
 return cjson.encode(stats)
 ',
+
+		SCRIPT_JOB_STATUS =>//<JobStatusBlob>
+'
+local jobId = ARGV[1]
+local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
+local status = statusBlob.JobStatus
+local result = {status=status}
+if status == "${JobStatus.Working}" then
+	local computeJobId = redis.call("HGET", "${REDIS_KEY_JOB_ID_TO_COMPUTE_ID}", jobId)
+	result.statusWorking = redis.call("HGET", "${REDIS_KEY_COMPUTEJOB_WORKING_STATE}", computeJobId)
+end
+return cjson.encode(result)
+',
+
+		SCRIPT_JOB_STATUSES =>//<Map<JobId,JobStatusBlob>>
+'
+local jobIds = redis.call("HKEYS", "$REDIS_KEY_STATUS")
+local result = {}
+for i,jobId in ipairs(jobIds) do
+	local statusBlob = cjson.decode(redis.call("HGET", "$REDIS_KEY_STATUS", jobId))
+	local status = statusBlob.JobStatus
+	result[jobId] = {status=status}
+	if status == "${JobStatus.Working}" then
+		local computeJobId = redis.call("HGET", "${REDIS_KEY_JOB_ID_TO_COMPUTE_ID}", jobId)
+		result[jobId].statusWorking = redis.call("HGET", "${REDIS_KEY_COMPUTEJOB_WORKING_STATE}", computeJobId)
+	end
+end
+return cjson.encode(result)
+',
+
 			SCRIPT_TO_JSON =>
 '
 local result = {}
@@ -1014,8 +1039,10 @@ end
 
 local computeJobIds = redis.call("HGETALL", "$REDIS_KEY_JOB_ID_TO_COMPUTE_ID")
 result.computeJobIds = {}
+result.jobIds = {}
 for i=1,#computeJobIds,2 do
 	result.computeJobIds[computeJobIds[i]] = computeJobIds[i + 1]
+	result.jobIds[computeJobIds[i + 1]] = computeJobIds[i]
 end
 
 local workingStates = redis.call("HGETALL", "$REDIS_KEY_COMPUTEJOB_WORKING_STATE")
@@ -1028,6 +1055,13 @@ local jobStatus = redis.call("HGETALL", "$REDIS_KEY_STATUS")
 result.jobStatus = {}
 for i=1,#jobStatus,2 do
 	result.jobStatus[jobStatus[i]] = cjson.decode(jobStatus[i + 1])
+end
+
+local jobStats = redis.call("HGETALL", "$REDIS_KEY_STATS")
+result.stats = {}
+for i=1,#jobStats,2 do
+	local stats = cmsgpack.unpack(jobStats[i + 1])
+	result.stats[jobStats[i]] = stats
 end
 
 return cjson.encode(result)
@@ -1142,7 +1176,10 @@ abstract Stats(Array<Float>)
 typedef QueueJsonDump = {
 	var pending :Array<JobId>;
 	var working :Array<{id:JobId, score:Float}>;
-	var jobStatus :TypedDynamicObject<JobId, JobStatus>;
+	var computeJobIds :TypedDynamicObject<JobId, ComputeJobId>;
+	var jobIds :TypedDynamicObject<ComputeJobId,JobId>;
+	var jobStatus :TypedDynamicObject<JobId, JobStatusUpdate>;
+	var stats :TypedDynamicObject<JobId, Stats>;
 	var jobFinishedStatus :TypedDynamicObject<JobId, JobFinishedStatus>;
 	var jobWorkingStatus :TypedDynamicObject<ComputeJobId, JobWorkingStatus>;
 }
@@ -1164,6 +1201,7 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 			return this.pending;
 		}
 	}
+
 	inline function get_working() :Array<{id:JobId, score:Float}>
 	{
 		if (this.working == null || Reflect.fields(this.working).length == 0) {
@@ -1173,8 +1211,45 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 		}
 	}
 
+	inline public function getFinishedAndStatus() :TypedDynamicObject<JobFinishedStatus,Array<JobId>>
+	{
+		if (this.jobStatus == null || Reflect.fields(this.jobStatus).length == 0) {
+			return {};
+		} else {
+			var results :TypedDynamicObject<JobFinishedStatus,Array<JobId>> = {};
+			var jobids = this.jobStatus.keys();
+			jobids.sort(Reflect.compare);
+			for (jobId in jobids) {
+				var statusUpdate :JobStatusUpdate = this.jobStatus[jobId];
+				if (statusUpdate.JobStatus == JobStatus.Finished) {
+					var finishedStatus :String = statusUpdate.JobFinishedStatus;
+					if (!results.exists(finishedStatus)) {
+						results.set(finishedStatus, []);
+					}
+					results.get(finishedStatus).push(jobId);
+				}
+			}
+			return results;
+		}
+	}
+
 	inline public function isJobInQueue(jobId :JobId) :Bool
 	{
 		return pending.has(jobId) || working.exists(function(e) return e.id == jobId);
+	}
+
+	inline public function getComputeJobId(jobId :JobId) :ComputeJobId
+	{
+		return Reflect.field(this.computeJobIds, jobId);
+	}
+
+	inline public function getStats(jobId :JobId) :Stats
+	{
+		return Reflect.field(this.stats, jobId);
+	}
+
+	inline public function getJobId(computeJobId :ComputeJobId) :JobId
+	{
+		return Reflect.field(this.jobIds, computeJobId);
 	}
 }

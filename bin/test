@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+haxe test/testsCompile.hxml && node build/test/compute_tests.js $@

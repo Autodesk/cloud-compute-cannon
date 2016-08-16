@@ -3,10 +3,12 @@ import js.node.child_process.ChildProcess;
 
 import haxe.unit.async.PromiseTestRunner;
 
+import ccc.compute.ConnectionToolsDocker;
 import ccc.compute.InitConfigTools;
 
 using Lambda;
 using StringTools;
+using promhx.PromiseTools;
 
 class TestsIntegration
 {
@@ -48,19 +50,100 @@ class TestsIntegration
 		}
 	}
 
+	static function tryToResolveClass(className :String) :Class<Dynamic>
+	{
+		var cls = Type.resolveClass(className);
+		if (cls != null) {
+			return cls;
+		} else if (Type.resolveClass('ccc.compute.server.tests.$className') != null) {
+			return Type.resolveClass('ccc.compute.server.tests.$className');
+		} else if (Type.resolveClass('compute.$className') != null) {
+			return Type.resolveClass('compute.$className');
+		} else if (Type.resolveClass('storage.$className') != null) {
+			return Type.resolveClass('storage.$className');
+		} else {
+			return null;
+		}
+	}
+
+	static function getClassAndMethod(s :String) :{cls :Class<Dynamic>, method :String}
+	{
+		var className = Sys.args()[0];
+		var cls = tryToResolveClass(className);
+		if (cls != null) {
+			return {cls:cls, method:null};
+		} else {
+			var tokens = className.split('.');
+			var methodName = tokens.pop();
+			className = tokens.join('.');
+			cls = tryToResolveClass(className);
+			if (cls != null) {
+				return {cls:cls, method:methodName};
+			} else {
+				return {cls:null, method:null};
+			}
+		}
+	}
+
 	static function main()
 	{
-		var bunyanLogger :js.npm.Bunyan.BunyanLogger = Logger.log;
-		bunyanLogger.level(js.npm.Bunyan.WARN);
+		Node.require('dotenv').config({path: '.env.test'});
+		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
+			untyped __js__('console.log = function() {}');
+			Logger.log.level(100);
+		}
 
-		//Required for source mapping
-		js.npm.SourceMapSupport;
-		util.EmbedMacros.embedFiles('etc');
-		ErrorToJson;
+		if (Sys.args().length == 0) {
+			runTests();
+		} else {
+			var className = Sys.args()[0];
+			var clsAndMethod = getClassAndMethod(className);
+			var cls = clsAndMethod.cls;
+			var methodName = clsAndMethod.method;
+			if (cls != null) {
+				if (methodName != null) {
+					var ins :{setup:Void->Promise<Bool>,tearDown:Void->Promise<Bool>} = Type.createInstance(cls, []);
+					var testMethod = Reflect.field(ins, methodName);
+					if (testMethod != null) {
+						ins.setup()
+							.orTrue()
+							.pipe(function(_) {
+								var p :Promise<Bool> = Reflect.callMethod(ins, testMethod, []);
+								return p.orTrue();
+							})
+							.errorPipe(function(err) {
+								traceRed(err);
+								return Promise.promise(false);
+							})
+							.then(function(passed){
+								if (passed) {
+									traceGreen('Passed!');
+									Node.process.exit(0);
+								} else {
+									traceRed('Failed!');
+									Node.process.exit(1);
+								}
+								return true;
+							});
+					} else {
+						traceRed('No method ${className}.$methodName');
+						Node.process.exit(1);
+					}
+				} else {
+					var runner = new PromiseTestRunner();
+					runner.add(Type.createInstance(cls, []));
+					runner.run();
+				}
+			} else {
+				traceRed('No class ${className}');
+				Node.process.exit(1);
+			}
+		}
+	}
 
-		//Prevents warning messages since we have a lot of streams piping to the stdout/err streams.
-		js.Node.process.stdout.setMaxListeners(20);
-		js.Node.process.stderr.setMaxListeners(20);
+	static function runTests()
+	{
+		TestMain.setupTestExecutable();
 
 		var isRedis = !isDisabled('REDIS');
 		var isAws = detectPkgCloud();
@@ -83,30 +166,34 @@ class TestsIntegration
 
 		var runner = new PromiseTestRunner();
 
+		//Disable these tests until we figure out how to inject S3 credentials outside of git
+		//and test the CLI
+		// runner.add(new ccc.compute.server.tests.TestStorageS3());
+		// runner.add(new compute.TestCLIRemoteServerInstallation());
+		// runner.add(new compute.TestCLISansServer());
+		// runner.add(new compute.TestCLI());
+
 		//Run the unit tests. These do not require any external dependencies
 		if (isUnit) {
-			runner.add(new utils.TestMiscUnit());
+			runner.add(new ccc.compute.server.tests.TestUnit());
 			runner.add(new utils.TestPromiseQueue());
 			runner.add(new utils.TestStreams());
 			runner.add(new storage.TestStorageRestAPI());
-			runner.add(new storage.TestStorageLocal());
+			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
 			runner.add(new compute.TestRedisMock());
-			if (isInternet) {
+			if (isInternet && !ConnectionToolsDocker.isInsideContainer()) {
 				runner.add(new storage.TestStorageSftp());
 			}
 		}
 
-		// if (ccc.compute.ConnectionToolsDocker.isLocalDockerHost()) {
-		// 	runner.add(new compute.TestFluent());
-		// }
-
 		if (isRedis) {
 			// These require a local redis db
-			runner.add(new compute.TestAutoscaling());
-			runner.add(new compute.TestRedis());
+			// runner.add(new compute.TestAutoscaling());
+			// runner.add(new compute.TestRedis());
 
 			//These require access to a local docker server
 			if (isDockerProvider) {
+				ccc.compute.workers.WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
 				runner.add(new compute.TestScheduler());
 				runner.add(new compute.TestJobStates());
 				runner.add(new compute.TestInstancePool());
@@ -118,12 +205,6 @@ class TestsIntegration
 				runner.add(new compute.TestDockerCompute());
 				runner.add(new compute.TestServiceBatchCompute());
 			}
-
-			// runner.add(new compute.TestCLIRemoteServerInstallation());
-			// runner.add(new compute.TestJobStates());
-			//CLI
-			// runner.add(new compute.TestCLISansServer());
-			// runner.add(new compute.TestCLI());
 		}
 
 		if (isVagrant && isRedis) {
@@ -134,10 +215,11 @@ class TestsIntegration
 		}
 
 		if (isAws) {
-			// runner.add(new compute.TestPkgCloudAws());
+			runner.add(new ccc.compute.server.tests.TestWorkerMonitoring());
+			runner.add(new compute.TestPkgCloudAws());
 			runner.add(new compute.TestScalingAmazon());
-			// runner.add(new compute.TestCompleteJobSubmissionAmazon());
-			// runner.add(new compute.TestRestartAfterCrashAWS());
+			runner.add(new compute.TestCompleteJobSubmissionAmazon());
+			runner.add(new compute.TestRestartAfterCrashAWS());
 		}
 
 		runner.run();

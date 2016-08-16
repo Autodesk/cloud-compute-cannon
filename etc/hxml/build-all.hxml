@@ -6,6 +6,12 @@
 
 etc/hxml/build-fluent-config.hxml
 
+-cmd echo "Building server"
+
+--next
+
+etc/hxml/server-build.hxml
+
 --next
 
 -cmd echo "Building all server tests"
@@ -14,14 +20,18 @@ etc/hxml/build-fluent-config.hxml
 
 test/testsCompile.hxml
 
--cmd echo "Building server"
-
---next
-
-etc/hxml/server-build.hxml
-
 -cmd echo "Building CLI tool"
 
 --next
 
 etc/hxml/cli-build.hxml
+
+-cmd echo "Building Server API tests"
+
+--next
+
+-cmd echo "Building Development CI server"
+
+--next
+
+etc/hxml/dev-ci-server-build.hxml

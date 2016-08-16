@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+if [ $# -eq 0 ]
+	then
+		echo "./bin/run-stack-remote <host> <path_to_serverconfig>"
+	exit 0
+fi
+SERVER_HOST=$1
+SERVER_CONFIG_PATH=$2
+bin/sync-to-remote $1
+REMOTE_CCC_PATH="cloudcomputecannon"
+scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/ccc.yml
+DOCKER_COMPOSE="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
+COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` COMPUTE_CONFIG=\`cat ccc.yml\` $DOCKER_COMPOSE up"
+echo $COMMAND
+ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"

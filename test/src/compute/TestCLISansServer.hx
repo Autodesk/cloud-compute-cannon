@@ -3,14 +3,13 @@ package compute;
 import batcher.cli.ProviderTools;
 import batcher.cli.ProviderTools.*;
 import batcher.cli.CliTools.*;
-import ccc.compute.Definitions;
 
 import js.Node;
 import js.node.ChildProcess;
 import js.node.Os;
 import js.node.Path;
 
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;

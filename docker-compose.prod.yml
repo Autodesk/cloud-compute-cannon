@@ -1,33 +1,26 @@
 compute:
-  build: "./"
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     #Mount local storage, even though it might use S3, we don't know at this point.
     - ./data/computejobs:/computejobs
     - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
+    - ./data/registry:/app/data/registry
+    #TODO: this is bad
+    - ./ccc.yml:/app/ccc.yml
   links:
     - redis
     - registry
     - fluentd
   environment:
-    HOST_PWD: "$PWD"
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+    CLIENT_DEPLOYMENT: "true"
 
 
 redis:
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.redis.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
-  #This config disables persistance to disk since we do not need it for development
   command: redis-server /usr/local/etc/redis/redis.conf
   volumes:
     - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
     # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-    - /data
+    - ./data/redis:/data
   ports:
     #Don't expose this port to the host, only linked containers.
     - "6379"
@@ -43,11 +36,29 @@ registry:
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
   links:
     - fluentd
-  #It's hard to find a use case for logging this.
 
 
 fluentd:
   build: ./etc/log/
   volumes:
-    - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
-    - ./etc/log/plugins:/fluentd/plugins
+    #WARNING TODO: currently disabled the fluent.prod.conf since
+    #the target separate elasticsearch does not work
+    - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+  links:
+    - elasticsearch
+
+
+elasticsearch:
+  extends:
+    file: docker-compose.core.yml
+    service: elasticsearch
+  log_driver: "json-file"
+  log_opt: {}
+
+
+kibana:
+  extends:
+    file: docker-compose.core.yml
+    service: kibana
+  links:
+    - elasticsearch

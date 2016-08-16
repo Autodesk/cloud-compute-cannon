@@ -5,7 +5,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -215,7 +215,7 @@ class TestScalingBase extends TestComputeBase
 					.thenWait(50)
 					.pipe(function(_) {
 						return manager.whenFinishedCurrentChanges()
-							.thenWait(50)
+							.thenWait(200)
 							.then(function(_) {
 								return assertEquals(manager.getActiveWorkers().length, Std.int(Math.max(1, machineTargetMinCount)));
 							});
@@ -232,6 +232,7 @@ class TestScalingBase extends TestComputeBase
 					.pipe(function(_) {
 						//Bump up to 2 workers
 						var testWorkerCount = 2;
+						traceMagenta('InstancePool.setTotalWorkerCount(redis, 2)');
 						return InstancePool.setTotalWorkerCount(redis, testWorkerCount)
 							.thenWait(50)
 							.pipe(function(_) {
@@ -241,6 +242,7 @@ class TestScalingBase extends TestComputeBase
 							.pipe(function(_) {
 								return InstancePool.toJson(redis)
 									.then(function(jsondump :InstancePoolJson) {
+										traceMagenta('jsondump=${jsondump.toString()}');
 										assertEquals(jsondump.getTargetWorkerCount(provider.id), testWorkerCount);
 										existingMachines = jsondump.getRunningMachines(provider.id);
 										assertEquals(jsondump.getAvailableMachines(provider.id).length, testWorkerCount);
@@ -250,6 +252,7 @@ class TestScalingBase extends TestComputeBase
 					})
 					//Now down to a single machine
 					.pipe(function(_) {
+						traceMagenta('InstancePool.setTotalWorkerCount(redis, 1)');
 						return InstancePool.setTotalWorkerCount(redis, 1)
 							.thenWait(20)
 							.pipe(function(_) {
@@ -258,6 +261,7 @@ class TestScalingBase extends TestComputeBase
 							.pipe(function(_) {
 								return InstancePool.toJson(redis)
 									.then(function(jsondump :InstancePoolJson) {
+										traceMagenta('jsondump=${jsondump.toString()}');
 										assertEquals(jsondump.getTargetWorkerCount(provider.id), 1);
 										return true;
 									});
@@ -273,6 +277,7 @@ class TestScalingBase extends TestComputeBase
 					.thenWait(100)
 					//Now up to 2 machines again. One of the new machines should be the old
 					.pipe(function(_) {
+						traceMagenta('InstancePool.setTotalWorkerCount(redis, 2)');
 						return InstancePool.setTotalWorkerCount(redis, 2)
 							.thenWait(50)
 							.pipe(function(_) {
@@ -282,6 +287,13 @@ class TestScalingBase extends TestComputeBase
 								return InstancePool.toJson(redis)
 									.then(function(jsondump :InstancePoolJson) {
 										var currentMachines = jsondump.getRunningMachines(provider.id);
+										if (jsondump.getTargetWorkerCount(provider.id) != 2) {
+											traceRed('jsondump.getTargetWorkerCount(provider.id) ${jsondump.getTargetWorkerCount(provider.id)} != 2');
+											traceRed('jsondump=\n${jsondump.toString()}');
+											traceRed('currentMachines=${currentMachines}');
+											traceRed('existingMachines=${existingMachines}');
+											traceRed('TotalWorkerCount=2');
+										}
 										assertEquals(jsondump.getTargetWorkerCount(provider.id), 2);
 										assertEquals(existingMachines.length, currentMachines.length);
 										for (workerId in existingMachines) {

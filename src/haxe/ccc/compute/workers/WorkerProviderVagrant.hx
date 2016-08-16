@@ -6,12 +6,12 @@ import js.Node;
 import js.node.Path;
 import js.node.Fs;
 
-import js.npm.Docker;
-import js.npm.FsExtended;
+import js.npm.docker.Docker;
+import js.npm.fsextended.FsExtended;
 import js.npm.FsPromises;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Vagrant;
+import js.npm.ssh2.Ssh;
+import js.npm.vagrant.Vagrant;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
@@ -19,7 +19,6 @@ import promhx.RedisPromises;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools as Tools;
@@ -58,9 +57,10 @@ class WorkerProviderVagrant extends WorkerProviderBase
 	public function new(?config :ServiceConfigurationWorkerProvider)
 	{
 		super(config);
-		this.id = 'vagrant';
+		this.id = ServiceWorkerProviderType.vagrant;
 		if (_config == null) {
 			_config = {
+				type: ServiceWorkerProviderType.vagrant,
 				minWorkers: 0,
 				maxWorkers: 2,
 				priority: 1,
@@ -108,7 +108,7 @@ class WorkerProviderVagrant extends WorkerProviderBase
 			});
 	}
 
-	override public function updateConfig(config :ProviderConfigBase) :Promise<Bool>
+	override public function updateConfig(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
 	{
 		var vagrantConfig :ServiceConfigurationWorkerProviderVagrant = cast config;
 		vagrantConfig.rootPath = ROOT_PATH;

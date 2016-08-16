@@ -18,14 +18,13 @@ class StreamPromises
 		var deferred = new promhx.deferred.DeferredPromise();
 		var isResolvedOrRejected = false;
 		var disableErrorLogs = false;
-		var resolve = function() {
+		var resolve = function(event) {
 			if (!isResolvedOrRejected) {
 				isResolvedOrRejected = true;
-				// trace('resolving $errorContext');
 				deferred.resolve(true);
 			} else {
 				if (!disableErrorLogs) {
-					Log.error('Getting more than one call to resolve pipe promise');
+					Log.error('Getting more than one call to resolve pipe promise event=$event $errorContext');
 				}
 			}
 		}
@@ -42,11 +41,10 @@ class StreamPromises
 		}
 		if (endEvents != null) {
 			for (endEvent in endEvents) {
-				writable.once(endEvent, resolve);
+				writable.once(endEvent, resolve.bind(endEvent));
 			}
-		}
-		if (endEvents == null || !endEvents.has(WritableEvent.Finish)) {
-			writable.on(WritableEvent.Finish, resolve);
+		} else {
+			writable.on(WritableEvent.Finish, resolve.bind(WritableEvent.Finish));
 		}
 
 		readable.on('response', function(response :{statusCode:Int}) {
@@ -63,7 +61,6 @@ class StreamPromises
 							//
 						}
 					}
-					// writable.end();
 				}
 			}
 		});

@@ -13,14 +13,14 @@ class CliColors
 	public static function colorTransformFromString(s :String) :String->String
 	{
 		var color = colorFromString(s);
-		var f :String->String = Reflect.field(js.npm.CliColor, color);
+		var f :String->String = Reflect.field(js.npm.clicolor.CliColor, color);
 		return f;
 	}
 
 	public static function createColorTransformStream(color :String)
 	{
-		var f :String->String = Reflect.field(js.npm.CliColor, color);
-		var transform = util.streams.StreamTools.createTransformStreamString(f);
+		var f :String->String = Reflect.field(js.npm.clicolor.CliColor, color);
+		var transform = util.streams.StreamTools.createTransformStream(f);
 		return transform;
 	}
 

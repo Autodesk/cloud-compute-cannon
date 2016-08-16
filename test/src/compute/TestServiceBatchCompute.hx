@@ -5,7 +5,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -19,8 +19,6 @@ import util.RedisTools;
 
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.InstancePool;
 import ccc.compute.JobTools;
 import ccc.compute.ServiceBatchCompute;
@@ -46,10 +44,12 @@ class TestServiceBatchCompute extends TestComputeBase
 	{
 		return super.setup()
 			.pipe(function(_) {
-
 				var out = untyped __js__('require("child_process").execSync("haxe etc/hxml/cli-build.hxml")');
 				//Create a server in a forker process
-				return TestTools.forkServerCompute()
+				var envCopy = Reflect.copy(js.Node.process.env);
+				Reflect.setField(envCopy, ENV_LOG_LEVEL, "70");//js.npm.bunyan.Bunyan.WARN);
+               	Reflect.setField(envCopy, ENV_VAR_DISABLE_LOGGING, "true");//js.npm.bunyan.Bunyan.WARN);
+				return TestTools.forkServerCompute(envCopy)
 					.then(function(serverprocess) {
 						_childProcess = serverprocess;
 						return true;
@@ -73,7 +73,7 @@ class TestServiceBatchCompute extends TestComputeBase
 				//This script copies the input to an output file
 				var scriptValue = '#!/usr/bin/env bash\ncp /${DIRECTORY_INPUTS}/$inputName /${DIRECTORY_OUTPUTS}/$outputName';
 				var jobParams :BasicBatchProcessRequest = {
-					image: Constants.DOCKER_IMAGE_DEFAULT,
+					image: DOCKER_IMAGE_DEFAULT,
 					cmd: ['/bin/bash', '/${DIRECTORY_INPUTS}/$scriptName'],
 					inputs: [
 						{
@@ -93,18 +93,10 @@ class TestServiceBatchCompute extends TestComputeBase
 					.thenWait(5000)
 					.pipe(function(result) {
 						var jobId = result.jobId;
-						trace('jobId=${jobId}');
 						return ClientCompute.getJobData(HOST, jobId)
 							.pipe(function(jobResult) {
-								trace('jobResult=${jobResult}');
 								return Promise.promise(true);
 							});
-						// return Promise.promise(true);
-						// return ClientCompute.getJobResult(HOST, jobId)
-						// 	.pipe(function(jobResult) {
-						// 		trace('jobResult=${jobResult}');
-						// 		return Promise.promise(true);
-						// 	});
 					});
 			});
 	}
@@ -115,5 +107,5 @@ class TestServiceBatchCompute extends TestComputeBase
 
 	var _schedulingService :ServiceBatchCompute;
 
-	static var HOST = Host.fromString('localhost:${Constants.SERVER_DEFAULT_PORT}');
+	static var HOST = Host.fromString('localhost:${SERVER_DEFAULT_PORT}');
 }

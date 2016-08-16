@@ -13,17 +13,16 @@ etc/hxml/base-nodejs.hxml
 -resource docker-compose.yml@docker-compose.yml
 -resource docker-compose.core.yml@docker-compose.core.yml
 -resource docker-compose.override.yml@docker-compose.override.yml
+-resource docker-compose.prod.yml@docker-compose.prod.yml
 
 # -dce full
 
 -debug
-
--D nodejs
--D PromhxExposeErrors
+# -D PromhxExposeErrors
 
 -cp test/src
 
--main ccc.compute.cli.CliMain
+-main ccc.compute.client.cli.CliMain
 
 -js build/cli/cloudcomputecannon.js
 

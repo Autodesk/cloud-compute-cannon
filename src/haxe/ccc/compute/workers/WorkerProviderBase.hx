@@ -4,8 +4,8 @@ import haxe.Json;
 
 import js.Node;
 import js.npm.RedisClient;
+import js.npm.docker.Docker;
 
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 
 import promhx.Promise;
@@ -13,6 +13,7 @@ import promhx.Promise;
 import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.CallbackPromise;
+import promhx.DockerPromises;
 
 import t9.abstracts.net.*;
 import t9.abstracts.time.*;
@@ -43,7 +44,7 @@ class WorkerProviderBase
 
 	@inject public var _redis :RedisClient;
 	#if debug public #end
-	var _config :ProviderConfigBase;
+	var _config :ServiceConfigurationWorkerProvider;
 	var _streamMachineCount :Stream<TargetMachineCount>;
 	var _streamMachineStatus :Stream<Array<StatusResult>>;
 	var _ready :Promise<Bool> = Promise.promise(true);
@@ -86,12 +87,51 @@ class WorkerProviderBase
 						return true;
 					});
 			})
+			//Check all workers. No retrying allowed, if a worker does not
+			//respond immediately, remove it
+			.pipe(function(_) {
+				log.debug({f:'postInjection', log:'check all existing workers id=$id'});
+				return InstancePool.getInstancesInPool(_redis, id)
+					.pipe(function(workerStatus :Array<StatusResult>) {
+						log.debug('workerStatus=${workerStatus}');
+						var promises = [];
+						for (workerStatus in workerStatus) {
+							switch(workerStatus.status) {
+								case Available,Deferred:
+									log.debug('checking ${workerStatus.id}');
+									promises.push(
+										InstancePool.getWorker(_redis, workerStatus.id)
+											.pipe(function(workerDef) {
+												return DockerPromises.ping(new Docker(workerDef.docker));
+											})
+											.then(function(ok) {
+												//Instance is ok
+												log.debug('${workerStatus.id} docker ping OK');
+												return false;
+											})
+											.errorPipe(function(err) {
+												log.warn('${workerStatus.id} docker ping FAILED');
+												return InstancePool.workerFailed(_redis, workerStatus.id)
+													.errorPipe(function(err) {
+														log.error({message: 'Failed to fail worker that we cannot reach', error:err});
+														return Promise.promise(true);
+													});
+											}));
+								case WaitingForRemoval,Removing,Failed://Ignored
+							}
+						}
+
+
+						return Promise.whenAll(promises)
+							.thenTrue();
+					});
+			})
 			.pipe(function(_) {
 				log.debug({f:'postInjection', log:'updateConfig'});
 				return updateConfig(_config);
 			})
 			.then(function(_) {
-				log.debug({f:'postInjection', log:'RedisTools.createJsonStream'});
+				// log.debug({f:'postInjection', log:'RedisTools.createJsonStream'});
 				_streamMachineCount = RedisTools.createJsonStream(_redis, InstancePool.REDIS_KEY_WORKER_POOL_TARGET_INSTANCES);
 				_streamMachineCount
 					.then(function(counts :TargetMachineCount) {
@@ -138,7 +178,6 @@ class WorkerProviderBase
 
 	public function setWorkerCount(newCount :Int) :Promise<Bool>
 	{
-		log.debug({f:'setWorkerCount', newCount:newCount});
 		// Log.info('setWorkerCount newCount=$newCount _targetWorkerCount=$_targetWorkerCount _actualWorkerCount=$_actualWorkerCount');
 		if (newCount > _config.maxWorkers || newCount < _config.minWorkers) {
 			//This can occur if counts are set in between config updates
@@ -147,6 +186,7 @@ class WorkerProviderBase
 		}
 		_targetWorkerCount = newCount;
 		if (_targetWorkerCount != _actualWorkerCount) {
+			log.debug({f:'setWorkerCount', newCount:newCount});
 			if (_updateCountPromise == null) {
 				_updateCountPromise = updateWorkerCount(_redis, _targetWorkerCount, this)
 					.then(function(currentCount) {
@@ -282,9 +322,10 @@ class WorkerProviderBase
 		if (delay.toFloat() < 0) {
 			delay = new Seconds(0.0);
 		}
+		var delayMs = delay.toMilliseconds().toInt();
 
 		//TODO: There is a bug in the deferred logic. For now:
-		delay = new Minutes(45);
+		// delay = new Minutes(45);
 		log.debug('addWorkerToDeferred workerId=$workerId removalTimeStamp=$removalTimeStamp delay=${delay.toMilliseconds().toInt()}');
 		var machineRemovalDelayed = {
 			id: workerId,
@@ -292,7 +333,7 @@ class WorkerProviderBase
 				_deferredRemovals = _deferredRemovals.filter(function(e) return e.id != workerId);
 				log.debug('Shutdown deferred worker=$workerId delayMs=${delay} removalTimeStamp=${removalTimeStamp.toString()} now=${Date.now().toString()}');
 				InstancePool.setWorkerDeferredToRemoving(_redis, workerId);
-			}, delay.toMilliseconds().toInt()),
+			}, delayMs),
 			removalTime: removalTimeStamp
 		}
 		// log.info('worker deferring for removal machine=$workerId removalTimeStamp=${removalTimeStamp.toString()} delay=${delay} now=${Date.now().toString()}');
@@ -322,13 +363,17 @@ class WorkerProviderBase
 	 */
 	function getShutdownDelay(workerId :MachineId) :Promise<Minutes>
 	{
-		return Promise.promise(_config.billingIncrement);
+		if (_config.billingIncrement == null) {
+			return Promise.promise(new Minutes(0));
+		} else {
+			return Promise.promise(_config.billingIncrement);
+		}
 	}
 
 	var _instanceStatusCache = new Map<MachineId,MachineStatus>();
 	function onWorkerStatusUpdate(statuses :Array<StatusResult>)
 	{
-		log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
+		// log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
 		for (status in statuses) {
 			var instanceId = status.id;
 			if (_instanceStatusCache.get(instanceId) == status.status) {
@@ -363,7 +408,6 @@ class WorkerProviderBase
 						.pipe(function(delay) {
 							log.debug('instance=$instanceId TimeStamp.now()=${TimeStamp.now()} delay=${delay} delay.toSeconds()=${delay.toSeconds()}');
 							var removalTimeStamp :TimeStamp = TimeStamp.now().addSeconds(delay.toSeconds());
-							// log.info('removeWorker $instanceId delay=${delay.toString()} removalTimeStamp=$removalTimeStamp');
 							log.debug('instance=$instanceId deferred removalTimeStamp=$removalTimeStamp');
 							return InstancePool.setWorkerTimeout(redis, instanceId, removalTimeStamp)
 								.then(function(_) {
@@ -396,7 +440,7 @@ class WorkerProviderBase
 		});
 	}
 
-	public function updateConfig(config :ProviderConfigBase) :Promise<Bool>
+	public function updateConfig(config :ServiceConfigurationWorkerProvider) :Promise<Bool>
 	{
 		Assert.notNull(config);
 		Assert.notNull(config.maxWorkers);
@@ -406,7 +450,7 @@ class WorkerProviderBase
 			config.billingIncrement = new Minutes(0);
 		}
 		if (_config == null) {
-			_config = config;
+			_config = cast config;
 		} else {
 			_config.maxWorkers = config.maxWorkers;
 			_config.minWorkers = config.minWorkers;

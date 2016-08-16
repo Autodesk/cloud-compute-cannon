@@ -11,8 +11,8 @@ import util.DockerTools;
 
 import js.Node;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Docker;
+import js.npm.ssh2.Ssh;
+import js.npm.docker.Docker;
 
 import promhx.Promise;
 import promhx.PublicStream;
@@ -21,7 +21,6 @@ import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 import promhx.CallbackPromise;
 
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 
@@ -130,7 +129,7 @@ class WorkerManager
 						promises.push(InstancePool.getWorker(_redis, id)
 							.then(function(workerDef) {
 								if (workerDef == null) {
-									Log.warn('InstancePool.getWorker(id=$id) workerDef result==null');
+									Log.warn('InstancePool.getWorker(id=$id) workerDef result==null workers(redis)=$workerIds workers(here)=${_workers.keys()}');
 									return;
 								}
 								if (_workers == null) {

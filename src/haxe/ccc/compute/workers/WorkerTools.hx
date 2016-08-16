@@ -1,9 +1,9 @@
 package ccc.compute.workers;
 
 import js.Node;
-import js.npm.Ssh;
+import js.npm.ssh2.Ssh;
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import promhx.CallbackPromise;
 import promhx.Promise;
@@ -11,7 +11,6 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 
-import ccc.compute.Definitions;
 import ccc.compute.InstancePool;
 import ccc.storage.ServiceStorage;
 
@@ -25,15 +24,6 @@ typedef Instance = {
 	function docker() :Docker;
 }
 
-/**
- * Notes: the boot2docker machine needs to have sftp enabled:
- * Add
- * 	Subsystem sftp internal-sftp
- * to /var/lib/boot2docker/ssh/sshd_config
- *
- * This is meant to work, but I couldn't find the script (/etc/rc.d/sshd restart)
- * so I just restarted the damn machine.
- */
 class WorkerTools
 {
 	public static function getInstance(def :WorkerDefinition) :Instance
@@ -52,7 +42,7 @@ class WorkerTools
 	{
 		return new Docker({
 			host: ssh.host,
-			port: 2375,
+			port: DOCKER_PORT,
 			protocol: 'http'
 		});
 	}
@@ -82,35 +72,54 @@ class WorkerTools
 			});
 	}
 
+	/**
+	 * Delete docker images and local compute jobs directory
+	 * @param  worker :WorkerDefinition [description]
+	 * @return        [description]
+	 */
+	public static function cleanWorker(worker :InstanceDefinition) :Promise<Bool>
+	{
+		return Promise.promise(true)
+			.pipe(function(_) {
+				if (worker.ssh != null) {
+					return Promise.promise(true)
+						.pipe(function(_) {
+							//Stop and rm containers
+							return SshTools.execute(worker.ssh, "docker stop $(docker ps -a -q) && docker rm --volumes $(docker ps -a -q)");
+						})
+						.pipe(function(_) {
+							//Delete docker images
+							return SshTools.execute(worker.ssh, "docker rmi -f $(docker images -q)");
+						})
+						.pipe(function(_) {
+							//Delete docker volumes
+							return SshTools.execute(worker.ssh, "docker volume rm $(docker volume ls -qf dangling=true)");
+						})
+						.pipe(function(_) {
+							//Delete /computejobs files
+							return SshTools.execute(worker.ssh, 'sudo rm -rf "$WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER/*"');
+						})
+						.thenTrue();
+				} else {
+					return Promise.promise(true);
+				}
+			});
+	}
+
 	public static function removeJobsOnMachine(docker :Docker, jobs :Array<ComputeJobId>) :Promise<Bool>
 	{
 		return Promise.promise(true);
 	}
 
-	public function createDockerPoll(docker :Docker, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
-	{
-		return poll(
-			function() {
-				var promise = new CallbackPromise();
-				docker.ping(promise.cb1);
-				return promise;
-			},
-			pollIntervalMilliseconds,
-			maxRetries,
-			doublingRetryIntervalMilliseconds);
-	}
-
 	/**
-	 * Returns a Stream that if a false value is returned, means that
-	 * the connection failed (allowing for the configured retries).
-	 * After a single failure (return of false), the Stream object is disposed.
-	 * To dispose prior, call stream.end().
+	 * Returns a Stream that returns a value. If the polling for the
+	 * value fails, the stream is ended.
 	 * @param  connection                   :Void->Bool   [description]
 	 * @param  maxRetries                   :Int          [description]
 	 * @param  doublingIntervalMilliseconds :Int          [description]
 	 * @return                              [description]
 	 */
-	public static function poll(connection :Void->Promise<Dynamic>, pollInterval :Int, maxRetries :Int, doublingRetryIntervalMilliseconds :Int) :Stream<Bool>
+	public static function pollValue<T>(connection :Void->Promise<T>, pollInterval :Int, maxRetries :Int, doublingRetryIntervalMilliseconds :Int) :Stream<T>
 	{
 		var stream = new promhx.deferred.DeferredStream();
 		var ended = false;
@@ -124,17 +133,11 @@ class WorkerTools
 			if (ended) {
 				return;
 			}
-			promhx.RetryPromise.pollDecayingInterval(connection, maxRetries, doublingRetryIntervalMilliseconds, 'WorkerTools.poll')
-				.then(function(_) {
+			promhx.RetryPromise.pollDecayingInterval(connection, maxRetries, doublingRetryIntervalMilliseconds, 'WorkerTools.pollValue')
+				.then(function(val) {
 					if (!ended) {
-						stream.resolve(true);
+						stream.resolve(val);
 						haxe.Timer.delay(poll, pollInterval);
-					}
-				})
-				.catchError(function(err) {
-					if (!ended) {
-						stream.resolve(false);
-						stream.boundStream.end();
 					}
 				});
 		}

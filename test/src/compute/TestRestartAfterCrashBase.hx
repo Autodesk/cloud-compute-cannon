@@ -11,7 +11,6 @@ import promhx.RedisPromises;
 
 import ccc.compute.client.ClientCompute;
 import ccc.compute.ServiceBatchCompute;
-import ccc.compute.Definitions;
 import ccc.compute.ConnectionToolsRedis;
 
 import utils.TestTools;
@@ -67,7 +66,6 @@ class TestRestartAfterCrashBase extends TestBase
 					cmd: ['sleep', '2'],
 					parameters: {cpus:1, maxDuration:60*1000*10}
 				};
-
 				//Get the job id
 				return ClientCompute.postJob(hostport, jobParams)
 					.then(function(result) {

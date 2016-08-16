@@ -1,14 +1,12 @@
 package ccc.compute;
 
 import ccc.compute.JobTools;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
-import js.npm.CliColor;
+import js.npm.clicolor.CliColor;
 
 
 import promhx.Promise;
@@ -50,86 +48,87 @@ class JobTools
 		}
 	}
 
-	// public static function workerInputDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id, DIRECTORY_INPUTS);
-	// }
-
-	// public static function workerOutputDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id, DIRECTORY_OUTPUTS);
-	// }
-
-	// public static function workerStdoutDir(id :ComputeJobId) :String
-	// {
-	// 	return Path.join(JOB_DATA_DIRECTORY_HOST_MOUNT, id);
-	// }
-
 	public static function workerInputDir(id :ComputeJobId) :String
 	{
-		return Path.join(id, DIRECTORY_INPUTS);
+		return '$id/$DIRECTORY_INPUTS/';
 	}
 
 	public static function workerOutputDir(id :ComputeJobId) :String
 	{
-		return Path.join(id, DIRECTORY_OUTPUTS);
+		return '$id/$DIRECTORY_OUTPUTS/';
 	}
 
 	public static function workerStdoutDir(id :ComputeJobId) :String
 	{
-		return Path.join(id);
+		return '$id/';
 	}
 
 	public static function workerStdoutPath(id :ComputeJobId) :String
 	{
-		return Path.join(workerStdoutDir(id), STDOUT_FILE);
+		return '${workerStdoutDir(id)}/${STDOUT_FILE}';
 	}
 
 	public static function workerStderrPath(id :ComputeJobId) :String
 	{
-		return Path.join(workerStdoutDir(id), STDERR_FILE);
+		return '${workerStdoutDir(id)}/${STDERR_FILE}';
 	}
 
 	public static function inputDir(job :DockerJobDefinition) :String
 	{
+		Assert.notNull(job);
+		Assert.notNull(job.jobId);
 		if (job.inputsPath == null) {
 			return defaultInputDir(job.jobId);
 		} else {
-			return job.inputsPath.endsWith('/') ? job.inputsPath : job.inputsPath + '/';
+			return job.inputsPath.ensureEndsWith('/');
 		}
 	}
 
 	public static function outputDir(job :DockerJobDefinition) :String
 	{
+		Assert.notNull(job);
+		Assert.notNull(job.jobId);
 		if (job.outputsPath == null) {
 			return defaultOutputDir(job.jobId);
 		} else {
-			return job.outputsPath.endsWith('/') ? job.outputsPath : job.outputsPath + '/';
+			return job.outputsPath.ensureEndsWith('/');
 		}
 	}
 
 	public static function resultDir(job :DockerJobDefinition) :String
 	{
-		if (job.resultsPath == null) {
+		Assert.notNull(job);
+		Assert.notNull(job.jobId);
+		if (job.resultsPath.isEmpty()) {
 			return job.jobId + '/';
 		} else {
-			return job.resultsPath.endsWith('/') ? job.resultsPath : job.resultsPath + '/';
+			return job.resultsPath.ensureEndsWith('/');
 		}
 	}
 
 	public static function resultJsonPath(job :DockerJobDefinition) :String
 	{
-		return Path.join(resultDir(job), RESULTS_JSON_FILE);
+		return resultDir(job) + RESULTS_JSON_FILE;
+	}
+
+	public static function stdoutPath(job :DockerJobDefinition) :String
+	{
+		return '${resultDir(job)}/${STDOUT_FILE}';
+	}
+
+	public static function stderrPath(job :DockerJobDefinition) :String
+	{
+		return '${resultDir(job)}/${STDERR_FILE}';
 	}
 
 	public static function defaultInputDir(id :JobId) :String
 	{
-		return Path.join(id, DIRECTORY_INPUTS);
+		return Path.join(id, DIRECTORY_INPUTS).ensureEndsWith('/');
 	}
 
 	public static function defaultOutputDir(id :JobId) :String
 	{
-		return Path.join(id, DIRECTORY_OUTPUTS);
+		return Path.join(id, DIRECTORY_OUTPUTS).ensureEndsWith('/');
 	}
 
 	public static function getJobColor(jobId :JobId) :String
@@ -178,26 +177,26 @@ class JobTools
 	public static function getStreams(jobId :JobId, ?pipeToConsole :Bool = true) :LogStreams
 	{
 		//stdout
-		var stdOutStream = StreamTools.createTransformStreamString(getJobStdOutTransform(jobId));
+		var stdOutStream = StreamTools.createTransformStream(getJobStdOutTransform(jobId));
 		stdOutStream.pipe(js.Node.process.stdout);
 		stdOutStream.on(WritableEvent.Finish, function() {
 			stdOutStream.unpipe();
 		});
 
 		//stderr
-		var stdErrStream = StreamTools.createTransformStreamString(getJobStdErrTransform(jobId));
+		var stdErrStream = StreamTools.createTransformStream(getJobStdErrTransform(jobId));
 		stdErrStream.pipe(js.Node.process.stderr);
 		stdErrStream.on(WritableEvent.Finish, function() {
 			stdErrStream.unpipe();
 		});
 
 		//process
-		var processStdStream = StreamTools.createTransformStreamString(getJobStdOutTransform(jobId));
+		var processStdStream = StreamTools.createTransformStream(getJobStdOutTransform(jobId));
 		processStdStream.pipe(js.Node.process.stdout);
 		processStdStream.on(WritableEvent.Finish, function() {
 			processStdStream.unpipe();
 		});
-		var processErrorStream = StreamTools.createTransformStreamString(getJobStdErrTransform(jobId));
+		var processErrorStream = StreamTools.createTransformStream(getJobStdErrTransform(jobId));
 		processErrorStream.pipe(js.Node.process.stdout);
 		processErrorStream.on(WritableEvent.Finish, function() {
 			processErrorStream.unpipe();

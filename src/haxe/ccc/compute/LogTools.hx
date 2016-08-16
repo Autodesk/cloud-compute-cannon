@@ -2,7 +2,6 @@ package ccc.compute;
 
 import haxe.Json;
 
-import ccc.compute.Definitions;
 
 class LogTools
 {
@@ -29,8 +28,8 @@ class LogTools
 				return;
 			} else {
 				for (f in Reflect.fields(o)) {
-					if (f == key) {
-						Reflect.deleteField(o, f);
+					if (f == key || f.indexOf('key') > -1 || f.indexOf('Key') > -1 || f.indexOf('KEY') > -1) {
+						Reflect.setField(o, f, 'removed');
 					} else {
 						var val = Reflect.field(o, f);
 						var isObject = (untyped __typeof__(val)) == 'object';

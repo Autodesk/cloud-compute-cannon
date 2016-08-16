@@ -3,7 +3,6 @@ package compute;
 import promhx.Promise;
 
 import ccc.compute.workers.WorkerProviderVagrant;
-import ccc.compute.Definitions.Constants.*;
 
 class TestRestartAfterCrashVagrant extends TestRestartAfterCrashBase
 {

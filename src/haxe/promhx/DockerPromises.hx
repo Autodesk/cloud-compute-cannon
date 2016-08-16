@@ -3,19 +3,18 @@ package promhx;
 import haxe.Json;
 
 #if nodejs
-import js.npm.Docker;
+import js.npm.docker.Docker;
 import js.node.stream.Readable;
 import js.node.stream.Readable.ReadableEvent;
 #end
 
 import promhx.Deferred;
-import promhx.Promise;
 import promhx.CallbackPromise;
 import promhx.deferred.DeferredPromise;
 
-using StringTools;
+import util.DockerUrl;
+
 using promhx.PromiseTools;
-using Lambda;
 
 class DockerPromises
 {
@@ -34,6 +33,18 @@ class DockerPromises
 		var promise = new promhx.CallbackPromise();
 		docker.listImages(promise.cb2);
 		return promise;
+	}
+
+	public static function hasImage(docker :Docker, imageUrl :DockerUrl) :Promise<Bool>
+	{
+		return listImages(docker)
+			.then(function(images) {
+				return images.exists(function(e) {
+					return e.RepoTags.exists(function(tag :DockerUrl) {
+						return DockerUrlTools.matches(imageUrl, tag);
+					});
+				});
+			});
 	}
 
 	public static function push(image :DockerImage, ?opts :{?tag :String}, ?auth :Dynamic) :Promise<Bool>
@@ -149,6 +160,7 @@ class DockerPromises
 			if (err != null) {
 				Log.error('encountered error when pulling image: $image error: $err');
 				promise.boundPromise.reject(err);
+				promise = null;
 				return;
 			}
 
@@ -157,7 +169,10 @@ class DockerPromises
 			// stream.on('close', function () {
 			// it doesn't send the 'close' event - DEH 20151221
 			stream.on(ReadableEvent.End, function () {
-				promise.resolve(!errorEncounteredInStream);
+				if (promise != null) {
+					promise.resolve(!errorEncounteredInStream);
+					promise = null;
+				}
 			});
 
 			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
@@ -179,5 +194,13 @@ class DockerPromises
 		});
 
 		return promise.boundPromise;
+	}
+
+	public static function ping(docker :Docker) :Promise<Bool>
+	{
+		var promise = new CallbackPromise();
+		trace('docker ping');
+		docker.ping(promise.cb1);
+		return promise.thenTrue();
 	}
 }

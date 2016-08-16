@@ -1,6 +1,5 @@
 package compute;
 
-import ccc.compute.Definitions;
 import ccc.compute.execution.Jobs;
 
 import t9.abstracts.time.*;
@@ -15,7 +14,10 @@ class MockJobs extends Jobs
 	public var jobExitCode :Int = 0;
 	public var workingStatus :JobWorkingStatus = JobWorkingStatus.FinishedWorking;
 
-	public function new() {super();}
+	public function new()
+	{
+		super();
+	}
 
 	override function createJob(computeJobId :ComputeJobId)
 	{

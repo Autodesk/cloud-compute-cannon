@@ -2,6 +2,7 @@ etc/hxml/server-build.hxml
 
 -debug
 
--D PromhxExposeErrors
+# -D PromhxExposeErrors
+-D extra_validation
 
--cmd node build/cloud-compute-cannon-server.js | bunyan
+-cmd node build/cloud-compute-cannon-server.js

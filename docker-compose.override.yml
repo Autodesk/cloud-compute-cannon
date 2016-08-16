@@ -1,37 +1,28 @@
 compute:
-  build: "."
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - ./data/computejobs:/computejobs
-    - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
+    - ./data:/app/data
   links:
     - redis
     - registry
     - fluentd
-    - elasticsearch
-  environment:
-    #This is used to get the correct host working directory to pass into the
-    #worker containers to map the local file system to /inputs+/outputs within
-    #the container
-    HOST_PWD: "$PWD"
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.nodejs-bunyan.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+  log_driver: "json-file"
+  log_opt: {}
+
 
 redis:
   #This config disables persistance to disk since we do not need it for development
   command: redis-server /usr/local/etc/redis/redis.conf
   volumes:
-    - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
+    - ./data/redis:/data
   ports:
     - "6379:6379"
   links:
     - fluentd
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.redis.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+
 
 registry:
   volumes:
@@ -41,10 +32,9 @@ registry:
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
   links:
     - fluentd
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.registry.cloudcomputecannon.server.{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+  log_driver: "none"
+  log_opt: {}
+
 
 fluentd:
   build: ./etc/log/
@@ -53,17 +43,21 @@ fluentd:
     - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
+  log_driver: "none"
+  log_opt: {}
+
 
 elasticsearch:
   extends:
     file: docker-compose.core.yml
     service: elasticsearch
+  log_driver: "none"
+  log_opt: {}
+
 
 kibana:
   extends:
     file: docker-compose.core.yml
     service: kibana
-  #Pretty sure I don't care about listening to you ever in the dev context.
-  log_driver: "none"
   links:
     - elasticsearch

@@ -1,11 +1,63 @@
 package promhx;
 
+import haxe.Timer;
+
 import promhx.Promise;
 import promhx.base.AsyncBase;
 import promhx.deferred.DeferredPromise;
 
 class PromiseTools
 {
+	public static function untilTrue(f :Void->Promise<Bool>, ?interval :Int = 1000, ?max :Int = 100) :Promise<Bool>
+	{
+		var promise = new DeferredPromise();
+		var check = null;
+		var count = 0;
+		check = function() {
+			count++;
+			f().then(function(result) {
+				if (result) {
+					if (promise != null) {
+						promise.resolve(true);
+						promise = null;
+					}
+				} else {
+					if (count < max) {
+						Timer.delay(check, interval);
+					} else {
+						if (promise != null) {
+							promise.boundPromise.reject('count >= max($max)');
+							promise = null;
+						}
+					}
+				}
+			})
+			.catchError(function(err) {
+				if (promise != null) {
+					promise.boundPromise.reject(err);
+					promise = null;
+				}
+			});
+		}
+		check();
+		return promise.boundPromise;
+	}
+
+	public static function orTrue(p :Promise<Bool>) :Promise<Bool>
+	{
+		return p != null ? p : Promise.promise(true);
+	}
+
+	public static function isErroredOrFinished(p :Promise<Dynamic>) :Bool
+	{
+		return p.isErrored() || p.isFulfilled() || p.isRejected();
+	}
+
+	public static function isDeferredErroredOrFinished(p :DeferredPromise<Dynamic>) :Bool
+	{
+		return p.isErrored() || p.isFulfilled() || p.boundPromise.isErrored() || p.boundPromise.isFulfilled() || p.boundPromise.isRejected();
+	}
+
 	public static function error<A>(err :Dynamic) :Promise<A>
 	{
 		var p = new Promise();
@@ -113,10 +165,10 @@ class PromiseTools
 		var results = [];
 		while (p.length > 0) {
 			promise = chainPipeInternal(promise, p.shift())
-						.then(function(val) {
-							results.push(val);
-							return val;
-						});
+				.then(function(val) {
+					results.push(val);
+					return val;
+				});
 		}
 		return promise
 			.then(function(_) {

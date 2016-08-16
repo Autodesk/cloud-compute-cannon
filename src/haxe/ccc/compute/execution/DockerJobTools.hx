@@ -1,15 +1,14 @@
 package ccc.compute.execution;
 
-import util.DockerTools;
-
 import haxe.Json;
 
 import js.Error;
+import js.Node;
 import js.node.stream.Readable;
 import js.node.Path;
-import js.npm.Docker;
-import js.npm.Ssh;
-import js.npm.Ssh;
+import js.npm.docker.Docker;
+import js.npm.ssh2.Ssh;
+import js.npm.ssh2.Ssh;
 
 import promhx.Promise;
 import promhx.PromiseTools;
@@ -24,14 +23,19 @@ import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
 import ccc.compute.ComputeTools;
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
+
+import util.DockerTools;
+import util.streams.StreamTools;
 
 using ccc.compute.JobTools;
 using ccc.compute.workers.WorkerTools;
 using StringTools;
 using promhx.PromiseTools;
 
+typedef WroteLogs = {
+	var stdout :Bool;
+	var stderr :Bool;
+}
 /**
  * This class manages the lifecycle of a single
  * batch compute running in a docker container
@@ -45,6 +49,37 @@ using promhx.PromiseTools;
  */
 class DockerJobTools
 {
+	/**
+	 * This is complicated and a PITA
+	 * @param  path :String       [description]
+	 * @return      [description]
+	 */
+	public static function getDockerHostMountablePath(path :String) :String
+	{
+		if (!path.startsWith(LOCAL_WORKER_HOST_MOUNT_PREFIX)) {
+			return LOCAL_WORKER_HOST_MOUNT_PREFIX + path;
+		} else {
+			return path;
+		}
+	}
+
+	public static function deleteJobRemoteData(job :DockerJobDefinition, fs :ServiceStorage) :Promise<Bool>
+	{
+		var paths = [
+			JobTools.inputDir(job),
+			JobTools.outputDir(job),
+			JobTools.resultDir(job)
+		].map(function(path) {
+			return fs.deleteDir(path)
+				.errorPipe(function(err) {
+					Log.error({message:'Failed to delete $path for job=${job.jobId}', error:err});
+					return Promise.promise(true);
+				});
+		});
+		return Promise.whenAll(paths)
+			.thenTrue();
+	}
+
 	public static function deleteWorkerInputs(job :QueueJobDefinitionDocker) :Promise<Bool>
 	{
 		var workerStorage = getWorkerStorage(job);
@@ -78,8 +113,8 @@ class DockerJobTools
 		Assert.notNull(job.computeJobId, 'job.computeJobId is null');
 		var workerStorageConfig :StorageDefinition = {
 			type: StorageSourceType.Sftp,
-			rootPath: JOB_DATA_DIRECTORY_HOST_MOUNT,
-			sshConfig: job.worker.ssh
+			rootPath: WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT,
+			credentials: job.worker.ssh
 		};
 		return StorageTools.getStorage(workerStorageConfig);
 	}
@@ -181,22 +216,21 @@ class DockerJobTools
 		imageId = imageId.toLowerCase();
 		Assert.notNull(docker);
 		Assert.notNull(imageId);
-		var volumes = {};
 		var hostConfig :CreateContainerHostConfig = {};
 		hostConfig.Binds = [];
+		//Ensure json-file logging so we can get to the logs
+		hostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
 		for (mount in mounts) {
-			Reflect.setField(volumes, mount.Destination, {});
 			hostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
 		}
 
 		var opts :CreateContainerOptions = {
 			Image: imageId,
 			Cmd: cmd,
-			AttachStdout: true,
-			AttachStderr: true,
+			AttachStdout: false,
+			AttachStderr: false,
 			Tty: false,
 			Labels: labels,
-			Volumes: volumes,
 			HostConfig: hostConfig,
 			WorkingDir: workingDir
 		}
@@ -247,22 +281,128 @@ class DockerJobTools
 		return deferredPromise.boundPromise;
 	}
 
-	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage) :Promise<Bool>
+	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage, ?checkLogsReadable :Bool = true) :Promise<WroteLogs>
 	{
+		var result :WroteLogs = {stdout:false, stderr:false};
 		return getContainerId(docker, computeJobId)
 			.pipe(function(id) {
 				if (id == null) {
 					Log.error('Cannot find container with tag: "computeId=$computeJobId"');
-					return Promise.promise(false);
+					return Promise.promise(result);
 				} else {
-					return Promise.whenAll([fs.getFileWritable(STDOUT_FILE), fs.getFileWritable(STDERR_FILE)])
-						.pipe(function(pipes) {
-							var out = pipes[0];
-							var err = pipes[1];
-							return DockerTools.writeContainerLogs(docker.getContainer(id), out, err);
-						})
-						//TODO: am I not listening to the correct events?
-						.thenWait(100);
+					var container = docker.getContainer(id);
+					var promises = [
+						DockerTools.getContainerStdout(container)
+							.pipe(function(stream) {
+								var passThrough = StreamTools.createTransformStream(
+									function(data) {
+										if (data != null) {
+											result.stdout = true;
+										}
+										return data;
+									});
+								stream.pipe(passThrough);
+								return fs.writeFile(STDOUT_FILE, passThrough)
+									.pipe(function(_) {
+										if (result.stdout) {
+											//If there was data for the file,
+											//check it exists before returning
+											//since some systems e.g. S3 do not
+											//return a file immediately
+											return RetryPromise.pollRegular(function() {
+												return fs.exists(STDOUT_FILE)
+													.then(function(exists) {
+														if (exists) {
+															return true;
+														} else {
+															throw 'not yet found';
+															return false;
+														}
+													});
+											});
+										} else {
+											return Promise.promise(true);
+										}
+									});
+							}),
+						DockerTools.getContainerStderr(container)
+							.pipe(function(stream) {
+								var passThrough = StreamTools.createTransformStream(
+									function(data) {
+										if (data != null) {
+											result.stderr = true;
+										}
+										return data;
+									});
+								stream.pipe(passThrough);
+								return fs.writeFile(STDERR_FILE, passThrough)
+									.pipe(function(_) {
+										//If there was data for the file,
+										//check it exists before returning
+										//since some systems e.g. S3 do not
+										//return a file immediately
+										if (result.stderr) {
+											return RetryPromise.pollRegular(function() {
+												return fs.exists(STDERR_FILE)
+													.then(function(exists) {
+														if (exists) {
+															return true;
+														} else {
+															throw 'not yet found';
+															return false;
+														}
+													});
+											});
+										} else {
+											return Promise.promise(true);
+										}
+									});
+							})
+					];
+
+					//Do both streams concurrently
+					return Promise.whenAll(promises)
+						.then(function(_) {
+							return result;
+						});
+						// //Don't return unless requests return the files on the
+						// //storage service, for some services e.g. S3 the files
+						// //take some time to be available.
+						// .pipe(function(_) {
+						// 	if (result.stderr || result.stdout) {
+						// 		var promises = [];
+						// 		if (result.stdout) {
+						// 			promises.push(RetryPromise.pollRegular(function() {
+						// 				return fs.exists(STDOUT_FILE)
+						// 					.then(function(exists) {
+						// 						if (exists) {
+						// 							return true;
+						// 						} else {
+						// 							throw 'not yet found';
+						// 							return false;
+						// 						}
+						// 					});
+						// 			}));
+						// 		}
+						// 		if (result.stderr) {
+						// 			promises.push(RetryPromise.pollRegular(function() {
+						// 				return fs.exists(STDERR_FILE)
+						// 					.then(function(exists) {
+						// 						if (exists) {
+						// 							return true;
+						// 						} else {
+						// 							throw 'not yet found';
+						// 							return false;
+						// 						}
+						// 					});
+						// 			}));
+						// 		}
+						// 		return Promise.whenAll(promises)
+						// 			.thenVal(result);
+						// 	} else {
+						// 		return Promise.promise(result);
+						// 	}
+						// });
 				}
 			});
 	}

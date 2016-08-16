@@ -13,15 +13,13 @@ import haxe.Json;
 
 import js.Node;
 import js.npm.RedisClient;
-import js.npm.Ssh;
-import js.npm.Docker;
+import js.npm.ssh2.Ssh;
+import js.npm.docker.Docker;
 
 import minject.Injector;
 
 import ccc.compute.ComputeTools;
 import ccc.compute.InstancePool;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.ComputeQueue;
 import ccc.compute.LogStreams;
 import ccc.compute.execution.Job;
@@ -229,8 +227,8 @@ class Jobs
 	function createJob(computeJobId :ComputeJobId)
 	{
 		var job = new Job(computeJobId);
-		if (_injector.hasMapping(ServiceStorage, BOOT2DOCKER_PROVIDER_STORAGE_PATH)) {
-			var workerStorage = _injector.getValue(ServiceStorage, BOOT2DOCKER_PROVIDER_STORAGE_PATH);
+		if (_injector.hasMapping(ServiceStorage, SERVER_MOUNTED_CONFIG_FILE_NAME)) {
+			var workerStorage = _injector.getValue(ServiceStorage, SERVER_MOUNTED_CONFIG_FILE_NAME);
 			job._workerStorage = workerStorage;
 		}
 		return job;

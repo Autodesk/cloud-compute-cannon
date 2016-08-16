@@ -1,4 +1,4 @@
-package ccc.compute.cli;
+package ccc.compute.client.cli;
 
 import haxe.Json;
 
@@ -7,7 +7,7 @@ import js.node.ChildProcess;
 import js.node.Fs;
 import js.node.Path;
 
-import js.npm.Commander;
+import js.npm.commander.Commander;
 import js.npm.RedisClient;
 
 import promhx.Promise;

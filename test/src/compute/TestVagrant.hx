@@ -6,9 +6,9 @@ import js.Node;
 import js.node.Path;
 import js.node.Fs;
 
-import js.npm.FsExtended;
-import js.npm.Ssh;
-import js.npm.Docker;
+import js.npm.fsextended.FsExtended;
+import js.npm.ssh2.Ssh;
+import js.npm.docker.Docker;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -23,7 +23,6 @@ import ccc.compute.workers.WorkerProviderVagrant;
 import ccc.compute.workers.WorkerProviderVagrantTools;
 import ccc.compute.workers.WorkerTools;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 import util.SshTools;
 
 import util.DockerTools;

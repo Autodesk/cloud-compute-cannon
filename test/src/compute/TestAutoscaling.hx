@@ -5,7 +5,7 @@ import haxe.Json;
 import js.Node;
 import js.node.Path;
 import js.node.Fs;
-import js.npm.FsExtended;
+import js.npm.fsextended.FsExtended;
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -15,8 +15,6 @@ import promhx.deferred.DeferredPromise;
 import promhx.PromiseTools;
 import promhx.RedisPromises;
 
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
@@ -210,6 +208,7 @@ class TestAutoscaling extends TestComputeBase
 							.pipe(function(_) {
 								return provider.whenFinishedCurrentChanges();
 							})
+							.thenWait(200)
 							.pipe(function(_) {
 								return InstancePool.toJson(redis)
 									.then(function(jsondump :InstancePoolJson) {
@@ -303,8 +302,10 @@ class TestAutoscaling extends TestComputeBase
 									.pipe(function(jsondump :InstancePoolJson) {
 										var promises = [];
 										for (machine in jsondump.getMachines()) {
-											for (computeJobId in machine.jobs) {
-												promises.push(ComputeQueue.removeComputeJob(redis, computeJobId));
+											if (machine.jobs != null) {
+												for (computeJobId in machine.jobs) {
+													promises.push(ComputeQueue.removeComputeJob(redis, computeJobId));
+												}
 											}
 										}
 										return Promise.whenAll(promises);

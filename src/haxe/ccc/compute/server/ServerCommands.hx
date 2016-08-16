@@ -1,19 +1,21 @@
 package ccc.compute.server;
 
-import haxe.Json;
+import haxe.Resource;
 
+import js.node.Fs;
+import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
-import js.npm.Docker;
+import js.npm.docker.Docker;
 
 import ccc.compute.ComputeQueue;
-import ccc.compute.Definitions;
-import ccc.compute.Definitions.Constants.*;
+import ccc.compute.InstancePool;
 import ccc.compute.JobTools;
+import ccc.compute.execution.DockerJobTools;
+import ccc.compute.workers.WorkerTools;
 import ccc.storage.ServiceStorage;
 
-import promhx.Promise;
 import promhx.PromiseTools;
 import promhx.StreamPromises;
 import promhx.DockerPromises;
@@ -22,22 +24,181 @@ import promhx.StreamPromises;
 import promhx.RequestPromises;
 
 import util.DockerTools;
+import util.DockerUrl;
 import util.DockerRegistryTools;
+import util.DateFormatTools;
 
-import t9.abstracts.net.*;
-
-using Lambda;
 using promhx.PromiseTools;
-using StringTools;
+using DateTools;
 
 /**
  * Server API methods
  */
 class ServerCommands
 {
+	/** For debugging */
+	public static function traceStatus(redis :RedisClient) :Promise<Bool>
+	{
+		return status(redis)
+			.then(function(statusBlob) {
+				traceMagenta(Json.stringify(statusBlob, null, "  "));
+				return true;
+			});
+	}
+	public static function status(redis :RedisClient) :Promise<SystemStatus>
+	{
+		var workerJson :InstancePoolJson = null;
+		var jobsJson :QueueJson = null;
+		var workerJsonRaw :Dynamic = null;
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return Promise.whenAll(
+					[
+						InstancePool.toJson(redis)
+							.then(function(out) {
+								workerJson = out;
+								return true;
+							}),
+						ComputeQueue.toJson(redis)
+							.then(function(out) {
+								jobsJson = out;
+								return true;
+							}),
+						InstancePool.toRawJson(redis)
+							.then(function(out) {
+								workerJsonRaw = out;
+								return true;
+							})
+					]);
+			})
+			.then(function(_) {
+				var now = Date.now();
+				var result = {
+					pending: jobsJson.pending,
+					workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
+						return {
+							id :m.id,
+							jobs: m.jobs != null ? m.jobs.map(function(computeJobId) {
+								var jobId = jobsJson.getJobId(computeJobId);
+								var stats = jobsJson.getStats(jobId);
+								var enqueued = Date.fromTime(stats.enqueueTime);
+								var dequeued = Date.fromTime(stats.lastDequeueTime);
+								return {
+									id: jobId,
+									enqueued: enqueued.toString(),
+									started: dequeued.toString(),
+									duration: DateFormatTools.getShortStringOfDateDiff(dequeued, now)
+								}
+							}) : [],
+							cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
+						};
+					}),
+					finished: jobsJson.getFinishedAndStatus(),
+					// workerJson: workerJson,
+					// workerJsonRaw: workerJsonRaw
+				};
+				return result;
+			})
+			.pipe(function(result) {
+				var promises = workerJson.getMachines().map(
+					function(m) {
+						return InstancePool.getWorker(redis, m.id)
+							.pipe(function(workerDef) {
+								if (workerDef.ssh != null) {
+									return cloud.MachineMonitor.getDiskUsage(workerDef.ssh)
+										.then(function(usage) {
+											result.workers.iter(function(blob) {
+												if (blob.id == m.id) {
+													Reflect.setField(blob, 'disk', usage);
+												}
+											});
+											return true;
+										})
+										.errorPipe(function(err) {
+											Log.error({error:err, message:'Failed to get disk space for worker=${m.id}'});
+											return Promise.promise(false);
+										});
+								} else {
+									return Promise.promise(true);
+								}
+							});
+					});
+				return Promise.whenAll(promises)
+					.then(function(_) {
+						return result;
+					});
+			});
+	}
+
+	public static function version() :ServerVersionBlob
+	{
+		if (_versionBlob == null) {
+			_versionBlob = versionInternal();
+		}
+		return _versionBlob;
+	}
+
+	static var _versionBlob :ServerVersionBlob;
+	static function versionInternal()
+	{
+		var haxeCompilerVersion = Version.getHaxeCompilerVersion();
+		var customVersion = null;
+		try {
+			customVersion = Fs.readFileSync(Path.join(ROOT, 'VERSION'), {encoding:'utf8'});
+		} catch(ignored :Dynamic) {
+			customVersion = null;
+		}
+		var npmPackageVersion = null;
+		try {
+			npmPackageVersion = Json.parse(Resource.getString('package.json')).version;
+		}
+		var instance = Std.string(Std.int(Math.random() * 100000000));
+		return {npm:npmPackageVersion, compiler:haxeCompilerVersion, VERSION:customVersion, instance:instance};
+	}
+
+	public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>
+	{
+		return return ComputeQueue.getAllJobIds(redis)
+			.pipe(function(jobIds :Array<JobId>) {
+				return Promise.whenAll(jobIds.map(function(jobId) {
+					return ComputeQueue.getJob(redis, jobId)
+						.pipe(function(job :DockerJobDefinition) {
+							return DockerJobTools.deleteJobRemoteData(job, fs);
+						});
+				}));
+			})
+			.pipe(function(_) {
+				return hardStopAndDeleteAllJobs(redis);
+			});
+	}
+
+	public static function hardStopAndDeleteAllJobs(redis :RedisClient) :Promise<Bool>
+	{
+		return Promise.promise(true)
+			.pipe(function(_) {
+				//Remove all jobs
+				return ComputeQueue.getAllJobIds(redis)
+					.pipe(function(jobIds) {
+						return Promise.whenAll(jobIds.map(function(jobId) {
+							return ComputeQueue.removeJob(redis, jobId);
+						}));
+					})
+					//Clean all workers
+					.pipe(function(_) {
+						return ccc.compute.InstancePool.getAllWorkers(redis)
+							.pipe(function(workerDefs) {
+								return Promise.whenAll(workerDefs.map(
+									function(instance) {
+										return WorkerTools.cleanWorker(instance);
+									}));
+							});
+					});
+			})
+			.thenTrue();
+	}
+
 	public static function buildImageIntoRegistry(imageStream :IReadable, repositoryTag :String, resultStream :IWritable) :Promise<DockerUrl>
 	{
-		trace('buildImageIntoRegistry');
 		return Promise.promise(true)
 			.pipe(function(_) {
 				var docker = ConnectionToolsDocker.getDocker();
@@ -131,13 +292,10 @@ class ServerCommands
 		if (remoteImageUrl.tag == null) {
 			remoteImageUrl.tag = 'latest';
 		}
-		trace('remoteImageUrl=${remoteImageUrl}');
 		var localImageUrl :DockerUrl = remoteImageUrl;
-		trace('localImageUrl=${localImageUrl}');
 		if (tag != null) {
 			localImageUrl.tag = tag;
 		}
-		trace('localImageUrl=${localImageUrl}');
 		var registryAddress :Host = ConnectionToolsDocker.getLocalRegistryHost();
 
 		return Promise.promise(true)
@@ -145,13 +303,8 @@ class ServerCommands
 			.pipe(function(_) {
 				//Then tag it
 				var dockerImage = docker.getImage(image);
-				trace('fffff');
-				trace('localImageUrl=${localImageUrl}');
-				trace('Host.fromString("localhost:$REGISTRY_DEFAULT_PORT")=${Host.fromString('localhost:$REGISTRY_DEFAULT_PORT')}');
 				localImageUrl.registryhost = Host.fromString('localhost:$REGISTRY_DEFAULT_PORT');
-				trace('localImageUrl=${localImageUrl}');
 				var newImageName = localImageUrl.noTag();
-				trace('newImageName=${newImageName}');
 				var promise = new CallbackPromise();
 				log.debug({step:'pulled_success_tagging', repo:newImageName, tag:localImageUrl.tag});
 				dockerImage.tag({repo:newImageName, tag:localImageUrl.tag}, promise.cb2);
@@ -186,6 +339,7 @@ class ServerCommands
 	{
 		return ComputeQueue.getJob(redis, jobId)
 			.pipe(function(jobdef :DockerJobDefinition) {
+				traceCyan(jobdef);
 				if (jobdef == null) {
 					return Promise.promise('unknown_job');
 				} else {
@@ -218,13 +372,11 @@ class ServerCommands
 				return switch(jobStatusBlob.JobStatus) {
 					case Pending,Working:
 						if (jobStatusBlob.computeJobId != null) {
-							// trace('ComputeQueue.finishComputeJob ${jobStatusBlob.computeJobId}');
 							ComputeQueue.finishComputeJob(redis, jobStatusBlob.computeJobId, JobFinishedStatus.Killed)
 								.then(function(_) {
 									return 'killed';
 								});
 						} else {
-							// trace('ComputeQueue.finishJob ${jobStatusBlob.jobId}');
 							ComputeQueue.finishJob(redis, jobStatusBlob.jobId, JobFinishedStatus.Killed)
 								.then(function(_) {
 									return 'killed';
@@ -240,7 +392,7 @@ class ServerCommands
 			});
 	}
 
-	public static function getJobDefinition(redis :RedisClient, fs :ServiceStorage, jobId :JobId) :Promise<DockerJobDefinition>
+	public static function getJobDefinition(redis :RedisClient, fs :ServiceStorage, jobId :JobId, ?externalUrl :Bool = true) :Promise<DockerJobDefinition>
 	{
 		Assert.notNull(redis);
 		Assert.notNull(fs);
@@ -251,63 +403,38 @@ class ServerCommands
 					return null;
 				} else {
 					var jobDefCopy = Reflect.copy(jobdef);
-					jobDefCopy.inputsPath = fs.getExternalUrl(JobTools.inputDir(jobdef));
-					jobDefCopy.outputsPath = fs.getExternalUrl(JobTools.outputDir(jobdef));
-					jobDefCopy.resultsPath = fs.getExternalUrl(JobTools.resultDir(jobdef));
+					jobDefCopy.inputsPath = externalUrl ? fs.getExternalUrl(JobTools.inputDir(jobdef)) : JobTools.inputDir(jobdef);
+					jobDefCopy.outputsPath = externalUrl ? fs.getExternalUrl(JobTools.outputDir(jobdef)) : JobTools.outputDir(jobdef);
+					jobDefCopy.resultsPath = externalUrl ? fs.getExternalUrl(JobTools.resultDir(jobdef)) : JobTools.resultDir(jobdef);
 					return jobDefCopy;
 				}
-				
-				// var result :JobDescriptionComplete = {
-				// 	definition: jobDefCopy,
-				// 	status: status
-				// }
-				// trace('  result=$result');
-
-				// var resultsJsonPath = JobTools.resultJsonPath(jobDefCopy);
-				// return _fs.exists(resultsJsonPath)
-				// 	.pipe(function(exists) {
-				// 		if (exists) {
-				// 			return _fs.readFile(resultsJsonPath)
-				// 				.pipe(function(stream) {
-				// 					if (stream != null) {
-				// 						return StreamPromises.streamToString(stream)
-				// 							.then(function(resultJsonString) {
-				// 								result.result = Json.parse(resultJsonString);
-				// 								return result;
-				// 							});
-				// 					} else {
-				// 						return Promise.promise(result);
-				// 					}
-				// 				});
-				// 		} else {
-				// 			return Promise.promise(result);
-				// 		}
 			});
 	}
 
 	public static function getJobPath(redis :RedisClient, fs :ServiceStorage, jobId :JobId, pathType :JobPathType) :Promise<String>
 	{
-		return getJobDefinition(redis, fs, jobId)
+		return getJobDefinition(redis, fs, jobId, false)
 			.then(function(jobdef :DockerJobDefinition) {
 				if (jobdef == null) {
 					Log.error({log:'jobId=$jobId no job definition, cannot get results path', jobid:jobId});
 					return null;
 				} else {
-					return switch(pathType) {
-						case Inputs: return jobdef.inputsPath;
-						case Outputs: return jobdef.outputsPath;
-						case Results: return jobdef.resultsPath;
+					var path = switch(pathType) {
+						case Inputs: jobdef.inputsPath;
+						case Outputs: jobdef.outputsPath;
+						case Results: jobdef.resultsPath;
 						default:
 							Log.error({log:'getJobPath jobId=$jobId unknown pathType=$pathType', jobid:jobId});
 							throw 'getJobPath jobId=$jobId unknown pathType=$pathType';
 					}
+					return fs.getExternalUrl(path);
 				}
 			});
 	}
 
 	public static function getJobResults(redis :RedisClient, fs :ServiceStorage, jobId :JobId) :Promise<JobResult>
 	{
-		return getJobDefinition(redis, fs, jobId)
+		return getJobDefinition(redis, fs, jobId, false)
 			.pipe(function(jobdef :DockerJobDefinition) {
 				if (jobdef == null) {
 					Log.error('jobId=$jobId no job definition, cannot get results path');
@@ -344,11 +471,12 @@ class ServerCommands
 			});
 	}
 
-	public static function getStatus(redis :RedisClient, jobId :JobId) :Promise<Null<JobStatus>>
+	public static function getStatus(redis :RedisClient, jobId :JobId) :Promise<Null<String>>
 	{
-		return ComputeQueue.getStatus(redis, jobId)
+		return ComputeQueue.getJobStatus(redis, jobId)
 			.then(function(jobStatusBlob) {
-				return jobStatusBlob != null ? jobStatusBlob.JobStatus : null;
+				var s :String = jobStatusBlob.status == JobStatus.Working ? jobStatusBlob.statusWorking : jobStatusBlob.status;
+				return s;
 			})
 			.errorPipe(function(err) {
 				Log.error(err);
@@ -364,7 +492,6 @@ class ServerCommands
 					return Promise.promise(null);
 				} else {
 					var path = jobResults.stdout;
-					trace('getStdout jobId=$jobId path=$path');
 					if (path == null) {
 						return Promise.promise(null);
 					} else {

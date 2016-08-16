@@ -1,18 +1,13 @@
 package ccc.compute.client;
 
-import haxe.Json;
 import haxe.remoting.JsonRpc;
 
-import ccc.compute.Definitions;
 import ccc.compute.JobTools;
 import ccc.compute.ServiceBatchCompute;
-import ccc.compute.cli.CliTools.*;
+import ccc.compute.client.cli.CliTools.*;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
-import t9.websockets.WebSocketConnection;
-
-import t9.abstracts.net.*;
 
 using StringTools;
 using ccc.compute.ComputeTools;
@@ -47,8 +42,8 @@ class ClientCompute
 				Reflect.setField(formData, f, Reflect.field(forms, f));
 			}
 		}
-		js.npm.Request.post({url:host.rpcUrl(), formData:formData},
-			function(err :js.Error, httpResponse :js.npm.Request.HttpResponse, body:js.npm.Request.Body) {
+		js.npm.request.Request.post({url:host.rpcUrl(), formData:formData},
+			function(err :js.Error, httpResponse :js.npm.request.Request.HttpResponse, body:js.npm.request.Request.Body) {
 				if (err != null) {
 					Log.error(err);
 					promise.boundPromise.reject(err);
@@ -63,77 +58,10 @@ class ClientCompute
 						promise.boundPromise.reject(err);
 					}
 				} else {
-					promise.boundPromise.reject('non-200 response');
+					promise.boundPromise.reject('non-200 response body=$body');
 				}
 			});
 		return promise.boundPromise;
-	}
-
-	@:expose
-	public static function getJobResult(host :Host, jobId :JobId) :Promise<JobResult>
-	{
-		if (jobId == null) {
-			Log.warn('Null jobId passed');
-			return Promise.promise(null);
-		}
-		function listenWebsocket() {
-			var promise = new DeferredPromise();
-			if (jobId != null) {
-				var ws = new WebSocketConnection('ws://' + host);
-				ws.registerOnMessage(function(data :Dynamic, ?flags) {
-					try {
-						var result :ResponseDef = Json.parse(data + '');
-						if (result.error == null) {
-							// var jobData :JobDataBlob = result.result;
-							// JobTools.prependJobResultsUrls(jobData, hostport + '/');
-							// promise.resolve(jobData);
-							getJobResultData(host, jobId)
-								.then(function(result) {
-									promise.resolve(result);
-								});
-						} else {
-							promise.boundPromise.reject(result.error);
-						}
-						ws.close();
-					} catch(err :Dynamic) {
-						Log.error(err);
-						ws.close();
-					}
-				});
-				ws.registerOnOpen(function () {
-					ws.send(Json.stringify({method:Constants.RPC_METHOD_JOB_NOTIFY, params:{jobId:jobId}}));//, {binary: false}
-					getJobResultData(host, jobId)
-						.then(function(result) {
-							if (!promise.isResolved()) {
-								promise.resolve(result);
-							}
-						})
-						.catchError(function(err) {
-							//Do nothing, file isn't there, wait for the websocket notification
-						});
-				});
-				ws.registerOnClose(function(_) {
-					if (!promise.isResolved()) {
-						promise.boundPromise.reject('Websocket closed prematurely');
-					}
-				});
-			} else {
-				promise.boundPromise.reject('jobId is null');
-			}
-			return promise.boundPromise;
-		}
-		return getJobResultData(host, jobId)
-			.pipe(function(result) {
-				if (result == null) {
-					return listenWebsocket();
-				} else {
-					return Promise.promise(result);
-				}
-			})
-			.errorPipe(function(err) {
-				// Log.error('Got error from getJobData($resultsBaseUrl) err=$err');
-				return listenWebsocket();
-			});
 	}
 
 	public static function getJobResultData(host :Host, jobId :JobId) :Promise<JobResult>
@@ -150,6 +78,11 @@ class ClientCompute
 					return result;
 				});
 		}
+	}
+
+	public static function getJobResult(host :Host, jobId :JobId) :Promise<JobResult>
+	{
+		return ClientTools.getJobResult(host, jobId, getJobResultData.bind(host, jobId));
 	}
 
 	public static function getJobData(host :Host, jobId :JobId) :Promise<JobDescriptionComplete>

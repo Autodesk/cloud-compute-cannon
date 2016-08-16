@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+haxe etc/hxml/dev-ci-server-build.hxml
+node build/devci-server.js $@

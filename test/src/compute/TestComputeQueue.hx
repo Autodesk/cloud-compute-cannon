@@ -9,18 +9,12 @@ import promhx.Promise;
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
 import ccc.compute.ComputeTools;
-import ccc.compute.Definitions;
 
 import t9.abstracts.net.*;
 
 using promhx.PromiseTools;
 using ccc.compute.InstancePool;
 using Lambda;
-
-typedef JobBlob = {
-	var stuff:String;
-	var jobId :JobId;
-}
 
 class TestComputeQueue extends TestComputeBase
 {
@@ -63,7 +57,7 @@ class TestComputeQueue extends TestComputeBase
 		var jobs = [];
 		for (i in 0...jobCount) {
 			var jobId :JobId = 'job' + i;
-			var job :QueueJob<JobBlob> = {
+			var job :QueueJob<MockJobBlob> = {
 				id: jobId,
 				parameters: {cpus:1, maxDuration:maxDuration},
 				item: {stuff: jobId, jobId: jobId}

@@ -25,7 +25,7 @@ class TestRedisMock extends haxe.unit.async.PromiseTest
 	{
 		var deferred = new DeferredPromise<Bool>();
 
-		var redis = js.npm.RedisClientMock.createClient();
+		var redis = js.npm.redismock.RedisClientMock.createClient();
 		var testchannel = 'testchannel';
 		redis.on(RedisClient.EVENT_MESSAGE, function(channel, message) {
 			if (channel == testchannel) {
@@ -46,12 +46,12 @@ class TestRedisMock extends haxe.unit.async.PromiseTest
 		var deferred = new DeferredPromise<Bool>();
 
 		var conn = function() {
-			return js.npm.RedisClientMock.createClient();
+			return js.npm.redismock.RedisClientMock.createClient();
 		}
 
 		var key = 'some_stream_key';
 
-		var sendClient = js.npm.RedisClientMock.createClient();
+		var sendClient = js.npm.redismock.RedisClientMock.createClient();
 
 		var stream :Stream<String> = RedisTools.createStreamCustomInternal(sendClient, key);
 

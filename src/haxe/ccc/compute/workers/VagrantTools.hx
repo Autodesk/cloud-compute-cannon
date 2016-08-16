@@ -4,8 +4,8 @@ import js.Node;
 import js.node.Path;
 import js.node.Fs;
 
-import js.npm.FsExtended;
-import js.npm.Vagrant;
+import js.npm.fsextended.FsExtended;
+import js.npm.vagrant.Vagrant;
 
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;

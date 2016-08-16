@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
-docker-compose rm -fv && docker-compose build && COMPUTE_CONFIG=`cat serverconfig.yml` docker-compose up
+DC="docker-compose -f docker-compose.yml -f docker-compose.prod.yml "
+$DC rm -fv && $DC build && $DC up -d

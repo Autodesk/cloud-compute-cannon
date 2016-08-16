@@ -7,6 +7,8 @@ import promhx.Promise;
 import promhx.RetryPromise;
 #end
 
+import haxe.extern.EitherType;
+
 import js.Node;
 import js.Error;
 import js.node.stream.Writable;
@@ -15,7 +17,6 @@ import js.node.stream.Readable;
 @:enum
 abstract ProviderType(String) {
   var amazon = 'amazon';
-  var google = 'google';
 }
 
 //https://github.com/pkgcloud/pkgcloud/blob/master/docs/providers/amazon.md#using-compute
@@ -101,17 +102,28 @@ typedef File = {
 	function download(options :Dynamic, ?cb :Null<Error>->Void) :IReadable;
 }
 
+typedef UploadOptions = {
+	var container :String;
+	var remote :String;
+}
+
+typedef DownloadOptions = {
+	var container :String;
+	var remote :String;
+}
+
 typedef StorageClient = {
 	function getContainers(cb :Error->Array<Container>->Void) :Void;
 	function createContainer(options :Dynamic, cb :Null<Error>->Container->Void) :Void;
 	function destroyContainer(containerName :String, cb :Null<Error>->Void) :Void;
 	function getContainer(containerName :String, cb :Null<Error>->Container->Void) :Void;
 
-	function upload(options :Dynamic) :IWritable;
-	function download(options :Dynamic, ?cb :Null<Error>->Void) :IReadable;
-	function getFiles(container :Container, cb :Null<Error>->Array<File>->Void) :Void;
-	function getFile(container :Container, fileName :String, cb :Null<Error>->File->Void) :Void;
-	function removeFile(container :Container, file :File, ?cb :Null<Error>->Void) :Void;
+	function upload(options :UploadOptions) :IWritable;
+	function download(options :DownloadOptions, ?cb :Null<Error>->Void) :IReadable;
+	@:overload(function(container :EitherType<Container,String>, options :Dynamic, cb :Null<Error>->Array<File>->Void):Void {})
+	function getFiles(container :EitherType<Container,String>, cb :Null<Error>->Array<File>->Void) :Void;
+	function getFile(container :EitherType<Container,String>, fileName :String, cb :Null<Error>->File->Void) :Void;
+	function removeFile(container :EitherType<Container,String>, file :File, ?cb :Null<Error>->Void) :Void;
 }
 
 typedef Credentials = {
@@ -292,9 +304,9 @@ abstract StorageClientP(StorageClient) from StorageClient
 		return ClientImplStorage.download(this, options);
 	}
 
-	inline public function getFiles(container :Container) :Promise<Array<File>>
+	inline public function getFiles(container :Container, ?options :Dynamic) :Promise<Array<File>>
 	{
-		return ClientImplStorage.getFiles(this, container);
+		return ClientImplStorage.getFiles(this, container, options);
 	}
 
 	inline public function getFile(container :Container, fileName :String) :Promise<File>
@@ -349,10 +361,10 @@ class ClientImplStorage
 		return client.download(options);
 	}
 
-	public static function getFiles(client :StorageClient, container :Container) :Promise<Array<File>>
+	public static function getFiles(client :StorageClient, container :Container, ?options :Dynamic) :Promise<Array<File>>
 	{
 		var promise = new CallbackPromise();
-		client.getFiles(container, promise.cb2);
+		client.getFiles(container, options, promise.cb2);
 		return promise;
 	}
 
