@@ -199,7 +199,6 @@ class DockerPromises
 	public static function ping(docker :Docker) :Promise<Bool>
 	{
 		var promise = new CallbackPromise();
-		trace('docker ping');
 		docker.ping(promise.cb1);
 		return promise.thenTrue();
 	}

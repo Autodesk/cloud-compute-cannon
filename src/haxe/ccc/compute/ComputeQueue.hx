@@ -1211,7 +1211,7 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 		}
 	}
 
-	inline public function getFinishedAndStatus() :TypedDynamicObject<JobFinishedStatus,Array<JobId>>
+	inline public function getFinishedAndStatus(?max :Int = -1) :TypedDynamicObject<JobFinishedStatus,Array<JobId>>
 	{
 		if (this.jobStatus == null || Reflect.fields(this.jobStatus).length == 0) {
 			return {};
@@ -1219,6 +1219,9 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 			var results :TypedDynamicObject<JobFinishedStatus,Array<JobId>> = {};
 			var jobids = this.jobStatus.keys();
 			jobids.sort(Reflect.compare);
+			if (max > -1) {
+				jobids = jobids.slice(0, max);
+			}
 			for (jobId in jobids) {
 				var statusUpdate :JobStatusUpdate = this.jobStatus[jobId];
 				if (statusUpdate.JobStatus == JobStatus.Finished) {

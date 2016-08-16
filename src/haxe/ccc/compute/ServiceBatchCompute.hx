@@ -63,6 +63,15 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
+		alias:'pending',
+		doc:'Get pending jobs'
+	})
+	public function pending() :Promise<Array<JobId>>
+	{
+		return ServerCommands.pending(_redis);
+	}
+
+	@rpc({
 		alias:'status',
 		doc:'Get the running status of the system: pending jobs, running jobs, worker machines'
 	})
@@ -234,7 +243,7 @@ class ServiceBatchCompute
 	{
 #if (nodejs && !macro)
 		switch(command) {
-			case Remove,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
+			case Remove,RemoveComplete,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
 			default:
 				return Promise.promise(cast {error:'Unrecognized job subcommand=\'$command\' [remove | kill | result | status | exitcode | stats | definition | time]'});
 		}
@@ -244,7 +253,9 @@ class ServiceBatchCompute
 		function getResultForJob(job) :Promise<Dynamic> {
 			return switch(command) {
 				case Remove:
-					removeJob(_redis, _fs, job);
+					ComputeQueue.removeJob(_redis, job);
+				case RemoveComplete:
+					removeJobComplete(_redis, _fs, job);
 				case Kill:
 					killJob(_redis, job);
 				case Status:
