@@ -1,15 +1,15 @@
 package ccc.storage;
 
-import haxe.Json;
+import ccc.storage.ServiceStorage;
+import ccc.storage.StorageTools;
 
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 
-import promhx.Promise;
+import promhx.StreamPromises;
 
-import ccc.storage.ServiceStorage;
-import ccc.storage.StorageTools;
+import util.streams.StreamTools;
 
 using StringTools;
 
@@ -154,6 +154,31 @@ class ServiceStorageBase
 	public function getExternalUrl(?path :String) :String
 	{
 		return path == null ? '' : path;
+	}
+
+	public function test() :Promise<ServiceStorageTestResult>
+	{
+		var randString = js.npm.shortid.ShortId.generate();
+		var stream = StreamTools.stringToStream(randString);
+		var clsNameTokens = Type.getClassName(Type.getClass(this)).split('.');
+		var fileName = clsNameTokens[clsNameTokens.length - 1] + "Test";
+		return writeFile(fileName, stream)
+			.pipe(function(_) {
+				return readFile(fileName)
+					.pipe(function(stream) {
+						return StreamPromises.streamToString(stream)
+							.then(function(out) {
+								var success = randString == out.trim();
+								return {success:success, write:true, read:true, error:null};
+							})
+							.errorPipe(function(err) {
+								return Promise.promise({success:false, write:true, read:false, error:Json.stringify(err)});
+							});
+					});
+			})
+			.errorPipe(function(err) {
+				return Promise.promise({success:false, write:false, read:false, error:Json.stringify(err)});
+			});
 	}
 
 	inline function get_type() :StorageSourceType

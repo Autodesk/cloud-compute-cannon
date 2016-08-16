@@ -1,23 +1,80 @@
 package ccc.storage;
 
+/**
+ CORS configuration:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+    <CORSRule>
+        <AllowedOrigin>*</AllowedOrigin>
+        <AllowedMethod>GET</AllowedMethod>
+        <AllowedMethod>PUT</AllowedMethod>
+        <AllowedMethod>POST</AllowedMethod>
+        <AllowedMethod>DELETE</AllowedMethod>
+        <AllowedMethod>HEAD</AllowedMethod>
+        <AllowedHeader>*</AllowedHeader>
+    </CORSRule>
+</CORSConfiguration>
+
+Bucket policy (where <USER> is the id of the user account, and
+<BUCKET_NAME> is the name of the S3 bucket:
+
+{
+	"Version": "2008-10-17",
+	"Statement": [
+		{
+			"Sid": "",
+			"Effect": "Allow",
+			"Principal": {
+				"AWS": "arn:aws:iam::763896067184:user/<USER>"
+			},
+			"Action": [
+				"s3:ListBucket",
+				"s3:GetBucketLocation"
+			],
+			"Resource": "arn:aws:s3:::<BUCKET_NAME>"
+		},
+		{
+			"Sid": "",
+			"Effect": "Allow",
+			"Principal": {
+				"AWS": "arn:aws:iam::763896067184:user/<USER>"
+			},
+			"Action": [
+				"s3:PutObject",
+				"s3:GetObject",
+				"s3:DeleteObject",
+				"s3:DeleteObjectVersion",
+				"s3:RestoreObject",
+				"s3:GetObjectVersion"
+			],
+			"Resource": "arn:aws:s3:::<BUCKET_NAME>/*"
+		},
+		{
+			"Sid": "",
+			"Effect": "Allow",
+			"Principal": "*",
+			"Action": "s3:GetObject",
+			"Resource": "arn:aws:s3:::<BUCKET_NAME>/*"
+		}
+	]
+}
+ */
+
+import ccc.compute.Definitions;
+import ccc.storage.ServiceStorage;
+import ccc.storage.*;
+
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.aws.AWS;
 
 import promhx.Promise;
 import promhx.PromiseTools;
-import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
-
-import ccc.compute.Definitions;
-import ccc.storage.ServiceStorageBase;
-import ccc.storage.StorageSourceType;
-import ccc.storage.StorageDefinition;
 
 using Lambda;
 using StringTools;
-
-
 
 class ServiceStorageS3 extends ServiceStorageBase
 {
@@ -50,22 +107,25 @@ class ServiceStorageS3 extends ServiceStorageBase
 			_initialized = promise.boundPromise;
 			_S3.getBucketPolicy({Bucket:_containerName}, function(err, data) {
 				if (err != null) {
+					//For now, throw an error and crash. S3 buckets need to be
+					//set up manually for now
+					promise.boundPromise.reject(err);
 					//No bucket exists, let's create one
-					var createBucketOptions = {
-						Bucket: _containerName,
-						ACL: 'public-read',
-						CreateBucketConfiguration: {
-							LocationConstraint: _config.credentials.region,
-						},
-						GrantFullControl: 'FULL_CONTROL'
-					}
-					_S3.createBucket(createBucketOptions, function(err, result) {
-						if (err != null) {
-							promise.boundPromise.reject(err);
-						} else {
-							promise.resolve(true);
-						}
-					});
+					// var createBucketOptions = {
+					// 	Bucket: _containerName,
+					// 	ACL: 'public-read',
+					// 	CreateBucketConfiguration: {
+					// 		LocationConstraint: _config.credentials.region,
+					// 	},
+					// 	GrantFullControl: 'FULL_CONTROL'
+					// }
+					// _S3.createBucket(createBucketOptions, function(err, result) {
+					// 	if (err != null) {
+					// 		promise.boundPromise.reject(err);
+					// 	} else {
+					// 		promise.resolve(true);
+					// 	}
+					// });
 				} else {
 					promise.resolve(true);
 				}

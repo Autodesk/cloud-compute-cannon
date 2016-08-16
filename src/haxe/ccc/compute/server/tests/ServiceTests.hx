@@ -1,8 +1,12 @@
 package ccc.compute.server.tests;
 
+import ccc.storage.ServiceStorage;
+
 import haxe.unit.async.PromiseTest;
 import haxe.unit.async.PromiseTestRunner;
+
 import minject.Injector;
+
 import promhx.PromiseTools;
 
 @:enum
@@ -22,13 +26,28 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = true, ?all :Bool = false, ?registry :Bool = false, ?worker :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false) :Promise<CompleteTestResult>
 	{
+		if (!(core || all || registry || worker || storage || compute)) {
+			core = true;
+		}
+		if (all) {
+			core = true;
+			registry = true;
+			worker = true;
+			storage = true;
+			compute = true;
+		}
+
 		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
 		var runner = new PromiseTestRunner();
 
-		if (core || all) {
+		if (core) {
 			runner.add(new TestUnit());
+			runner.add(new TestJobs(targetHost));
+		}
+
+		if (core || storage) {
 			runner.add(new TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
 			var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
 			switch(injectedStorage.type) {
@@ -41,17 +60,20 @@ class ServiceTests
 					var test :PromiseTest = new TestStorageS3(cast  injectedStorage);
 					runner.add(test);
 			}
-
-			runner.add(new TestJobs(targetHost));
 		}
-		if (registry || all) {
+
+		if (registry) {
 			runner.add(new TestRegistry(targetHost));
 		}
 
-		if (worker || all) {
+		if (worker) {
 			var testWorkers = new TestWorkerMonitoring();
 			_injector.injectInto(testWorkers);
 			runner.add(testWorkers);
+		}
+
+		if (compute) {
+			runner.add(new TestCompute(targetHost));
 		}
 
 		var exitOnFinish = false;
@@ -65,6 +87,26 @@ class ServiceTests
 				});
 				return result;
 			});
+	}
+
+	@rpc({
+		alias:'test-storage',
+		doc:'Test the storage service (local, S3, etc)'
+	})
+	public function runStorageTest() :Promise<ServiceStorageTestResult>
+	{
+		var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
+		return injectedStorage.test();
+	}
+
+	@rpc({
+		alias:'test-compute',
+		doc:'Test compute service by running a job that performs all basics: read input, write output, read external output, stdout, and stderr'
+	})
+	public function runComputeTest() :Promise<ServiceStorageTestResult>
+	{
+		var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
+		return injectedStorage.test();
 	}
 
 	@rpc({

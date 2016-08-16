@@ -67,24 +67,23 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 
 				//First wait until it is assigned a worker, then get the worker id
 				return PromiseTools.untilTrue(function() {
-					return proxy.status()
-						.then(function(systemStatus :SystemStatus) {
-							if (!systemStatus.pending.has(jobId)) {
-								//Get the worker
-								var worker = systemStatus.workers.find(function(w) {
-									return w.jobs.exists(function(j) {
-										return j.id == jobId;
-									});
-								});
-								if (worker == null) {
-									traceRed('jobId=$jobId');
-									traceRed(Json.stringify(systemStatus, null, '\t'));
-								}
-								assertNotNull(worker);
-								workerId = worker.id;
-								return true;
+					return proxy.pending()
+						.pipe(function(pending) {
+							if (pending.has(jobId)) {
+								return Promise.promise(false);
 							} else {
-								return false;
+								return proxy.status()
+									.then(function(systemStatus :SystemStatus) {
+										//Get the worker
+										var worker = systemStatus.workers.find(function(w) {
+											return w.jobs.exists(function(j) {
+												return j.id == jobId;
+											});
+										});
+										assertNotNull(worker);
+										assertNotEquals(worker.id, workerId);
+										return true;
+									});
 							}
 						});
 				})
@@ -110,20 +109,23 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			})
 			.pipe(function(_) {
 				return PromiseTools.untilTrue(function() {
-					return proxy.status()
-						.then(function(systemStatus :SystemStatus) {
-							if (!systemStatus.pending.has(jobId)) {
-								//Get the worker
-								var worker = systemStatus.workers.find(function(w) {
-									return w.jobs.exists(function(j) {
-										return j.id == jobId;
-									});
-								});
-								assertNotNull(worker);
-								assertNotEquals(worker.id, workerId);
-								return true;
+					return proxy.pending()
+						.pipe(function(pending) {
+							if (pending.has(jobId)) {
+								return Promise.promise(false);
 							} else {
-								return false;
+								return proxy.status()
+									.then(function(systemStatus :SystemStatus) {
+										//Get the worker
+										var worker = systemStatus.workers.find(function(w) {
+											return w.jobs.exists(function(j) {
+												return j.id == jobId;
+											});
+										});
+										assertNotNull(worker);
+										assertNotEquals(worker.id, workerId);
+										return true;
+									});
 							}
 						});
 				});

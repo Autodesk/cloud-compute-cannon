@@ -45,6 +45,15 @@ class ServerCommands
 				return true;
 			});
 	}
+
+	public static function pending(redis :RedisClient) :Promise<Array<JobId>>
+	{
+		return ComputeQueue.toJson(redis)
+			.then(function(out) {
+				return out.pending;
+			});
+	}
+
 	public static function status(redis :RedisClient) :Promise<SystemStatus>
 	{
 		var workerJson :InstancePoolJson = null;
@@ -74,7 +83,8 @@ class ServerCommands
 			.then(function(_) {
 				var now = Date.now();
 				var result = {
-					pending: jobsJson.pending,
+					pendingCount: jobsJson.pending.length,
+					pendingTop5: jobsJson.pending.slice(0, 5),
 					workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
 						return {
 							id :m.id,
@@ -93,7 +103,8 @@ class ServerCommands
 							cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
 						};
 					}),
-					finished: jobsJson.getFinishedAndStatus(),
+					finishedCount: jobsJson.getFinishedAndStatus().keys().length,
+					finishedTop5: jobsJson.getFinishedAndStatus(5),
 					// workerJson: workerJson,
 					// workerJsonRaw: workerJsonRaw
 				};
@@ -335,11 +346,10 @@ class ServerCommands
 		return ComputeQueue.getJobStats(redis, jobId);
 	}
 
-	public static function removeJob(redis :RedisClient, fs :ServiceStorage, jobId :JobId) :Promise<String>
+	public static function removeJobComplete(redis :RedisClient, fs :ServiceStorage, jobId :JobId, ?removeFiles :Bool = true) :Promise<String>
 	{
 		return ComputeQueue.getJob(redis, jobId)
 			.pipe(function(jobdef :DockerJobDefinition) {
-				traceCyan(jobdef);
 				if (jobdef == null) {
 					return Promise.promise('unknown_job');
 				} else {
