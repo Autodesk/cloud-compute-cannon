@@ -544,12 +544,12 @@ class DockerTools
 			} else {
 				var readable :IReadable = untyped __js__('new require("stream").PassThrough()');
 				var header :Buffer = null;
-				stream.on('readable', function() {
+				stream.on(ReadableEvent.Readable, function() {
 					header = header != null ? header : stream.read(8);
 					while (untyped __strict_neq__(header, null)) {
 						var type = header.readUInt8(0);
 						var payload = stream.read(header.readUInt32BE(4));
-						if (untyped __strict_eq__(header, null)) {
+						if (untyped __strict_eq__(payload, null)) {
 							break;
 						}
 						if (type == 2) {
