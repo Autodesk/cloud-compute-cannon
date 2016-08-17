@@ -36,7 +36,7 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 		}
 	}
 
-	@timeout(10000)
+	@timeout(1200000)
 	public function testFileExists() :Promise<Bool>
 	{
 		return _storage.exists('sdfsdfafsadfasdcfsfcasfsadf')
@@ -50,7 +50,7 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 			});
 	}
 
-	@timeout(10000)
+	@timeout(120000)
 	public function testGettingFileThatDoesNotExist() :Promise<Bool>
 	{
 		return _storage.readFile('sdfsdfafsadfasdcfsfcasfsadf')
