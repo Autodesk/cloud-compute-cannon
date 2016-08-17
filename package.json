@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "bin": {
     "ccc": "bin/cloudcomputecannon.js",
@@ -8,28 +8,11 @@
   },
   "scripts": {
     "start": "haxe etc/hxml/server-devrun.hxml",
-    "init": "npm install && git submodule update --init --recursive && haxelib newrepo && haxelib install --always etc/hxml/base.hxml && haxelib install --always etc/hxml/base-nodejs.hxml && chmod -R 777 data",
+    "init": "git submodule update --init --recursive",
     "build": "haxe etc/hxml/build-all.hxml",
-    "testsIntegration": "AWS=true COMPUTE_CONFIG=`cat test/etc/TestConfigAws.yaml` haxe test/testsIntegration.hxml",
-    "testsAws": "AWS=true COMPUTE_CONFIG=`cat test/etc/TestConfigAws.yaml` haxe test/testsIntegration.hxml",
     "redis-cli": "redis-cli -h 192.168.99.100",
-    "docker-build": "docker build -t cloudcomputecannon .",
-    "docker-run": "docker run --rm -t -i -v `pwd`:/app/ cloudcomputecannon",
     "redis-admin": "redis-commander --redis-host 192.168.99.101 && open http://localhost:8081",
     "clean": "rm -rf data/computejobs/* ; rm -rf data/registry/* ; rm -rf data/ServiceStorageLocalFileSystem/*",
-    "stack": "docker-compose rm -fv && docker-compose build && docker-compose up",
-    "stack.faster": "docker-compose rm -fv && docker-compose up",
-    "pythonclient": "PYTHONPATH=/usr/local/lib/python3.4/site-packages bin/client.py",
-    "redis": "docker run --name redis --rm -p 6379:6379 -t -i -v `pwd`/etc/redis/redis.conf:/usr/local/etc/redis/redis.conf redis:3 redis-server /usr/local/etc/redis/redis.conf",
-    "registry": "docker run --name registry --rm -p 5000:5000 -v `pwd`/tmp/registrydata:/var/lib/registry registry:2",
-    "build.tests": "docker build -t ccctests .",
-    "tests.docker": "docker run -p 8219:8219 -e \"DOCKER=true\" -e \"VAGRANT=false\" -e \"REDIS=false\" -e \"AWS=false\" --rm -v `pwd`:/app -v /var/run/docker.sock:/var/run/docker.sock ccctests haxe -debug test/testsIntegration.hxml | bunyan",
-    "tests.docker.redis": "docker run -p 8219:8219 -e \"DOCKER=true\" -e \"VAGRANT=false\" -e \"REDIS=true\" -e \"AWS=false\" --rm -v `pwd`:/app -v /var/run/docker.sock:/var/run/docker.sock ccctests haxe -debug test/testsIntegration.hxml | bunyan",
-    "tests.vagrant": "UNIT=false DOCKER=false AWS=false haxe -debug test/testsIntegration.hxml | bunyan",
-    "logdev": "docker-compose -f docker-compose.logging.yml rm -fv && docker-compose -f docker-compose.logging.yml build && docker-compose -f docker-compose.logging.yml up",
-    "stack.noserver2": "docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.override.localdev.yml rm -fv redis registry fluentd elasticsearch kibana && docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.override.localdev.yml build redis registry fluentd elasticsearch kibana && docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.override.localdev.yml up redis registry fluentd elasticsearch kibana",
-    "stack.noserver": "docker-compose rm -fv redis registry fluentd elasticsearch kibana && docker-compose build redis registry fluentd elasticsearch kibana && docker-compose up redis registry fluentd elasticsearch kibana",
-    "foo": "--log-driver=fluentd",
     "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf"
   },
   "repository": {
