@@ -74,6 +74,8 @@ extern class AWSS3
 	// http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listBuckets-property
 	public function listBuckets(cb :Null<Error>->Dynamic->Void) :Void;
 
+	public function headObject(p :AWSS3ObjectParams, cb :Null<Error>->Dynamic->Void) :Void;
+
 	public function deleteObject(p :AWSS3ObjectParams, cb :Null<Error>->Dynamic->Void) :Void;
 
 	public function listObjectsV2(p :AWSS3ListObjectParams, cb :Null<Error>->Dynamic->Void) :Void;

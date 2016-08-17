@@ -192,8 +192,14 @@ class ServiceStorageS3 extends ServiceStorageBase
 			.pipe(function(_) {
 				var promise = new DeferredPromise();
 				var params = {Bucket: _containerName, Key: path};
-				_S3.getObject(params, function(err, data) {
-					promise.resolve(err == null);
+				_S3.headObject(params, function(err, data) {
+					if (err != null && Reflect.field(err, 'code') == 'NotFound') {
+						promise.resolve(false);
+					} else if (err != null) {
+						promise.boundPromise.reject(err);
+					} else {
+						promise.resolve(true);
+					}
 				});
 				return promise.boundPromise;
 			});
@@ -201,13 +207,17 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function readFile(path :String) :Promise<IReadable>
 	{
-		path = getPath(path);
-		return initialized()
-			.pipe(function(_) {
-				var promise = new DeferredPromise();
-				var params = {Bucket: _containerName, Key: path};
-				promise.resolve(_S3.getObject(params).createReadStream());
-				return promise.boundPromise;
+		return exists(path)
+			.pipe(function(file_exists) {
+				if (file_exists) {
+					path = getPath(path);
+					var promise = new DeferredPromise();
+					var params = {Bucket: _containerName, Key: path};
+					promise.resolve(_S3.getObject(params).createReadStream());
+					return promise.boundPromise;
+				} else {
+					return PromiseTools.error('Does not exist: $path');
+				}
 			});
 	}
 

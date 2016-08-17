@@ -36,6 +36,33 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 		}
 	}
 
+	@timeout(10000)
+	public function testFileExists() :Promise<Bool>
+	{
+		return _storage.exists('sdfsdfafsadfasdcfsfcasfsadf')
+			.then(function(exists) {
+				assertFalse(exists);
+				return true;
+			})
+			.errorPipe(function(err) {
+				assertIsNull(err);
+				return Promise.promise(false);
+			});
+	}
+
+	@timeout(10000)
+	public function testGettingFileThatDoesNotExist() :Promise<Bool>
+	{
+		return _storage.readFile('sdfsdfafsadfasdcfsfcasfsadf')
+			.then(function(_) {
+				assertTrue(false);
+				return true;
+			})
+			.errorPipe(function(err) {
+				return Promise.promise(true);
+			});
+	}
+
 	function doPathParsing(s :ServiceStorage) :Promise<Bool>
 	{
 		var rootPath = 'rootPathTest/';
