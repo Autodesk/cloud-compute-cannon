@@ -30,6 +30,18 @@ class TestStoragePkgCloud extends TestStorageBase
 			}));
 	}
 
+	@timeout(10000)
+	override public function testFileExists() :Promise<Bool>
+	{
+		return super.testFileExists();
+	}
+
+	@timeout(10000)
+	override public function testGettingFileThatDoesNotExist() :Promise<Bool>
+	{
+		return super.testGettingFileThatDoesNotExist();
+	}
+
 	// AWS S3 allows path-like object names
 	// @timeout(100)
 	// function TODO_CHECK_THIS_testPathConversion() :Promise<Bool>

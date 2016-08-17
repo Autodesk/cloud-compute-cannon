@@ -31,6 +31,18 @@ class TestStorageS3 extends TestStorageBase
 			});
 	}
 
+	@timeout(10000)
+	override public function testFileExists() :Promise<Bool>
+	{
+		return super.testFileExists();
+	}
+
+	@timeout(10000)
+	override public function testGettingFileThatDoesNotExist() :Promise<Bool>
+	{
+		return super.testGettingFileThatDoesNotExist();
+	}
+
 	@timeout(1000)
 	public function testPathsS3() :Promise<Bool>
 	{
