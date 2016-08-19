@@ -3,7 +3,7 @@
 *.sublime-workspace
 .aws
 .bundle
-.env
+.env*
 .haxelib
 .idea
 .vagrant

@@ -707,11 +707,13 @@ class ServiceBatchCompute
 						}
 						var url :String = input.value;
 						if (url.startsWith('http')) {
-							// Log.info('Got input "${input.name}" url=${input.value}');
 							var request :String->IReadable = Node.require('request');
-							promises.push(_fs.writeFile(inputFilePath, request(input.value)));
+							//Fuck the request library
+							//https://github.com/request/request/issues/887
+							var readable :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+							request(input.value).pipe(readable);
+							promises.push(_fs.writeFile(inputFilePath, readable));
 						} else {
-							// Log.info('Got input "${input.name}" local fs=${input.value}');
 							promises.push(
 								_fs.readFile(url)
 									.pipe(function(stream) {

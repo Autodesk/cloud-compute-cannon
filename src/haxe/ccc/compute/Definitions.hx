@@ -4,6 +4,8 @@ import haxe.DynamicAccess;
 
 import util.ObjectTools;
 
+import ccc.storage.StorageDefinition;
+
 #if (nodejs && !macro)
 	import js.npm.docker.Docker;
 	import js.npm.ssh2.Ssh;
@@ -11,7 +13,6 @@ import util.ObjectTools;
 
 	import ccc.storage.ServiceStorage;
 	import ccc.storage.StorageTools;
-	import ccc.storage.StorageDefinition;
 #end
 
 /**
@@ -167,7 +168,7 @@ typedef InstanceDefinition = {
 	var id :MachineId;
 	var hostPublic :HostName;
 	var hostPrivate :HostName;
-#if nodejs
+#if (nodejs && !macro)
 	var ssh :ConnectOptions;
 	var docker :DockerConnectionOpts;
 #else
@@ -445,6 +446,8 @@ abstract CLIServerPathRoot(String) from String
 	inline public function new(s :String)
 		this = s;
 
+#if (js && !macro)
+
 	inline public function getServerYamlConfigPath() :String
 	{
 		return js.node.Path.join(this, Constants.LOCAL_CONFIG_DIR, Constants.SERVER_CONNECTION_FILE);
@@ -470,6 +473,8 @@ abstract CLIServerPathRoot(String) from String
 			return false;
 		}
 	}
+
+#end
 
 	public function toString() :String
 	{

@@ -102,6 +102,7 @@ class ServerCompute
 		}
 
 		var config :ServiceConfiguration = InitConfigTools.getConfig();
+
 		Assert.notNull(config);
 		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
 		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
@@ -363,7 +364,7 @@ class ServerCompute
 
 				//Run internal tests
 				Log.debug('Running server functional tests');
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?compute=true')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?compute=true&storage=false')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);

@@ -1,6 +1,7 @@
 package ccc.compute.client.cli;
 
 import ccc.compute.client.ClientCompute;
+import ccc.compute.client.ClientTools;
 import ccc.compute.JobTools;
 import ccc.compute.InitConfigTools;
 import ccc.compute.ServiceBatchCompute;
@@ -258,7 +259,7 @@ class ClientCommands
 		var address = getServerAddress();
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return ClientCompute.postJob(address, jobParams, inputStreams)
+				return ClientTools.postJob(address, jobParams, inputStreams)
 					.then(function(result) {
 						var submissionData :SubmissionDataBlob = {
 							jobId: result.jobId,

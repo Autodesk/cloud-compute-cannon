@@ -158,7 +158,7 @@ class ServiceStorageSftp
 
 	override public function copyFile(source :String, target :String) :Promise<Bool>
 	{
-		Log.error('Not yet implemented');
+		Log.error('ServiceStorageSftp.copyFile Not yet implemented');
 		return Promise.promise(true);
 	}
 

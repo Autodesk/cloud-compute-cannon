@@ -52,7 +52,7 @@ class WorkerProviderTools
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
 			default:
-				throw 'Not yet implemented';
+				throw 'WorkerProviderTools.getPublicHostName Not yet implemented';
 		}
 	}
 
@@ -64,7 +64,7 @@ class WorkerProviderTools
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
 			default:
-				throw 'Not yet implemented';
+				throw 'WorkerProviderTools.getPrivateHostName Not yet implemented';
 		}
 	}
 

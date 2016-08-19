@@ -1,6 +1,11 @@
 #!/usr/bin/env sh
 DOCKERBLOB="docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
-# $DOCKERBLOB rm -fv compute
+$DOCKERBLOB rm -fv compute
 $DOCKERBLOB rm -fv --all
 $DOCKERBLOB build
-$DOCKERBLOB up --abort-on-container-exit
+if [ $# -eq 1 ]
+	then
+		COMPUTE_CONFIG=`cat $1` $DOCKERBLOB up --abort-on-container-exit
+	else
+		$DOCKERBLOB up --abort-on-container-exit
+fi

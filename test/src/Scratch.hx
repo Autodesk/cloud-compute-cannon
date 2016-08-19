@@ -6,43 +6,55 @@ class Scratch
 {
 	static function main()
 	{
-		// util.EmbedMacros.embedFiles('etc');
-		// trace('foo');
-		// trace(haxe.Resource.listNames());
-		// trace(haxe.Resource.getString(haxe.Resource.listNames()[0]));
-		// 
-		// var clientRpcDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(batcher.cli.ClientCommands);
-		var clientRpcDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(MacroFoo);
-		// trace('clientRpcDefinitions=${clientRpcDefinitions}');
-		// 
-		for (e in [
-			'quay.io:80/bionano/lmvconverter',
-			'bionano/lmvconverter',
-			'quay.io/bionano/lmvconverter:latest',
-			'localhost:5001/lmvconverter:latest',
-			'quay.io:80/bionano/lmvconverter:c955c37',
-			'bionano/lmvconverter:c955c37',
-			'lmvconverter:c955c37',
-			'lmvconverter'
-			]) {
-			trace(parseDockerUrl(e));
-		}
+		//ccc.compute.server.tests.TestComputeMacros.
+		buildTestContent();
+		// var inputValue1 = 'some other string';
+		inputValue = 'some other string' + Math.random();
+		trace(inputValue);
 	}
 
-	
-}
-
-class MacroFoo
-{
-	@rpc({
-		alias:'devtest',
-		doc:'Various convenience functions for dev testing',
-		args:{
-			'command':{doc: 'Output is JSON'}
-		}
-	})
-	public static function devtest(command :String, ?foo :String = 'bar') :promhx.Promise<String>
+	public static macro function buildTestContent()
 	{
-		return null;
+		// var ShortId = {
+		// 	generate: function() {
+		// 		return UUID.uuid(8);
+		// 	}
+		// }
+		trace('here');
+		return macro {
+			var inputValue :String = 'sdfsdf';
+			trace('inside macro ' + inputValue);
+
+			inputValue = 'sdfsdf' + Math.random();
+
+			trace('inside macro ' + inputValue);
+			// var inputValue = 'in${ShortId.generate()}';
+			// var inputName = 'in${ShortId.generate()}';
+
+			// var outputName1 = 'out${ShortId.generate()}';
+			// var outputName2 = 'out${ShortId.generate()}';
+			// var outputValue1 = 'out${ShortId.generate()}';
+
+			// var input :ComputeInputSource = {
+			// 	type: InputSource.InputInline,
+			// 	value: inputValue,
+			// 	name: inputName
+			// }
+		};
 	}
 }
+
+// class MacroFoo
+// {
+// 	@rpc({
+// 		alias:'devtest',
+// 		doc:'Various convenience functions for dev testing',
+// 		args:{
+// 			'command':{doc: 'Output is JSON'}
+// 		}
+// 	})
+// 	public static function devtest(command :String, ?foo :String = 'bar') :promhx.Promise<String>
+// 	{
+// 		return null;
+// 	}
+// }
