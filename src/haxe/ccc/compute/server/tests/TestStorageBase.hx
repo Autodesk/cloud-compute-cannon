@@ -209,6 +209,23 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 							});
 					});
 			})
+			//Test piping in a http request readable stream
+			.pipe(function(_) {
+				var url = 'https://commons.wikimedia.org/static/images/wikimedia-button-2x.png';
+				var fileName = 'wikimedia-button-2x.png';
+				var stream = js.npm.request.Request.get(url);
+				return storage.writeFile(fileName, stream)
+					.pipe(function(_) {
+						return storage.readFile(fileName)
+							.pipe(function(readStream) {
+								return StreamPromises.streamToBuffer(readStream);
+							})
+							.then(function(buffer) {
+								var md5 = js.node.Crypto.createHash('md5').update(buffer).digest('hex');
+								assertEquals(md5, 'b6d63aa25f73a7e0e1c1cfe063fc5eb9');
+							});
+					});
+			})
 			.then(function(_) {
 				storage.close();
 				return true;

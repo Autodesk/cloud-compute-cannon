@@ -26,6 +26,7 @@ import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 import ccc.compute.client.ClientCompute;
+import ccc.compute.client.ClientTools;
 import ccc.storage.StorageTools;
 import ccc.storage.ServiceStorage;
 
@@ -89,7 +90,7 @@ class TestServiceBatchCompute extends TestComputeBase
 					]
 				}
 
-				return ClientCompute.postJob(HOST, jobParams)
+				return ClientTools.postJob(HOST, jobParams)
 					.thenWait(5000)
 					.pipe(function(result) {
 						var jobId = result.jobId;

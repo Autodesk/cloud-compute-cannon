@@ -23,46 +23,6 @@ typedef JobDataBlob = {>JobResult,
 @:expose('ClientCompute')
 class ClientCompute
 {
-	@:expose
-	public static function postJob(host :Host, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<{jobId:JobId}>
-	{
-		var promise = new DeferredPromise();
-		var jsonRpcRequest :RequestDef = {
-			id: JsonRpcConstants.JSONRPC_NULL_ID,
-			jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
-			method: Constants.RPC_METHOD_JOB_SUBMIT,
-			params: job
-		}
-
-		var formData = {
-			jsonrpc: Json.stringify(jsonRpcRequest)
-		};
-		if (forms != null) {
-			for (f in Reflect.fields(forms)) {
-				Reflect.setField(formData, f, Reflect.field(forms, f));
-			}
-		}
-		js.npm.request.Request.post({url:host.rpcUrl(), formData:formData},
-			function(err :js.Error, httpResponse :js.npm.request.Request.HttpResponse, body:js.npm.request.Request.Body) {
-				if (err != null) {
-					Log.error(err);
-					promise.boundPromise.reject(err);
-					return;
-				}
-				if (httpResponse.statusCode == 200) {
-					try {
-						// var result :JobResult = Json.parse(body);
-						var result :ResponseDefSuccess<{jobId:JobId}> = Json.parse(body);
-						promise.resolve(result.result);
-					} catch (err :Dynamic) {
-						promise.boundPromise.reject(err);
-					}
-				} else {
-					promise.boundPromise.reject('non-200 response body=$body');
-				}
-			});
-		return promise.boundPromise;
-	}
 
 	public static function getJobResultData(host :Host, jobId :JobId) :Promise<JobResult>
 	{
@@ -82,7 +42,8 @@ class ClientCompute
 
 	public static function getJobResult(host :Host, jobId :JobId) :Promise<JobResult>
 	{
-		return ClientTools.getJobResult(host, jobId, getJobResultData.bind(host, jobId));
+		// return ClientTools.getJobResult(host, jobId, getJobResultData.bind(host, jobId));
+		return ClientTools.getJobResult(host, jobId);
 	}
 
 	public static function getJobData(host :Host, jobId :JobId) :Promise<JobDescriptionComplete>

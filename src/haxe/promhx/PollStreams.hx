@@ -5,6 +5,8 @@ import promhx.base.AsyncBase;
 import promhx.deferred.DeferredPromise;
 import promhx.RetryPromise;
 
+import t9.util.ColorTraces.*;
+
 class PollStreams
 {
 	/**
@@ -46,7 +48,9 @@ class PollStreams
 					}
 				})
 				.catchError(function(err) {
+#if (nodejs && !macro)
 					traceRed(err);
+#end
 					if (!ended) {
 						stream.throwError(err);
 					}

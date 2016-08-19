@@ -67,10 +67,12 @@ import ccc.storage.*;
 
 import js.node.stream.Readable;
 import js.node.stream.Writable;
+import js.node.Fs;
 import js.npm.aws.AWS;
 
 import promhx.Promise;
 import promhx.PromiseTools;
+import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
 using Lambda;
@@ -229,12 +231,24 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function writeFile(path :String, data :IReadable) :Promise<Bool>
 	{
+		Assert.notNull(data);
 		path = getPath(path);
+		var tempFileName :String = null;
 		return initialized()
 			.pipe(function(_) {
+				if (Reflect.hasField(data, 'read')) {
+					return Promise.promise(data);
+				} else {
+					tempFileName = '/tmp/tmpfile${Std.int(Math.random() * 100000)}';
+					return StreamPromises.pipe(data, Fs.createWriteStream(tempFileName), [WritableEvent.Finish], 'ServiceStorageS3.writeFile')
+						.then(function(done) {
+							return cast Fs.createReadStream(tempFileName);
+						});
+				}
+			})
+			.pipe(function(stream) {
 				var promise = new DeferredPromise();
-				var params = {Bucket: _containerName, Key: path, Body: data};
-
+				var params = {Bucket: _containerName, Key: path, Body: stream};
 				var eventDispatcher = _S3.upload(params, function(err, result) {
 					if (err != null) {
 						promise.boundPromise.reject(err);
@@ -242,11 +256,17 @@ class ServiceStorageS3 extends ServiceStorageBase
 						promise.resolve(true);
 					}
 				});
+				return promise.boundPromise;
 				// This can be integrated later
 				// eventDispatcher.on('httpUploadProgress', function(evt) {
 				// 	trace('Progress:', evt.loaded, '/', evt.total);
 				// });
-				return promise.boundPromise;
+			})
+			.errorPipe(function(err) {
+				if (tempFileName != null) {
+					Fs.unlink(tempFileName, function(err) {});
+				}
+				return PromiseTools.error(err);
 			});
 	}
 

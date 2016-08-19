@@ -126,7 +126,7 @@ class Constants
 	inline public static var WORKER_COREOS_OS_MEMORY_USAGE = 2048;//mb
 	inline public static var WORKER_JOB_DEFAULT_MEMORY_REQUIRED = 512;//mb
 
-#if nodejs
+#if (nodejs && !macro)
 	public static var ROOT = (js.Node.process.platform == "win32") ? js.Node.process.cwd().split(js.node.Path.sep)[0] : "/";
 #end
 

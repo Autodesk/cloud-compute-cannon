@@ -24,14 +24,13 @@ class StreamPromises
 				deferred.resolve(true);
 			} else {
 				if (!disableErrorLogs) {
-					Log.error('Getting more than one call to resolve pipe promise event=$event $errorContext');
+					Log.error('Getting more than one call to resolve pipe promise event=$event ${Std.string(errorContext)}');
 				}
 			}
 		}
-		var reject = function(e) {
+		var reject = function(e :Dynamic) {
 			if (!isResolvedOrRejected) {
 				isResolvedOrRejected = true;
-				// trace('rejecting $errorContext ${Std.string(e)}');
 				deferred.boundPromise.reject(e);
 			} else {
 				if (!disableErrorLogs) {
@@ -84,6 +83,14 @@ class StreamPromises
 
 	public static function streamToString(stream :IReadable) :Promise<String>
 	{
+		return streamToBuffer(stream)
+			.then(function(buffer) {
+				return buffer != null ? buffer.toString() : null;
+			});
+	}
+
+	public static function streamToBuffer(stream :IReadable) :Promise<Buffer>
+	{
 		var promise = new DeferredPromise();
 		var buffer :Buffer = null;
 		stream.on(ReadableEvent.Error, function(err) {
@@ -95,7 +102,7 @@ class StreamPromises
 		});
 		stream.once(ReadableEvent.End, function() {
 			if (!promise.isResolved()) {
-				promise.resolve(buffer != null ? buffer.toString() : null);
+				promise.resolve(buffer);
 			}
 		});
 		stream.on(ReadableEvent.Data, function(chunk :Buffer) {
