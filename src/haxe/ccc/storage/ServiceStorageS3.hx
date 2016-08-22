@@ -234,12 +234,24 @@ class ServiceStorageS3 extends ServiceStorageBase
 		Assert.notNull(data);
 		path = getPath(path);
 		var tempFileName :String = null;
+		var cleanup = function() {
+			if (tempFileName != null) {
+				Node.setTimeout(function() {
+					if (tempFileName != null) {
+						Fs.unlink(tempFileName, function(err) {
+							//Ignored
+						});
+						tempFileName = null;
+					}
+				}, 1000);
+			}
+		}
 		return initialized()
 			.pipe(function(_) {
 				if (Reflect.hasField(data, 'read')) {
 					return Promise.promise(data);
 				} else {
-					tempFileName = '/tmp/tmpfile${Std.int(Math.random() * 100000)}';
+					tempFileName = '/tmp/tmpfile_${js.npm.shortid.ShortId.generate()}_${path}';
 					return StreamPromises.pipe(data, Fs.createWriteStream(tempFileName), [WritableEvent.Finish], 'ServiceStorageS3.writeFile')
 						.then(function(done) {
 							return cast Fs.createReadStream(tempFileName);
@@ -262,10 +274,12 @@ class ServiceStorageS3 extends ServiceStorageBase
 				// 	trace('Progress:', evt.loaded, '/', evt.total);
 				// });
 			})
+			.then(function(result) {
+				cleanup();
+				return result;
+			})
 			.errorPipe(function(err) {
-				if (tempFileName != null) {
-					Fs.unlink(tempFileName, function(err) {});
-				}
+				cleanup();
 				return PromiseTools.error(err);
 			});
 	}
