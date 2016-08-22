@@ -159,7 +159,8 @@ class ServiceStorageS3 extends ServiceStorageBase
 		var awsConfig = {
 			accessKeyId: config.credentials.accessKeyId != null ? config.credentials.accessKeyId : config.credentials.keyId,
 			secretAccessKey: config.credentials.secretAccessKey != null ? config.credentials.secretAccessKey : config.credentials.key,
-			region: config.credentials.region
+			region: config.credentials.region,
+			maxRetries: config.credentials.maxRetries
 		}
 
 		Assert.notNull(awsConfig.region);
@@ -251,8 +252,9 @@ class ServiceStorageS3 extends ServiceStorageBase
 				if (Reflect.hasField(data, 'read')) {
 					return Promise.promise(data);
 				} else {
-					tempFileName = '/tmp/tmpfile_${js.npm.shortid.ShortId.generate()}_${path}';
-					return StreamPromises.pipe(data, Fs.createWriteStream(tempFileName), [WritableEvent.Finish], 'ServiceStorageS3.writeFile')
+					var tempFileToken = js.node.Path.basename(path);
+					tempFileName = '/tmp/tmpfile_${js.npm.shortid.ShortId.generate()}_${tempFileToken}';
+					return StreamPromises.pipe(data, Fs.createWriteStream(tempFileName), [WritableEvent.Finish], 'ServiceStorageS3.writeFile $path')
 						.then(function(done) {
 							return cast Fs.createReadStream(tempFileName);
 						});
