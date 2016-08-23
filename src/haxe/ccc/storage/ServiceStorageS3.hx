@@ -69,6 +69,7 @@ import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.node.Fs;
 import js.npm.aws.AWS;
+import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 import promhx.PromiseTools;
@@ -92,6 +93,10 @@ class ServiceStorageS3 extends ServiceStorageBase
 	private static var splitRegEx = ~/\/+/g;
 	private static var replaceChar :String = "--";
 
+	static var TEMP_FILE_PATH_DIR = '/tmp';
+	static var TEMP_FILE_PATH_PREFIX = 'tmpfileS3';
+	static var TEMP_FILES_CLEANED = false;
+
 	public function new()
 	{
 		super();
@@ -105,6 +110,28 @@ class ServiceStorageS3 extends ServiceStorageBase
 	function initialized() :Promise<Bool>
 	{
 		if (_initialized == null) {
+			if (!TEMP_FILES_CLEANED) {
+				TEMP_FILES_CLEANED = true;
+				//Remove prior tmp files
+				var filterStartingWith = '${TEMP_FILE_PATH_DIR}/${TEMP_FILE_PATH_PREFIX}';
+				var existingTmpFiles = FsExtended.listAllSync(TEMP_FILE_PATH_DIR,
+					{
+						recursive:false,
+						prependDir:true,
+						filter:function(itemPath :String, stat:Dynamic) {
+							return itemPath.startsWith(filterStartingWith);
+						}
+					});
+				existingTmpFiles.iter(function(path) {
+					try {
+						traceYellow('Deleting $path');
+						FsExtended.deleteFileSync(path);
+					} catch(e :Dynamic) {
+						Log.warn('Could not delete prior tmp file=$path err=$e');
+					}
+				});
+			}
+
 			var promise = new DeferredPromise();
 			_initialized = promise.boundPromise;
 			_S3.getBucketPolicy({Bucket:_containerName}, function(err, data) {
@@ -180,10 +207,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 		config.httpAccessUrl = _httpAccessUrl;
 		config.container = _containerName;
 		config.rootPath = _rootPath;
-		// copy._S3 = _S3;
-		// copy._initialized = _initialized;
-		// copy._httpAccessUrl = _httpAccessUrl;
-		// copy._containerName = _containerName;
+		//This avoids cop
 		copy.setConfig(config);
 		return copy;
 	}
@@ -253,7 +277,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 					return Promise.promise(data);
 				} else {
 					var tempFileToken = js.node.Path.basename(path);
-					tempFileName = '/tmp/tmpfile_${js.npm.shortid.ShortId.generate()}_${tempFileToken}';
+					tempFileName = '${TEMP_FILE_PATH_DIR}/${TEMP_FILE_PATH_PREFIX}_${js.npm.shortid.ShortId.generate()}_${tempFileToken}';
 					return StreamPromises.pipe(data, Fs.createWriteStream(tempFileName), [WritableEvent.Finish], 'ServiceStorageS3.writeFile $path')
 						.then(function(done) {
 							return cast Fs.createReadStream(tempFileName);
