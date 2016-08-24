@@ -280,21 +280,31 @@ class ServiceStorageS3 extends ServiceStorageBase
 					tempFileName = '${TEMP_FILE_PATH_DIR}/${TEMP_FILE_PATH_PREFIX}_${js.npm.shortid.ShortId.generate()}_${tempFileToken}';
 					return StreamPromises.pipe(data, Fs.createWriteStream(tempFileName), [WritableEvent.Finish], 'ServiceStorageS3.writeFile $path')
 						.then(function(done) {
-							return cast Fs.createReadStream(tempFileName);
+							try {
+								Fs.accessSync(tempFileName);//Throws if there is an accessibility issue
+								return cast Fs.createReadStream(tempFileName);
+							} catch(err :Dynamic) {
+								Log.warn('Coping file to S3, coping to disk first, but there was no data, so no file stream $tempFileName');
+								return null;
+							}
 						});
 				}
 			})
 			.pipe(function(stream) {
-				var promise = new DeferredPromise();
-				var params = {Bucket: _containerName, Key: path, Body: stream};
-				var eventDispatcher = _S3.upload(params, function(err, result) {
-					if (err != null) {
-						promise.boundPromise.reject(err);
-					} else {
-						promise.resolve(true);
-					}
-				});
-				return promise.boundPromise;
+				if (stream != null) {
+					var promise = new DeferredPromise();
+					var params = {Bucket: _containerName, Key: path, Body: stream};
+					var eventDispatcher = _S3.upload(params, function(err, result) {
+						if (err != null) {
+							promise.boundPromise.reject(err);
+						} else {
+							promise.resolve(true);
+						}
+					});
+					return promise.boundPromise;
+				} else {
+					return Promise.promise(true);
+				}
 				// This can be integrated later
 				// eventDispatcher.on('httpUploadProgress', function(evt) {
 				// 	trace('Progress:', evt.loaded, '/', evt.total);

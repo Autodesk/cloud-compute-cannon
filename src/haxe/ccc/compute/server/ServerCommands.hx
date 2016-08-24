@@ -8,6 +8,7 @@ import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
+import js.npm.redis.RedisLuaTools;
 
 import ccc.compute.ComputeQueue;
 import ccc.compute.InstancePool;
@@ -50,7 +51,11 @@ class ServerCommands
 	{
 		return ComputeQueue.toJson(redis)
 			.then(function(out) {
-				return out.pending;
+				if(RedisLuaTools.isArrayObjectEmpty(out.pending)) {
+					return [];
+				} else {
+					return out.pending;
+				}
 			});
 	}
 
