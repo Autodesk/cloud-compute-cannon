@@ -83,6 +83,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 										});
 										assertNotNull(worker);
 										assertNotEquals(worker.id, workerId);
+										workerId = worker.id;
 										return true;
 									});
 							}
