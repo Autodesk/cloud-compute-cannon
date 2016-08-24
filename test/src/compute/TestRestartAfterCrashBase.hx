@@ -63,7 +63,7 @@ class TestRestartAfterCrashBase extends TestBase
 			//Submit a job
 			.pipe(function(_) {
 				var jobParams :BasicBatchProcessRequest = {
-					image:'busybox',
+					image:DOCKER_IMAGE_DEFAULT,
 					cmd: ['sleep', '2'],
 					parameters: {cpus:1, maxDuration:60*1000*10}
 				};

@@ -61,7 +61,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 		//Submit a long running job
 		var jobId :JobId = null;
 		var workerId :MachineId = null;
-		return proxy.submitJob('busybox', ['sleep', '40'])
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ['sleep', '40'])
 			.pipe(function(out) {
 				jobId = out.jobId;
 				//Kill the machine the job is on

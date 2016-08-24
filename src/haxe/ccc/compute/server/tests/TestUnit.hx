@@ -21,7 +21,7 @@ class TestUnit extends haxe.unit.async.PromiseTest
 			inputsPath : null,
 			jobId : jobId,
 			image : {
-				value : "busybox",
+				value : DOCKER_IMAGE_DEFAULT,
 				type : DockerImageSourceType.Image
 			}
 		};

@@ -101,7 +101,7 @@ class ClientCommands
 		} else {
 			return switch(command) {
 				case Longjob:
-					runclient(['sleep', '500'], 'busybox')
+					runclient(['sleep', '500'], DOCKER_IMAGE_DEFAULT)
 						.thenVal(CLIResult.Success);
 				default:
 					log('Unknown command=$command. Available commands: [longjob]');

@@ -41,7 +41,7 @@ echo "$outputValueStdout"
 		var customInputsPath = '$TEST_BASE/testReadMultilineStdout/$random/inputs';
 		var customOutputsPath = '$TEST_BASE/testReadMultilineStdout/$random/outputs';
 		var customResultsPath = '$TEST_BASE/testReadMultilineStdout/$random/results';
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -86,7 +86,7 @@ echo "$outputValueStderr" >>/dev/stderr
 		var customInputsPath = '$TEST_BASE/testWriteStdoutAndStderr/$random/inputs';
 		var customOutputsPath = '$TEST_BASE/testWriteStdoutAndStderr/$random/outputs';
 		var customResultsPath = '$TEST_BASE/testWriteStdoutAndStderr/$random/results';
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -136,7 +136,7 @@ echo "$outputValueStderr" >>/dev/stderr
 		var customInputsPath = '$TEST_BASE/testReadInput/$random/inputs';
 		var customOutputsPath = '$TEST_BASE/testReadInput/$random/outputs';
 		var customResultsPath = '$TEST_BASE/testReadInput/$random/results';
-		return proxy.submitJob('busybox', ["cat", '/$DIRECTORY_INPUTS/$inputName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["cat", '/$DIRECTORY_INPUTS/$inputName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -177,7 +177,7 @@ echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
 		var customInputsPath = '$TEST_BASE/testWriteOutput/$random/inputs';
 		var customOutputsPath = '$TEST_BASE/testWriteOutput/$random/outputs';
 		var customResultsPath = '$TEST_BASE/testWriteOutput/$random/results';
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -243,7 +243,7 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 		var customInputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/inputs';
 		var customOutputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/outputs';
 		var customResultsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/results';
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [inputScript, inputBinaryValue1, inputBinaryValue2], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [inputScript, inputBinaryValue1, inputBinaryValue2], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -299,7 +299,7 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 		var scriptName = 'script.sh';
 
 		var jobSubmissionOptions :BasicBatchProcessRequest = {
-			image: 'busybox',
+			image: DOCKER_IMAGE_DEFAULT,
 			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
 			inputs: [], //inputs are part of the multipart message (formStreams)
 			parameters: {cpus:1, maxDuration:20*60*100000},

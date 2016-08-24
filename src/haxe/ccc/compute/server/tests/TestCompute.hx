@@ -82,7 +82,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 
 		var inputsArray = [inputInline, inputUrl, inputScript];
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob('busybox', ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], inputsArray, null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], inputsArray, null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -206,7 +206,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 
 		var request: BasicBatchProcessRequest = {
 			inputs: inputsArray,
-			image: 'busybox',
+			image: DOCKER_IMAGE_DEFAULT,
 			cmd: ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'],
 			resultsPath: customResultsPath,
 			inputsPath: customInputsPath,
