@@ -80,7 +80,7 @@ class Constants
 	inline public static var SERVER_RPC_URL = '$SERVER_API_URL/rpc';
 	inline public static var SERVER_URL_API_DOCKER_IMAGE_BUILD = '$SERVER_API_URL/build';
 	inline public static var ADDRESS_REGISTRY_DEFAULT = 'localhost:$REGISTRY_DEFAULT_PORT';
-	inline public static var DOCKER_IMAGE_DEFAULT = 'busybox';
+	inline public static var DOCKER_IMAGE_DEFAULT = 'docker.io/busybox:latest';
 	inline public static var SERVER_CONTAINER_TAG_SERVER = 'ccc_server';
 	inline public static var SERVER_CONTAINER_TAG_REDIS = 'ccc_redis';
 	inline public static var SERVER_CONTAINER_TAG_REGISTRY = 'ccc_registry';
