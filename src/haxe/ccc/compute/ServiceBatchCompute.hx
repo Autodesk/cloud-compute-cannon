@@ -63,6 +63,19 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
+		alias:'log',
+		doc:'Set the log level'
+	})
+	public function logLevel(level :Int) :Promise<Bool>
+	{
+		Log.warn('Setting log level=$level');
+		level = Std.parseInt(level + '');
+		Logger.GLOBAL_LOG_LEVEL = level;
+		// Log.log.level(level);
+		return Promise.promise(true);
+	}
+
+	@rpc({
 		alias:'pending',
 		doc:'Get pending jobs'
 	})

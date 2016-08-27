@@ -447,7 +447,7 @@ class ClientCommands
 				if (stderr != null) {
 					Node.process.stderr.write(stderr);
 				}
-				js.node.ChildProcess.exec('docker-compose rm -fv', {cwd:localServerPath}, function(err, stdout, stderr) {
+				js.node.ChildProcess.exec('docker-compose rm -f', {cwd:localServerPath}, function(err, stdout, stderr) {
 					if (err != null) {
 						log(err);
 					}

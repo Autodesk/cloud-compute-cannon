@@ -43,32 +43,44 @@ abstract AbstractLogger(js.npm.bunyan.Bunyan.BunyanLogger) to js.npm.bunyan.Buny
 
 	inline public function trace(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		this.info(processLogMessage(msg, pos));
+		if (Logger.GLOBAL_LOG_LEVEL <= 10) {
+			this.trace(processLogMessage(msg, pos));
+		}
 	}
 
 	inline public function debug(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		this.info(processLogMessage(msg, pos));
+		if (Logger.GLOBAL_LOG_LEVEL <= 20) {
+			this.debug(processLogMessage(msg, pos));
+		}
 	}
 
 	inline public function info(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		this.info(processLogMessage(msg, pos));
+		if (Logger.GLOBAL_LOG_LEVEL <= 30) {
+			this.info(processLogMessage(msg, pos));
+		}
 	}
 
 	inline public function warn(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		this.warn(processLogMessage(msg, pos));
+		if (Logger.GLOBAL_LOG_LEVEL <= 40) {
+			this.warn(processLogMessage(msg, pos));
+		}
 	}
 
 	inline public function error(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		this.error(processLogMessage(msg, pos));
+		if (Logger.GLOBAL_LOG_LEVEL <= 50) {
+			this.error(processLogMessage(msg, pos));
+		}
 	}
 
 	inline public function critical(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		this.fatal(processLogMessage(msg, pos));
+		if (Logger.GLOBAL_LOG_LEVEL <= 60) {
+			this.fatal(processLogMessage(msg, pos));
+		}
 	}
 
 	inline public function level(?newLevel :Null<Int>) :Int

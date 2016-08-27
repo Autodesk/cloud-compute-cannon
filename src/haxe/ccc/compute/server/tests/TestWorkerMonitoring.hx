@@ -32,9 +32,9 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	 * Parallelize these tests for speed
 	 * @return [description]
 	 */
-	public function XtestWorkerMonitor() :Promise<Bool>
+	public function testWorkerMonitor() :Promise<Bool>
 	{
-		var promises = [_testWorkerDockerMonitor(), _testWorkerDiskFull()];
+		var promises = [_testWorkerDiskFull(), _testWorkerDockerMonitor()];
 
 		return Promise.whenAll(promises)
 			.then(function(results) {
@@ -139,7 +139,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	/**
 	 * Workers that do not exist should fail correctly
 	 */
-	public function XtestWorkerMissingOnStartup() :Promise<Bool>
+	public function testWorkerMissingOnStartup() :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
 		var monitor = new MachineMonitor()

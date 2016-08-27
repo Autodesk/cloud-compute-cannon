@@ -77,13 +77,22 @@ class Worker
 				}
 			}
 		});
+		startMonitor();
 	}
 
 	function startMonitor()
 	{
 		_monitor = new MachineMonitor()
-			.monitorDocker(_definition.docker)
-			.monitorDiskSpace(_definition.ssh);
+			.monitorDocker(_definition.docker, 2000)
+			.monitorDiskSpace(_definition.ssh, 0.9, 2000);
+
+		_monitor.docker.then(function(status) {
+			log.trace({monitor:'docker', status:Type.enumConstructor(status)});
+		});
+
+		_monitor.disk.then(function(status) {
+			log.trace({monitor:'disk', status:Type.enumConstructor(status)});
+		});
 
 		_monitor.status.then(function(machineStatus) {
 			switch(machineStatus) {
