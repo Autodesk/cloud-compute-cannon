@@ -28,6 +28,6 @@ if [ "$2" ]
     COMPUTE_SNIPPET="COMPUTE_CONFIG=\`cat $REMOTE_SERVER_CONFIG_FILE\`"
     COMPOSE_TEST_CONFIG="docker-compose.test.remote.yml"
 fi
-COMMAND="$DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && LOG_LEVEL="$LOG_LEVEL" $COMPUTE_SNIPPET $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f $COMPOSE_TEST_CONFIG up --abort-on-container-exit"
+COMMAND="$DOCKER_COMPOSE rm -f && $DOCKER_COMPOSE build && LOG_LEVEL="$LOG_LEVEL" $COMPUTE_SNIPPET $DOCKER_COMPOSE -f docker-compose.yml -f docker-compose.override.yml -f $COMPOSE_TEST_CONFIG up --abort-on-container-exit"
 echo $COMMAND
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"

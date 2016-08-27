@@ -455,7 +455,7 @@ class ProviderTools
 	static function runDockerComposedServer(ssh :ConnectOptions) :Promise<Bool>
 	{
 		var dc ="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.prod.yml";
-		var command = 'cd ${Constants.APP_NAME_COMPACT} && $dc stop && $dc rm -fv && $dc build && $dc up -d';
+		var command = 'cd ${Constants.APP_NAME_COMPACT} && $dc stop && $dc rm -f && $dc build && $dc up -d';
 		return SshTools.execute(ssh, command, 10, 10, null, null, true)
 			.then(function(execResult) {
 				if (execResult.code != 0) {

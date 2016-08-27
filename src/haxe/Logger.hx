@@ -5,36 +5,50 @@ import js.npm.bunyan.Bunyan;
  */
 class Logger
 {
+	public static var GLOBAL_LOG_LEVEL :Int = 30;
+
 	public static var log :AbstractLogger;
 
 	inline public static function trace(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		log.trace(msg, pos);
+		if (GLOBAL_LOG_LEVEL <= 10) {
+			log.trace(msg, pos);
+		}
 	}
 
 	inline public static function debug(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		log.debug(msg, pos);
+		if (GLOBAL_LOG_LEVEL <= 20) {
+			log.debug(msg, pos);
+		}
 	}
 
 	inline public static function info(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		log.info(msg, pos);
+		if (GLOBAL_LOG_LEVEL <= 30) {
+			log.info(msg, pos);
+		}
 	}
 
 	inline public static function warn(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		log.warn(msg, pos);
+		if (GLOBAL_LOG_LEVEL <= 40) {
+			log.warn(msg, pos);
+		}
 	}
 
 	inline public static function error(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		log.error(msg, pos);
+		if (GLOBAL_LOG_LEVEL <= 50) {
+			log.error(msg, pos);
+		}
 	}
 
 	inline public static function critical(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		log.critical(msg, pos);
+		if (GLOBAL_LOG_LEVEL <= 60) {
+			log.critical(msg, pos);
+		}
 	}
 
 	inline public static function child(fields :Dynamic) :AbstractLogger

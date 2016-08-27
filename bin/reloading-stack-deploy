@@ -11,6 +11,6 @@ bin/reloading-stack-sync $SERVER_HOST $SERVER_CONFIG_PATH
 bin/sync-to-remote $1
 
 DOCKER_COMPOSE="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
-COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -fv && $DOCKER_COMPOSE build && $DOCKER_COMPOSE up"
+COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f && $DOCKER_COMPOSE build && $DOCKER_COMPOSE up"
 echo $COMMAND
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"
