@@ -29,7 +29,7 @@ class ServiceTests
 	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false) :Promise<CompleteTestResult>
 	{
 		if (!(core || all || registry || worker || storage || compute)) {
-			core = true;
+			compute = true;
 		}
 		if (all) {
 			core = true;
