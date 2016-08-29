@@ -16,6 +16,7 @@ import promhx.CallbackPromise;
 
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
+import ccc.compute.workers.WorkerProvider;
 
 import util.DockerTools;
 import util.RedisTools;
@@ -36,6 +37,7 @@ class Worker
 	public var id (get, null) :MachineId;
 
 	@inject public var _redis :RedisClient;
+	@inject public var _provider :WorkerProvider;
 	var _definition :WorkerDefinition;
 	var _id :MachineId;
 	var _computeStatus :MachineStatus;
@@ -82,10 +84,20 @@ class Worker
 
 	function startMonitor()
 	{
-		_monitor = new MachineMonitor()
-			.monitorDocker(_definition.docker, 2000)
-			.monitorDiskSpace(_definition.ssh, 0.9, 2000);
+		_monitor = new MachineMonitor();
 
+		//Always monitor the docker daemon
+		_monitor.monitorDocker(_definition.docker, 2000);
+
+		//Monitoring disk space only makes sense for certain providers
+		var type :ServiceWorkerProviderType = _provider.id;
+		switch(type) {
+			case pkgcloud,vagrant:
+				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 2000);
+			default:
+		}
+
+		//Output monitoring logs
 		_monitor.docker.then(function(status) {
 			log.trace({monitor:'docker', status:Type.enumConstructor(status)});
 		});
@@ -94,6 +106,7 @@ class Worker
 			log.trace({monitor:'disk', status:Type.enumConstructor(status)});
 		});
 
+		//The action taken after a failure is detected
 		_monitor.status.then(function(machineStatus) {
 			switch(machineStatus) {
 				case Connecting,OK:
