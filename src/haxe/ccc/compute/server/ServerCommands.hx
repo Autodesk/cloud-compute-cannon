@@ -87,6 +87,7 @@ class ServerCommands
 			})
 			.then(function(_) {
 				var now = Date.now();
+
 				var result = {
 					pendingCount: jobsJson.pending.length,
 					pendingTop5: jobsJson.pending.slice(0, 5),
@@ -108,7 +109,7 @@ class ServerCommands
 							cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
 						};
 					}),
-					finishedCount: jobsJson.getFinishedAndStatus().keys().length,
+					finishedCount: jobsJson.getFinishedJobs().length,
 					finishedTop5: jobsJson.getFinishedAndStatus(5),
 					// workerJson: workerJson,
 					// workerJsonRaw: workerJsonRaw
