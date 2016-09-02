@@ -66,13 +66,15 @@ class ServiceBatchCompute
 		alias:'log',
 		doc:'Set the log level'
 	})
-	public function logLevel(level :Int) :Promise<Bool>
+	public function logLevel(?level :Null<Int>) :Promise<Int>
 	{
-		Log.warn('Setting log level=$level');
-		level = Std.parseInt(level + '');
-		Logger.GLOBAL_LOG_LEVEL = level;
+		if (level != null) {
+			level = Std.parseInt(level + '');
+			Log.warn('Setting log level=$level');
+			Logger.GLOBAL_LOG_LEVEL = level;
+		}
 		// Log.log.level(level);
-		return Promise.promise(true);
+		return Promise.promise(Logger.GLOBAL_LOG_LEVEL);
 	}
 
 	@rpc({
