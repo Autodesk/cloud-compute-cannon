@@ -275,6 +275,7 @@ class ServerCommands
 							//Check if the image is in the local docker daemon
 							return DockerPromises.listImages(docker)
 								.pipe(function(imageData) {
+									log.debug({imageData:imageData});
 									if (imageData.exists(function(id) {
 										return id != null && id.RepoTags != null && id.RepoTags.has(localImageUrl);
 									})) {
