@@ -276,7 +276,7 @@ class ServerCommands
 							return DockerPromises.listImages(docker)
 								.pipe(function(imageData) {
 									if (imageData.exists(function(id) {
-										return id.RepoTags.has(localImageUrl);
+										return id != null && id.RepoTags != null && id.RepoTags.has(localImageUrl);
 									})) {
 										log.debug({step:'exists_in_local_docker_daemon'});
 										return Promise.promise(true);
