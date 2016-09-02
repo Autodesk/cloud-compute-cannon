@@ -14,4 +14,4 @@ data/registry/**
 data/ServiceStorageLocalFileSystem/**
 
 #REMOVE THIS WHEN WORKING
-#./etc/log
+./etc/log

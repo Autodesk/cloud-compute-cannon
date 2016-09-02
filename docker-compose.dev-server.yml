@@ -1,26 +1,23 @@
 compute:
-  # command: ["node", "src/js/server-reloading.js"]
   command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/cloud-compute-cannon-server.js"]
   volumes:
     - ./:/config
     - ./build:/app/build
   environment:
     LOG_LEVEL: "${LOG_LEVEL}"
+
+redis:
   log_driver: "json-file"
   log_opt: {}
 
-redis:
-  log_driver: "none"
-  log_opt: {}
-
-registry:
-  log_driver: "none"
-  log_opt: {}
-
 elasticsearch:
-  log_driver: "none"
+  log_driver: "json-file"
   log_opt: {}
 
 fluentd:
+  log_driver: "json-file"
+  log_opt: {}
+
+registry:
   log_driver: "none"
   log_opt: {}

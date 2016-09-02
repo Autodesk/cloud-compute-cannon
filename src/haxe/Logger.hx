@@ -97,17 +97,23 @@ class Logger
 // 		}
 // 		Reflect.setField(jobColorFilter, '_transform', transform);
 // 		jobColorFilter.pipe(js.Node.process.stdout);
+ 		var fluentLogger = {write:ccc.compute.FluentTools.createEmitter()};
+ 		var streams :Array<Dynamic> = [
+			{
+				level: Bunyan.TRACE,
+				stream: js.Node.process.stdout
+			},
+			{
+				level: Bunyan.TRACE,
+				type: 'raw',// use 'raw' to get raw log record objects
+				stream: fluentLogger
+			}
+		];
 		log = new AbstractLogger(
 		{
 			name: ccc.compute.Constants.SERVER_CONTAINER_TAG_SERVER,
-			level: Bunyan.DEBUG,
-			// streams: [
-			// 	{
-			// 		level: Bunyan.DEBUG,
-			// 		// type: 'raw',// use 'raw' to get raw log record objects 
-			// 		// stream: jobColorFilter
-			// 	}
-			// ],
+			level: Bunyan.TRACE,
+			streams: streams,
 			src: false
 		});
 	}

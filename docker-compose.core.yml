@@ -25,10 +25,8 @@ compute:
     #If the client CLI installed this stack, se this true.
     #Then the servers expects a mounted config file, and if missing, logs an error.
     CLIENT_DEPLOYMENT: "false"
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.nodejs-bunyan.ccc{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+  log_driver: "json-file"
+  log_opt: {}
 
 redis:
   image: redis:3.2.0-alpine
@@ -58,7 +56,7 @@ registry:
     fluentd-address: "localhost:24225"
 
 fluentd:
-  command: ["fluentd", "-v-v", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
+  command: ["fluentd", "-q", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
   ports:
       - "24225:24225"
       - "9881:9881"
@@ -66,13 +64,13 @@ fluentd:
   log_opt: {}
 
 elasticsearch:
-  image: elasticsearch:2.3
+  image: elasticsearch:2.3.5
   ports:
     - "9200:9200"
     - "9300:9300"
 
 kibana:
-  image: kibana:4.4.2
+  image: kibana:4.5.4
   ports:
     - "5601:5601"
   environment:

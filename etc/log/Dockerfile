@@ -1,14 +1,13 @@
-FROM fluent/fluentd:v0.12.21
+FROM fluent/fluentd:v0.14.2
 MAINTAINER Dion Amago Whitehead <dion.amago@autodesk.com>
+USER root
+RUN apk --no-cache --update add \
+    					build-base \
+    					ruby-dev && \
+    gem install fluent-plugin-elasticsearch && \
+    apk del build-base ruby-dev && \
+    rm -rf /tmp/* /var/tmp/* /var/cache/apk/*
 USER fluent
-WORKDIR /home/fluent
-ENV PATH /home/fluent/.gem/ruby/2.2.0/bin:$PATH
-RUN gem install fluent-plugin-elasticsearch
-RUN gem install fluent-plugin-parser
-RUN gem install fluent-plugin-aws-elasticsearch-service
-
-COPY fluent.conf /fluentd/etc/
-COPY plugins /fluentd/plugins
 
 EXPOSE 24225 9880
-CMD fluentd -c /fluentd/etc/$FLUENTD_CONF -p /fluentd/plugins $FLUENTD_OPT
+CMD fluentd -c /fluentd/etc/fluent.conf -p /fluentd/plugins $FLUENTD_OPT

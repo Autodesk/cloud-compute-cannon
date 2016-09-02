@@ -24,7 +24,6 @@ abstract AbstractLogger(js.npm.bunyan.Bunyan.BunyanLogger) to js.npm.bunyan.Buny
 			default: cast {message:Std.string(logThing)};
 		}
 		obj['src'] = {file:pos.fileName, line:pos.lineNumber};
-		obj['time'] = untyped __js__('new Date().toISOString()');
 		//Ensure errors are strings, not objects, for eventual consumption by Elasticsearch
 		if (obj.exists('error') && obj['error'] != null) {
 			switch(untyped __typeof__(obj['error'])) {

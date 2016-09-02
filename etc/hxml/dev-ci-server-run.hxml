@@ -1,3 +1,0 @@
-etc/hxml/dev-ci-server-build.hxml
-
--cmd node build/devci-server.js

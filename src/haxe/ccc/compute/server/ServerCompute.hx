@@ -85,14 +85,12 @@ class ServerCompute
 
 		var env = Node.process.env;
 
-		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
-		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
-		// 	Log.trace(v, infos);
-		// }
-
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
 			Log.critical({crash:err.stack, message:'crash'});
-			Node.process.exit(1);
+			//Ensure crash is logged before exiting.
+			ccc.compute.FluentTools.logToFluent(Json.stringify(err), function() {
+				Node.process.exit(1);
+			});
 		});
 
 		//Sanity checks
@@ -191,6 +189,19 @@ class ServerCompute
 				Log.debug('${SERVER_PATH_READY}=NO');
 				res.status(500).end();
 			}
+		});
+
+		//Check if server is ready
+		app.get('/crash', cast function(req, res) {
+			Node.process.stdout.write('NAKEDBUS\n');
+			Node.process.nextTick(function() {
+				throw new Error('FAKE CRASH');
+			});
+		});
+
+		app.get('/log2*', cast function(req, res) {
+			Node.process.stdout.write('\nPOLYGLOT\n');
+			res.status(200).end();
 		});
 
 		//Check if server is ready

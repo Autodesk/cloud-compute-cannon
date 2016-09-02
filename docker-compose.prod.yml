@@ -39,9 +39,7 @@ registry:
 fluentd:
   build: ./etc/log/
   volumes:
-    #WARNING TODO: currently disabled the fluent.prod.conf since
-    #the target separate elasticsearch does not work
-    - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+    - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
   links:
     - elasticsearch
 
