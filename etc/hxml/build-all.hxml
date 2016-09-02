@@ -1,11 +1,5 @@
 #Builds ALL haxe projects, apps, client libraries, etc
 
--cmd echo "Building fluent configs from templates"
-
---next
-
-etc/hxml/build-fluent-config.hxml
-
 -cmd echo "Building server"
 
 --next
@@ -25,13 +19,3 @@ test/testsCompile.hxml
 --next
 
 etc/hxml/cli-build.hxml
-
--cmd echo "Building Server API tests"
-
---next
-
--cmd echo "Building Development CI server"
-
---next
-
-etc/hxml/dev-ci-server-build.hxml

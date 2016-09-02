@@ -8,8 +8,6 @@ compute:
     - redis
     - registry
     - fluentd
-  log_driver: "json-file"
-  log_opt: {}
 
 
 redis:
@@ -41,11 +39,8 @@ fluentd:
   build: ./etc/log/
   volumes:
     - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
-    - ./etc/log/plugins:/fluentd/plugins
   links:
     - elasticsearch
-  log_driver: "none"
-  log_opt: {}
 
 
 elasticsearch:

@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-docker build -t ccc .
-docker run --rm -ti -v `pwd`/etc/log:/app/etc/log ccc haxe etc/hxml/build-fluent-config.hxml
-cp etc/log/fluent.prod.conf etc/log/fluent.conf

@@ -1,24 +1,39 @@
 package ccc.compute;
 
+import haxe.extern.EitherType;
 
 import js.npm.fluentlogger.FluentLogger;
 
+typedef LogObj = {
+	var message :Dynamic;
+}
+
 class FluentTools
 {
-	public static function logToFluent(obj :Dynamic)
+	public static function createEmitter()
 	{
-		//TODO: change the 'tag'
-		var msg :Dynamic = switch(untyped __typeof__(obj)) {
-			case 'object': obj;
-			default: {message:Std.string(obj)};
+		return function(obj :Dynamic, ?cb :Void->Void) :Void {
+			var msg :LogObj = switch(untyped __typeof__(obj)) {
+				case 'object': obj;
+				default: {message:Std.string(obj)};
+			}
+			if (!Reflect.hasField(msg, '@timestamp')) {
+				Reflect.setField(msg, '@timestamp', untyped __js__('new Date().toISOString()'));
+			}
+			Reflect.deleteField(obj, 'time');
+			static_emitter(obj, null, cb);
 		}
-		Reflect.setField(msg, 'time', untyped __js__('new Date().toISOString()'));
-		emitter.emit('tag', obj, Date.now().getTime());
 	}
 
-	static var emitter :FluentLogger = FluentLogger.createFluentSender(APP_NAME_COMPACT,
-		{
-			host: ConnectionToolsDocker.getContainerAddress('fluentd'),
-			port: FLUENTD_SOURCE_PORT
-		});
+	public static function logToFluent(obj :Dynamic, ?cb :Void->Void)
+	{
+		createEmitter()(obj, cb);
+	}
+
+	static var static_emitter =
+		FluentLogger.createFluentSender(null,
+			{
+				host: ConnectionToolsDocker.getContainerAddress('fluentd'),
+				port: FLUENTD_SOURCE_PORT
+			}).emit.bind(APP_NAME_COMPACT, _, _, _);
 }
