@@ -1236,6 +1236,20 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 		}
 	}
 
+	inline public function getFinishedJobs() :Array<JobId>
+	{
+		if (this.jobStatus == null || Reflect.fields(this.jobStatus).length == 0) {
+			return [];
+		} else {
+			var jobids = this.jobStatus.keys();
+			jobids.sort(Reflect.compare);
+			jobids = jobids.filter(function(jobId) {
+				return this.jobStatus[jobId].JobStatus == JobStatus.Finished;
+			});
+			return jobids;
+		}
+	}
+
 	inline public function isJobInQueue(jobId :JobId) :Bool
 	{
 		return pending.has(jobId) || working.exists(function(e) return e.id == jobId);
