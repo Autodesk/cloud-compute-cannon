@@ -17,11 +17,14 @@ class FluentTools
 				case 'object': obj;
 				default: {message:Std.string(obj)};
 			}
+			if (Reflect.hasField(msg, 'time')) {
+				Reflect.setField(msg, '@timestamp', Reflect.field(msg, 'time').toISOString());
+			}
 			if (!Reflect.hasField(msg, '@timestamp')) {
 				Reflect.setField(msg, '@timestamp', untyped __js__('new Date().toISOString()'));
 			}
-			Reflect.deleteField(obj, 'time');
-			static_emitter(obj, null, cb);
+			Reflect.deleteField(msg, 'time');
+			static_emitter(msg, null, cb);
 		}
 	}
 
