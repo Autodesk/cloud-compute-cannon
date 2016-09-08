@@ -561,6 +561,18 @@ abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigura
 		return instanceDefinition;
 	}
 
+	inline public function getShortName() :String
+	{
+		return switch(this.type) {
+			case boot2docker: 'local';
+			case vagrant: 'vagrant';
+			case pkgcloud:
+				var credentials :js.npm.PkgCloud.ClientOptionsAmazon = this.credentials;
+				credentials.provider + '';
+			default: 'unknown';
+		}
+	}
+
 	inline public function getMachineKey(machineType :String) :String
 	{
 		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
