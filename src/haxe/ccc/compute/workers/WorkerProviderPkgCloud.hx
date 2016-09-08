@@ -30,6 +30,7 @@ import t9.abstracts.net.*;
 using promhx.PromiseTools;
 using Lambda;
 using StringTools;
+using t9.util.ColorTraces;
 
 typedef InstanceOptionsAmazon = {
 	var InstanceType :String;
@@ -318,10 +319,12 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 					if (config.machines[MachineType.worker] == null) {
 						return PromiseTools.error('No machine defined as "${MachineType.server}" or "${MachineType.worker}" in providers.machines in configuration');
 					} else {
-						return createInstance(getConfig(), MachineType.worker);
+						trace("    - using the machine type 'worker' specified in your configuration".yellow());
+						return createInstance(config, MachineType.worker);
 					}
 				} else {
-					return createInstance(getConfig(), MachineType.server);
+					trace("    - using the machine type 'server' specified in your configuration".yellow());
+					return createInstance(config, MachineType.server);
 				}
 			});
 	}
@@ -431,6 +434,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						protocol: 'http'
 					}
 				};
+				traceGreen('    - created remote server ${server.id} at $host');
 				return workerDef;
 			});
 	}
@@ -483,6 +487,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						instanceOpts.MaxCount = 1;
 						log.debug({message:'AWS $machineType', options:LogTools.removePrivateKeys(instanceOpts)});
 						var promise = new DeferredPromise();
+						js.Node.process.stdout.write('    - creating instance\n'.yellow());
 						ec2.runInstances(instanceOpts, function(err, data :{Instances:Array<Dynamic>}) {
 							if (err != null) {
 								log.error({log:'runInstances', error:err});
@@ -491,11 +496,14 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							}
 							// log.trace({message:'runInstances', data:data});
 							var instanceId = data.Instances[0].InstanceId;
+							js.Node.process.stdout.write('        - $instanceId created\n'.green());
 
 							//Get tags, merge default and instance specific
 							var tags = [];
+							var tagsForLogging :DynamicAccess<String> = {};
 							for (tagName in instanceDefinition.tags.keys()) {
 								tags.push({Key:tagName, Value:instanceDefinition.tags[tagName]});
+								tagsForLogging[tagName] = instanceDefinition.tags[tagName];
 							}
 
 							function getServerAndResolve() {
@@ -506,12 +514,16 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							}
 							// Add tags to the instance
 							if (tags.length == 0) {
+								js.Node.process.stdout.write('\n');
 								getServerAndResolve();
 							} else {
+								js.Node.process.stdout.write('    - tagging $instanceId with ${Json.stringify(tagsForLogging)}\n'.yellow());
 								var tagParams = {Resources: [instanceId], Tags: tags};
 								ec2.createTags(tagParams, function(err) {
+									js.Node.process.stdout.write('        - successfully tagged\n'.green());
 									log.trace('Tagging $machineType $instanceId with $tags '+ (err != null? "failure" : "success"));
 									if (err != null) {
+										js.Node.process.stdout.write('failed to tag instance, error=$err'.red());
 										log.error({log:'createTags', error:err});
 									}
 									log.debug({log:'done tagging, client.getServer'});
@@ -523,12 +535,14 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				}
 			})
 			.pipe(function(server) {
+				js.Node.process.stdout.write('    - polling ${server.id} via provider API'.yellow());
 				var promise = new DeferredPromise();
 				//Poll every interval until the status is running
 				var f = null;
 				var status = null;
 				f = function() {
 					log.info({f:'createPkgCloudInstance', instance_id:server.id, message:'getServer'});
+					js.Node.process.stdout.write('.'.yellow());
 					client.getServer(server.id)
 						.then(function(server) {
 							if (server.status != status) {
@@ -538,6 +552,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							// log.trace({server_status:server.status, addresses:server.addresses});
 							var host = getIpFromServer(server, isPublicIp);
 							if (server.status == PkgCloudComputeStatus.running && host != null && host != '') {
+								js.Node.process.stdout.write('OK\n'.green());
 								promise.resolve(server);
 							} else {
 								haxe.Timer.delay(f, 4000);//4 seconds
@@ -562,8 +577,10 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				}
 
 				Log.info('provider=$type new $machineType ${server.id} set up instance host=$host');
-				return WorkerProviderTools.pollInstanceUntilSshReady(sshOptions)
+				js.Node.process.stdout.write('    - polling ${server.id} via SSH'.yellow());
+				return WorkerProviderTools.pollInstanceUntilSshReady(sshOptions, function() js.Node.process.stdout.write('.'.yellow()))
 					.pipe(function(_) {
+						js.Node.process.stdout.write('OK\n'.green());
 						log.info('SSH connection to instance established!');
 						log.info('provider=$type new $machineType ${server.id} set up instance');
 						//Update CoreOs to allow docker access

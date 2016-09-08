@@ -36,6 +36,7 @@ using promhx.PromiseTools;
 using StringTools;
 using DateTools;
 using Lambda;
+using t9.util.ColorTraces;
 
 enum ClientResult {
 	Websocket;
@@ -589,7 +590,7 @@ class ClientCommands
 	}
 
 	@rpc({
-		alias:'server-install',
+		alias:'install',
 		doc:'Install the cloudcomputecannon server locally or on a remote provider',
 		args:{
 			'config':{doc: '<Path to server config yaml file>', short:'c'},
@@ -603,6 +604,7 @@ class ClientCommands
 	})
 	public static function install(?config :String, ?host :HostName, ?key :String, ?username :String, ?force :Bool = false, ?uploadonly :Bool = false) :Promise<CLIResult>
 	{
+		traceGreen('Beginning install');
 		//Docker version check
 		var incompatibleVersionError = 'Incompatible docker version. Needs 1.12.x';
 		try {
@@ -632,13 +634,14 @@ class ClientCommands
 		if (config != null) {
 			//Missing config file check
 			if (!FsExtended.existsSync(config)) {
-				log('Missing configuration file: $config');
+				traceRed('...Missing configuration file: $config');
 				return Promise.promise(CLIResult.PrintHelpExit1);
 			}
 
 			if (isServerConnection(path)) {
-				log('Existing installation @${path.getServerYamlConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
-				return Promise.promise(CLIResult.PrintHelpExit1);
+				traceRed('  Existing installation @ ${path.getServerYamlConfigPath()}.\n  You cannot create a new installation without first removing the current installation.');
+				traceRed('  To remove an existing server run:\n      ccc server-remove');
+				return Promise.promise(CLIResult.ExitCode(1));
 			}
 
 			return Promise.promise(true)
@@ -658,6 +661,7 @@ class ClientCommands
 							if (sshConfig == null) {
 								throw 'No key supplied for host=$host and the host entry was not found in ~/.ssh/config';
 							}
+							traceGreen('...Using SSH host credentials found in ~/.ssh/config: host=${sshConfig.host}');
 						} else {
 							try {
 								key = Fs.readFileSync(key, {encoding:'utf8'});
@@ -665,6 +669,7 @@ class ClientCommands
 							if (username == null) {
 								throw 'No username supplied for host=$host and the host entry was not found in ~/.ssh/config';
 							}
+
 							sshConfig = {
 								privateKey: key,
 								host: host,
@@ -682,6 +687,7 @@ class ClientCommands
 						//Write it without the ssh config data, since
 						//we'll pick it up from the ~/.ssh/config every time
 						serverBlob.host = new Host(new HostName(host), new Port(SERVER_DEFAULT_PORT));
+						traceGreen('...Writing server connection to $path');
 						writeServerConnection(serverBlob, path);
 
 						//Use the actual ssh host for the main host field
@@ -714,14 +720,20 @@ class ClientCommands
 				})
 				//Don't assume anything is working except ssh/docker connections.
 				.pipe(function(serverBlob) {
-					return ProviderTools.installServer(serverBlob, force, uploadonly);
+					traceYellow('  - install server components');
+					return ProviderTools.installServer(serverBlob, force, uploadonly)
+						.then(function(_) {
+							return serverBlob;
+						});
 				})
+				.traceThen('  - cloud server successfully installed!'.green())
 				.thenVal(CLIResult.Success)
 				.errorPipe(function(err) {
-					warn(err);
+					traceRed(err);
 					return Promise.promise(CLIResult.ExitCode(1));
 				});
 		} else {
+			traceYellow('No configuration specified, installing locally');
 			//Install and run via docker
 			//First check if there is a local instance running
 			var hostName :HostName = null;

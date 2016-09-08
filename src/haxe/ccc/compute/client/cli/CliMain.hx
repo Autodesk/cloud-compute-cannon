@@ -107,7 +107,8 @@ class CliMain
 				})
 				.then(function(result :ResponseDefSuccess<CLIResult>) {
 					if (result.error != null) {
-						trace(result.error);
+						traceRed('error=${result.error}');
+						Node.process.exit(1);
 					}
 					switch(result.result) {
 						case Success:
@@ -125,7 +126,6 @@ class CliMain
 							Node.process.exit(-1);
 					}
 				}).catchError(function(err) {
-					err = Json.stringify(err, null, '\t');
 					traceRed('ERROR from $requestDef\nError:\n${err}');
 					Node.process.exit(1);
 				});
