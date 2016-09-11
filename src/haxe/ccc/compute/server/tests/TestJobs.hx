@@ -45,7 +45,7 @@ echo "$outputValueStdout"
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
-			.pipe(function(jobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
@@ -53,7 +53,7 @@ echo "$outputValueStdout"
 				return Promise.promise(true)
 					.pipe(function(_) {
 						assertNotNull(jobResult.stdout);
-						var stdoutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+						var stdoutUrl = jobResult.getStdoutUrl();
 						assertNotNull(stdoutUrl);
 						return RequestPromises.get(stdoutUrl)
 							.then(function(stdout) {
@@ -90,7 +90,7 @@ echo "$outputValueStderr" >>/dev/stderr
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
-			.pipe(function(jobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
@@ -98,7 +98,7 @@ echo "$outputValueStderr" >>/dev/stderr
 				return Promise.promise(true)
 					.pipe(function(_) {
 						assertNotNull(jobResult.stderr);
-						var stderrUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stderr}';
+						var stderrUrl = jobResult.getStderrUrl();
 						assertNotNull(stderrUrl);
 						return RequestPromises.get(stderrUrl)
 							.then(function(stderr) {
@@ -109,7 +109,7 @@ echo "$outputValueStderr" >>/dev/stderr
 					})
 					.pipe(function(_) {
 						assertNotNull(jobResult.stdout);
-						var stdoutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+						var stdoutUrl = jobResult.getStdoutUrl();
 						assertNotNull(stdoutUrl);
 						return RequestPromises.get(stdoutUrl)
 							.then(function(stdout) {
@@ -140,11 +140,11 @@ echo "$outputValueStderr" >>/dev/stderr
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
-			.pipe(function(jobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
-				var stdOutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+				var stdOutUrl = jobResult.getStdoutUrl();
 				assertNotNull(stdOutUrl);
 				return RequestPromises.get(stdOutUrl)
 					.then(function(stdout) {
@@ -181,14 +181,13 @@ echo "$outputValue" > /$DIRECTORY_OUTPUTS/$outputName
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
-			.pipe(function(jobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
-				var outputUrl = jobResult.outputsBaseUrl;
 				var outputs = jobResult.outputs != null ? jobResult.outputs : [];
 				assertTrue(outputs.length == 1);
-				var outputUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputs[0]}';
+				var outputUrl = jobResult.getOutputUrl(outputs[0]);
 				return RequestPromises.get(outputUrl)
 					.then(function(out) {
 						out = out != null ? out.trim() : out;
@@ -247,19 +246,18 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
-			.pipe(function(jobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
-				var outputUrl = jobResult.outputsBaseUrl;
 				var outputs = jobResult.outputs != null ? jobResult.outputs : [];
 				assertTrue(outputs.length == 2);
-				var outputUrl1 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}${outputName1}';
+				var outputUrl1 = jobResult.getOutputUrl(outputName1);
 				return RequestPromises.getBuffer(outputUrl1)
 					.pipe(function(out1) {
 						assertNotNull(out1);
 						assertEquals(out1.compare(bytes1), 0);
-						var outputUrl2 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}${outputName2}';
+						var outputUrl2 = jobResult.getOutputUrl(outputName2);
 						return RequestPromises.getBuffer(outputUrl2)
 							.then(function(out2) {
 								assertNotNull(out2);
@@ -335,19 +333,18 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 								var jobIdResult :{result:{jobId:String}} = Json.parse(body);
 								return ServerTestTools.getJobResult(jobIdResult.result.jobId);
 							})
-							.pipe(function(jobResult) {
+							.pipe(function(jobResult :JobResultAbstract) {
 								if (jobResult == null) {
 									throw 'jobResult should not be null. Check the above section';
 								}
-								var outputUrl = jobResult.outputsBaseUrl;
 								var outputs = jobResult.outputs != null ? jobResult.outputs : [];
 								assertTrue(outputs.length == 2);
-								var outputUrl1 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}${outputName1}';
+								var outputUrl1 = jobResult.getOutputUrl(outputName1);
 								return RequestPromises.getBuffer(outputUrl1)
 									.pipe(function(out1) {
 										assertNotNull(out1);
 										assertEquals(out1.compare(bytes1), 0);
-										var outputUrl2 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}${outputName2}';
+										var outputUrl2 = jobResult.getOutputUrl(outputName2);
 										return RequestPromises.getBuffer(outputUrl2)
 											.then(function(out2) {
 												assertNotNull(out2);
@@ -370,7 +367,7 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 		return promise.boundPromise;
 	}
 
-		@timeout(120000)
+	@timeout(120000)
 	public function testCompleteComputeJobProxy() :Promise<Bool>
 	{
 		var TESTNAME = 'testCompleteComputeJobProxy';
@@ -436,14 +433,14 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
-			.pipe(function(jobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
 				return Promise.promise(true)
 					.pipe(function(_) {
 							assertNotNull(jobResult.stderr);
-							var stderrUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stderr}';
+							var stderrUrl = jobResult.getStderrUrl();
 							assertNotNull(stderrUrl);
 							return RequestPromises.get(stderrUrl)
 								.then(function(stderr) {
@@ -454,7 +451,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 						})
 						.pipe(function(_) {
 							assertNotNull(jobResult.stdout);
-							var stdoutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+							var stdoutUrl = jobResult.getStdoutUrl();
 							assertNotNull(stdoutUrl);
 							return RequestPromises.get(stdoutUrl)
 								.then(function(stdout) {
@@ -464,14 +461,13 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 								});
 						})
 						.pipe(function(_) {
-							var outputUrl = jobResult.outputsBaseUrl;
 							var outputs = jobResult.outputs != null ? jobResult.outputs : [];
 							assertTrue(outputs.length == inputsArray.length);
 							assertTrue(outputs.has(outputName1));
 							assertTrue(outputs.has(outputName2));
-							var outputUrl1 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputName1}';
-							var outputUrl2 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputName2}';
-							var outputUrl3 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputName3}';
+							var outputUrl1 = jobResult.getOutputUrl(outputName1);
+							var outputUrl2 = jobResult.getOutputUrl(outputName2);
+							var outputUrl3 = jobResult.getOutputUrl(outputName3);
 							return RequestPromises.get(outputUrl1)
 								.pipe(function(out) {
 									out = out != null ? out.trim() : out;

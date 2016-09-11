@@ -9,6 +9,17 @@ class Logger
 
 	public static var log :AbstractLogger;
 
+	public static function isFluentInEtcHosts() :Bool
+	{
+		try {
+			var stdout :String = js.node.ChildProcess.execSync('cat /etc/hosts', {stdio:['ignore','pipe','ignore']});
+			var output = Std.string(stdout);
+			return output.indexOf('fluent') > -1;
+		} catch (ignored :Dynamic) {
+			return false;
+		}
+	}
+
 	inline public static function trace(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
 		if (GLOBAL_LOG_LEVEL <= 10) {
@@ -97,18 +108,23 @@ class Logger
 // 		}
 // 		Reflect.setField(jobColorFilter, '_transform', transform);
 // 		jobColorFilter.pipe(js.Node.process.stdout);
- 		var fluentLogger = {write:ccc.compute.FluentTools.createEmitter()};
+
  		var streams :Array<Dynamic> = [
 			{
 				level: Bunyan.TRACE,
 				stream: js.Node.process.stdout
-			},
-			{
+			}
+		];
+
+		if (isFluentInEtcHosts()) {
+			var fluentLogger = {write:ccc.compute.FluentTools.createEmitter()};
+			streams.push({
 				level: Bunyan.TRACE,
 				type: 'raw',// use 'raw' to get raw log record objects
 				stream: fluentLogger
-			}
-		];
+			});
+		}
+
 		log = new AbstractLogger(
 		{
 			name: ccc.compute.Constants.SERVER_CONTAINER_TAG_SERVER,

@@ -1,5 +1,6 @@
 # Cloud Compute Cannon
 
+
 Cloud Compute Cannon is a tool aimed at scientists and more general users who want to use cheap cloud providers (such as Amazon) to perform large scale computes (number crunching). It aims to lower some of the biggest barriers and learning curves in getting data and custom code running on distributed cloud infrastructure. It can be run both as a command-line tool, or as a server for integrating into other tools via a REST API/websockets.
 
 Use cases:

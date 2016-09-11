@@ -1,0 +1,23 @@
+services:
+  - docker
+
+sudo: required
+
+git:
+    submodules: false
+
+env:
+  - DOCKER_COMPOSE_VERSION: 1.8.0
+
+before_install:
+  # Use sed to replace the SSH URL with the public URL, then initialize submodules
+  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+  - git submodule update --init --recursive
+  - sudo rm -f /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+  - docker ps
+
+script:
+  - docker-compose -f docker-compose.travis.yml run --rm compute node build/cloud-compute-cannon-server.js

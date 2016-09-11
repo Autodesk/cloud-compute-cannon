@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+DOCKER_COMMAND="docker-compose -f docker-compose.travis.yml run --rm compute node build/cloud-compute-cannon-server.js"
+# if [ $# -eq 1 ]
+# 	then
+# 		COMPUTE_CONFIG=`cat $1` TRAVIS=true $DOCKER_COMMAND
+# 	else
+		# TRAVIS=true $DOCKER_COMMAND
+# fi
+
+TRAVIS=true $DOCKER_COMMAND

@@ -466,6 +466,9 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	override public function getExternalUrl(?path :String) :String
 	{
+		if (path != null && path.startsWith('http')) {
+			return path;
+		}
 		path = getPath(path);
 		if (_httpAccessUrl != null) {
 			return _httpAccessUrl + path;

@@ -352,7 +352,7 @@ class DockerJobTools
 															return false;
 														}
 													});
-											});
+											}, 5, 500, 'get stderr', false);
 										} else {
 											return Promise.promise(true);
 										}
@@ -365,44 +365,6 @@ class DockerJobTools
 						.then(function(_) {
 							return result;
 						});
-						// //Don't return unless requests return the files on the
-						// //storage service, for some services e.g. S3 the files
-						// //take some time to be available.
-						// .pipe(function(_) {
-						// 	if (result.stderr || result.stdout) {
-						// 		var promises = [];
-						// 		if (result.stdout) {
-						// 			promises.push(RetryPromise.pollRegular(function() {
-						// 				return fs.exists(STDOUT_FILE)
-						// 					.then(function(exists) {
-						// 						if (exists) {
-						// 							return true;
-						// 						} else {
-						// 							throw 'not yet found';
-						// 							return false;
-						// 						}
-						// 					});
-						// 			}));
-						// 		}
-						// 		if (result.stderr) {
-						// 			promises.push(RetryPromise.pollRegular(function() {
-						// 				return fs.exists(STDERR_FILE)
-						// 					.then(function(exists) {
-						// 						if (exists) {
-						// 							return true;
-						// 						} else {
-						// 							throw 'not yet found';
-						// 							return false;
-						// 						}
-						// 					});
-						// 			}));
-						// 		}
-						// 		return Promise.whenAll(promises)
-						// 			.thenVal(result);
-						// 	} else {
-						// 		return Promise.promise(result);
-						// 	}
-						// });
 				}
 			});
 	}

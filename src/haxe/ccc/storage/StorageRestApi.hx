@@ -28,6 +28,14 @@ class StorageRestApi
 		if (file.startsWith('/')) {
 			file = file.substr(1);
 		}
+
+		var externalUrl = storage.getExternalUrl(file);
+		if (externalUrl.startsWith('http')) {
+			res.writeHead(302, {'Location': externalUrl});
+			res.end();
+			return;
+		}
+
 		storage.readFile(file)
 			.then(function(stream) {
 				stream.once('error', function(err) {
