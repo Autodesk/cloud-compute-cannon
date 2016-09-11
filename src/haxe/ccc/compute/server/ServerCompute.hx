@@ -86,11 +86,27 @@ class ServerCompute
 		var env = Node.process.env;
 
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
-			Log.critical({crash:err.stack, message:'crash'});
+			var errObj = {
+				stack:try err.stack catch(e :Dynamic){null;},
+				error:err,
+				errorJson: try untyped err.toJSON() catch(e :Dynamic){null;},
+				errorString: try untyped err.toString() catch(e :Dynamic){null;},
+				message:'crash'
+			}
+			Log.critical(errObj);
+			traceRed(errObj);
 			//Ensure crash is logged before exiting.
-			ccc.compute.FluentTools.logToFluent(Json.stringify(err), function() {
+			try {
+				if (Logger.isFluentInEtcHosts()) {
+					ccc.compute.FluentTools.logToFluent(Json.stringify(errObj), function() {
+						Node.process.exit(1);
+					});
+				} else {
+					Node.process.exit(1);
+				}
+			} catch(e :Dynamic) {
 				Node.process.exit(1);
-			});
+			}
 		});
 
 		//Sanity checks
@@ -375,7 +391,8 @@ class ServerCompute
 
 				//Run internal tests
 				Log.debug('Running server functional tests');
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?compute=true')
+				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&compute=true" : "compute=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
@@ -387,12 +404,21 @@ class ServerCompute
 								Log.error({TestResults:result});
 								traceRed(Json.stringify(result, null, '  '));
 							}
+							if (isTravisBuild) {
+								Node.process.exit(result.success ? 0 : 1);
+							}
 						} catch(err :Dynamic) {
 							Log.error({error:err, message:'Failed to parse test results'});
+							if (isTravisBuild) {
+								Node.process.exit(1);
+							}
 						}
 					})
 					.catchError(function(err) {
 						Log.error({error:err, message:'failed tests!'});
+						if (isTravisBuild) {
+							Node.process.exit(1);
+						}
 					});
 			});
 	}

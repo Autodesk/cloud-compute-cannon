@@ -13,6 +13,7 @@ import haxe.remoting.JsonRpc;
 	import util.streams.StreamTools;
 #end
 
+import promhx.StreamPromises;
 import promhx.RequestPromises;
 import promhx.deferred.DeferredPromise;
 
@@ -76,9 +77,9 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 		}
 
 		var random = ShortId.generate();
-		var customInputsPath = '$TEST_BASE/testReadMultilineStdout/$random/inputs';
-		var customOutputsPath = '$TEST_BASE/testReadMultilineStdout/$random/outputs';
-		var customResultsPath = '$TEST_BASE/testReadMultilineStdout/$random/results';
+		var customInputsPath = '$TEST_BASE/$TESTNAME/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/outputs';
+		var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
 
 		var inputsArray = [inputInline, inputUrl, inputScript];
 
@@ -95,14 +96,14 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 		forms[inputUrl.name] = js.npm.request.Request.get(inputUrl.value);
 
 		return ccc.compute.client.ClientTools.postJobWaitOnResult(_serverHost, request, forms)
-			.pipe(function(jobResult :JobResult) {
+			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
 				return Promise.promise(true)
 					.pipe(function(_) {
 							assertNotNull(jobResult.stderr);
-							var stderrUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stderr}';
+							var stderrUrl = jobResult.getStderrUrl();
 							assertNotNull(stderrUrl);
 							return RequestPromises.get(stderrUrl)
 								.then(function(stderr) {
@@ -113,7 +114,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 						})
 						.pipe(function(_) {
 							assertNotNull(jobResult.stdout);
-							var stdoutUrl = 'http://${SERVER_LOCAL_HOST}/${jobResult.stdout}';
+							var stdoutUrl = jobResult.getStdoutUrl();
 							assertNotNull(stdoutUrl);
 							return RequestPromises.get(stdoutUrl)
 								.then(function(stdout) {
@@ -123,14 +124,14 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 								});
 						})
 						.pipe(function(_) {
-							var outputUrl = jobResult.outputsBaseUrl;
 							var outputs = jobResult.outputs != null ? jobResult.outputs : [];
 							assertTrue(outputs.length == inputsArray.length);
 							assertTrue(outputs.has(outputName1));
 							assertTrue(outputs.has(outputName2));
-							var outputUrl1 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputName1}';
-							var outputUrl2 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputName2}';
-							var outputUrl3 = 'http://${SERVER_LOCAL_HOST}/${jobResult.outputsBaseUrl}/${outputName3}';
+
+							var outputUrl1 = jobResult.getOutputUrl(outputName1);
+							var outputUrl2 = jobResult.getOutputUrl(outputName2);
+							var outputUrl3 = jobResult.getOutputUrl(outputName3);
 							return RequestPromises.get(outputUrl1)
 								.pipe(function(out) {
 									out = out != null ? out.trim() : out;

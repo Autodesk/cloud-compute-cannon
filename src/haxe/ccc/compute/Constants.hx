@@ -55,6 +55,7 @@ class Constants
 	inline public static var ENV_VAR_CCC_ADDRESS = 'CCC_ADDRESS';
 	inline public static var ENV_DISABLE_SERVER_CHECKS = 'DISABLE_SERVER_CHECKS';
 	inline public static var ENV_LOG_LEVEL = 'LOG_LEVEL';
+	inline public static var ENV_TRAVIS = 'TRAVIS';
 	/* A flag ("true") to determine if the CLI installed this server */
 	inline public static var ENV_CLIENT_DEPLOYMENT = 'CLIENT_DEPLOYMENT';
 

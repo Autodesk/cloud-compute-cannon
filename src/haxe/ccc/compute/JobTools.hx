@@ -65,12 +65,12 @@ class JobTools
 
 	public static function workerStdoutPath(id :ComputeJobId) :String
 	{
-		return '${workerStdoutDir(id)}/${STDOUT_FILE}';
+		return '${workerStdoutDir(id)}${STDOUT_FILE}';
 	}
 
 	public static function workerStderrPath(id :ComputeJobId) :String
 	{
-		return '${workerStdoutDir(id)}/${STDERR_FILE}';
+		return '${workerStdoutDir(id)}${STDERR_FILE}';
 	}
 
 	public static function inputDir(job :DockerJobDefinition) :String
@@ -113,12 +113,12 @@ class JobTools
 
 	public static function stdoutPath(job :DockerJobDefinition) :String
 	{
-		return '${resultDir(job)}/${STDOUT_FILE}';
+		return '${resultDir(job)}${STDOUT_FILE}';
 	}
 
 	public static function stderrPath(job :DockerJobDefinition) :String
 	{
-		return '${resultDir(job)}/${STDERR_FILE}';
+		return '${resultDir(job)}${STDERR_FILE}';
 	}
 
 	public static function defaultInputDir(id :JobId) :String

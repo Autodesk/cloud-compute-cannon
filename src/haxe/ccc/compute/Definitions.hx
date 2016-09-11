@@ -612,3 +612,25 @@ typedef ServiceConfigurationWorkerProvider = {
 	@:optional var keys :DynamicAccess<String>;
 	@:optional var machines :DynamicAccess<ProviderInstanceDefinition>;
 }
+
+@:forward
+abstract JobResultAbstract(JobResult) from JobResult to JobResult
+{
+	inline function new (val: JobResult)
+		this = val;
+
+	inline public function getOutputUrl(outputName :String) :String
+	{
+		return outputName.startsWith('http') ? outputName : (this.outputsBaseUrl != null && this.outputsBaseUrl.startsWith('http') ? '${this.outputsBaseUrl}${outputName}' : 'http://${SERVER_LOCAL_HOST}/${this.outputsBaseUrl}${outputName}');
+	}
+
+	inline public function getStdoutUrl() :String
+	{
+		return this.stdout.startsWith('http') ? this.stdout : 'http://${SERVER_LOCAL_HOST}/${this.stdout}';
+	}
+
+	inline public function getStderrUrl() :String
+	{
+		return this.stderr.startsWith('http') ? this.stderr : 'http://${SERVER_LOCAL_HOST}/${this.stderr}';
+	}
+}
