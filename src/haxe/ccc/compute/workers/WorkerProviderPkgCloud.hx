@@ -272,17 +272,6 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	{
 		log.info('provider=$id worker=$workerId destroying destroying instance');
 		return destroyInstance(workerId);
-		
-		// if (_compute != null) {
-		// 	return _compute.destroyServer(workerId)
-		// 		.thenTrue()
-		// 		.errorPipe(function(err) {
-		// 			Log.error('shutdownWorker err (This might be fine)=$err');
-		// 			return Promise.promise(true);
-		// 		});
-		// } else {
-		// 	return Promise.promise(true);
-		// }
 	}
 
 	override public function shutdownAllWorkers() :Promise<Bool>
@@ -382,7 +371,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	{
 		return RequestPromises.get('http://169.254.169.254/latest/meta-data/public-hostname')
 			.then(function(s) {
-				return new HostName(s.trim());
+				return s != null ? new HostName(s.trim()) : null;
 			});
 	}
 
@@ -412,29 +401,22 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	{
 		var provider :CloudProvider = config;
 		return createPkgCloudInstance(config, machineType, log)
-			.then(function(server) {
-				var usePublicIp = config.machines[machineType].public_ip == true;
-				var host = getIpFromServer(server, usePublicIp);
-				var hostPublic = getIpFromServer(server, true);
-				var hostPrivate = getIpFromServer(server, false);
-				var privateKey = provider.getMachineKey(machineType);
+			.then(function(serverBlob) {
+				var server = serverBlob.server;
+				var ssh = serverBlob.ssh;
+				var privateIp = serverBlob.privateIp;
 				var workerDef :WorkerDefinition = {
 					id: server.id,
-					hostPublic: new HostName(hostPublic),
-					hostPrivate: new HostName(hostPrivate),
-					ssh: {
-						host: host,
-						port: 22,
-						username: 'core',
-						privateKey: privateKey
-					},
+					hostPublic: new HostName(ssh.host),
+					hostPrivate: new HostName(privateIp),
+					ssh: ssh,
 					docker: {
-						host: host,
+						host: privateIp,
 						port: 2375,
 						protocol: 'http'
 					}
 				};
-				traceGreen('    - created remote server ${server.id} at $host');
+				traceGreen('    - created remote server ${server.id} at ${ssh.host}');
 				return workerDef;
 			});
 	}
@@ -451,7 +433,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			.thenTrue();
 	}
 
-	public static function createPkgCloudInstance(config :ServiceConfigurationWorkerProvider, machineType :String, ?log :AbstractLogger) :Promise<PkgCloudServer>
+	public static function createPkgCloudInstance(config :ServiceConfigurationWorkerProvider, machineType :String, ?log :AbstractLogger) :Promise<{server:PkgCloudServer,ssh:ConnectOptions, privateIp: String}>
 	{
 		log = Logger.ensureLog(log, {f:'createPkgCloudInstance'});
 
@@ -487,7 +469,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 						instanceOpts.MaxCount = 1;
 						log.debug({message:'AWS $machineType', options:LogTools.removePrivateKeys(instanceOpts)});
 						var promise = new DeferredPromise();
-						js.Node.process.stdout.write('    - creating instance\n'.yellow());
+						Node.process.stdout.write('    - creating instance\n'.yellow());
 						ec2.runInstances(instanceOpts, function(err, data :{Instances:Array<Dynamic>}) {
 							if (err != null) {
 								log.error({log:'runInstances', error:err});
@@ -496,7 +478,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							}
 							// log.trace({message:'runInstances', data:data});
 							var instanceId = data.Instances[0].InstanceId;
-							js.Node.process.stdout.write('        - $instanceId created\n'.green());
+							Node.process.stdout.write('        - $instanceId created\n'.green());
 
 							//Get tags, merge default and instance specific
 							var tags = [];
@@ -514,16 +496,16 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							}
 							// Add tags to the instance
 							if (tags.length == 0) {
-								js.Node.process.stdout.write('\n');
+								Node.process.stdout.write('\n');
 								getServerAndResolve();
 							} else {
-								js.Node.process.stdout.write('    - tagging $instanceId with ${Json.stringify(tagsForLogging)}\n'.yellow());
+								Node.process.stdout.write('    - tagging $instanceId with ${Json.stringify(tagsForLogging)}\n'.yellow());
 								var tagParams = {Resources: [instanceId], Tags: tags};
 								ec2.createTags(tagParams, function(err) {
-									js.Node.process.stdout.write('        - successfully tagged\n'.green());
+									Node.process.stdout.write('        - successfully tagged\n'.green());
 									log.trace('Tagging $machineType $instanceId with $tags '+ (err != null? "failure" : "success"));
 									if (err != null) {
-										js.Node.process.stdout.write('failed to tag instance, error=$err'.red());
+										Node.process.stdout.write('failed to tag instance, error=$err'.red());
 										log.error({log:'createTags', error:err});
 									}
 									log.debug({log:'done tagging, client.getServer'});
@@ -535,14 +517,14 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				}
 			})
 			.pipe(function(server) {
-				js.Node.process.stdout.write('    - polling ${server.id} via provider API'.yellow());
+				Node.process.stdout.write('    - polling ${server.id} via provider API'.yellow());
 				var promise = new DeferredPromise();
 				//Poll every interval until the status is running
 				var f = null;
 				var status = null;
 				f = function() {
 					log.info({f:'createPkgCloudInstance', instance_id:server.id, message:'getServer'});
-					js.Node.process.stdout.write('.'.yellow());
+					Node.process.stdout.write('.'.yellow());
 					client.getServer(server.id)
 						.then(function(server) {
 							if (server.status != status) {
@@ -552,7 +534,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 							// log.trace({server_status:server.status, addresses:server.addresses});
 							var host = getIpFromServer(server, isPublicIp);
 							if (server.status == PkgCloudComputeStatus.running && host != null && host != '') {
-								js.Node.process.stdout.write('OK\n'.green());
+								Node.process.stdout.write('OK\n'.green());
 								promise.resolve(server);
 							} else {
 								haxe.Timer.delay(f, 4000);//4 seconds
@@ -563,7 +545,8 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				return promise.boundPromise;
 			})
 			.pipe(function(server) {
-				var host = getIpFromServer(server, isPublicIp);
+				var host = getIpFromServer(server, isPublicIp || machineType == MachineType.server);
+				var privateIp = getIpFromServer(server, false);
 				if (host == null) {
 					throw 'Could not find public IP in server=$server';
 				}
@@ -577,17 +560,19 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				}
 
 				Log.info('provider=$type new $machineType ${server.id} set up instance host=$host');
-				js.Node.process.stdout.write('    - polling ${server.id} via SSH'.yellow());
-				return WorkerProviderTools.pollInstanceUntilSshReady(sshOptions, function() js.Node.process.stdout.write('.'.yellow()))
+				Node.process.stdout.write('    - polling ${server.id} at host=${sshOptions.host} username=${sshOptions.username} via SSH'.yellow());
+				return WorkerProviderTools.pollInstanceUntilSshReady(sshOptions, function() Node.process.stdout.write('.'.yellow()))
 					.pipe(function(_) {
-						js.Node.process.stdout.write('OK\n'.green());
+						Node.process.stdout.write('OK\n'.green());
 						log.info('SSH connection to instance established!');
 						log.info('provider=$type new $machineType ${server.id} set up instance');
 						//Update CoreOs to allow docker access
 						//AWS specific
+						Node.process.stdout.write('    - setting up CoreOS\n'.yellow());
 						return WorkerProviderTools.setupCoreOS(sshOptions)
 							.then(function(_) {
-								return server;
+								Node.process.stdout.write('      - OK\n'.green());
+								return {server:server, ssh:sshOptions, privateIp:privateIp};
 							});
 					});
 			});
