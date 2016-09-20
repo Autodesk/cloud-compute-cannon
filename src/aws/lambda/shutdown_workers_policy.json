@@ -1,0 +1,17 @@
+{
+    "NB": "THIS IS A WIP, this needs to be updated",
+    "Statement": [
+        {
+            "Sid": "Stmt1474396555000",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeInstanceStatus",
+                "ec2:DescribeInstances",
+                "ec2:TerminateInstances"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
