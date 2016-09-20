@@ -131,6 +131,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 
 	override public function destroyInstance(instanceId :MachineId) :Promise<Bool>
 	{
+		Assert.notNull(instanceId);
 		return super.destroyInstance(instanceId)
 			.pipe(function(_) {
 				if (_compute != null) {
@@ -375,6 +376,17 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			});
 	}
 
+	static function getAWSInstanceId() :Promise<MachineId>
+	{
+		return RequestPromises.get('http://169.254.169.254/latest/meta-data/instance-id')
+			.then(function(s) {
+				return new MachineId(s.trim());
+			})
+			.errorPipe(function(err) {
+				return Promise.promise(Sys.getEnv('USER'));
+			});
+	}
+
 	inline function get_compute() :ComputeClientP
 	{
 		return _compute;
@@ -453,67 +465,74 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			.pipe(function(_) {
 				switch(config.type) {
 					case amazon:
-						var instanceOpts :InstanceOptionsAmazon = cast instanceDefinition.options;
-						log.debug('creating aws instance');
-						/*
-						 * Using the amazon pkgcloud API directly is not sufficient for our purposes,
-						 * since some options are not exposed, e.g. specifying the SubnetId.
-						 * So instead, we grab the EC2 object from the client object, and interact
-						 * directly with the AWS-SDK.
-						 */
-						//Do some raw stuff via the direct AWS object
-						//http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EC2.html#runInstances-property
-						var ec2 :{runInstances:Dynamic->(Dynamic->Dynamic->Void)->Void, createTags:Dynamic->(Dynamic->Void)->Void} = Reflect.field(client, 'ec2');
-						Assert.notNull(ec2, 'Missing ec2 field from pkgcloud client');
-						instanceOpts.MinCount = 1;
-						instanceOpts.MaxCount = 1;
-						log.debug({message:'AWS $machineType', options:LogTools.removePrivateKeys(instanceOpts)});
-						var promise = new DeferredPromise();
-						Node.process.stdout.write('    - creating instance\n'.yellow());
-						ec2.runInstances(instanceOpts, function(err, data :{Instances:Array<Dynamic>}) {
-							if (err != null) {
-								log.error({log:'runInstances', error:err});
-								promise.boundPromise.reject(err);
-								return;
-							}
-							// log.trace({message:'runInstances', data:data});
-							var instanceId = data.Instances[0].InstanceId;
-							Node.process.stdout.write('        - $instanceId created\n'.green());
+						return getAWSInstanceId()
+							.pipe(function(serverInstanceId) {
 
-							//Get tags, merge default and instance specific
-							var tags = [];
-							var tagsForLogging :DynamicAccess<String> = {};
-							for (tagName in instanceDefinition.tags.keys()) {
-								tags.push({Key:tagName, Value:instanceDefinition.tags[tagName]});
-								tagsForLogging[tagName] = instanceDefinition.tags[tagName];
-							}
-
-							function getServerAndResolve() {
-								client.getServer(instanceId)
-									.then(function(server) {
-										promise.resolve(server);
-									});
-							}
-							// Add tags to the instance
-							if (tags.length == 0) {
-								Node.process.stdout.write('\n');
-								getServerAndResolve();
-							} else {
-								Node.process.stdout.write('    - tagging $instanceId with ${Json.stringify(tagsForLogging)}\n'.yellow());
-								var tagParams = {Resources: [instanceId], Tags: tags};
-								ec2.createTags(tagParams, function(err) {
-									Node.process.stdout.write('        - successfully tagged\n'.green());
-									log.trace('Tagging $machineType $instanceId with $tags '+ (err != null? "failure" : "success"));
+								var instanceOpts :InstanceOptionsAmazon = cast instanceDefinition.options;
+								log.debug('creating aws instance');
+								/*
+								 * Using the amazon pkgcloud API directly is not sufficient for our purposes,
+								 * since some options are not exposed, e.g. specifying the SubnetId.
+								 * So instead, we grab the EC2 object from the client object, and interact
+								 * directly with the AWS-SDK.
+								 */
+								//Do some raw stuff via the direct AWS object
+								//http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EC2.html#runInstances-property
+								var ec2 :{runInstances:Dynamic->(Dynamic->Dynamic->Void)->Void, createTags:Dynamic->(Dynamic->Void)->Void} = Reflect.field(client, 'ec2');
+								Assert.notNull(ec2, 'Missing ec2 field from pkgcloud client');
+								instanceOpts.MinCount = 1;
+								instanceOpts.MaxCount = 1;
+								log.debug({message:'AWS $machineType', options:LogTools.removePrivateKeys(instanceOpts)});
+								var promise = new DeferredPromise();
+								js.Node.process.stdout.write('    - creating instance\n'.yellow());
+								ec2.runInstances(instanceOpts, function(err, data :{Instances:Array<Dynamic>}) {
 									if (err != null) {
-										Node.process.stdout.write('failed to tag instance, error=$err'.red());
-										log.error({log:'createTags', error:err});
+										log.error({log:'runInstances', error:err});
+										promise.boundPromise.reject(err);
+										return;
 									}
-									log.debug({log:'done tagging, client.getServer'});
-									getServerAndResolve();
+									// log.trace({message:'runInstances', data:data});
+									var instanceId = data.Instances[0].InstanceId;
+									js.Node.process.stdout.write('        - $instanceId created\n'.green());
+
+									//Get tags, merge default and instance specific
+									var tags = [];
+									tags.push({Key:INSTANCE_TAG_TYPE_KEY, Value:machineType});
+									tags.push({Key:INSTANCE_TAG_OWNER_KEY, Value:serverInstanceId});
+
+									//Custom tags
+									for (tagName in instanceDefinition.tags.keys()) {
+										tags.push({Key:tagName, Value:instanceDefinition.tags[tagName]});
+									}
+
+									//Create an object for better logging (avoiding the Key:Value verbosity)
+									var tagsForLogging :DynamicAccess<String> = {};
+									for (tag in tags) {
+										tagsForLogging[tag.Key] = tag.Value;
+									}
+
+									function getServerAndResolve() {
+										client.getServer(instanceId)
+											.then(function(server) {
+												promise.resolve(server);
+											});
+									}
+									// Add tags to the instance
+									js.Node.process.stdout.write('    - tagging $instanceId with ${Json.stringify(tagsForLogging)}\n'.yellow());
+									var tagParams = {Resources: [instanceId], Tags: tags};
+									ec2.createTags(tagParams, function(err) {
+										js.Node.process.stdout.write('        - successfully tagged\n'.green());
+										log.trace('Tagging $machineType $instanceId with $tags '+ (err != null? "failure" : "success"));
+										if (err != null) {
+											js.Node.process.stdout.write('failed to tag instance, error=$err'.red());
+											log.error({log:'createTags', error:err});
+										}
+										log.debug({log:'done tagging, client.getServer'});
+										getServerAndResolve();
+									});
 								});
-							}
-						});
-						return promise.boundPromise;
+								return promise.boundPromise;
+							});
 				}
 			})
 			.pipe(function(server) {

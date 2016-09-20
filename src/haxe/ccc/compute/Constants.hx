@@ -91,6 +91,12 @@ class Constants
 	public static var SERVER_LOCAL_HOST :Host = new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT));
 	public static var SERVER_LOCAL_RPC_URL :UrlString = '${SERVER_DEFAULT_PROTOCOL}://${SERVER_LOCAL_HOST}${SERVER_RPC_URL}';
 
+	/* WORKER TAGS */
+	inline public static var INSTANCE_TAG_TYPE_KEY = 'CCC_TYPE';
+	inline public static var INSTANCE_TAG_TYPE_VALUE_WORKER = 'worker';
+	inline public static var INSTANCE_TAG_TYPE_VALUE_SERVER = 'server';
+	inline public static var INSTANCE_TAG_OWNER_KEY = 'CCC_OWNER';
+
 	/* Fluent/logging */
 	inline public static var FLUENTD_SOURCE_PORT = 24225;
 	inline public static var FLUENTD_HTTP_COLLECTOR_PORT = 9881;
