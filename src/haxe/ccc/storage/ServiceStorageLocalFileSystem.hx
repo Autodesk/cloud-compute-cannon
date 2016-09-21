@@ -23,7 +23,7 @@ using StringTools;
 class ServiceStorageLocalFileSystem
 	extends ServiceStorageBase
 {
-	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'data/ServiceStorageLocalFileSystem/';
+	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'tmp/storage/';
 
 	public static function getService(?path :String) :ServiceStorageLocalFileSystem
 	{
@@ -230,5 +230,15 @@ class ServiceStorageLocalFileSystem
 	override public function toString()
 	{
 		return '[StorageLocal _rootPath=$_rootPath]';
+	}
+
+	public function getAbsolutePath(path :String) :String
+	{
+		return getPath(path);
+	}
+
+	override function get_type() :StorageSourceType
+	{
+		return StorageSourceType.Local;
 	}
 }

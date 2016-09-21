@@ -1,6 +1,6 @@
 storage:
   type: "local"
-  rootPath: "data/ServiceStorageLocalFileSystem"
+  rootPath: "tmp/data"
 
 providers:
   - type: "Boot2Docker"

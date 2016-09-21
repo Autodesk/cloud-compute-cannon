@@ -7,6 +7,7 @@ import js.node.stream.Readable;
 import js.node.stream.Writable;
 import js.npm.RedisClient;
 import js.npm.clicolor.CliColor;
+import js.npm.docker.Docker;
 
 
 import promhx.Promise;
@@ -34,6 +35,16 @@ class JobTools
 	inline public static function generateComputeJobId(jobId :JobId, ?attempt :Int = 1) :ComputeJobId
 	{
 		return '${jobId}${Constants.JOB_ID_ATTEMPT_SEP}${attempt}';
+	}
+
+	inline public static function getWorkerVolumeNameInputs(computeJobId :ComputeJobId) :DockerVolumeName
+	{
+		return '${DIRECTORY_INPUTS}__${computeJobId}';
+	}
+
+	inline public static function getWorkerVolumeNameOutputs(computeJobId :ComputeJobId) :DockerVolumeName
+	{
+		return '${DIRECTORY_OUTPUTS}__${computeJobId}';
 	}
 
 	public static function prependJobResultsUrls(jobResult :JobResult, urlPrefix :String)

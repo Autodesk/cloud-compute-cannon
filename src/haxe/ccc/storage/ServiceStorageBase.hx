@@ -181,7 +181,7 @@ class ServiceStorageBase
 			});
 	}
 
-	inline function get_type() :StorageSourceType
+	function get_type() :StorageSourceType
 	{
 		return _config.type;
 	}

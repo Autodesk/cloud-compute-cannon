@@ -85,6 +85,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 	var _httpAccessUrl :String;
 	var _S3 :AWSS3;
 	var _initialized :Promise<Bool>;
+	var _S3Config :ccc.docker.dataxfer.DockerDataTools.S3Credentials;
 
 
 	private static var precedingSlash = ~/^\/+/;
@@ -105,6 +106,11 @@ class ServiceStorageS3 extends ServiceStorageBase
 	override public function toString()
 	{
 		return '[StorageS3 _rootPath=$_rootPath container=${_containerName} _httpAccessUrl=${_httpAccessUrl}]';
+	}
+
+	public function getS3Credentials() :ccc.docker.dataxfer.DockerDataTools.S3Credentials
+	{
+		return Reflect.copy(_S3Config);
 	}
 
 	function initialized() :Promise<Bool>
@@ -176,12 +182,10 @@ class ServiceStorageS3 extends ServiceStorageBase
 	override public function setConfig(config :StorageDefinition) :ServiceStorageBase
 	{
 		Assert.notNull(config.container);
-		Assert.notNull(config.httpAccessUrl);
 		Assert.notNull(config.credentials);
+		Assert.notNull(config.container);
 
-		if (config.container != null) {
-			_containerName = config.container;
-		}
+		_containerName = config.container;
 
 		var awsConfig = {
 			accessKeyId: config.credentials.accessKeyId != null ? config.credentials.accessKeyId : config.credentials.keyId,
@@ -189,12 +193,16 @@ class ServiceStorageS3 extends ServiceStorageBase
 			region: config.credentials.region,
 			maxRetries: config.credentials.maxRetries
 		}
+		_S3Config = {keyId:awsConfig.accessKeyId, key:awsConfig.secretAccessKey, region:awsConfig.region, bucket:config.container};
 
-		Assert.notNull(awsConfig.region);
 		Assert.notNull(awsConfig.accessKeyId);
 		Assert.notNull(awsConfig.secretAccessKey);
 
-		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl);
+		Sys.environment()['AWS_S3_KEYID'] = awsConfig.accessKeyId;
+		Sys.environment()['AWS_S3_KEY'] = awsConfig.secretAccessKey;
+		Sys.environment()['AWS_S3_BUCKET'] = config.container;
+
+		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl != null ? config.httpAccessUrl : 'https://${_containerName}.s3.amazonaws.com/');
 		_S3 = new AWSS3(awsConfig);
 
 		return super.setConfig(config);

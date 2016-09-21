@@ -48,6 +48,6 @@ EXPOSE 9001
 EXPOSE 9002
 
 #Do not watch the entire tree, just that file
-CMD forever --watchDirectory build build/cloud-compute-cannon-server.js
+CMD forever --watchDirectory build build/server/cloud-compute-cannon-server.js
 
 

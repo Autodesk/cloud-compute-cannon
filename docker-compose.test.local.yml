@@ -1,21 +1,28 @@
-compute:
-  command: ["haxe", "test/testsIntegration.hxml"]
-  environment:
-    AWS: "false"
-    DOCKER: "true"
-    VAGRANT: "false"
+version: '2'
+services:
+  compute:
+    command: ["haxe", "test/testsIntegration.hxml"]
+    environment:
+      AWS: "false"
+      DOCKER: "true"
+      VAGRANT: "false"
 
-fluentd:
-  log_driver: "none"
+  redis:
+    logging:
+      driver: "none"
+      options: {}
 
-redis:
-  log_driver: "none"
+  registry:
+    logging:
+      driver: "none"
+      options: {}
 
-registry:
-  log_driver: "none"
+  elasticsearch:
+    logging:
+      driver: "none"
+      options: {}
 
-elasticsearch:
-  log_driver: "none"
-
-kibana:
-  log_driver: "none"
+  kibana:
+    logging:
+      driver: "none"
+      options: {}

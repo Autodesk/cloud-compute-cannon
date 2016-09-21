@@ -59,6 +59,8 @@ class TestsIntegration
 			return Type.resolveClass('ccc.compute.server.tests.$className');
 		} else if (Type.resolveClass('compute.$className') != null) {
 			return Type.resolveClass('compute.$className');
+		} else if (Type.resolveClass('ccc.docker.dataxfer.$className') != null) {
+			return Type.resolveClass('ccc.docker.dataxfer.$className');
 		} else if (Type.resolveClass('storage.$className') != null) {
 			return Type.resolveClass('storage.$className');
 		} else {
@@ -105,6 +107,7 @@ class TestsIntegration
 					var ins :{setup:Void->Promise<Bool>,tearDown:Void->Promise<Bool>} = Type.createInstance(cls, []);
 					var testMethod = Reflect.field(ins, methodName);
 					if (testMethod != null) {
+						Node.setTimeout(function(){}, 1000000000);
 						ins.setup()
 							.orTrue()
 							.pipe(function(_) {
@@ -114,6 +117,16 @@ class TestsIntegration
 							.errorPipe(function(err) {
 								traceRed(err);
 								return Promise.promise(false);
+							})
+							.pipe(function(result) {
+								return ins.tearDown()
+									.then(function(_) {
+										return result;
+									})
+									.errorPipe(function(err) {
+										traceRed(err);
+										return Promise.promise(result);
+									});
 							})
 							.then(function(passed){
 								if (passed) {
@@ -185,6 +198,8 @@ class TestsIntegration
 				runner.add(new storage.TestStorageSftp());
 			}
 		}
+
+		runner.add(new ccc.docker.dataxfer.TestDataTransfer());
 
 		if (isRedis) {
 			// These require a local redis db

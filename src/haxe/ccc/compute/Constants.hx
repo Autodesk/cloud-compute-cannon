@@ -78,7 +78,7 @@ class Constants
 	inline public static var SERVER_PATH_WAIT = '/wait';
 	inline public static var SERVER_API_URL = '/api';
 	inline public static var SERVER_API_RPC_URL_FRAGMENT = '/rpc';
-	inline public static var SERVER_RPC_URL = '$SERVER_API_URL/rpc';
+	inline public static var SERVER_RPC_URL = '${SERVER_API_URL}${SERVER_API_RPC_URL_FRAGMENT}';
 	inline public static var SERVER_URL_API_DOCKER_IMAGE_BUILD = '$SERVER_API_URL/build';
 	inline public static var ADDRESS_REGISTRY_DEFAULT = 'localhost:$REGISTRY_DEFAULT_PORT';
 	inline public static var DOCKER_IMAGE_DEFAULT = 'docker.io/busybox:latest';
@@ -132,6 +132,10 @@ class Constants
 	/* We guess how much the OS of CoreOS uses, and subtract this from total memory */
 	inline public static var WORKER_COREOS_OS_MEMORY_USAGE = 2048;//mb
 	inline public static var WORKER_JOB_DEFAULT_MEMORY_REQUIRED = 512;//mb
+
+	/* docker */
+	inline public static var LOCAL_STORAGE_VOLUME = 'ccc-local-storage';
+
 
 #if (nodejs && !macro)
 	public static var ROOT = (js.Node.process.platform == "win32") ? js.Node.process.cwd().split(js.node.Path.sep)[0] : "/";

@@ -1,23 +1,27 @@
-compute:
-  command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/cloud-compute-cannon-server.js"]
-  volumes:
-    - ./:/config
-    - ./build:/app/build
-  environment:
-    LOG_LEVEL: "${LOG_LEVEL}"
+version: '2'
 
-redis:
-  log_driver: "json-file"
-  log_opt: {}
+services:
 
-elasticsearch:
-  log_driver: "json-file"
-  log_opt: {}
+  compute:
+    command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/server/cloud-compute-cannon-server.js"]
+    # command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/test/compute_tests.js"]
+    volumes:
+      - ./build:/app/build
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL}"
 
-fluentd:
-  log_driver: "json-file"
-  log_opt: {}
+  redis:
+    logging:
+      driver: json-file
 
-registry:
-  log_driver: "none"
-  log_opt: {}
+  elasticsearch:
+    logging:
+      driver: json-file
+
+  fluentd:
+    logging:
+      driver: json-file
+
+  registry:
+    logging:
+      driver: none

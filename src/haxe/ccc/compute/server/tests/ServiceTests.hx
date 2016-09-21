@@ -26,9 +26,9 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || registry || worker || storage || compute)) {
+		if (!(core || all || registry || worker || storage || compute || dockervolumes)) {
 			compute = true;
 		}
 		if (all) {
@@ -37,6 +37,7 @@ class ServiceTests
 			worker = true;
 			storage = true;
 			compute = true;
+			dockervolumes = true;
 		}
 
 		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
@@ -60,6 +61,10 @@ class ServiceTests
 					var test :PromiseTest = new TestStorageS3(cast  injectedStorage);
 					runner.add(test);
 			}
+		}
+
+		if (dockervolumes || core || storage) {
+			runner.add(new ccc.docker.dataxfer.TestDataTransfer());
 		}
 
 		if (registry) {
