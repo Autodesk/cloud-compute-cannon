@@ -19,6 +19,34 @@ class TestJobs extends ServerAPITestBase
 	static var TEST_BASE = 'tests';
 
 	@timeout(120000)
+	public function testWaitForJob() :Promise<Bool>
+	{
+		var outputValueStdout = 'out${ShortId.generate()}';
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		var random = ShortId.generate();
+		var customResultsPath = '$TEST_BASE/testWaitForJob/$random/results';
+		var waitForJobToFinish = true;
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '-c', 'echo $outputValueStdout'], [], null, 1, 600000, customResultsPath, null, null, waitForJobToFinish)
+			.pipe(function(jobResult :JobResultAbstract) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+				return Promise.promise(true)
+					.pipe(function(_) {
+						assertNotNull(jobResult.stdout);
+						var stdoutUrl = jobResult.getStdoutUrl();
+						assertNotNull(stdoutUrl);
+						return RequestPromises.get(stdoutUrl)
+							.then(function(stdout) {
+								stdout = stdout != null ? stdout.trim() : stdout;
+								assertEquals(stdout, outputValueStdout);
+								return true;
+							});
+					});
+			});
+	}
+
+	@timeout(120000)
 	public function testReadMultilineStdout() :Promise<Bool>
 	{
 		var outputValueStdout = 'out${ShortId.generate()}';
@@ -332,6 +360,106 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 							.pipe(function(out) {
 								var jobIdResult :{result:{jobId:String}} = Json.parse(body);
 								return ServerTestTools.getJobResult(jobIdResult.result.jobId);
+							})
+							.pipe(function(jobResult :JobResultAbstract) {
+								if (jobResult == null) {
+									throw 'jobResult should not be null. Check the above section';
+								}
+								var outputs = jobResult.outputs != null ? jobResult.outputs : [];
+								assertEquals(outputs.length, 2);
+								var outputUrl1 = jobResult.getOutputUrl(outputName1);
+								return RequestPromises.getBuffer(outputUrl1)
+									.pipe(function(out1) {
+										assertNotNull(out1);
+										assertEquals(out1.compare(bytes1), 0);
+										var outputUrl2 = jobResult.getOutputUrl(outputName2);
+										return RequestPromises.getBuffer(outputUrl2)
+											.then(function(out2) {
+												assertNotNull(out2);
+												assertEquals(out2.compare(bytes2), 0);
+												return true;
+											});
+									});
+							})
+							.then(function(passed) {
+								promise.resolve(passed);
+							});
+					} catch (err :Dynamic) {
+						promise.boundPromise.reject(err);
+					}
+				} else {
+					promise.boundPromise.reject('non-200 response body=' + body);
+				}
+			});
+
+		return promise.boundPromise;
+	}
+
+	@timeout(120000)
+	public function testMultipartRPCSubmissionAndWait() :Promise<Bool>
+	{
+		var url = 'http://${_serverHost}${SERVER_RPC_URL}';
+
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testBinaryInputAndOutput/$random/results';
+
+		// Create bytes for inputs. We'll test the output bytes
+		// against these
+		var bytes1 = new Buffer([Std.int(Math.random() * 1000), Std.int(Math.random() * 1000), Std.int(Math.random() * 1000)]);
+		var inputName1 = 'in${Std.int(Math.random() * 100000000)}';
+		var outputName1 = 'out${Std.int(Math.random() * 100000000)}';
+
+		var bytes2 = new Buffer('somestring${Std.int(Math.random() * 100000000)}', 'utf8');
+		var inputName2 = 'in${Std.int(Math.random() * 100000000)}';
+		var outputName2 = 'out${Std.int(Math.random() * 100000000)}';
+
+		//A script that copies the inputs to outputs
+		var script =
+'#!/bin/sh
+cp /$DIRECTORY_INPUTS/$inputName1 /$DIRECTORY_OUTPUTS/$outputName1
+cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
+';
+		var scriptName = 'script.sh';
+
+		var jobSubmissionOptions :BasicBatchProcessRequest = {
+			image: DOCKER_IMAGE_DEFAULT,
+			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
+			inputs: [], //inputs are part of the multipart message (formStreams)
+			parameters: {cpus:1, maxDuration:20*60*100000},
+			//Custom paths
+			outputsPath: customOutputsPath,
+			inputsPath: customInputsPath,
+			resultsPath: customResultsPath,
+			wait: true
+		};
+
+		var formData :DynamicAccess<Dynamic> = {};
+		formData[JsonRpcConstants.MULTIPART_JSONRPC_KEY] = Json.stringify(
+			{
+				method: RPC_METHOD_JOB_SUBMIT,
+				params: jobSubmissionOptions,
+				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2
+
+			});
+		formData[scriptName] = script;
+		formData[inputName1] = bytes1;
+		formData[inputName2] = bytes2;
+
+		var promise = new DeferredPromise();
+		js.npm.request.Request.post({url:url, formData: formData},
+			function(err, httpResponse, body) {
+				if (err != null) {
+					promise.boundPromise.reject(err);
+					return;
+				}
+				if (httpResponse.statusCode == 200) {
+					try {
+						Promise.promise(true)
+							.then(function(out) {
+								var rpcResult :{result:JobResult} = Json.parse(body);
+								return rpcResult.result;
 							})
 							.pipe(function(jobResult :JobResultAbstract) {
 								if (jobResult == null) {

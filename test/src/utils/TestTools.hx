@@ -50,7 +50,7 @@ class TestTools
 			Reflect.setField(env, ENV_VAR_DISABLE_LOGGING, "true");
 		}
 
-		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: env, silent:true});
+		var serverChildProcess = ChildProcess.fork('$BUILD_DIR_SERVER/$APP_SERVER_FILE', {env: env, silent:true});
 		serverChildProcess.on(ChildProcessEvent.Message, function(message, sendHandle) {
 			if (message == IPC_MESSAGE_READY) {
 				promise.resolve(serverChildProcess);

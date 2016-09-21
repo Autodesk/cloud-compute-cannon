@@ -57,6 +57,7 @@ typedef JobWaitingStatus = {
 @:enum
 abstract DevTestCommand(String) to String from String {
 	var Longjob = 'longjob';
+	var ShellCommand = 'shell';
 }
 
 typedef SubmissionDataBlob = {
@@ -86,26 +87,49 @@ class ClientCommands
 			});
 	}
 
+	static var DEV_TEST_JOBS = 'longjob | shell';
 	@rpc({
 		alias:'devtest',
 		doc:'Various convenience functions for dev testing. [longjob]',
 		args:{
-			'command':{doc: 'Output is JSON'}
+			'command':{doc: 'longjob | shell'}
 		}
 	})
-	public static function devtest(command :String) :Promise<CLIResult>
+	public static function devtest(command :String, ?shell :String) :Promise<CLIResult>
 	{
 		var devCommand :DevTestCommand = command;
+		if (devCommand == null && shell != null) {
+			devCommand = DevTestCommand.ShellCommand;
+		}
 		if (devCommand == null) {
-			log('Available commands: [longjob]');
+			log('Available commands: [$DEV_TEST_JOBS]');
 			return Promise.promise(CLIResult.Success);
 		} else {
 			return switch(command) {
 				case Longjob:
-					runclient(['sleep', '500'], DOCKER_IMAGE_DEFAULT)
+					var jobRequest :BasicBatchProcessRequest = {
+						image: DOCKER_IMAGE_DEFAULT,
+						cmd: ['sleep', '500'],
+						wait: true
+					}
+					runInternal(jobRequest)
+						.then(function(jobResult) {
+							traceGreen(Json.stringify(jobResult, null, '  '));
+						})
+						.thenVal(CLIResult.Success);
+				case ShellCommand:
+					var jobRequest :BasicBatchProcessRequest = {
+						image: DOCKER_IMAGE_DEFAULT,
+						cmd: ['/bin/sh', '-c', shell],
+						wait: true
+					}
+					runInternal(jobRequest)
+						.then(function(jobResult) {
+							traceGreen(Json.stringify(jobResult, null, '  '));
+						})
 						.thenVal(CLIResult.Success);
 				default:
-					log('Unknown command=$command. Available commands: [longjob]');
+					log('Unknown command=$command. Available commands: [$DEV_TEST_JOBS]');
 					Promise.promise(CLIResult.PrintHelpExit1);
 			}
 		}
@@ -122,6 +146,7 @@ class ClientCommands
 			inputfile: {doc:'Input files [inputfile]. E.g. --inputfile foo1=/home/user1/Desktop/test.jpg" --input foo2=/home/me/myserver/myfile.txt ', short:'f'},
 			inputurl: {doc:'Input urls (downloaded from the server) [inputurl]. E.g. --input foo1=http://someserver/test.jpg --input foo2=http://myserver/myfile', short:'u'},
 			results: {doc: 'Results directory [./<results_dir>/<date string>__<jobId>/]. The contents of that folder will have an inputs/ and outputs/ directories. ', short:'r'},
+			wait: {doc: 'Wait until the job is finished before returning (default is to return the jobId immediately, then query using that jobId, since jobs may take a long time)', short:'w'},
 		},
 		docCustom: 'Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\\\"Hello World!\\\")"]\''
 	})
@@ -132,7 +157,8 @@ class ClientCommands
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?results :String
+		?results :String,
+		?wait :Bool = false
 		)
 	{
 		var commandArray :Array<String> = null;
@@ -150,6 +176,7 @@ class ClientCommands
 			cmd: commandArray,
 			parameters: {cpus:1, maxDuration:60*1000*10},
 			inputs: [],
+			wait: wait
 		};
 		return runCli(jobParams, input, inputfile, inputurl, results);
 	}
@@ -170,10 +197,14 @@ class ClientCommands
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?results: String
+		?results: String,
+		?wait: Bool = false
 		)
 	{
 		var jobParams :BasicBatchProcessRequest = Json.parse(Fs.readFileSync(jsonfile, 'utf8'));
+		if (jobParams.wait == null) {
+			jobParams.wait = wait;
+		}
 		return runCli(jobParams, input, inputfile, inputurl, results);
 	}
 
@@ -186,7 +217,7 @@ class ClientCommands
 		?json :Bool = true) :Promise<CLIResult>
 	{
 		return runInternal(jobParams, input, inputfile, inputurl, results)
-			.then(function(submissionData :SubmissionDataBlob) {
+			.then(function(submissionData :JobResult) {
 				//Write the client job file
 				var dateString = Date.now().format("%Y-%m-%d");
 				var resultsBaseDir = results != null ? results : 'results';
@@ -210,7 +241,7 @@ class ClientCommands
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
 		?results: String,
-		?json :Bool = true) :Promise<SubmissionDataBlob>
+		?json :Bool = true) :Promise<JobResult>
 	{
 		// var dateString = Date.now().format("%Y-%m-%d");
 		// var resultsBaseDir = results != null ? results : 'results';
@@ -260,14 +291,7 @@ class ClientCommands
 		var address = getServerAddress();
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return ClientTools.postJob(address, jobParams, inputStreams)
-					.then(function(result) {
-						var submissionData :SubmissionDataBlob = {
-							jobId: result.jobId,
-							// jobRequest: jobParams
-						}
-						return submissionData;
-					});
+				return ClientTools.postJob(address, jobParams, inputStreams);
 			});
 	}
 
@@ -1022,37 +1046,24 @@ class ClientCommands
 			parameters: {cpus:1, maxDuration:60*1000*10},
 			inputs: [],
 			outputsPath: 'someTestOutputPath/outputs',
-			inputsPath: 'someTestInputPath/inputs'
+			inputsPath: 'someTestInputPath/inputs',
+			wait: true
 		};
 		return runInternal(jobParams, ['$inputFile=input1$rand'], [], [], './tmp/results')
-			.pipe(function(submissionData :SubmissionDataBlob) {
-				if (submissionData != null) {
-					var jobId = submissionData.jobId;
-					return waitInternal([jobId])
-						.pipe(function(out) {
-							if (out.length > 0) {
-								var jobResult = out[0].job;
-								if (jobResult != null && jobResult.exitCode == 0) {
-									var address = getServerAddress();
-									return Promise.promise(true)
-										.pipe(function(_) {
-											return RequestPromises.get('http://' + jobResult.stdout)
-												.then(function(stdout) {
-													log('stdout=${stdout.trim()}');
-													Assert.that(stdout.trim() == stdoutText);
-													return true;
-												});
-										});
-								} else {
-									log('jobResult is null ');
-									return Promise.promise(false);
-								}
-							} else {
-								log('No waiting jobs');
-								return Promise.promise(false);
-							}
+			.pipe(function(jobResult) {
+				if (jobResult != null && jobResult.exitCode == 0) {
+					var address = getServerAddress();
+					return Promise.promise(true)
+						.pipe(function(_) {
+							return RequestPromises.get('http://' + jobResult.stdout)
+								.then(function(stdout) {
+									log('stdout=${stdout.trim()}');
+									Assert.that(stdout.trim() == stdoutText);
+									return true;
+								});
 						});
 				} else {
+					log('jobResult is null $jobResult');
 					return Promise.promise(false);
 				}
 			})

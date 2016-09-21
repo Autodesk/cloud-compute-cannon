@@ -41,6 +41,8 @@ import ccc.storage.ServiceStorage;
 import ccc.storage.StorageRestApi;
 import ccc.storage.ServiceStorageLocalFileSystem;
 
+import promhx.Stream;
+
 import util.RedisTools;
 import util.DockerTools;
 
@@ -64,6 +66,7 @@ class ServerCompute
 {
 	public static var StorageService :ServiceStorage;
 	public static var WorkerProvider :WorkerProvider;
+	public static var StatusStream :Stream<JobStatusUpdate>;
 
 	static function main()
 	{
@@ -369,6 +372,12 @@ class ServerCompute
 				//Server infrastructure. This automatically handles client JSON-RPC remoting and other API requests
 				app.use(SERVER_API_URL, cast schedulingService.router());
 
+				StatusStream = RedisTools.createJsonStream(injector.getValue(RedisClient), ComputeQueue.REDIS_CHANNEL_STATUS);
+				StatusStream.catchError(function(err) {
+					Log.error(err);
+				});
+
+
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
 				websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
@@ -393,7 +402,7 @@ class ServerCompute
 				//Run internal tests
 				Log.debug('Running server functional tests');
 				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true" : "compute=true"}')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true" : "jobs=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
@@ -506,7 +515,7 @@ class ServerCompute
 			});
 		});
 
-		var stream = RedisTools.createJsonStream(redis, ComputeQueue.REDIS_CHANNEL_STATUS)
+		StatusStream
 			.then(function(status :JobStatusUpdate) {
 				if (status.jobId == null) {
 					Log.warn('No jobId for status=${Json.stringify(status)}');
@@ -521,8 +530,5 @@ class ServerCompute
 					}
 				}
 			});
-		stream.catchError(function(err) {
-			Log.error(err);
-		});
 	}
 }
