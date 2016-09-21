@@ -81,7 +81,8 @@ class ServerCompute
 		js.Node.process.stderr.setMaxListeners(100);
 
 		//Load env vars from an .env file if present
-		Node.require('dotenv').config({path: '/config/.env', silent: true});
+		Node.require('dotenv').config({path: '.env', silent: true});
+		Node.require('dotenv').config({path: 'config/.env', silent: true});
 
 		var env = Node.process.env;
 
@@ -144,7 +145,7 @@ class ServerCompute
 			trace('trace_without_objectifying');
 		}
 
-		Log.info('CCC server start');
+		Log.info('CCC server start ${ServerCommands.version()}');
 
 		Log.trace({log_check:'trace'});
 		Log.trace('trace');
@@ -392,7 +393,7 @@ class ServerCompute
 				//Run internal tests
 				Log.debug('Running server functional tests');
 				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&compute=true" : "compute=true"}')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true" : "compute=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);

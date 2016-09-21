@@ -17,12 +17,13 @@ import promhx.deferred.DeferredPromise;
 import promhx.DockerPromises;
 import promhx.StreamPromises;
 
+import ccc.compute.ComputeTools;
+import ccc.compute.ComputeQueue;
+import ccc.docker.dataxfer.DockerDataTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
 import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
-import ccc.compute.ComputeTools;
-import ccc.compute.ComputeQueue;
 
 import util.DockerTools;
 import util.streams.StreamTools;
@@ -49,6 +50,48 @@ typedef WroteLogs = {
  */
 class DockerJobTools
 {
+	/**
+	 * This converts ServiceStorage copy operations into docker container 
+	 * @param  storage     :ServiceStorage         [description]
+	 * @param  storagePath :String                 [description]
+	 * @param  volume      :MountedDockerVolumeDef [description]
+	 * @return             [description]
+	 */
+	public static function copyToVolume(storage :ServiceStorage, storagePath :String, volume :MountedDockerVolumeDef) :CopyDataResult
+	{
+		switch(storage.type) {
+			case Sftp: throw 'Not implemented yet: ServiceStorageSftp->Docker Volume';
+			case PkgCloud: throw 'Not implemented yet: ServiceStoragePkgCloud->Docker Volume';
+			case Local:
+				var localStorage = cast(storage, ccc.storage.ServiceStorageLocalFileSystem);
+				var localPath = localStorage.getPath(storagePath);
+				return {end:DockerDataTools.transferDiskToVolume(localPath, volume)};
+			case S3:
+				var storageS3 = cast(storage, ccc.storage.ServiceStorageS3);
+				var credentials = storageS3.getS3Credentials();
+				credentials.path = storageS3.getPath(storagePath);
+				return DockerDataTools.transferS3ToVolume(credentials, volume);
+		}
+	}
+
+	public static function copyFromVolume(storage :ServiceStorage, storagePath :String, volume :MountedDockerVolumeDef) :CopyDataResult
+	{
+		switch(storage.type) {
+			case Sftp: throw 'Not implemented yet: Docker Volume->ServiceStorageSftp';
+			case PkgCloud: throw 'Not implemented yet: Docker Volume->ServiceStoragePkgCloud';
+			case Local:
+				var localStorage = cast(storage, ccc.storage.ServiceStorageLocalFileSystem);
+				var localPath = localStorage.getPath(storagePath);
+				return {end:DockerDataTools.transferVolumeToDisk(volume, localPath)};
+			case S3:
+				var storageS3 = cast(storage, ccc.storage.ServiceStorageS3);
+				var credentials = storageS3.getS3Credentials();
+				credentials.path = storageS3.getPath(storagePath);
+				return DockerDataTools.transferVolumeToS3(volume, credentials);
+		}
+	}
+
+
 	/**
 	 * This is complicated and a PITA
 	 * @param  path :String       [description]
@@ -211,7 +254,7 @@ class DockerJobTools
 	public static function runDockerContainer(docker :Docker, computeJobId :ComputeJobId, imageId :String, cmd :Array<String>, mounts :Array<Mount>, workingDir :String, labels :Dynamic<String>, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
 	{
 		log = Logger.ensureLog(log, {image:imageId, computejobid:computeJobId, dockerhost:docker.modem.host});
-		log.info({log:'run_docker_container', cmd:'[${cmd != null ? cmd.join(",") : ''}]', mounts:'[${mounts != null ? mounts.join(",") : ''}]', workingDir:workingDir, labels:labels});
+		log.info({log:'run_docker_container', cmd:'[${cmd != null ? cmd.join(",") : ''}]', mounts:'[${mounts != null ? mounts.map(function(e) return Json.stringify(e)).join(",") : ''}]', workingDir:workingDir, labels:labels});
 		var promise = new DeferredPromise();
 		imageId = imageId.toLowerCase();
 		Assert.notNull(docker);

@@ -19,7 +19,7 @@ SERVER_HOST=$1
 SERVER_CONFIG_PATH=$2
 SYNC_COMMAND="rsync --copy-links $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/ccc.yml && ./bin/sync-to-remote $SERVER_HOST"
 #Watch for server changes and push if so. This should restart the server
-chokidar 'build/cloud-compute-cannon-server.js' "$SERVER_CONFIG_PATH" -c "$SYNC_COMMAND" &
+chokidar 'build/server/cloud-compute-cannon-server.js' "$SERVER_CONFIG_PATH" -c "$SYNC_COMMAND" &
 eval $SYNC_COMMAND
 # bin/sync-to-remote $1
 # scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/ccc.yml

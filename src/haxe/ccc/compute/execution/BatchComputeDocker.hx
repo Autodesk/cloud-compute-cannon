@@ -23,6 +23,8 @@ import ccc.compute.InstancePool;
 import ccc.compute.LogStreams;
 import ccc.compute.execution.DockerJobTools;
 
+import ccc.docker.dataxfer.DockerDataTools;
+
 import ccc.storage.StorageTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
@@ -68,12 +70,23 @@ class BatchComputeDocker
 		var computeJobId = job.computeJobId;
 		var docker = job.worker.getInstance().docker();
 
+		if (job.item.inputs == null) {
+			job.item.inputs = [];
+		}
+
 		//Create the various remote/local/worker storage services.
 		var inputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerInputDir());
 		var outputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerOutputDir());
 		var inputStorageRemote = fs.clone().appendToRootPath(job.item.inputDir());
 		var outputStorageRemote = fs.clone().appendToRootPath(job.item.outputDir());
 		var resultsStorageRemote = fs.clone().appendToRootPath(job.item.resultDir());
+
+		var inputVolumeName = job.item.inputs.length > 0 ? JobTools.getWorkerVolumeNameInputs(job.computeJobId) : null;
+		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(job.computeJobId);
+		var outputsVolume :MountedDockerVolumeDef = {
+			dockerOpts: job.worker.docker,
+			name: outputVolumeName,
+		};
 
 		/*
 			Set the job JobWorkingStatus. This is to
@@ -149,38 +162,27 @@ class BatchComputeDocker
 					log.debug({JobWorkingStatus:jobWorkingStatus, log:'beginning input file processing'});
 					return Promise.promise(true)
 						.pipe(function(_) {
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'workerStorage.makeDir ${workerStorage.getRootPath()}${job.computeJobId.workerInputDir()}'});
-							return inputStorageWorker.makeDir();
-						})
-						.pipe(function(_) {
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'workerStorage.makeDir ${workerStorage.getRootPath()}${job.computeJobId.workerOutputDir()}'});
-							return outputStorageWorker.makeDir()
-								.then(function(_) {
-									return true;
-								});
+							log.debug({JobWorkingStatus:jobWorkingStatus, log:'Creating output volume'});
+							return DockerDataTools.createVolume(outputsVolume);
 						})
 						.pipe(function(_) {
 							log.debug({JobWorkingStatus:jobWorkingStatus, log:'copying inputs'});
-							if (job.item.inputs == null) {
-								job.item.inputs = [];
-							}
 							if (job.item.inputs.length == 0) {
 								return Promise.promise(null);
 							} else {
-								log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying inputs from $inputStorageRemote to $inputStorageWorker items=${job.item.inputs}'});
-#if debug
-								return inputStorageRemote.listDir()
-									.pipe(function(files) {
-										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Files in $inputStorageRemote=$files}'});
-										return return DockerJobTools.copyFilesInternal(inputStorageRemote, inputStorageWorker, job.item.inputs);
+								var inputsVolume :MountedDockerVolumeDef = {
+									dockerOpts: job.worker.docker,
+									name: inputVolumeName,
+								};
+								log.debug({JobWorkingStatus:jobWorkingStatus, log:'Creating volume=$inputVolumeName'});
+								return DockerDataTools.createVolume(inputsVolume)
+									.pipe(function(_) {
+										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying inputs to volume=$inputVolumeName'});
+										return DockerJobTools.copyToVolume(inputStorageRemote, null, inputsVolume).end;
 									});
-#else
-								return DockerJobTools.copyFilesInternal(inputStorageRemote, inputStorageWorker, job.item.inputs);
-#end
 							}
 						})
 						.then(function(_) {
-							// workerStorage.close();
 							log.debug({JobWorkingStatus:jobWorkingStatus, log:'finished copying inputs=' + job.item.inputs});
 							return true;
 						})
@@ -259,18 +261,21 @@ class BatchComputeDocker
 								 */
 								var mounts :Array<Mount> = [
 									{
-										Source: DockerJobTools.getDockerHostMountablePath(inputStorageWorker.getRootPath()),
-										Destination: '/${DIRECTORY_INPUTS}',
-										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
-										RW: true
-									},
-									{
-										Source: DockerJobTools.getDockerHostMountablePath(outputStorageWorker.getRootPath()),
+										Source: outputVolumeName,
 										Destination: '/${DIRECTORY_OUTPUTS}',
 										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									}
 								];
+
+								if (inputVolumeName != null) {
+									mounts.push({
+										Source: inputVolumeName,
+										Destination: '/${DIRECTORY_INPUTS}',
+										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
+										RW: true
+									});
+								}
 
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
 
@@ -291,6 +296,7 @@ class BatchComputeDocker
 										return DockerPromises.wait(containerunResult.container)
 											.then(function(status :{StatusCode:Int}) {
 												exitCode = status.StatusCode;
+
 												log.info({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode});
 												if (error != null) {
 													log.error({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode, error:error});
@@ -316,22 +322,14 @@ class BatchComputeDocker
 					if (job.item.outputsPath != null) {
 						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Writing to custom outputs path=' + job.item.outputsPath});
 					}
-					// var workerOutputs = workerStorage.appendToRootPath(Path.join(job.computeJobId, DIRECTORY_OUTPUTS));
-					// outputStorage = outputStorage.appendToRootPath(job.item.outputDir());
-					// var workerOutputConfig :StorageDefinition = {
-					// 	type: StorageSourceType.Sftp,
-					// 	rootPath: job.computeJobId.workerOutputDir(),
-					// 	sshConfig: job.worker.ssh
-					// };
-					// var source = StorageTools.getStorage(workerOutputConfig);
-					return outputStorageWorker.listDir()
+
+					return DockerDataTools.lsVolume(outputsVolume)
 						.pipe(function(files) {
 							outputFiles = files;
-							//log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying outputs from $outputStorageWorker to $outputStorageRemote items=${files.join(", ")}'});
-							if (outputFiles != null && outputFiles.length > 0) {
-								return DockerJobTools.copyInternal(outputStorageWorker, outputStorageRemote);
-							} else {
+							if (outputFiles.length == 0) {
 								return Promise.promise(true);
+							} else {
+								return DockerJobTools.copyFromVolume(outputStorageRemote, null, outputsVolume).end;
 							}
 						})
 						.pipe(function(_) {
@@ -344,7 +342,6 @@ class BatchComputeDocker
 			.pipe(function(_) {
 				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingLogs) {
-					// var resultsStorage = fs.clone().appendToRootPath(job.item.resultDir());
 					log.info('Copying logs from to $resultsStorageRemote');
 					return DockerJobTools.copyLogs(docker, job.computeJobId, resultsStorageRemote)
 						.pipe(function(_) {
@@ -371,28 +368,49 @@ class BatchComputeDocker
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
 				//The job is now finished. Clean up the temp worker storage,
 				// out of the promise chain (for speed)
-				Promise.whenAll(
-					[
-						inputStorageWorker.deleteDir()
-							.then(function(_) {
-								log.info('Deleted ${inputStorageWorker.toString()}');
-								return true;
-							})
-							.errorPipe(function(err) {
-								log.error('Problem deleting ${inputStorageWorker.toString()} err=${err}');
-								return Promise.promise(false);
-							}),
-						outputStorageWorker.deleteDir()
-							.then(function(_) {
-								log.info('Deleted ${outputStorageWorker.toString()}');
-								return true;
-							})
-							.errorPipe(function(err) {
-								log.error('Problem deleting ${outputStorageWorker.toString()} err=${err}');
-								return Promise.promise(false);
-							})
-
-					]);
+				getContainer(docker, computeJobId)
+						.pipe(function(containerData) {
+							if (containerData != null) {
+								return DockerPromises.removeContainer(docker.getContainer(containerData.Id))
+									.then(function(_) {
+										log.debug('Removed container=${containerData.Id}');
+										return true;
+									})
+									.errorPipe(function(err) {
+										log.error('Problem removing container ${containerData.Id} err=${err}');
+										return Promise.promise(false);
+									});
+							} else {
+								return Promise.promise(true);
+							}
+						})
+						.pipe(function(_) {
+							return Promise.whenAll(
+								[
+									inputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(inputVolumeName)) : Promise.promise(true)
+										.then(function(_) {
+											log.debug('Removed volume=$inputVolumeName');
+											return true;
+										})
+										.errorPipe(function(err) {
+											log.error('Problem deleting volume ${inputVolumeName} err=${err}');
+											return Promise.promise(false);
+										}),
+									outputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(outputVolumeName)) : Promise.promise(true)
+										.then(function(_) {
+											log.debug('Removed volume=$outputVolumeName');
+											return true;
+										})
+										.errorPipe(function(err) {
+											log.error('Problem deleting volume ${outputVolumeName} err=${err}');
+											return Promise.promise(false);
+										})
+								]);
+						})
+						.then(function(_) {
+							log.debug('Removed containers and volumes');
+							return true;
+						});
 				return jobResult;
 			});
 

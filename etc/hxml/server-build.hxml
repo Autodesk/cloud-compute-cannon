@@ -8,4 +8,4 @@ etc/hxml/base-nodejs.hxml
 
 -main ccc.compute.server.ServerCompute
 
--js build/cloud-compute-cannon-server.js
+-js build/server/cloud-compute-cannon-server.js

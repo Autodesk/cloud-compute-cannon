@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
+#-D DockerDataToolsDebug
 haxe test/testsCompile.hxml && node build/test/compute_tests.js $@

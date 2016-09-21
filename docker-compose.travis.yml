@@ -2,14 +2,12 @@ compute:
   extends:
     file: docker-compose.core.yml
     service: compute
-  command: ["node", "build/cloud-compute-cannon-server.js"]
+  command: ["node", "build/server/cloud-compute-cannon-server.js"]
   links:
     - redis
   environment:
     TRAVIS: "${TRAVIS}"
   volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./data/computejobs:/computejobs
     - ./data:/app/data
     # - ./build:/app/build
   log_driver: "json-file"

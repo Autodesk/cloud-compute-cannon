@@ -7,8 +7,8 @@ etc/hxml/server-build.hxml
 etc/hxml/base-nodejs.hxml
 
 -resource package.json@package.json
--resource build/cloud-compute-cannon-server.js@cloud-compute-cannon-server.js
--resource build/cloud-compute-cannon-server.js.map@cloud-compute-cannon-server.js.map
+-resource build/server/cloud-compute-cannon-server.js@cloud-compute-cannon-server.js
+-resource build/server/cloud-compute-cannon-server.js.map@cloud-compute-cannon-server.js.map
 
 -resource docker-compose.yml@docker-compose.yml
 -resource docker-compose.core.yml@docker-compose.core.yml

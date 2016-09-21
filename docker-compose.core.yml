@@ -1,81 +1,82 @@
-compute:
-  build: "."
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  ports:
-    - "9000:9000"
-    - "9001:9001"
-    - "9002:9002"
-  environment:
-    PORT: "9000"
-    # OPTIONAL: Path to the mounted configuration file
-    # CONFIG_PATH: "/app/ccc.yml"
-    #If the REGISTRY field is set, it will override REGISTRY_PORT
-    # REGISTRY_ADDRESS: "5001"
-    # OPTIONAL
-    # REGISTRY: "registry:5001"
-    # OPTIONAL text flattened yaml of the server configuration.
-    COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
-    #This is used to get the correct host working directory to pass into the
-    #worker containers to map the local file system to /inputs+/outputs within
-    #the container. Only used for local docker providers (not cloud)
-    HOST_PWD: "$PWD"
-    #Sets the max log level (bunyan where 10=trace 40=warn)
-    # LOG_LEVEL: "$LOG_LEVEL"
-    #If the client CLI installed this stack, se this true.
-    #Then the servers expects a mounted config file, and if missing, logs an error.
-    CLIENT_DEPLOYMENT: "false"
-  log_driver: "json-file"
-  log_opt: {}
+version: '2'
 
-redis:
-  image: redis:3.2.0-alpine
-  command: redis-server /usr/local/etc/redis/redis.conf
-  volumes:
-    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
-    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-    - /data
-  #No ports are specified here because the prod version must not expose the
-  #port outside the machine, whereas the development case exposes the port
-  #because sometimes the dev server is run outside a container context
-  #docker-compose doesn't like mixing "6379:6379" and "6379" type port entries
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+services:
 
-registry:
-  image: registry:2.4.0
-  environment:
-    REGISTRY_HTTP_ADDR: 0.0.0.0:5001
-  ports:
-    - "5001:5001"
-  log_driver: "fluentd"
-  log_opt:
-    tag: "docker.ccc{{.ImageName}}/{{.ID}}"
-    fluentd-address: "localhost:24225"
+  compute:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      #This volume is needed for running computes locally
+      - ccc-local-storage:/app/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+      - "9002:9002"
+    environment:
+      PORT: "9000"
+      # OPTIONAL: Path to the mounted configuration file
+      # CONFIG_PATH: "/app/ccc.yml"
+      #If the REGISTRY field is set, it will override REGISTRY_PORT
+      # REGISTRY_ADDRESS: "5001"
+      # OPTIONAL
+      # REGISTRY: "registry:5001"
+      # OPTIONAL text flattened yaml of the server configuration.
+      COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
+      #This is used to get the correct host working directory to pass into the
+      #worker containers to map the local file system to /inputs+/outputs within
+      #the container. Only used for local docker providers (not cloud)
+      HOST_PWD: "$PWD"
+      #Sets the max log level (bunyan where 10=trace 40=warn)
+      # LOG_LEVEL: "$LOG_LEVEL"
+      #If the client CLI installed this stack, se this true.
+      #Then the servers expects a mounted config file, and if missing, logs an error.
+      CLIENT_DEPLOYMENT: "false"
+    logging:
+      driver: json-file
 
-fluentd:
-  command: ["fluentd", "-q", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
-  ports:
-      - "24225:24225"
-      - "9881:9881"
-  log_driver: "json-file"
-  log_opt: {}
+  redis:
+    image: redis:3.2.0-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      #Don't expose this port to the host, only linked containers.
+      - "6379"
+    volumes:
+      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+      # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
+      - redis-data:/data
+    #No ports are specified here because the prod version must not expose the
+    #port outside the machine, whereas the development case exposes the port
+    #because sometimes the dev server is run outside a container context
+    #docker-compose doesn't like mixing "6379:6379" and "6379" type port entries
+    logging:
+      driver: json-file
 
-elasticsearch:
-  image: elasticsearch:2.3.5
-  ports:
-    - "9200:9200"
-    - "9300:9300"
+  registry:
+    image: registry:2.4.0
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5001
+    ports:
+      - "5001:5001"
 
-kibana:
-  image: kibana:4.5.4
-  ports:
-    - "5601:5601"
-  environment:
-    ELASTICSEARCH_URL: "http://elasticsearch:9200"
-  #Pretty sure I don't care about listening to you ever
-  log_driver: "none"
-  log_opt: {}
+  fluentd:
+    command: ["fluentd", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
+    ports:
+        - "24225:24225"
+        - "9881:9881"
+    logging:
+      driver: json-file
 
+  elasticsearch:
+    image: elasticsearch:2.3
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
+  kibana:
+    image: kibana:4.4.2
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+    #Pretty sure I don't care about listening to you ever
+    logging:
+      driver: none

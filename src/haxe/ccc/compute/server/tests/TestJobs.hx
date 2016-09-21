@@ -338,7 +338,7 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 									throw 'jobResult should not be null. Check the above section';
 								}
 								var outputs = jobResult.outputs != null ? jobResult.outputs : [];
-								assertTrue(outputs.length == 2);
+								assertEquals(outputs.length, 2);
 								var outputUrl1 = jobResult.getOutputUrl(outputName1);
 								return RequestPromises.getBuffer(outputUrl1)
 									.pipe(function(out1) {
