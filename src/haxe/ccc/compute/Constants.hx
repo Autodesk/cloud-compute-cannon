@@ -18,7 +18,7 @@ class Constants
 	public static var SERVER_HOSTNAME_PUBLIC :String;
 
 	/* General */
-	inline public static var BUILD_DIR = 'build';
+	inline public static var BUILD_DIR_SERVER = 'build/server';
 	inline public static var APP_NAME = 'cloud-compute-cannon';
 	public static var APP_SERVER_FILE = APP_NAME + '-server.js';
 	public static var APP_NAME_COMPACT = APP_NAME.replace('-', '');

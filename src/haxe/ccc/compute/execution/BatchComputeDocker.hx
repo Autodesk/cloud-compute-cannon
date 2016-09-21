@@ -259,25 +259,26 @@ class BatchComputeDocker
 									There is no existing container, so create one
 									and run it
 								 */
-								var mounts :Array<Mount> = [
-									{
-										Source: outputVolumeName,
-										Destination: '/${DIRECTORY_OUTPUTS}',
-										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
-										RW: true
-									}
-								];
+								var outputVolume = {
+									Source: outputVolumeName,
+									Destination: '/${DIRECTORY_OUTPUTS}',
+									Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
+									RW: true
+								};
+								var mounts :Array<Mount> = [outputVolume];
 
+								var inputVolume = null;
 								if (inputVolumeName != null) {
-									mounts.push({
+									inputVolume = {
 										Source: inputVolumeName,
 										Destination: '/${DIRECTORY_INPUTS}',
-										Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
+										Mode: 'r',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
-									});
+									};
+									mounts.push(inputVolume);
 								}
 
-								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:'${mounts[0].Source}=>${mounts[0].Destination}', mountOutputs:'${mounts[1].Source}=>${mounts[1].Destination}'});
+								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:(inputVolume != null ? '${inputVolume.Source}=>${inputVolume.Destination}' : null), mountOutputs:'${outputVolume.Source}=>${outputVolume.Destination}'});
 
 								var labels :Dynamic<String> = {
 									jobId: job.id,
@@ -389,14 +390,18 @@ class BatchComputeDocker
 								[
 									inputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(inputVolumeName)) : Promise.promise(true)
 										.then(function(_) {
-											log.debug('Removed volume=$inputVolumeName');
+											if (inputVolumeName != null) {
+												log.debug('Removed volume=$inputVolumeName');
+											} else {
+												log.debug('No input volume to remove');
+											}
 											return true;
 										})
 										.errorPipe(function(err) {
 											log.error('Problem deleting volume ${inputVolumeName} err=${err}');
 											return Promise.promise(false);
 										}),
-									outputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(outputVolumeName)) : Promise.promise(true)
+									DockerPromises.removeVolume(docker.getVolume(outputVolumeName))
 										.then(function(_) {
 											log.debug('Removed volume=$outputVolumeName');
 											return true;

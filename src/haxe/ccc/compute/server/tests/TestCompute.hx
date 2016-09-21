@@ -89,13 +89,14 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			cmd: ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'],
 			resultsPath: customResultsPath,
 			inputsPath: customInputsPath,
-			outputsPath: customOutputsPath
+			outputsPath: customOutputsPath,
+			wait: true
 		}
 
 		var forms :DynamicAccess<Dynamic> = {};
 		forms[inputUrl.name] = js.npm.request.Request.get(inputUrl.value);
 
-		return ccc.compute.client.ClientTools.postJobWaitOnResult(_serverHost, request, forms)
+		return ccc.compute.client.ClientTools.postJob(_serverHost, request, forms)
 			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';

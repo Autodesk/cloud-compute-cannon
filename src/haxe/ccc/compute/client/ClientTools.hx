@@ -18,17 +18,8 @@ using ccc.compute.ComputeTools;
  */
 class ClientTools
 {
-	public static function postJobWaitOnResult(host :Host, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<JobResult>
-	{
-		return postJob(host, job, forms)
-			.pipe(function(result) {
-				var jobId = result.jobId;
-				return getJobResult(host, jobId);
-			});
-	}
-
 	@:expose
-	public static function postJob(host :Host, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<{jobId:JobId}>
+	public static function postJob(host :Host, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<JobResult>
 	{
 		var promise = new DeferredPromise();
 		var jsonRpcRequest :RequestDef = {
@@ -46,6 +37,8 @@ class ClientTools
 				Reflect.setField(formData, f, Reflect.field(forms, f));
 			}
 		}
+		//Simply by making this request a multi-part request is is assumed
+		//to be a job submission.
 		js.npm.request.Request.post({url:host.rpcUrl(), formData:formData},
 			function(err :js.Error, httpResponse :js.npm.request.Request.HttpResponse, body:js.npm.request.Request.Body) {
 				if (err != null) {
@@ -56,7 +49,7 @@ class ClientTools
 				if (httpResponse.statusCode == 200) {
 					try {
 						// var result :JobResult = Json.parse(body);
-						var result :ResponseDefSuccess<{jobId:JobId}> = Json.parse(body);
+						var result :ResponseDefSuccess<JobResult> = Json.parse(body);
 						promise.resolve(result.result);
 					} catch (err :Dynamic) {
 						promise.boundPromise.reject(err);

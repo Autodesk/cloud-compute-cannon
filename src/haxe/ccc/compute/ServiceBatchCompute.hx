@@ -21,6 +21,7 @@ package ccc.compute;
 	import promhx.StreamPromises;
 	import promhx.PromiseTools;
 	import promhx.DockerPromises;
+	import promhx.Stream;
 
 	import ccc.compute.server.ServerCommands;
 	import ccc.compute.server.ServerCommands.*;
@@ -53,6 +54,80 @@ package ccc.compute;
  */
 class ServiceBatchCompute
 {
+	@rpc({
+		alias:'job-wait',
+		doc:'Waits until a job has finished before returning'
+	})
+	public function getJobResult(jobId :JobId, ?timeout :Float = 1000000) :Promise<JobResult>
+	{
+		if (timeout == null) {
+			timeout = 1000000;
+		}
+		var getJobResultInternal = function() {
+			return doJobCommand(JobCLICommand.Result, [jobId])
+				.then(function(out) {
+					return out[jobId];
+				});
+		}
+
+		var promise = new DeferredPromise();
+		var timeoutId = null;
+		var stream :Stream<Void> = null;
+
+		function cleanUp() {
+			if (stream != null) {
+				stream.end();
+			}
+			if (timeoutId != null) {
+				Node.clearTimeout(timeoutId);
+				timeoutId = null;
+			}
+		}
+
+		function resolve(result) {
+			cleanUp();
+			if (promise != null) {
+				promise.resolve(result);
+				promise = null;
+			}
+		}
+		function reject(err) {
+			cleanUp();
+			if (promise != null) {
+				promise.boundPromise.reject(err);
+				promise = null;
+			}
+		}
+
+		timeoutId = Node.setTimeout(function() {
+			reject('Timeout');
+		}, Std.int(timeout));
+
+		stream = ccc.compute.server.ServerCompute.StatusStream
+			.then(function(status :JobStatusUpdate) {
+				if (status != null && jobId == status.jobId) {
+					switch(status.JobStatus) {
+						case Pending, Working, Finalizing:
+						case Finished:
+							getJobResultInternal()
+								.then(function (result) {
+									resolve(result);
+								});
+					}
+				}
+			});
+		stream.catchError(reject);
+
+		getJobResultInternal()
+			.then(function (result) {
+				if (result != null) {
+					resolve(result);
+				}
+			});
+		return promise.boundPromise;
+	}
+
+	/** For debugging */
 	@rpc({
 		alias:'nudge',
 		doc:'Force the model to check pending jobs'
@@ -149,6 +224,7 @@ class ServiceBatchCompute
 			'resultsPath': {'doc': 'Custom path on the storage service for the generated job.json, stdout, and stderr files.'},
 			'inputsPath': {'doc': 'Custom path on the storage service for the inputs files.'},
 			'outputsPath': {'doc': 'Custom path on the storage service for the outputs files.'},
+			'wait': {'doc': 'Do not return request until compute job is finished. Only use for short jobs.'},
 		}
 	})
 	public function submitJob(
@@ -160,8 +236,9 @@ class ServiceBatchCompute
 		?maxDuration :Int = 600000,
 		?resultsPath :String,
 		?inputsPath :String,
-		?outputsPath :String
-		) :Promise<{jobId:JobId}>
+		?outputsPath :String,
+		?wait :Bool = false
+		) :Promise<JobResult>
 	{
 		var request :BasicBatchProcessRequest = {
 			image: image,
@@ -172,6 +249,7 @@ class ServiceBatchCompute
 			resultsPath: resultsPath,
 			inputsPath: inputsPath,
 			outputsPath: outputsPath,
+			wait: wait
 		}
 
 		return runComputeJobRequest(request);
@@ -411,7 +489,7 @@ class ServiceBatchCompute
 			});
 	}
 
-	function runComputeJobRequest(job :BasicBatchProcessRequest) :Promise<{jobId:JobId}>
+	function runComputeJobRequest(job :BasicBatchProcessRequest) :Promise<JobResult>
 	{
 		if (job == null) {
 			throw 'Null job argument in ServiceBatchCompute.run(...)';
@@ -490,11 +568,16 @@ class ServiceBatchCompute
 				}
 				return Promise.promise(true);
 			})
-			.then(function(_) {
+			.pipe(function(_) {
 				if (error != null) {
 					throw error;
 				}
-				return {jobId:jobId};
+				if (job.wait == true) {
+					return getJobResult(jobId, job.parameters != null && job.parameters.maxDuration != null ? job.parameters.maxDuration : null);
+				} else {
+					var jobResult :JobResult = {jobId:jobId};
+					return Promise.promise(jobResult);
+				}
 			});
 	}
 
@@ -645,28 +728,31 @@ class ServiceBatchCompute
 								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
 							}
 							return Promise.promise(true)
-								// .pipe(function(_) {
-								// 	var dockerUrl :DockerUrl = dockerJob.image.value;
-								// 	trace('ORIGINAL URL=$dockerUrl');
-								// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
-								// 		.then(function(url) {
-								// 			trace('FINAL URL=$url');
-								// 			dockerJob.image.value = url;
-								// 			return true;
-								// 		});
-								// })
 								.pipe(function(_) {
 									return ComputeQueue.enqueue(_redis, job);
 								});
 						})
 						.then(function(_) {
-							res.writeHead(200, {'content-type': 'application/json'});
-							var jsonRpcRsponse = {
-								result: {jobId:jobId},
-								jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
-								id: jsonrpc.id
+							if (jsonrpc.params.wait == true) {
+								getJobResult(jobId, jsonrpc.params.parameters != null && jsonrpc.params.parameters.maxDuration != null ? jsonrpc.params.parameters.maxDuration : null)
+									.then(function(jobResult) {
+										res.writeHead(200, {'content-type': 'application/json'});
+										var jsonRpcRsponse = {
+											result: jobResult,
+											jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
+											id: jsonrpc.id
+										}
+										res.end(Json.stringify(jsonRpcRsponse));
+									});
+							} else {
+								res.writeHead(200, {'content-type': 'application/json'});
+								var jsonRpcRsponse = {
+									result: {jobId:jobId},
+									jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
+									id: jsonrpc.id
+								}
+								res.end(Json.stringify(jsonRpcRsponse));
 							}
-							res.end(Json.stringify(jsonRpcRsponse));
 						})
 						.catchError(function(err) {
 							Log.error(err);

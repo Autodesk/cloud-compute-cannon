@@ -3,8 +3,8 @@ version: '2'
 services:
 
   compute:
-    command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/server/cloud-compute-cannon-server.js"]
-    # command: ["nodemon", "-w", "build/", "-w", "/config/ccc.yml", "build/test/compute_tests.js"]
+    command: ["nodemon", "-w", "build/server", "-w", "/config/ccc.yml", "build/server/cloud-compute-cannon-server.js"]
+    # command: ["nodemon", "-w", "build/test", "-w", "/config/ccc.yml", "build/test/compute_tests.js"]
     volumes:
       - ./build:/app/build
     environment:

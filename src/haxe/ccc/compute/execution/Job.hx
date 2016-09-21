@@ -54,7 +54,7 @@ class Job
 		var externalBaseUrl = fs.getExternalUrl();
 
 		var jobResult :JobResult = {
-			id: job.id,
+			jobId: job.id,
 			status: finishedStatus,
 			exitCode: batchJobResult.exitCode,
 			stdout: fs.getExternalUrl(job.item.stdoutPath()),

@@ -26,9 +26,9 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || registry || worker || storage || compute || dockervolumes)) {
+		if (!(core || all || registry || worker || storage || compute || dockervolumes || jobs)) {
 			compute = true;
 		}
 		if (all) {
@@ -38,6 +38,7 @@ class ServiceTests
 			storage = true;
 			compute = true;
 			dockervolumes = true;
+			jobs = true;
 		}
 
 		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
@@ -45,6 +46,9 @@ class ServiceTests
 
 		if (core) {
 			runner.add(new TestUnit());
+		}
+
+		if (core || jobs) {
 			runner.add(new TestJobs(targetHost));
 		}
 
@@ -77,7 +81,7 @@ class ServiceTests
 			runner.add(testWorkers);
 		}
 
-		if (compute) {
+		if (compute || core) {
 			runner.add(new TestCompute(targetHost));
 		}
 
