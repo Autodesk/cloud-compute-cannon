@@ -1,21 +1,34 @@
-compute:
-  extends:
-    file: docker-compose.core.yml
-    service: compute
-  command: ["node", "build/server/cloud-compute-cannon-server.js"]
-  links:
-    - redis
-  environment:
-    TRAVIS: "${TRAVIS}"
-  volumes:
-    - ./data:/app/data
-    # - ./build:/app/build
-  log_driver: "json-file"
-  log_opt: {}
+version: '2'
 
-redis:
-  extends:
-    file: docker-compose.core.yml
-    service: redis
-  log_driver: "json-file"
-  log_opt: {}
+volumes:
+  redis-data:
+    driver: local
+  ccc-local-storage:
+    driver: local
+
+services:
+
+  compute:
+    extends:
+      file: docker-compose.core.yml
+      service: compute
+    build:
+      context: .
+    command: ["node", "build/server/cloud-compute-cannon-server.js"]
+    links:
+      - redis
+    environment:
+      TRAVIS: "${TRAVIS}"
+    # volumes:
+      # - ./build:/app/build
+    logging:
+      driver: "json-file"
+      options: {}
+
+  redis:
+    extends:
+      file: docker-compose.core.yml
+      service: redis
+    logging:
+      driver: "json-file"
+      options: {}
