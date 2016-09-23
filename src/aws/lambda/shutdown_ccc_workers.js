@@ -25,24 +25,20 @@ function getInstanceData(instances, instanceId) {
 
 function checkWorker(workerId, ownerId, instances, cb) {
     var serverData = getInstanceData(instances, ownerId);
-    if (serverData === null) {
-        console.log('Missing server data for workerId=' + workerId + ' serverId=' + ownerId);
-        cb(workerId);
-    } else {
-        console.log('Found worker=' + workerId + ' with owner=[' + ownerId + ', ' + serverData.State.Name + ']');
-        if (serverData.State.Name != 'running') {
-            console.log('Server not running for worker=' + workerId + ' serverId=' + serverData.State.Name);
-            ec2.terminateInstances({InstanceIds:[workerId]}, (err, data) => {
-                if (err) {
-                    console.error(err);
-                } else {
-                    console.log(data);
-                }
-                cb(workerId);
-            });
-        } else {
+    var serverName = serverData !== null ? '[' + ownerId + ', ' + serverData.State.Name + ']' : 'missing';
+    console.log('Found worker=' + workerId + ' with owner=' + serverName);
+    if (serverData === null || serverData.State.Name != 'running') {
+        console.log('Server not running for worker=' + workerId + ' server=' + serverName);
+        ec2.terminateInstances({InstanceIds:[workerId]}, (err, data) => {
+            if (err) {
+                console.error(err);
+            } else {
+                console.log(data);
+            }
             cb(workerId);
-        }
+        });
+    } else {
+        cb(workerId);
     }
 }
 
