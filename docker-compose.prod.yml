@@ -11,10 +11,6 @@ services:
       LOG_LEVEL: "${LOG_LEVEL}"
       CONFIG_PATH: "/app/config/ccc.yml"
       CLIENT_DEPLOYMENT: "true"
-    links:
-      - redis
-      - registry
-      - fluentd
     logging:
       driver: json-file
 
@@ -41,26 +37,8 @@ services:
         fluentd-address: "localhost:24225"
 
   fluentd:
-    build: ./etc/log/
+    image: fluent/fluentd:v0.14.2
     volumes:
       - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
-    links:
-      - elasticsearch
     logging:
       driver: json-file
-
-  elasticsearch:
-    extends:
-      file: docker-compose.core.yml
-      service: elasticsearch
-    logging:
-      driver: json-file
-
-  kibana:
-    extends:
-      file: docker-compose.core.yml
-      service: kibana
-    links:
-      - elasticsearch
-    logging:
-      driver: none

@@ -6,6 +6,12 @@ set -ev
 
 ZIP_DIR="build/appzip"
 
+if [ -z "$1" ]; then
+	CONFIG_PATH="etc/config/serverconfig.template.yaml"
+else
+	CONFIG_PATH="$1"
+fi
+
 NPM_VERSION=$(cat package.json \
   | grep version \
   | head -1 \
@@ -32,8 +38,8 @@ for VERSION in $NPM_VERSION $GIT_TAG ; do
 	cp docker-compose.prod.yml $ZIP_DIR/
 	cp -r etc $ZIP_DIR/
 
-	#Example default configuration packed with the artifacts
-	cp etc/config/serverconfig.template.yaml $ZIP_DIR/ccc.yml
+	#configuration packed with the artifacts
+	cp $CONFIG_PATH $ZIP_DIR/ccc.yml
 
 	#Script to run the stack
 	cp bin/run-stack-prod $ZIP_DIR/
