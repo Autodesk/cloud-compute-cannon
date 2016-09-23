@@ -1,4 +1,5 @@
 version: '2'
+
 services:
   compute:
     command: ["haxe", "test/testsIntegration.hxml"]

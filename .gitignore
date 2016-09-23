@@ -21,3 +21,4 @@ data/redis
 .cloudcomputecannon
 client.py
 results
+INSTANCE_VERSION

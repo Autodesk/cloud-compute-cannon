@@ -158,6 +158,7 @@ class ServerCommands
 	static var _versionBlob :ServerVersionBlob;
 	static function versionInternal()
 	{
+		var date = util.MacroUtils.compilationTime();
 		var haxeCompilerVersion = Version.getHaxeCompilerVersion();
 		var customVersion = null;
 		try {
@@ -169,8 +170,21 @@ class ServerCommands
 		try {
 			npmPackageVersion = Json.parse(Resource.getString('package.json')).version;
 		}
-		var instance = Std.string(Std.int(Math.random() * 100000000));
-		return {npm:npmPackageVersion, compiler:haxeCompilerVersion, VERSION:customVersion, instance:instance};
+		var gitSha = null;
+		try {
+			gitSha = Version.getGitCommitHash().substr(0,8);
+		} catch(e :Dynamic) {}
+
+		//Single per instance id.
+		var instanceVersion :String = null;
+		try {
+			instanceVersion = Fs.readFileSync('INSTANCE_VERSION', {encoding:'utf8'});
+		} catch(ignored :Dynamic) {
+			instanceVersion = js.npm.shortid.ShortId.generate();
+			Fs.writeFileSync('INSTANCE_VERSION', instanceVersion, {encoding:'utf8'});
+		}
+
+		return {npm:npmPackageVersion, git:gitSha, compiler:haxeCompilerVersion, VERSION:customVersion, instance:instanceVersion, compile_time:date};
 	}
 
 	public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>

@@ -13,8 +13,6 @@ services:
     extends:
       file: docker-compose.core.yml
       service: compute
-    build:
-      context: .
     links:
       - redis
       - registry
@@ -27,7 +25,7 @@ services:
     command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
-      - ./data/redis:/data
+      - redis-data:/data
     links:
       - fluentd
 

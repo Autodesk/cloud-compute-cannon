@@ -20,6 +20,9 @@ services:
     command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      #Don't expose this port to the host, only linked containers.
+      - "6379:6379"
     links:
       - fluentd
 

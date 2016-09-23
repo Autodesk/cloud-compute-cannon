@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#Build and tag the docker images locally
+echo "Building and tagging images"
+set -ev
+git submodule update --init --recursive
+docker build -t cccbuild -f etc/docker/DockerfileBuild .
+rm -rf build
+mkdir build
+docker run --rm -ti -v $PWD/build:/app/build -v $PWD/etc/docker:/app/etc/docker -v $PWD/src:/app/src -v $PWD/etc:/app/etc -v $PWD/test:/app/test -v $PWD/lib:/app/lib -v $PWD/.git:/app/.git -v $PWD/package.json:/app/package.json -v $PWD/docker-compose.yml:/app/docker-compose.yml -v $PWD/docker-compose.core.yml:/app/docker-compose.core.yml -v $PWD/docker-compose.prod.yml:/app/docker-compose.prod.yml -v $PWD/docker-compose.override.yml:/app/docker-compose.override.yml cccbuild haxe etc/hxml/build-all.hxml
+
+GIT_TAG=$TRAVIS_COMMIT
+GIT_TAG=${GIT_TAG:0:8}
+
+#Now build the final minimal docker image, and tag it
+PACKAGE_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+REPO_NAME="cloud-compute-cannon:$GIT_TAG"
+
+BUILD_DIR=build/docker
+mkdir -p $BUILD_DIR
+cp -r build/server $BUILD_DIR/
+cp etc/docker/Dockerfile $BUILD_DIR/
+cp package.json $BUILD_DIR/package.json
+echo $GIT_TAG > $BUILD_DIR/VERSION
+cd $BUILD_DIR/
+ls
+docker build -t $REPO_NAME .
+
+cd ../../
+
+#ALso create a tag with the npm version
+docker tag $REPO_NAME "cloud-compute-cannon:$PACKAGE_VERSION"
+docker tag $REPO_NAME "cloud-compute-cannon:latest"

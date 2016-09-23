@@ -12,9 +12,8 @@ services:
     extends:
       file: docker-compose.core.yml
       service: compute
-    build:
-      context: .
-    command: ["node", "build/server/cloud-compute-cannon-server.js"]
+    image: "cloud-compute-cannon:${VERSION}"
+    command: ["node", "server/cloud-compute-cannon-server.js"]
     links:
       - redis
     environment:

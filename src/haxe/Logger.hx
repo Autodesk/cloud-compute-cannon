@@ -116,7 +116,7 @@ class Logger
 			}
 		];
 
-		if (isFluentInEtcHosts()) {
+		if (isFluentInEtcHosts() && ccc.compute.ConnectionToolsDocker.isInsideContainer()) {
 			var fluentLogger = {write:ccc.compute.FluentTools.createEmitter()};
 			streams.push({
 				level: Bunyan.TRACE,

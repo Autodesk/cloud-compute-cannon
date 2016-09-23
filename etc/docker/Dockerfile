@@ -11,12 +11,14 @@ RUN apk add --no-cache nodejs && \
 	apk add --no-cache make gcc g++ python linux-headers udev && \
 	npm install && \
 	npm install -g forever nodemon && \
-	apk del make gcc g++ python linux-headers udev
-
-COPY ::APP_SERVER_FILE:: $APP/
-COPY ::APP_SERVER_FILE::.map $APP/
+	apk del make gcc g++ python linux-headers udev && \
+	rm -rf /tmp/* /var/tmp/* /var/cache/apk/* && \
+	touch $APP/.foreverignore
 
 ENV PORT 9000
 EXPOSE $PORT
 
-CMD node ::APP_SERVER_FILE::
+ADD server $APP/server
+COPY VERSION $APP/VERSION
+
+CMD forever -w server server/cloud-cannon-compute-server.js

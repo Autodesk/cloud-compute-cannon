@@ -137,18 +137,20 @@ class ServerCompute
 
 		if (Reflect.field(env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
-			Logger.log.level(100);
+			Log.warn('Disabled logging');
+			Logger.GLOBAL_LOG_LEVEL = 100;
 		} else {
 			Log.info('$ENV_LOG_LEVEL=${Reflect.field(env, ENV_LOG_LEVEL)}');
 			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
 				var newLogLevel = Std.int(Reflect.field(env, ENV_LOG_LEVEL));
-				Logger.log.level(newLogLevel);
+				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
 			}
 			trace({log_check:'haxe_trace'});
 			trace('trace_without_objectifying');
+			Log.trace('Log.trace');
 		}
 
-		Log.info('CCC server start ${ServerCommands.version()}');
+		Log.info({start:'CCC server start', version: ServerCommands.version()});
 
 		Log.trace({log_check:'trace'});
 		Log.trace('trace');
