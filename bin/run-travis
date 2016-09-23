@@ -6,6 +6,12 @@ echo "TRAVIS_BRANCH=$TRAVIS_BRANCH"
 echo "TRAVIS_PULL_REQUEST=$TRAVIS_PULL_REQUEST"
 echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
 
+GIT_TAG=`git rev-parse HEAD`
+if [ ! -z "$TRAVIS_COMMIT" ]; then
+	GIT_TAG=$TRAVIS_COMMIT
+fi
+GIT_TAG=${GIT_TAG:0:8}
+
 #Then run the tests
 NPM_VERSION=$(cat package.json \
   | grep version \
@@ -14,8 +20,6 @@ NPM_VERSION=$(cat package.json \
   | sed 's/[",]//g' \
   | tr -d '[[:space:]]')
 
-GIT_TAG=$TRAVIS_COMMIT
-GIT_TAG=${GIT_TAG:0:8}
 echo "VERSION=$GIT_TAG"
 
 #First build locally the docker images for the minimal CCC server
