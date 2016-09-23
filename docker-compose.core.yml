@@ -6,7 +6,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # #This volume is needed for running computes locally
-      # - ccc-local-storage:/app/tmp/storage
+      # - ccc-local-storage:/app/ccc_local_storage
     ports:
       - "9000:9000"
       - "9001:9001"
