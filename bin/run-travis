@@ -29,7 +29,7 @@ echo "Running tests"
 #Run the tests
 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm compute node server/cloud-compute-cannon-server.js
 
-if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && ["$TRAVIS_REPO_SLUG" == "Autodesk/cloud-compute-cannon" ];
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "Autodesk/cloud-compute-cannon" ];
 	then
 		#If the tests pass, push the image to quay.io
 		echo "Push images to quay.io"
