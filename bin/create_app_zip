@@ -4,8 +4,6 @@
 
 set -ev
 
-ZIP_DIR="build/appzip"
-
 if [ -z "$1" ]; then
 	CONFIG_PATH="etc/config/serverconfig.template.yaml"
 else
@@ -28,11 +26,16 @@ GIT_TAG=${GIT_TAG:0:8}
 START_DIR=$PWD
 mkdir -p build
 
-for VERSION in $NPM_VERSION $GIT_TAG ; do
+for VERSION in $GIT_TAG $NPM_VERSION ; do
 	echo "VERSION=$VERSION"
-	cd $START_DIR
+	ZIP_NAME=ccc_docker_compose-$VERSION.zip
+	ZIP_DIR="build/appzip/$VERSION"
+	ZIP_FILE=$START_DIR/build/$ZIP_NAME
 	rm -rf $ZIP_DIR
+	rm -rf $ZIP_FILE
 	mkdir -p $ZIP_DIR
+	cd $START_DIR
+
 	cp docker-compose.core.yml $ZIP_DIR/
 	cp docker-compose.yml $ZIP_DIR/
 	cp docker-compose.prod.yml $ZIP_DIR/
@@ -51,11 +54,8 @@ for VERSION in $NPM_VERSION $GIT_TAG ; do
 
 	#Create the zip
 	cd $ZIP_DIR
-	ZIP_NAME=ccc_docker_compose-$VERSION.zip
-	ZIP_FILE=$START_DIR/build/$ZIP_NAME
 	zip -r $ZIP_FILE .
 	if [ ! -z "$AWS_ACCESS_KEY_ID" ] && [ ! -z "$AWS_SECRET_ACCESS_KEY" ]; then
-		echo "Pushing $ZIP_NAME to s3://ccc-public-storage/cloud-compute-cannon/versions/$ZIP_NAME"
 		#Package up the required files prod docker compose launch
 		#run the aws cli with the env vars and push the file to S3
 		docker run --rm -it -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v $ZIP_FILE:/tmp/$ZIP_NAME docker.io/garland/aws-cli-docker aws s3 cp /tmp/$ZIP_NAME s3://ccc-public-storage/cloud-compute-cannon/versions/$ZIP_NAME

@@ -1,26 +1,41 @@
-FROM ubuntu:14.04
-MAINTAINER Dion Whitehead Amago
+FROM debian:jessie
+MAINTAINER Dion Amago Whitehead
 
-# Haxe environment variables
-ENV HAXE_STD_PATH /root/haxe/std/
-ENV PATH /root/haxe/:$PATH
+ENV DEBIAN_FRONTEND noninteractive
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
 # Neko environment variables
-ENV NEKOPATH /root/neko/
-ENV LD_LIBRARY_PATH /root/neko/
-ENV PATH /root/neko/:$PATH
-
-ENV HAXE_DOWNLOAD_URL http://haxe.org/website-content/downloads/3.3.0-rc.1/downloads/haxe-3.3.0-rc.1-linux64.tar.gz
+ENV NEKOVERSION=2.0.0 NEKOPATH=/opt/neko
+ENV HAXEVERSION=3.3.0-rc.1 HAXEPATH=/opt/haxe HAXELIB_PATH=/opt/haxelib
 
 # Dependencies
-RUN apt-get update && \
-	apt-get install -y wget curl git g++ g++-multilib libgc-dev && \
-	mkdir /root/haxe && \
-	wget -O - $HAXE_DOWNLOAD_URL | tar xzf - --strip=1 -C "/root/haxe" && \
-	mkdir /root/neko && \
-	wget -O - http://nekovm.org/_media/neko-2.0.0-linux64.tar.gz | tar xzf - --strip=1 -C "/root/neko"  && \
-	apt-get -y remove wget curl && \
+RUN apt-get update \
+    && apt-get install -y \
+      wget \
+      libgc-dev \
+      git && \
+    mkdir -p $NEKOPATH && \
+    wget -O - http://nekovm.org/_media/neko-$NEKOVERSION-linux64.tar.gz \
+    | tar xzf - --strip=1 -C $NEKOPATH && \
+    mkdir -p $HAXEPATH && \
+    wget -O - http://haxe.org/website-content/downloads/$HAXEVERSION/downloads/haxe-$HAXEVERSION-linux64.tar.gz \
+      | tar xzf - --strip=1 -C $HAXEPATH && \
+    mkdir -p $HAXELIB_PATH && echo $HAXELIB_PATH > /root/.haxelib && cp /root/.haxelib /etc/ && \
+	apt-get -y remove wget && \
+	apt-get -y autoremove && \
 	apt-get -y clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+################################################################################
+
+ENV LD_LIBRARY_PATH $NEKOPATH
+ENV PATH $NEKOPATH:$PATH
+ENV HAXE_STD_PATH $HAXEPATH/std/
+ENV PATH $HAXEPATH:$PATH
+
+# workaround for https://github.com/HaxeFoundation/haxe/issues/3912
+ENV HAXE_STD_PATH $HAXE_STD_PATH:.:/
+
+CMD ["/bin/bash"]
 
 ENV APP /app
 RUN mkdir -p $APP

@@ -33,7 +33,7 @@ tmp-images: images.txt
 build-ver-file: VERSION
 build-manifest-file: build-manifest.txt
 
-s3-artifacts: "*.yml"
+s3-artifacts: "*.yml *.conf etc/log/*.conf etc/redis/*.conf"
 s3-zip-bucket: bionano-devops-build-artifacts
 zip-excludes: .archive_excludes
 zip-excludes-input-dirs: .
