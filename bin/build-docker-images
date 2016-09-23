@@ -8,7 +8,10 @@ rm -rf build
 mkdir build
 docker run --rm -ti -v $PWD/build:/app/build -v $PWD/etc/docker:/app/etc/docker -v $PWD/src:/app/src -v $PWD/etc:/app/etc -v $PWD/test:/app/test -v $PWD/lib:/app/lib -v $PWD/.git:/app/.git -v $PWD/package.json:/app/package.json -v $PWD/docker-compose.yml:/app/docker-compose.yml -v $PWD/docker-compose.core.yml:/app/docker-compose.core.yml -v $PWD/docker-compose.prod.yml:/app/docker-compose.prod.yml -v $PWD/docker-compose.override.yml:/app/docker-compose.override.yml cccbuild haxe etc/hxml/build-all.hxml
 
-GIT_TAG=$TRAVIS_COMMIT
+GIT_TAG=`git rev-parse HEAD`
+if [ ! -z "$TRAVIS_COMMIT" ]; then
+	GIT_TAG=$TRAVIS_COMMIT
+fi
 GIT_TAG=${GIT_TAG:0:8}
 
 #Now build the final minimal docker image, and tag it
@@ -33,6 +36,6 @@ docker build -t $REPO_NAME .
 
 cd ../../
 
-#ALso create a tag with the npm version
+#Also create a tag with the npm version
 docker tag $REPO_NAME "cloud-compute-cannon:$PACKAGE_VERSION"
 docker tag $REPO_NAME "cloud-compute-cannon:latest"
