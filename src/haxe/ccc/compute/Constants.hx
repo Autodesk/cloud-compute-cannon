@@ -87,7 +87,7 @@ class Constants
 	inline public static var SERVER_CONTAINER_TAG_REGISTRY = 'ccc_registry';
 	inline public static var SERVER_INSTALL_COMPOSE_SCRIPT = 'etc/server/install_docker_compose.sh';
 	inline public static var SERVER_MOUNTED_CONFIG_FILE_NAME = 'ccc.yml';
-	inline public static var SERVER_MOUNTED_CONFIG_FILE_DEFAULT = '/config/$SERVER_MOUNTED_CONFIG_FILE_NAME';
+	inline public static var SERVER_MOUNTED_CONFIG_FILE_DEFAULT = 'config/$SERVER_MOUNTED_CONFIG_FILE_NAME';
 	public static var SERVER_LOCAL_HOST :Host = new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT));
 	public static var SERVER_LOCAL_RPC_URL :UrlString = '${SERVER_DEFAULT_PROTOCOL}://${SERVER_LOCAL_HOST}${SERVER_RPC_URL}';
 

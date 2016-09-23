@@ -8,6 +8,7 @@ import haxe.DynamicAccess;
 import js.node.stream.Duplex;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
+import js.node.Fs;
 import js.node.Path;
 
 import js.npm.docker.Docker;
@@ -101,6 +102,12 @@ class DockerDataTools
 		Assert.notNull(path);
 		Assert.notNull(volume);
 
+		try {
+			Fs.accessSync(path);
+		} catch(err :Dynamic) {
+			return PromiseTools.error(err);
+		}
+
 		var readableTarStream = TarFs.pack(path);
 		return addData(volume, readableTarStream, volume.path)
 			.thenTrue();
@@ -111,7 +118,6 @@ class DockerDataTools
 	*/
 	public static function transferLocalDiskToLocalVolume(path :String, volume :MountedDockerVolumeDef) :CopyDataResult
 	{
-		TestDataTransfer;//temp
 		return transferLocalDiskLocalVolume(volume, path, true);
 	}
 

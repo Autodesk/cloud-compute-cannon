@@ -372,7 +372,7 @@ class BatchComputeDocker
 				getContainer(docker, computeJobId)
 						.pipe(function(containerData) {
 							if (containerData != null) {
-								return DockerPromises.removeContainer(docker.getContainer(containerData.Id))
+								return DockerPromises.removeContainer(docker.getContainer(containerData.Id), null, 'removeContainer computeJobId=$computeJobId')
 									.then(function(_) {
 										log.debug('Removed container=${containerData.Id}');
 										return true;

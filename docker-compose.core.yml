@@ -5,8 +5,8 @@ services:
   compute:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      #This volume is needed for running computes locally
-      - ccc-local-storage:/app/data
+      # #This volume is needed for running computes locally
+      # - ccc-local-storage:/app/data
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -30,8 +30,6 @@ services:
       #If the client CLI installed this stack, se this true.
       #Then the servers expects a mounted config file, and if missing, logs an error.
       CLIENT_DEPLOYMENT: "false"
-    logging:
-      driver: json-file
 
   redis:
     image: redis:3.2.0-alpine
@@ -42,13 +40,11 @@ services:
     volumes:
       - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
       # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-      - redis-data:/data
+      # - redis-data:/data
     #No ports are specified here because the prod version must not expose the
     #port outside the machine, whereas the development case exposes the port
     #because sometimes the dev server is run outside a container context
     #docker-compose doesn't like mixing "6379:6379" and "6379" type port entries
-    logging:
-      driver: json-file
 
   registry:
     image: registry:2.4.0
@@ -62,8 +58,6 @@ services:
     ports:
         - "24225:24225"
         - "9881:9881"
-    logging:
-      driver: json-file
 
   elasticsearch:
     image: elasticsearch:2.3

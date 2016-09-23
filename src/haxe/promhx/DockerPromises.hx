@@ -119,9 +119,9 @@ class DockerPromises
 			.thenTrue();
 	}
 
-	public static function removeContainer(container :DockerContainer, ?opts :RemoveContainerOpts) :Promise<Bool>
+	public static function removeContainer(container :DockerContainer, ?opts :RemoveContainerOpts, ?logString :String) :Promise<Bool>
 	{
-		return promhx.RetryPromise.pollDecayingInterval(__removeContainer.bind(container, opts), RETRIES, RETRIES_TIME_INTERVAL, 'removeContainer');
+		return promhx.RetryPromise.pollDecayingInterval(__removeContainer.bind(container, opts), RETRIES, RETRIES_TIME_INTERVAL, logString != null ? logString : 'removeContainer');
 	}
 
 	public static function wait(container :DockerContainer) :Promise<{StatusCode:Int}>

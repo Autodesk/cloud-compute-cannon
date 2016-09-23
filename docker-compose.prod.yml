@@ -3,17 +3,22 @@ version: '2'
 services:
 
   compute:
+    image: "quay.io/bionano/cloud-compute-cannon:${VERSION}"
+    command: ["forever", "server/cloud-compute-cannon-server.js"]
     volumes:
-      - ./:/config
+      - ./:/app/config/
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL}"
+      CONFIG_PATH: "/app/config/ccc.yml"
+      CLIENT_DEPLOYMENT: "true"
     links:
       - redis
       - registry
       - fluentd
-    environment:
-      CLIENT_DEPLOYMENT: "true"
+    logging:
+      driver: json-file
 
   redis:
-    command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
     logging:
@@ -41,6 +46,8 @@ services:
       - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
     links:
       - elasticsearch
+    logging:
+      driver: json-file
 
   elasticsearch:
     extends:
@@ -48,7 +55,6 @@ services:
       service: elasticsearch
     logging:
       driver: json-file
-      options: {}
 
   kibana:
     extends:
@@ -56,3 +62,5 @@ services:
       service: kibana
     links:
       - elasticsearch
+    logging:
+      driver: none

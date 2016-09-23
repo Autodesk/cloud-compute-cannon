@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Publishes images to quay.io:
+# quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
+# quay.io/bionano/cloud-compute-cannon:$GIT_VERSION
+
+set -ev
+# This assumes there is an image to publish
+if [ ! -z "$QUAY_USERNAME" ] && [ ! -z "$QUAY_PASSWORD" ]; then
+	#Make sure we are logged into quay.io
+	docker login --username $QUAY_USERNAME --password $QUAY_PASSWORD quay.io
+
+	NPM_VERSION=$(cat package.json \
+	  | grep version \
+	  | head -1 \
+	  | awk -F: '{ print $2 }' \
+	  | sed 's/[",]//g' \
+	  | tr -d '[[:space:]]
+	  ')
+	GIT_VERSION=$TRAVIS_COMMIT
+	GIT_VERSION=${GIT_VERSION:0:8}
+
+	docker tag cloud-compute-cannon:$NPM_VERSION quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
+	echo "Pushing quay.io/bionano/cloud-compute-cannon:$NPM_VERSION"
+	docker push quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
+
+	docker tag cloud-compute-cannon:$GIT_VERSION quay.io/bionano/cloud-compute-cannon:$GIT_VERSION
+	echo "Pushing quay.io/bionano/cloud-compute-cannon:$GIT_VERSION"
+	docker push quay.io/bionano/cloud-compute-cannon:$GIT_VERSION
+else
+	echo "QUAY_USERNAME and QUAY_PASSWORD are not set, skipping docker image push to quay.io";
+fi

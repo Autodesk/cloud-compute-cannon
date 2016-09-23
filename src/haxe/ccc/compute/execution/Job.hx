@@ -427,26 +427,14 @@ class Job
 
 	public function removeJobFromDockerHost() :Promise<Bool>
 	{
-		if (_removedFromDockerHost) {
-			return Promise.promise(true);
-		} else {
-			_removedFromDockerHost = true;
-			if (_job != null && _job.worker != null) {
-				var docker = _job.worker.getInstance().docker();
-				var suppressErrorIfContainerNotFound = true;
-				return DockerJobTools.removeContainer(docker, id, suppressErrorIfContainerNotFound)
-					.then(function(_) {
-						log.debug({log:'Removed container from docker'});
-						return true;
-					})
-					.errorPipe(function(err) {
-						Log.error({log:'Failed to remove container from docker, perhaps it was never created', error:err});
-						return Promise.promise(false);
-					});
-			} else {
-				return Promise.promise(false);
-			}
-		}
+		/**
+		 * This is now handled from BatchComputeDocker due to the
+		 * need to remove the container before removing the volumes
+		 * but I'm keep this here just in case I need to refactor
+		 * and forget to remove containers from the docker host
+		 */
+		_removedFromDockerHost = true;
+		return Promise.promise(true);
 	}
 
 	public function dispose() :Promise<Bool>

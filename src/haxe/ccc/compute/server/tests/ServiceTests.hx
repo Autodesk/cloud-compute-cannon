@@ -9,6 +9,8 @@ import minject.Injector;
 
 import promhx.PromiseTools;
 
+using t9.util.ColorTraces;
+
 @:enum
 abstract DevTest(String) {
 	var LongJob = 'longjob';
@@ -40,6 +42,17 @@ class ServiceTests
 			dockervolumes = true;
 			jobs = true;
 		}
+		var logString :haxe.DynamicAccess<Bool> = {
+			all: all,
+			core: core,
+			registry: registry,
+			worker: worker,
+			storage: storage,
+			compute: compute,
+			dockervolumes: dockervolumes,
+			jobs: jobs
+		};
+		trace('Running tests: [' + logString.keys().map(function(k) return logString[k] ? k.green() : k.red()).array().join(' ') + ']');
 
 		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
 		var runner = new PromiseTestRunner();
@@ -91,7 +104,7 @@ class ServiceTests
 			.then(function(result) {
 				result.tests.iter(function(test) {
 					if (test.error != null) {
-						traceRed(test.error.replace('\\n', '\n'));
+						trace(test.error.replace('\\n', '\n').red());
 					}
 				});
 				return result;

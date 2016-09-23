@@ -89,7 +89,7 @@ class TestsIntegration
 
 	static function main()
 	{
-		Node.require('dotenv').config({path: '.env.test'});
+		Node.require('dotenv').config({path: '.env.test', silent: true});
 		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
 			Logger.log.level(100);

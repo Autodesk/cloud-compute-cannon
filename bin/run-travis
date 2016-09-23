@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+set -ev
+
+echo "TRAVIS_BRANCH=$TRAVIS_BRANCH"
+echo "TRAVIS_PULL_REQUEST=$TRAVIS_PULL_REQUEST"
+echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
+
+#Then run the tests
+NPM_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+GIT_TAG=$TRAVIS_COMMIT
+GIT_TAG=${GIT_TAG:0:8}
+echo "VERSION=$GIT_TAG"
+
+#First build locally the docker images for the minimal CCC server
+bin/build-docker-images
+
+echo "Running tests"
+#Run the tests
+PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm compute node server/cloud-compute-cannon-server.js
+
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && ["$TRAVIS_REPO_SLUG" == "Autodesk/cloud-compute-cannon"];
+# if [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ];
+	then
+		#If the tests pass, push the image to quay.io
+		echo "Push images to quay.io"
+		./bin/publish_quay
+		#Create the docker-compose app zip file, this will also upload to S3 if we have correct credentials
+		echo "Create app zip"
+		./bin/create_app_zip
+fi
+
