@@ -28,16 +28,17 @@ mkdir -p build
 
 for VERSION in $GIT_TAG $NPM_VERSION ; do
 	echo "VERSION=$VERSION"
+	cd $START_DIR
 	ZIP_NAME=ccc_docker_compose-$VERSION.zip
 	ZIP_DIR="build/appzip/$VERSION"
 	ZIP_FILE=$START_DIR/build/$ZIP_NAME
 	rm -rf $ZIP_DIR
 	rm -rf $ZIP_FILE
 	mkdir -p $ZIP_DIR
-	cd $START_DIR
 
 	cp docker-compose.core.yml $ZIP_DIR/
 	cp docker-compose.yml $ZIP_DIR/
+
 	cp docker-compose.prod.yml $ZIP_DIR/
 	cp -r etc $ZIP_DIR/
 
