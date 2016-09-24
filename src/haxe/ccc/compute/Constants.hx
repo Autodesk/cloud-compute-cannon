@@ -58,6 +58,7 @@ class Constants
 	inline public static var ENV_TRAVIS = 'TRAVIS';
 	/* A flag ("true") to determine if the CLI installed this server */
 	inline public static var ENV_CLIENT_DEPLOYMENT = 'CLIENT_DEPLOYMENT';
+	inline public static var ENV_CLEAR_DB_ON_START = 'CLEAR_DB_ON_START';
 
 	/* Server */
 	public static var REGISTRY :Host;

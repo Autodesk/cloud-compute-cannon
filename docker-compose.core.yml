@@ -30,6 +30,8 @@ services:
       #If the client CLI installed this stack, se this true.
       #Then the servers expects a mounted config file, and if missing, logs an error.
       CLIENT_DEPLOYMENT: "false"
+      #If we should remove all jobs on (re)start
+      CLEAR_DB_ON_START: "${CLEAR_DB_ON_START}"
 
   redis:
     image: redis:3.2.0-alpine

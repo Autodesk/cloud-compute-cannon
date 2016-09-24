@@ -319,6 +319,20 @@ class ServerCompute
 						//Pipe specific logs from redis since while developing
 						// ServiceBatchComputeTools.pipeRedisLogs(redis);
 						injector.map(RedisClient).toValue(redis);
+						if (Reflect.field(env, ENV_CLEAR_DB_ON_START) == 'true') {
+							Log.warn('Deleting all keys prior to starting stack');
+							return ComputeQueue.deleteAllKeys(redis)
+								.pipe(function(_) {
+									return InstancePool.deleteAllKeys(redis);
+								})
+								.then(function(_) {
+									return redis;
+								});
+						} else {
+							return Promise.promise(redis);
+						}
+					})
+					.pipe(function(redis) {
 						return InitConfigTools.initAll(redis);
 					});
 			})
