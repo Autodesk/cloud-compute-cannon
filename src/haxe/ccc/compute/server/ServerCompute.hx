@@ -409,7 +409,7 @@ class ServerCompute
 				//Run internal tests
 				Log.debug('Running server functional tests');
 				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true" : "jobs=true"}')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true" : "compute=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
