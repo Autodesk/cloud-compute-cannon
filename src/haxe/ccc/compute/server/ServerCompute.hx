@@ -185,6 +185,11 @@ class ServerCompute
 
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
+			res.send(versionBlob.VERSION);
+		});
+
+		app.get('/version_extra', function(req, res) {
+			var versionBlob = ServerCommands.version();
 			res.send(Json.stringify(versionBlob));
 		});
 
