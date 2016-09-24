@@ -56,8 +56,8 @@ typedef JobWaitingStatus = {
 
 @:enum
 abstract DevTestCommand(String) to String from String {
-	var Longjob = 'longjob';
-	var ShellCommand = 'shell';
+	var longjob = 'longjob';
+	var shellcommand = 'shellcommand';
 }
 
 typedef SubmissionDataBlob = {
@@ -87,26 +87,26 @@ class ClientCommands
 			});
 	}
 
-	static var DEV_TEST_JOBS = 'longjob | shell';
+	static var DEV_TEST_JOBS = 'longjob | shellcommand';
 	@rpc({
 		alias:'devtest',
-		doc:'Various convenience functions for dev testing. [longjob]',
+		doc:'Various convenience functions for dev testing. [longjob | shellcommand]',
 		args:{
-			'command':{doc: 'longjob | shell'}
+			'command':{doc: 'longjob | shellcommand'}
 		}
 	})
 	public static function devtest(command :String, ?shell :String) :Promise<CLIResult>
 	{
 		var devCommand :DevTestCommand = command;
 		if (devCommand == null && shell != null) {
-			devCommand = DevTestCommand.ShellCommand;
+			devCommand = DevTestCommand.shellcommand;
 		}
 		if (devCommand == null) {
 			log('Available commands: [$DEV_TEST_JOBS]');
 			return Promise.promise(CLIResult.Success);
 		} else {
 			return switch(command) {
-				case Longjob:
+				case longjob:
 					var jobRequest :BasicBatchProcessRequest = {
 						image: DOCKER_IMAGE_DEFAULT,
 						cmd: ['sleep', '500'],
@@ -117,7 +117,7 @@ class ClientCommands
 							traceGreen(Json.stringify(jobResult, null, '  '));
 						})
 						.thenVal(CLIResult.Success);
-				case ShellCommand:
+				case shellcommand:
 					var jobRequest :BasicBatchProcessRequest = {
 						image: DOCKER_IMAGE_DEFAULT,
 						cmd: ['/bin/sh', '-c', shell],

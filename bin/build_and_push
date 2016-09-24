@@ -1,6 +1,2 @@
 #!/usr/bin/env bash
-set -ev
-
-bin/build-docker-images
-./bin/publish_quay
-./bin/create_app_zip
+bin/build-docker-images && env $(cat .env | xargs)  bin/publish_quay && env $(cat .env | xargs)  bin/create_app_zip

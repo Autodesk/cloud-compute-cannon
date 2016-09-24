@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # DOCKERBLOB="docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
 DOCKERBLOB="docker-compose -f docker-compose.dev-server.yml"
-$DOCKERBLOB rm -fv
+$DOCKERBLOB rm -f
 $DOCKERBLOB build
 if [ $# -eq 1 ]
 	then
