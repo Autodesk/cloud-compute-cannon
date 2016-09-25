@@ -21,4 +21,4 @@ EXPOSE $PORT
 ADD server $APP/server
 COPY VERSION $APP/VERSION
 
-CMD forever -w server server/cloud-cannon-compute-server.js
+CMD forever server/cloud-cannon-compute-server.js
