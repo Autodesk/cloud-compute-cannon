@@ -217,6 +217,7 @@ class ServiceBatchCompute
 		args:{
 			'command': {'doc':'Command to run in the docker container. E.g. --command=\'["echo", "foo"]\''},
 			'image': {'doc': 'Docker image name [busybox].'},
+			'pull_options': {'doc': 'Docker image pull options, e.g. auth credentials'},
 			'inputs': {'doc': 'Array of input source objects {type:[url|inline(default)], name:<filename>, value:<string>, encoding:[utf8(default)|base64|ascii|hex]} See https://nodejs.org/api/buffer.html for more info about supported encodings.'},
 			'workingDir': {'doc': 'The current working directory for the process in the docker container.'},
 			'cpus': {'doc': 'Minimum number of CPUs required for this process.'},
@@ -229,6 +230,7 @@ class ServiceBatchCompute
 	})
 	public function submitJob(
 		?image :String,
+		?pull_options :PullImageOptions,
 		?command :Array<String>,
 		?inputs :Array<ComputeInputSource>,
 		?workingDir :String,
@@ -242,6 +244,7 @@ class ServiceBatchCompute
 	{
 		var request :BasicBatchProcessRequest = {
 			image: image,
+			pull_options: pull_options,
 			cmd: command,
 			inputs: inputs,
 			workingDir: workingDir,
@@ -514,7 +517,7 @@ class ServiceBatchCompute
 				deleteInputs = inputFilesObj.cancel;
 				var dockerJob :DockerJobDefinition = {
 					jobId: jobId,
-					image: {type:DockerImageSourceType.Image, value:job.image},
+					image: {type:DockerImageSourceType.Image, value:job.image, pull_options:job.pull_options},
 					command: job.cmd,
 					inputs: inputFilesObj.inputs,
 					workingDir: job.workingDir,
@@ -709,7 +712,7 @@ class ServiceBatchCompute
 
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,
-								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image},
+								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options},
 								command: jsonrpc.params.cmd,
 								inputs: inputFileNames,
 								workingDir: jsonrpc.params.workingDir,
