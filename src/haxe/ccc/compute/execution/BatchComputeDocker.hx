@@ -208,8 +208,14 @@ class BatchComputeDocker
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
 										return Promise.promise(true);
 									} else {
-										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Pulling docker image=${dockerImage}'});
-										return DockerTools.getImage(docker, {fromImage:dockerImage}, log.child({'level':30}));
+										var pull_options = job.item.image.pull_options != null ? job.item.image.pull_options : {};
+										pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : dockerImage;
+										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Pulling docker image=${dockerImage}', pull_options:pull_options});
+										return DockerTools.pullImage(docker, dockerImage, pull_options, log.child({'level':30}))
+											.then(function(output) {
+												//Ignoring output for now.
+												return true;
+											});
 									}
 								});
 						case Context:

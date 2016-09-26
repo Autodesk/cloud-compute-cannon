@@ -96,6 +96,7 @@ typedef ComputeInputSource = {
 typedef BasicBatchProcessRequest = {
 	@:optional var inputs :Array<ComputeInputSource>;
 	@:optional var image :String;
+	@:optional var pull_options :PullImageOptions;
 	@:optional var cmd :Array<String>;
 	@:optional var workingDir :String;
 	@:optional var parameters :JobParams;
@@ -124,6 +125,7 @@ abstract DockerImageSourceType(String) {
 
 typedef DockerImageSource = {
 	var type :DockerImageSourceType;
+	@:optional var pull_options :PullImageOptions;
 	@:optional var value :String;//If an image, image name, if a context, the URL of the path
 #if (nodejs && !macro)
 	@:optional var options :BuildImageOptions;
