@@ -108,6 +108,7 @@ typedef BasicBatchProcessRequest = {
 	@:optional var contextPath :String;
 	/* Returns the result.json when the job is finished */
 	@:optional var wait :Bool;
+	@:optional var meta :Dynamic;
 }
 
 

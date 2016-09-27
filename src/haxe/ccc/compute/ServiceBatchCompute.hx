@@ -725,7 +725,7 @@ class ServiceBatchCompute
 								inputsPath: jsonrpc.params.inputsPath,
 								outputsPath: jsonrpc.params.outputsPath,
 								resultsPath: jsonrpc.params.resultsPath,
-								meta: jsonrpc.params.resultsPath
+								meta: jsonrpc.params.meta
 							};
 
 							Log.info({job_submission :dockerJob});
