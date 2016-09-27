@@ -226,6 +226,7 @@ class ServiceBatchCompute
 			'inputsPath': {'doc': 'Custom path on the storage service for the inputs files.'},
 			'outputsPath': {'doc': 'Custom path on the storage service for the outputs files.'},
 			'wait': {'doc': 'Do not return request until compute job is finished. Only use for short jobs.'},
+			'meta': {'doc': 'Metadata logged and saved with the job description and results.json'}
 		}
 	})
 	public function submitJob(
@@ -239,7 +240,8 @@ class ServiceBatchCompute
 		?resultsPath :String,
 		?inputsPath :String,
 		?outputsPath :String,
-		?wait :Bool = false
+		?wait :Bool = false,
+		?meta :Dynamic
 		) :Promise<JobResult>
 	{
 		var request :BasicBatchProcessRequest = {
@@ -252,7 +254,8 @@ class ServiceBatchCompute
 			resultsPath: resultsPath,
 			inputsPath: inputsPath,
 			outputsPath: outputsPath,
-			wait: wait
+			wait: wait,
+			meta: meta
 		}
 
 		return runComputeJobRequest(request);
@@ -523,8 +526,11 @@ class ServiceBatchCompute
 					workingDir: job.workingDir,
 					inputsPath: job.inputsPath,
 					outputsPath: job.outputsPath,
-					resultsPath: job.resultsPath
+					resultsPath: job.resultsPath,
+					meta: job.meta
 				};
+
+				Log.info({job_submission :dockerJob});
 
 				if (dockerJob.command != null && untyped __typeof__(dockerJob.command) == 'string') {
 					throw 'command field must be an array, not a string';
@@ -718,8 +724,11 @@ class ServiceBatchCompute
 								workingDir: jsonrpc.params.workingDir,
 								inputsPath: jsonrpc.params.inputsPath,
 								outputsPath: jsonrpc.params.outputsPath,
-								resultsPath: jsonrpc.params.resultsPath
+								resultsPath: jsonrpc.params.resultsPath,
+								meta: jsonrpc.params.resultsPath
 							};
+
+							Log.info({job_submission :dockerJob});
 
 							if (jsonrpc.params.cmd != null && untyped __typeof__(jsonrpc.params.cmd) == 'string') {
 								throw 'command field must be an array, not a string';
