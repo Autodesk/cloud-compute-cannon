@@ -22,3 +22,4 @@ data/redis
 client.py
 results
 INSTANCE_VERSION
+ccc_local*

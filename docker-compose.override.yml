@@ -6,7 +6,7 @@ services:
     build:
       context: .
     volumes:
-      - ./tmp/data:/app/data
+      - ./ccc_local_storage:/app/ccc_local_storage
       - ./:/config
     links:
       - redis

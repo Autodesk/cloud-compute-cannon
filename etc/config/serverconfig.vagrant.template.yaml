@@ -1,6 +1,6 @@
 storage:
   type: "local"
-  rootPath: "tmp/data"
+  rootPath: "ccc_local_storage"
 
 providers:
   - type: "Vagrant"
