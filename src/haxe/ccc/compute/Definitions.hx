@@ -207,12 +207,6 @@ abstract MachinePoolId(String) to String
 	{
 		this = s;
 	}
-
-	@:from
-	inline static public function fromString (s: String)
-	{
-		return new MachinePoolId(s);
-	}
 }
 
 @:enum

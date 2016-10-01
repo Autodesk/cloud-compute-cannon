@@ -37,7 +37,7 @@ typedef MachineRemovalDelayed = {
 class WorkerProviderBase
 	implements WorkerProvider
 {
-	public var id (default, null) :String;
+	public var id (default, null) :ServiceWorkerProviderType;
 	public var redis (get, null) :RedisClient;
 	public var ready (get, null) :Promise<Bool>;
 	public var log :AbstractLogger;
@@ -70,7 +70,7 @@ class WorkerProviderBase
 		log.debug({f:'postInjection'});
 		Assert.that(_streamMachineCount == null, Type.getClassName(Type.getClass(this)) + ' has already been injected');
 		if (id == null) {
-			throw 'Must set id before calling super constructor';
+			throw 'Must set id before calling postInjection';
 		}
 
 		_ready = Promise.promise(true)

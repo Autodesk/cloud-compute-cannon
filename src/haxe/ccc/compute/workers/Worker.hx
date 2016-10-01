@@ -93,8 +93,11 @@ class Worker
 		var type :ServiceWorkerProviderType = _provider.id;
 		switch(type) {
 			case pkgcloud,vagrant:
+				log.info("Setting up disk monitoring");
 				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 2000);
 			default:
+				log.info('NOT setting up disk monitoring because type=$type is not [${ServiceWorkerProviderType.pkgcloud} or ${ServiceWorkerProviderType.vagrant}]');
+
 		}
 
 		//Output monitoring logs

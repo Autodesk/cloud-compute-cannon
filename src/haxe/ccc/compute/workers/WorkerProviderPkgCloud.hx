@@ -154,12 +154,11 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	function initClient()
 	{
 		if (getConfig() != null && _compute == null) {
-			this.id = getConfig().credentials.provider + '';
-			log.info({log:'Initializing provider=$id', provider:id});
+			this.id = ServiceWorkerProviderType.pkgcloud;
+			log.info({log:'Initializing provider id=$id', provider:id});
 			Assert.that(!PROVIDERS.exists(this.id));
 			PROVIDERS.set(this.id, this);
 			_compute = cast PkgCloud.compute.createClient(getConfig().credentials);
-			var type :ProviderType = cast id;
 		}
 	}
 
