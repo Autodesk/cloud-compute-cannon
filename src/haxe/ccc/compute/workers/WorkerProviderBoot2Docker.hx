@@ -68,7 +68,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 	{
 		var dockerHost = ConnectionToolsDocker.getDockerHost();
 		var boot2docker :WorkerDefinition = {
-			id: ID,
+			id: cast ServiceWorkerProviderType.boot2docker,
 			hostPublic: dockerHost,
 			hostPrivate: dockerHost,
 			docker: ConnectionToolsDocker.getDockerConfig(),
@@ -85,8 +85,6 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		return new Docker(getLocalDockerWorker().docker);
 	}
 
-	inline static var ID = 'dockermachinedefault';
-
 	var _currentWorkers = Set.createInt();
 	@inject public var _injector :minject.Injector;
 	#if debug public #end
@@ -95,7 +93,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 	public function new(?config :ServiceConfigurationWorkerProvider)
 	{
 		super(config);
-		this.id = ID;
+		this.id = ServiceWorkerProviderType.boot2docker;
 		if (_config == null) {
 			_config = {
 				minWorkers: 0,
