@@ -140,7 +140,7 @@ class TestInstancePool extends TestComputeBase
 		var redis = _redis;
 		assertNotNull(redis);
 
-		var POOL_ID = 'testPoolId';
+		var POOL_ID = new MachinePoolId('testPoolId');
 
 		function addWorker(id :Int) {
 			var worker :WorkerDefinition = {
@@ -256,8 +256,8 @@ class TestInstancePool extends TestComputeBase
 		var redis = _redis;
 		assertNotNull(redis);
 
-		var POOL_ID1 :MachinePoolId = 'testPoolId1';
-		var POOL_ID2 :MachinePoolId = 'testPoolId2';
+		var POOL_ID1 = new MachinePoolId('testPoolId1');
+		var POOL_ID2 = new MachinePoolId('testPoolId2');
 
 		var machine1P1 :MachineId = 'm1p1';
 		var machine2P1 :MachineId = 'm2p1';
@@ -290,7 +290,7 @@ class TestInstancePool extends TestComputeBase
 			params: {cpus:1, maxDuration:maxDuration}
 		};
 
-		function addWorker(id :String, poolId :String) {
+		function addWorker(id :String, poolId :MachinePoolId) {
 			var worker :WorkerDefinition = {
 				id: Std.string(id),
 				hostPrivate: new HostName('fake'),

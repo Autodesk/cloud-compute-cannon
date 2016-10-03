@@ -18,7 +18,7 @@ using Lambda;
 
 class TestComputeQueue extends TestComputeBase
 {
-	public static var POOL_ID1 :MachinePoolId = 'testPoolId1';
+	public static var POOL_ID1 = new MachinePoolId('testPoolId1');
 	public static var MACHINE1_P1 :MachineId = 'm1p1';
 	public static var MACHINE2_P1 :MachineId = 'm2p1';
 
