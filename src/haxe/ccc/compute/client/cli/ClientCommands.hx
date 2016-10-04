@@ -662,83 +662,114 @@ class ClientCommands
 				return Promise.promise(CLIResult.PrintHelpExit1);
 			}
 
-			if (isServerConnection(path)) {
-				traceRed('  Existing installation @ ${path.getServerYamlConfigPath()}.\n  You cannot create a new installation without first removing the current installation.');
-				traceRed('  To remove an existing server run:\n      ccc server-remove');
-				return Promise.promise(CLIResult.ExitCode(1));
-			}
+
+			// if (isServerConnection(path)) {
+			// 	traceRed('  Existing installation @ ${path.getServerYamlConfigPath()}.\n  You cannot create a new installation without first removing the current installation.');
+			// 	traceRed('  To remove an existing server run:\n      ccc server-remove');
+			// 	return Promise.promise(CLIResult.ExitCode(1));
+			// }
 
 			return Promise.promise(true)
 				.pipe(function(_) {
-					var serverConfig = InitConfigTools.getConfigFromFile(config);
-					var serverBlob :ServerConnectionBlob = {
-						host: null,
-						provider: serverConfig
-					};
-					//If a host is supplied, try to get the credentials
-					var sshConfig = null;
-					if (host != null) {
-						//Use the provided server
-						//Search the ~/.ssh/config in case the key is defined there.
-						if (key == null) {
-							sshConfig = CliTools.getSSHConfigHostData(host);
-							if (sshConfig == null) {
-								throw 'No key supplied for host=$host and the host entry was not found in ~/.ssh/config';
-							}
-							traceGreen('...Using SSH host credentials found in ~/.ssh/config: host=${sshConfig.host}');
-						} else {
-							try {
-								key = Fs.readFileSync(key, {encoding:'utf8'});
-							} catch (err :Dynamic) {}
-							if (username == null) {
-								throw 'No username supplied for host=$host and the host entry was not found in ~/.ssh/config';
-							}
+					if (isServerConnection(path)) {
+						var configPath :CLIServerPathRoot = findExistingServerConfigPath();
+						var serverBlob :ServerConnectionBlob = configPath != null ? readServerConnection(configPath) : null;
+						var sshOptions = serverBlob.server.ssh;
 
-							sshConfig = {
-								privateKey: key,
-								host: host,
-								username: username
-							}
-							serverBlob.server = {
-								id: null,
-								hostPublic: new HostName(sshConfig.host),
-								hostPrivate: null,
-								ssh: sshConfig,
-								docker: null
-							}
-						}
-
-						//Write it without the ssh config data, since
-						//we'll pick it up from the ~/.ssh/config every time
-						serverBlob.host = new Host(new HostName(host), new Port(SERVER_DEFAULT_PORT));
-						traceGreen('...Writing server connection to $path');
-						writeServerConnection(serverBlob, path);
-
-						//Use the actual ssh host for the main host field
-						serverBlob.host = new Host(new HostName(sshConfig.host), new Port(SERVER_DEFAULT_PORT));
-
-						//But add it here so the install procedure will work
-						serverBlob.server = {
-							id :null,
-							hostPublic: new HostName(sshConfig.host),
-							hostPrivate: null,
-							ssh: sshConfig,
-							docker: null
-						}
-						return Promise.promise(serverBlob);
+						Node.process.stdout.write('  - Existing server config found @ $configPath, checking ${sshOptions.host} \n'.yellow());
+						var retryAttempts = 1;
+						var intervalMs = 2000;
+						return SshTools.getSsh(sshOptions, retryAttempts, intervalMs, promhx.RetryPromise.PollType.regular, 'pollExistingServer', false)
+							.then(function(ssh) {
+								ssh.end();
+								Node.process.stdout.write('    - Could connect to existing server ${sshOptions.host} \n'.green());
+								return true;
+							})
+							.errorPipe(function(err) {
+								traceRed(err);
+								Node.process.stdout.write('    - Failed to connect to ${sshOptions.host} \n'.red());
+								return Promise.promise(false);
+							})
+							.then(function(isRunning) {
+								if (!isRunning) {
+									throw 'Failed to connect to existing server config found @ $configPath, run "ccc server-remove" to remove this stale config';
+								}
+								return serverBlob;
+							});
 					} else {
-						//Create the server instance.
-						//It doesn't validate or check the running containers, that is the next step
-						var providerConfig = serverConfig.providers[0];
-						return ProviderTools.createServerInstance(providerConfig)
-							.then(function(instanceDef) {
+						return Promise.promise(true)
+							.pipe(function(_) {
+								var serverConfig = InitConfigTools.getConfigFromFile(config);
 								var serverBlob :ServerConnectionBlob = {
-									host: new Host(new HostName(instanceDef.hostPublic), new Port(SERVER_DEFAULT_PORT)),
-									server: instanceDef,
+									host: null,
 									provider: serverConfig
 								};
-								writeServerConnection(serverBlob, path);
-								return serverBlob;
+								//If a host is supplied, try to get the credentials
+								var sshConfig = null;
+								if (host != null) {
+									//Use the provided server
+									//Search the ~/.ssh/config in case the key is defined there.
+									if (key == null) {
+										sshConfig = CliTools.getSSHConfigHostData(host);
+										if (sshConfig == null) {
+											throw 'No key supplied for host=$host and the host entry was not found in ~/.ssh/config';
+										}
+										traceGreen('...Using SSH host credentials found in ~/.ssh/config: host=${sshConfig.host}');
+									} else {
+										try {
+											key = Fs.readFileSync(key, {encoding:'utf8'});
+										} catch (err :Dynamic) {}
+										if (username == null) {
+											throw 'No username supplied for host=$host and the host entry was not found in ~/.ssh/config';
+										}
+
+										sshConfig = {
+											privateKey: key,
+											host: host,
+											username: username
+										}
+										serverBlob.server = {
+											id: null,
+											hostPublic: new HostName(sshConfig.host),
+											hostPrivate: null,
+											ssh: sshConfig,
+											docker: null
+										}
+									}
+
+									//Write it without the ssh config data, since
+									//we'll pick it up from the ~/.ssh/config every time
+									serverBlob.host = new Host(new HostName(host), new Port(SERVER_DEFAULT_PORT));
+									traceGreen('...Writing server connection to $path');
+									writeServerConnection(serverBlob, path);
+
+									//Use the actual ssh host for the main host field
+									serverBlob.host = new Host(new HostName(sshConfig.host), new Port(SERVER_DEFAULT_PORT));
+
+									//But add it here so the install procedure will work
+									serverBlob.server = {
+										id :null,
+										hostPublic: new HostName(sshConfig.host),
+										hostPrivate: null,
+										ssh: sshConfig,
+										docker: null
+									}
+									return Promise.promise(serverBlob);
+								} else {
+									//Create the server instance.
+									//It doesn't validate or check the running containers, that is the next step
+									var providerConfig = serverConfig.providers[0];
+									return ProviderTools.createServerInstance(providerConfig)
+										.then(function(instanceDef) {
+											var serverBlob :ServerConnectionBlob = {
+												host: new Host(new HostName(instanceDef.hostPublic), new Port(SERVER_DEFAULT_PORT)),
+												server: instanceDef,
+												provider: serverConfig
+											};
+											writeServerConnection(serverBlob, path);
+											return serverBlob;
+										});
+								}
 							});
 					}
 				})
@@ -753,7 +784,7 @@ class ClientCommands
 				.traceThen('  - cloud server successfully installed!'.green())
 				.thenVal(CLIResult.Success)
 				.errorPipe(function(err) {
-					traceRed(err);
+					traceRed(Json.stringify(err, null, '  '));
 					return Promise.promise(CLIResult.ExitCode(1));
 				});
 		} else {

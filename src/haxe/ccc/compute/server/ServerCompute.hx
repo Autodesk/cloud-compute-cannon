@@ -101,7 +101,7 @@ class ServerCompute
 			traceRed(errObj);
 			//Ensure crash is logged before exiting.
 			try {
-				if (Logger.isFluentInEtcHosts()) {
+				if (Logger.IS_FLUENT) {
 					ccc.compute.FluentTools.logToFluent(Json.stringify(errObj), function() {
 						Node.process.exit(1);
 					});
@@ -339,10 +339,6 @@ class ServerCompute
 			//Get public/private network addresses
 			.pipe(function(_) {
 				var redis :RedisClient = injector.getValue(RedisClient);
-				// ServerCommands.status(redis)
-				// 	.then(function(blob) {
-				// 		traceGreen(Json.stringify(blob, null, '\t'));
-				// 	});
 				return Promise.promise(true)
 					.pipe(function(_) {
 						return WorkerProviderTools.getPrivateHostName(config.providers[0])
@@ -364,6 +360,19 @@ class ServerCompute
 			.then(function(_) {
 				status = ServerStatus.BuildingServices_3_4;
 				Log.debug({server_status:status});
+
+				//Log the worker status every minute to track potential bugs
+				var redis :RedisClient = injector.getValue(RedisClient);
+				Node.setInterval(function() {
+					ccc.compute.server.ServerCommands.status(redis)
+						.then(function(status) {
+							Log.info({message: 'status_poll', server_status:status});
+						})
+						.catchError(function(err) {
+							Log.error(err);
+						});
+				}, 10000);//10s
+
 				//Build and inject the app logic
 				//Create services
 				workerProviders = config.providers.map(WorkerProviderTools.getProvider);

@@ -87,11 +87,16 @@ class ServerCommands
 			})
 			.then(function(_) {
 				var now = Date.now();
-
 				var result = {
+					now: now.format('YYYY-MM-DDTHH:mm:ss.sssZ'),
 					pendingCount: jobsJson.pending.length,
 					pendingTop5: jobsJson.pending.slice(0, 5),
 					workers: workerJson.getMachines().map(function(m :JsonDumpInstance) {
+						var timeout :String = null;
+						if (workerJson.timeouts.exists(m.id)) {
+							var timeoutDate = Date.fromTime(workerJson.getTimeout(m.id));
+							timeout = DateFormatTools.getShortStringOfDateDiff(timeoutDate, now);
+						}
 						return {
 							id :m.id,
 							jobs: m.jobs != null ? m.jobs.map(function(computeJobId) {
@@ -106,7 +111,8 @@ class ServerCommands
 									duration: DateFormatTools.getShortStringOfDateDiff(dequeued, now)
 								}
 							}) : [],
-							cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}'
+							cpus: '${workerJson.getAvailableCpus(m.id)}/${workerJson.getTotalCpus(m.id)}',
+							timeout: timeout
 						};
 					}),
 					finishedCount: jobsJson.getFinishedJobs().length,
