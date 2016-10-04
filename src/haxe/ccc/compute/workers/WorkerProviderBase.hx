@@ -217,26 +217,10 @@ class WorkerProviderBase
 		}
 	}
 
-	/**
-	 * Sets the worker state to 'deferred' and marks it for actual
-	 * shutdown after some cloud provider specific delay.
-	 * @param  workerId :MachineId    [description]
-	 * @return          [description]
-	 */
 	public function removeWorker(workerId :MachineId) :Promise<Bool>
 	{
 		log.debug('WorkerProviderBase.removeWorker $workerId');
 		return destroyInstance(workerId);
-		// return getShutdownDelay(workerId)
-		// 	.pipe(function(delay) {
-		// 		var removalTimeStamp :TimeStamp = TimeStamp.now().addSeconds(delay.toSeconds());
-		// 		// Log.info('removeWorker $workerId delay=${delay.toString()} removalTimeStamp=$removalTimeStamp');
-		// 		return InstancePool.setWorkerTimeout(redis, workerId, removalTimeStamp)
-		// 			.then(function(_) {
-		// 				addWorkerToDeferred(workerId, removalTimeStamp);
-		// 				return true;
-		// 			});
-		// 	});
 	}
 
 	public function createWorker() :Promise<WorkerDefinition>

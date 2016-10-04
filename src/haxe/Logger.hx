@@ -6,19 +6,9 @@ import js.npm.bunyan.Bunyan;
 class Logger
 {
 	public static var GLOBAL_LOG_LEVEL :Int = 30;
+	public static var IS_FLUENT = true;
 
 	public static var log :AbstractLogger;
-
-	public static function isFluentInEtcHosts() :Bool
-	{
-		try {
-			var stdout :String = js.node.ChildProcess.execSync('cat /etc/hosts', {stdio:['ignore','pipe','ignore']});
-			var output = Std.string(stdout);
-			return output.indexOf('fluent') > -1;
-		} catch (ignored :Dynamic) {
-			return false;
-		}
-	}
 
 	inline public static function trace(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
@@ -81,34 +71,6 @@ class Logger
 
 	inline static function __init__()
 	{
-// 		var jobColorFilter : js.node.stream.Transform<Dynamic> = untyped __js__("new require('stream').Transform({objectMode:true})");
-// 		var transform = function(chunk:js.node.Buffer, encoding:String, callback:js.Error->haxe.extern.EitherType<String,js.node.Buffer>->Void):Void {
-// 			var logObj :Dynamic = cast chunk;
-// 			var s;
-// 			try {
-// 				s = haxe.Json.stringify(logObj);
-// 			} catch (err :Dynamic) {
-// 				Sys.println(err);
-// 				s = Std.string(chunk);
-// 			}
-// // #if debug
-// // 			if (s.indexOf('privateKey') > -1) {
-// // 				Sys.println(haxe.Json.stringify({error:'Found privateKey in log statement', statement:s}));
-// // 			}
-// // #end
-
-// 			//Colorize job specific log messages for easier debugging
-// 			if (Reflect.hasField(logObj, 'jobid')) {
-// 				var color = util.CliColors.colorFromString(Reflect.field(logObj, 'jobid'));
-// 				var f :String->String = Reflect.field(js.npm.clicolor.CliColor, color);
-// 				s = f(s);
-// 			}
-// 			s += '\n';
-// 			callback(null, s);
-// 		}
-// 		Reflect.setField(jobColorFilter, '_transform', transform);
-// 		jobColorFilter.pipe(js.Node.process.stdout);
-
  		var streams :Array<Dynamic> = [
 			{
 				level: Bunyan.TRACE,
@@ -116,13 +78,15 @@ class Logger
 			}
 		];
 
-		if (isFluentInEtcHosts() && ccc.compute.ConnectionToolsDocker.isInsideContainer()) {
+		if (ccc.compute.ConnectionToolsDocker.isInsideContainer()) {
 			var fluentLogger = {write:ccc.compute.FluentTools.createEmitter()};
 			streams.push({
 				level: Bunyan.TRACE,
 				type: 'raw',// use 'raw' to get raw log record objects
 				stream: fluentLogger
 			});
+		} else {
+			IS_FLUENT = false;
 		}
 
 		log = new AbstractLogger(

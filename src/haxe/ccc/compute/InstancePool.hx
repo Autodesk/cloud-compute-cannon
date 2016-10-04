@@ -361,6 +361,16 @@ class InstancePool
 			});
 	}
 
+	public static function getWorkerTimeout(client :RedisClient, id :MachineId) :Promise<TimeStamp>
+	{
+		var promise = new promhx.CallbackPromise();
+		client.zscore(REDIS_KEY_WORKER_DEFERRED_TIME, id, promise.cb2);
+		return promise
+			.then(function(timeFloat :Float) {
+				return new TimeStamp(new Milliseconds(timeFloat));
+			});
+	}
+
 	public static function getAllWorkerTimeouts(client :RedisClient, providerId :MachinePoolId) :Promise<Array<{id:MachineId, time:TimeStamp}>>
 	{
 		return evaluateLuaScript(client, SCRIPT_GET_ALL_WORKER_TIMEOUTS, [providerId])
@@ -1020,6 +1030,16 @@ for i=1,#all, 2 do
 	workerStatus[all[i]] = all[i+1]
 end
 result.status = workerStatus
+
+local workerTimeouts = {}
+local all = redis.call("HGETALL", "$REDIS_KEY_WORKER_STATUS")
+for i=1,#all, 2 do
+	local machineId = all[i]
+	local timeout = tonumber(redis.call("ZSCORE", "$REDIS_KEY_WORKER_DEFERRED_TIME", machineId))
+	workerTimeouts[machineId] = timeout
+end
+result.timeouts = workerTimeouts
+
 ';
 
 /* The literal Redis Lua scripts. These allow non-race condition and performant operations on the DB*/
@@ -1422,6 +1442,7 @@ typedef InstancePoolJsonDump = {
 	var minInstances :Dynamic<Int>;
 	var totalTargetInstances :Int;
 	var available :Array<MachineId>;
+	var timeouts :TypedDynamicObject<MachineId, Float>;
 }
 
 typedef JsonDumpInstance = {
@@ -1596,6 +1617,16 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 			}
 		}
 		return map;
+	}
+
+	inline public function getTimeout(id :MachineId) :TimeStamp
+	{
+		return this.timeouts[id] != null ? new TimeStamp(new Milliseconds(this.timeouts[id])) : null;
+	}
+
+	inline public function getTimeoutString(id :MachineId) :String
+	{
+		return this.timeouts[id] != null ? new TimeStamp(new Milliseconds(this.timeouts[id])) : null;
 	}
 
 

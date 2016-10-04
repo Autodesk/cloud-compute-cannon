@@ -17,6 +17,7 @@ services:
     links:
       - redis
       - registry
+      - fluentd
     logging:
       driver: json-file
 
@@ -39,3 +40,26 @@ services:
       REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
     logging:
       driver: none
+
+  fluentd:
+    build: ./etc/log/
+    volumes:
+      - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+    links:
+      - elasticsearch
+    logging:
+      driver: json-file
+
+  elasticsearch:
+    extends:
+      file: docker-compose.core.yml
+      service: elasticsearch
+    logging:
+      driver: none
+
+  kibana:
+    extends:
+      file: docker-compose.core.yml
+      service: kibana
+    links:
+      - elasticsearch

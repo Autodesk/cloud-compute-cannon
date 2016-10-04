@@ -21,9 +21,7 @@ SYNC_COMMAND="rsync --copy-links $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PA
 #Watch for server changes and push if so. This should restart the server
 chokidar 'build/server/cloud-compute-cannon-server.js' "$SERVER_CONFIG_PATH" -c "$SYNC_COMMAND" &
 eval $SYNC_COMMAND
-# bin/sync-to-remote $1
-# scp $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/ccc.yml
-DOCKER_COMPOSE="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
-COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f && $DOCKER_COMPOSE build && LOG_LEVEL=10 HOST_PWD=\`pwd\` $DOCKER_COMPOSE up"
+DOCKER_COMPOSE="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.dev-server.yml"
+COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` $DOCKER_COMPOSE up"
 echo $COMMAND
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"

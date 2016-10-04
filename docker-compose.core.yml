@@ -58,8 +58,8 @@ services:
   fluentd:
     command: ["fluentd", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
     ports:
-        - "24225:24225"
-        - "9881:9881"
+      - "24225:24225"
+      - "9881:9881"
 
   elasticsearch:
     image: elasticsearch:2.3

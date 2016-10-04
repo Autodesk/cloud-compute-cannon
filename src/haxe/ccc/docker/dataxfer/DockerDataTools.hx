@@ -240,6 +240,11 @@ class DockerDataTools
 					traceMagenta('docker run result err=$err data=$dataRun');
 					traceCyan('volumeOperation created container=${container.id}');
 #end
+					if (err != null) {
+						traceRed('Error in docker run err=${Json.stringify(err)}');
+						promise.boundPromise.reject(err);
+						return;
+					}
 					container.remove(function(errRemove, dataRemove) {
 #if DockerDataToolsDebug
 						traceCyan('volumeOperation removed container=${container.id} errRemove=$errRemove data=$dataRemove');
