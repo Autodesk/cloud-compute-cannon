@@ -2,8 +2,6 @@ package ccc.compute;
 
 import js.npm.RedisClient;
 
-import ccc.compute.ConnectionToolsDocker;
-
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 
@@ -21,7 +19,7 @@ class ConnectionToolsRedis
 
 	public static function getRedisClientInternal() :Promise<RedisClient>
 	{
-		var redisParams = getRedisConnectionParams();
+		var redisParams = {host:'redis', port:REDIS_PORT};
 		var client = RedisClient.createClient(redisParams.port, redisParams.host);
 		var promise = new DeferredPromise();
 		client.once(RedisEvent.Connect, function() {
@@ -48,12 +46,6 @@ class ConnectionToolsRedis
 			Log.warn({system:'redis', event:RedisEvent.End, redisParams:redisParams});
 		});
 		return promise.boundPromise;
-	}
-
-	public static function getRedisConnectionParams() :{host:String, port:Int}
-	{
-		var address :String = ConnectionToolsDocker.isInsideContainer() ? 'redis' : ConnectionToolsDocker.getDockerHost();
-		return {host:address, port:REDIS_PORT};
 	}
 
 	static function isRedisInEtcHosts() :Bool
