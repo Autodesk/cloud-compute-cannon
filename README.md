@@ -144,6 +144,12 @@ In the above configuration, only the `credentials.keyId` and `credentials.key` v
       keyId: "your keyId"
       key: "your key"
       region: "us-west-1"
+    # Optionally add arbitrary  copy parameters if using S3:
+    # http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
+    extraS3SyncParameters: [
+        ['--exclude', '*', '--include', '*.ext2'],
+        ['--exclude', '*', '--include', '*.ext3']
+      ]
 ```
 
 More coming soon!

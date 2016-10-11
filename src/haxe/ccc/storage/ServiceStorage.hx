@@ -27,6 +27,7 @@ interface ServiceStorage
 	function makeDir(?uri :String) :Promise<Bool>;
 	function setRootPath(val :String) :ServiceStorage;
 	function getRootPath() :String;
+	function getConfig() :StorageDefinition;
 	function close() :Void;
 	function appendToRootPath(path :String) :ServiceStorage;
 	/**
