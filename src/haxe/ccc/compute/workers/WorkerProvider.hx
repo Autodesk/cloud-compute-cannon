@@ -23,6 +23,7 @@ interface WorkerProvider
 
 	function setPriority(val :Int) :Promise<Bool>;
 	function setMaxWorkerCount(val :WorkerCount) :Promise<Bool>;
+	function setMinWorkerCount(val :WorkerCount) :Promise<Bool>;
 	function setWorkerCount(val :WorkerCount) :Promise<Bool>;
 
 	function removeWorker(id :MachineId) :Promise<Bool>;

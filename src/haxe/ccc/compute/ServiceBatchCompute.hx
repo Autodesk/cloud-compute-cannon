@@ -218,6 +218,31 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
+		alias:'remove-all-workers-and-jobs',
+		doc:'Removes a worker'
+	})
+	public function removeAllJobsAndWorkers() :Promise<Bool>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return _workerProvider.setMinWorkerCount(0);
+			})
+			.pipe(function(_) {
+				return _workerProvider.setMaxWorkerCount(0);
+			})
+			.pipe(function(_) {
+				return doJobCommand(JobCLICommand.Remove, []);
+			})
+			.pipe(function(_) {
+				return _workerProvider.shutdownAllWorkers();
+			});
+#else
+		return Promise.promise(false);
+#end
+	}
+
+	@rpc({
 		alias:'worker-remove',
 		doc:'Removes a worker'
 	})
@@ -469,12 +494,12 @@ class ServiceBatchCompute
 #end
 	}
 
-
 #if ((nodejs && !macro) && !excludeccc)
 	@inject public var _fs :ServiceStorage;
 	@inject public var _redis :RedisClient;
 	@inject public var _config :StorageDefinition;
 	@inject public var _storage :ServiceStorage;
+	@inject public var _workerProvider :WorkerProvider;
 	@inject public var _injector :minject.Injector;
 
 	public function new() {}

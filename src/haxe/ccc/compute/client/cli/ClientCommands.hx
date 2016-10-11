@@ -448,11 +448,16 @@ class ClientCommands
 	// }
 
 	@rpc({
-		alias:'server-remove',
-		doc:'Shut down the remote server, delete server files locally',
+		alias:'terminate',
+		doc:'Shut down the remote server(s) and workers, and delete server files locally',
 	})
-	public static function serverShutdown() :Promise<CLIResult>
+	public static function serverShutdown(?confirm :Bool = false) :Promise<CLIResult>
 	{
+		if (!confirm) {
+			traceYellow('To prevent accidentally destroying the server installation, run this command again with "--confirm" to terminate all instances.');
+			return Promise.promise(CLIResult.Success);
+		}
+
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
 			log('No server configuration @${path.getServerYamlConfigPath()}. Nothing to shut down.');
@@ -493,14 +498,23 @@ class ClientCommands
 					return CLIResult.Success;
 				});
 		} else {
-			var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
-			trace('shutting down server ${serverBlob.server.id}');
-			trace('TODO: properly clean up workers');
-			return provider.destroyInstance(serverBlob.server.id)
-				.then(function(_) {
-					trace('deleting connection file');
-					deleteServerConnection(path);
-					return CLIResult.Success;
+			var host = getHost();
+			var clientProxy = getProxy(host.rpcUrl());
+			traceYellow('- Removing entire CCC cloud installation:');
+			traceYellow('  - Destroying all workers and removing all jobs');
+			return clientProxy.removeAllJobsAndWorkers()
+				.pipe(function(_) {
+					traceGreen('    - OK');
+					var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
+					traceYellow('  - Removing CCC server(s) ${serverBlob.server.id}');
+					return provider.destroyInstance(serverBlob.server.id)
+						.then(function(_) {
+							traceGreen('    - OK');
+							traceYellow('  - Removing local files');
+							deleteServerConnection(path);
+							traceGreen('    - OK');
+							return CLIResult.Success;
+						});
 				});
 		}
 	}

@@ -45,8 +45,8 @@ class InitConfigTools
 
 	public static function getDefaultConfig() :ServiceConfiguration
 	{
-		Assert.notNull(haxe.Resource.getString('etc/config/serverconfig.template.yaml'), 'getDefaultConfig() Missing Resource=etc/config/serverconfig.template.yaml');
-		return parseConfig(haxe.Resource.getString('etc/config/serverconfig.template.yaml'));
+		Assert.notNull(haxe.Resource.getString('etc/config/serverconfig.template.yml'), 'getDefaultConfig() Missing Resource=etc/config/serverconfig.template.yml');
+		return parseConfig(haxe.Resource.getString('etc/config/serverconfig.template.yml'));
 	}
 
 	inline public static function parseConfig(s :String) :ServiceConfiguration
