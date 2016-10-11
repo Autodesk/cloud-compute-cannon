@@ -1,0 +1,35 @@
+#The default is going to use local storage because it is a lot easier to configure
+storage:
+  type: "local"
+  rootPath: "ccc_local_storage"
+
+providers:
+  - type: "PkgCloud"
+    priority: 1
+    maxWorkers: 2
+    minWorkers: 0
+    #billingIncrement is measured in minutes
+    #amazon provider automatically defaults to 60m
+    billingIncrement: 58
+    credentials:
+      provider: "amazon"
+      keyId: "::AWS_ACCESS_KEY_ID::"
+      key: "::AWS_SECRET_ACCESS_KEY::"
+      region: "us-west-1"
+    machines:
+      worker:
+        public_ip: true
+        tags:
+          Name: "Test_CloudComputeCannon_Worker"
+        options:
+          InstanceType: "m4.large"
+          ImageId: "ami-c2e490a2"
+          SubnetId: "subnet-a5f3c2e3"
+          SecurityGroupId: "sg-a3eae4e7"
+          KeyName: "platform-test-keypair2"
+          Key: |
+            -----BEGIN RSA PRIVATE KEY-----
+            MIIEogIBAAKCAQEAyh+2Op9GIcRjlayC+TP6Btxklb9nkQlrKJaXlovJfHgQPOvpTnDceyzHy755
+            JpsCbhrdio4GomeKHBObbD4eB5nIZ8VXQD1EhgedUxKKrW9csWyjlRbfOWEZyMmT025JIg8G4QYK
+            777Y36xUaerefktaNSOhmdKEuZJ+ZJx5LVU478YFgq8XEh3zdYRq6UH9YK2HOOGjVuu57kMHMpk4
+            -----END RSA PRIVATE KEY-----

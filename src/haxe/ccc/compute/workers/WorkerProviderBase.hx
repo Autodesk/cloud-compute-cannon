@@ -161,6 +161,12 @@ class WorkerProviderBase
 			.thenTrue();
 	}
 
+	public function setMinWorkerCount(val :WorkerCount) :Promise<Bool>
+	{
+		return InstancePool.setMinInstances(_redis, id, val)
+			.thenTrue();
+	}
+
 	public function setPriority(val :Int) :Promise<Bool>
 	{
 		return InstancePool.setPoolPriority(_redis, id, val)
