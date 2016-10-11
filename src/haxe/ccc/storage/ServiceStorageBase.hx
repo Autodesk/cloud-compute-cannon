@@ -29,6 +29,11 @@ class ServiceStorageBase
 		setRootPath(_config.rootPath);
 	}
 
+	public function getConfig() :StorageDefinition
+	{
+		return Json.parse(Json.stringify(_config));
+	}
+
 	public function setConfig(config :StorageDefinition) :ServiceStorageBase
 	{
 		Assert.notNull(config);

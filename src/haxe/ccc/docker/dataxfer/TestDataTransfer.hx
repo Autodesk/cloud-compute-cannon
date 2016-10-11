@@ -332,6 +332,63 @@ class TestDataTransfer extends PromiseTest
 			});
 	}
 
+	@timeout(10000)
+	public function testCustomS3CopyCommands() :Promise<Bool>
+	{
+		var docker = new Docker(ConnectionToolsDocker.getDockerConfig());
+		var awsKey = Sys.environment()['AWS_S3_KEY'];
+		var awsKeyId = Sys.environment()['AWS_S3_KEYID'];
+		var S3Bucket = Sys.environment()['AWS_S3_BUCKET'];
+
+		var S3Credentials = {
+			keyId: awsKeyId,
+			key: awsKey,
+			bucket: S3Bucket
+		}
+
+		if (awsKey == null || awsKeyId == null || S3Bucket == null) {
+			traceYellow('Cannot run ${}.testCustomS3CopyCommands without S3 credentials (AWS_S3_KEY and AWS_S3_KEYID and S3Bucket as env vars)');
+			return Promise.promise(true);
+		}
+
+		var testObj = createTestDataVolumeAndCheckFunction();
+		var source = testObj.source;
+		var tarStream = testObj.tarStream;
+		var fileData = testObj.files;
+
+		return DockerDataTools.createVolumeWithData(source, tarStream)
+			.pipe(function(_) {
+				//get the data and check it against the inputs
+				var target = {
+					keyId: awsKeyId,
+					key: awsKey,
+					bucket: S3Bucket,
+					path: '/tests/testVolumeToS3/${ShortId.generate()}',
+					extraS3SyncParameters: [
+						['--exclude', '*', '--include', '*.ext2'],
+						['--exclude', '*', '--include', '*.ext3']
+					]
+				}
+				return DockerDataTools.transferVolumeToS3(source, target).end
+					.pipe(function(out) {
+						return DockerDataTools.s3ls(docker, S3Credentials, target.path);
+					})
+					.then(function(paths) {
+						var createFilter = function(ext) {
+							return function(s :String) {
+								return s.endsWith(ext);
+							}
+						}
+
+						assertEquals(paths.length, 2);
+						assertEquals(paths.filter(createFilter('ext1')).length, 0);
+						assertEquals(fileData.keys().filter(createFilter('ext2')).length, paths.filter(createFilter('ext2')).length);
+						assertEquals(fileData.keys().filter(createFilter('ext3')).length, paths.filter(createFilter('ext3')).length);
+						return true;
+					});
+			});
+	}
+
 	function createTestDataVolumeAndCheckFunction()
 	{
 		return createTestDataVolumeAndCheckFunctionStatic(this);
@@ -349,10 +406,10 @@ class TestDataTransfer extends PromiseTest
 			return Std.int(Math.random() * 255);
 		}
 		var fileData :DynamicAccess<Dynamic> = {};
-		fileData['someDir1/file1_${ShortId.generate()}'] = 'somestring${ShortId.generate()}';
-		fileData['someDir2/file2_${ShortId.generate()}'] = new Buffer([randInt(), randInt(), randInt()]);
-		fileData['someDir3/someDir4/file3_${ShortId.generate()}'] = 'somestring${ShortId.generate()}';
-		fileData['someDir3/someDir5/someDir6/file4_${ShortId.generate()}'] = 'somestring${ShortId.generate()}';
+		fileData['someDir1/file1_${ShortId.generate()}.ext1'] = 'somestring${ShortId.generate()}';
+		fileData['someDir2/file2_${ShortId.generate()}.ext3'] = new Buffer([randInt(), randInt(), randInt()]);
+		fileData['someDir3/someDir4/file3_${ShortId.generate()}.ext1'] = 'somestring${ShortId.generate()}';
+		fileData['someDir3/someDir5/someDir6/file4_${ShortId.generate()}.ext2'] = 'somestring${ShortId.generate()}';
 
 		var docker = new Docker(sourceDocker);
 

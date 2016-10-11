@@ -110,7 +110,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 
 	public function getS3Credentials() :ccc.docker.dataxfer.DockerDataTools.S3Credentials
 	{
-		return Reflect.copy(_S3Config);
+		return Json.parse(Json.stringify(_S3Config));
 	}
 
 	function initialized() :Promise<Bool>
@@ -193,7 +193,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 			region: config.credentials.region,
 			maxRetries: config.credentials.maxRetries
 		}
-		_S3Config = {keyId:awsConfig.accessKeyId, key:awsConfig.secretAccessKey, region:awsConfig.region, bucket:config.container};
+		_S3Config = {keyId:awsConfig.accessKeyId, key:awsConfig.secretAccessKey, region:awsConfig.region, bucket:config.container, extraS3SyncParameters:config.extraS3SyncParameters};
 
 		Assert.notNull(awsConfig.accessKeyId);
 		Assert.notNull(awsConfig.secretAccessKey);

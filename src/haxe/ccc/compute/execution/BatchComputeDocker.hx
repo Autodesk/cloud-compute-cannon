@@ -336,7 +336,8 @@ class BatchComputeDocker
 							if (outputFiles.length == 0) {
 								return Promise.promise(true);
 							} else {
-								return DockerJobTools.copyFromVolume(outputStorageRemote, null, outputsVolume).end;
+								return DockerJobTools.copyFromVolume(outputStorageRemote, null, outputsVolume).end
+									.thenTrue();
 							}
 						})
 						.pipe(function(_) {
