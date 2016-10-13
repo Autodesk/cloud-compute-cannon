@@ -709,6 +709,14 @@ class ClientCommands
 									throw 'Failed to connect to existing server config found @ $configPath, run "ccc server-remove" to remove this stale config';
 								}
 								return serverBlob;
+							})
+							//Write the new configuration
+							.then(function(serverBlob) {
+								var serverConfig = InitConfigTools.getConfigFromFile(config);
+								serverBlob.provider = serverConfig;
+								Node.process.stdout.write('    - Writing updated server configuration to ${path} \n'.green());
+								writeServerConnection(serverBlob, path);
+								return serverBlob;
 							});
 					} else {
 						return Promise.promise(true)
