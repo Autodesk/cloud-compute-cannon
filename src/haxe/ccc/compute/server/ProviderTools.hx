@@ -192,10 +192,10 @@ class ProviderTools
 				return checkForDockerCompose(instance.ssh)
 					.pipe(function(isInstalled) {
 						if (isInstalled) {
-							js.Node.process.stdout.write('installed\n'.green());
+							js.Node.process.stdout.write(' OK\n'.green());
 							return Promise.promise(true);
 						} else {
-							Node.process.stdout.write('not installed\n'.yellow());
+							Node.process.stdout.write(' not installed\n'.yellow());
 							return installDockerCompose(instance)
 								.thenTrue();
 						}
