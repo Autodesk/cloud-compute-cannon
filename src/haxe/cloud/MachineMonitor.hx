@@ -171,7 +171,11 @@ class MachineMonitor
 				case CriticalFailure(failure): dispose();
 				default://Ignored
 			}
+		})
+		.catchError(function(err) {
+			//Catch but ignore stream errors
 		});
+
 		_docker.then(function(dockerStatus) {
 			switch(dockerStatus) {
 				case NotConfigured,Connecting:
@@ -180,7 +184,11 @@ class MachineMonitor
 				case ContactLost:
 					_status.resolve(MachineConnectionStatus.CriticalFailure(MachineFailureType.DockerConnectionLost));
 			}
+		})
+		.catchError(function(err) {
+			//Catch but ignore stream errors
 		});
+
 		_disk.then(function(diskStatus) {
 			switch(diskStatus) {
 				case NotConfigured,Connecting:
@@ -189,6 +197,9 @@ class MachineMonitor
 				case DiskSpaceExceeded:
 					_status.resolve(MachineConnectionStatus.CriticalFailure(MachineFailureType.DiskCapacityCritical));
 			}
+		})
+		.catchError(function(err) {
+			//Catch but ignore stream errors
 		});
 	}
 

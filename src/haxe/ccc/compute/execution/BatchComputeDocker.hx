@@ -377,52 +377,56 @@ class BatchComputeDocker
 				//The job is now finished. Clean up the temp worker storage,
 				// out of the promise chain (for speed)
 				getContainer(docker, computeJobId)
-						.pipe(function(containerData) {
-							if (containerData != null) {
-								return DockerPromises.removeContainer(docker.getContainer(containerData.Id), null, 'removeContainer computeJobId=$computeJobId')
+					.pipe(function(containerData) {
+						if (containerData != null) {
+							return DockerPromises.removeContainer(docker.getContainer(containerData.Id), null, 'removeContainer computeJobId=$computeJobId')
+								.then(function(_) {
+									log.debug('Removed container=${containerData.Id}');
+									return true;
+								})
+								.errorPipe(function(err) {
+									log.error('Problem removing container ${containerData.Id} err=${err}');
+									return Promise.promise(false);
+								});
+						} else {
+							return Promise.promise(true);
+						}
+					})
+					.errorPipe(function(err) {
+						log.error('Problem removing container err=${Json.stringify(err)}');
+						return Promise.promise(true);
+					})
+					.pipe(function(_) {
+						return Promise.whenAll(
+							[
+								inputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(inputVolumeName)) : Promise.promise(true)
 									.then(function(_) {
-										log.debug('Removed container=${containerData.Id}');
+										if (inputVolumeName != null) {
+											log.debug('Removed volume=$inputVolumeName');
+										} else {
+											log.debug('No input volume to remove');
+										}
 										return true;
 									})
 									.errorPipe(function(err) {
-										log.error('Problem removing container ${containerData.Id} err=${err}');
+										log.error('Problem deleting volume ${inputVolumeName} err=${err}');
 										return Promise.promise(false);
-									});
-							} else {
-								return Promise.promise(true);
-							}
-						})
-						.pipe(function(_) {
-							return Promise.whenAll(
-								[
-									inputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(inputVolumeName)) : Promise.promise(true)
-										.then(function(_) {
-											if (inputVolumeName != null) {
-												log.debug('Removed volume=$inputVolumeName');
-											} else {
-												log.debug('No input volume to remove');
-											}
-											return true;
-										})
-										.errorPipe(function(err) {
-											log.error('Problem deleting volume ${inputVolumeName} err=${err}');
-											return Promise.promise(false);
-										}),
-									DockerPromises.removeVolume(docker.getVolume(outputVolumeName))
-										.then(function(_) {
-											log.debug('Removed volume=$outputVolumeName');
-											return true;
-										})
-										.errorPipe(function(err) {
-											log.error('Problem deleting volume ${outputVolumeName} err=${err}');
-											return Promise.promise(false);
-										})
-								]);
-						})
-						.then(function(_) {
-							log.debug('Removed containers and volumes');
-							return true;
-						});
+									}),
+								DockerPromises.removeVolume(docker.getVolume(outputVolumeName))
+									.then(function(_) {
+										log.debug('Removed volume=$outputVolumeName');
+										return true;
+									})
+									.errorPipe(function(err) {
+										log.error('Problem deleting volume ${outputVolumeName} err=${err}');
+										return Promise.promise(false);
+									})
+							]);
+					})
+					.then(function(_) {
+						log.debug('Removed containers and volumes');
+						return true;
+					});
 				return jobResult;
 			});
 
