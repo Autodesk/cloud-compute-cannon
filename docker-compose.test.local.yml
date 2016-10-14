@@ -2,7 +2,12 @@ version: '2'
 
 services:
   compute:
-    command: ["haxe", "test/testsIntegration.hxml"]
+    image: "cloud-compute-cannon:latest"
+    command: ["${EXECUTABLE}", "build/test/compute_tests.js"]
+    volumes:
+      - ./:/config
+      - ./test:/app/test
+      - ./build:/app/build
     environment:
       AWS: "false"
       DOCKER: "true"
@@ -18,12 +23,9 @@ services:
       driver: "none"
       options: {}
 
-  elasticsearch:
+  fluentd:
+    image: fluent/fluentd:v0.14.2
+    volumes:
+      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
     logging:
-      driver: "none"
-      options: {}
-
-  kibana:
-    logging:
-      driver: "none"
-      options: {}
+      driver: none

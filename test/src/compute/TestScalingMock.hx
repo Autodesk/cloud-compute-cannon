@@ -53,9 +53,13 @@ class TestScalingMock extends TestScalingBase
 			})
 			.pipe(function(_) {
 				_workerManager = new MockWorkerManager();
-				_injector.injectInto(_workerManager);
 				_workerProvider = new MockWorkerProvider();
+
+				_injector.map(WorkerProvider).toValue(_workerProvider);
+
+				_injector.injectInto(_workerManager);
 				_injector.injectInto(_workerProvider);
+
 				return _workerProvider.ready;
 			});
 	}

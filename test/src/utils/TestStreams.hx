@@ -13,11 +13,16 @@ class TestStreams extends haxe.unit.async.PromiseTest
 	@timeout(100)
 	public function testStreamTools()
 	{
+		var tmpFile = '/tmp/tempFileDump';
 		var s = 'StringToStream';
 		var fileStream = StreamTools.stringToStream(s);
+		var writable = Fs.createWriteStream(tmpFile);
 
-		var writable = Fs.createWriteStream('/tmp/tempFileDump');
-
-		return StreamPromises.pipe(fileStream, writable);
+		return StreamPromises.pipe(fileStream, writable)
+			.then(function(_) {
+				var result = Fs.readFileSync(tmpFile, {encoding:'utf8'});
+				assertEquals(result, s);
+				return true;
+			});
 	}
 }

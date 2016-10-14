@@ -332,7 +332,7 @@ class TestDataTransfer extends PromiseTest
 			});
 	}
 
-	@timeout(10000)
+	@timeout(25000)
 	public function testCustomS3CopyCommands() :Promise<Bool>
 	{
 		var docker = new Docker(ConnectionToolsDocker.getDockerConfig());

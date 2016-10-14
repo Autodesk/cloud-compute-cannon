@@ -188,7 +188,6 @@ class TestsIntegration
 
 		//Run the unit tests. These do not require any external dependencies
 		if (isUnit) {
-			runner.add(new ccc.compute.server.tests.TestUnit());
 			runner.add(new utils.TestPromiseQueue());
 			runner.add(new utils.TestStreams());
 			runner.add(new storage.TestStorageRestAPI());
@@ -198,8 +197,6 @@ class TestsIntegration
 				runner.add(new storage.TestStorageSftp());
 			}
 		}
-
-		runner.add(new ccc.docker.dataxfer.TestDataTransfer());
 
 		if (isRedis) {
 			// These require a local redis db

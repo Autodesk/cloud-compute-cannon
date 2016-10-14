@@ -333,13 +333,10 @@ class ComputeQueue
 		return RedisPromises.hget(redis, REDIS_KEY_COMPUTEJOB_WORKING_STATE, computeJobId);
 	}
 
-	public static function requeueJob<T>(redis :RedisClient, computeJobId :ComputeJobId) :Promise<Stats>
+	public static function requeueJob<T>(redis :RedisClient, computeJobId :ComputeJobId) :Promise<Bool>
 	{
 		return evaluateLuaScript(redis, SCRIPT_REQUEUE, [computeJobId, Date.now().getTime()])
-			.then(function(s :String) {
-				var obj = Json.parse(s);
-				return obj;
-			});
+			.thenTrue();
 	}
 
 	public static function setAutoscaling(redis :RedisClient, autoscale :Bool) :Promise<Bool>
@@ -825,11 +822,11 @@ if not computeJobId then
 	return {err="Must provide computeJobId"}
 end
 
+local jobId = redis.call("HGET", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
+
 $SNIPPET_REQUEUE_COMPUTE_JOB
 
 $SNIPPET_PROCESS_PENDING
-
-return cjson.encode(stats)
 ',
 		SCRIPT_CHECK_TIMEOUTS =>
 '
