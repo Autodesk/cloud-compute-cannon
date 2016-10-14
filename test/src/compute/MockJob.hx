@@ -52,6 +52,11 @@ class MockJob extends Job
 		}
 	}
 
+	override function checkMachine() :Promise<Bool>
+	{
+		return Promise.promise(true);
+	}
+
 	override public function removeJobFromDockerHost() :Promise<Bool>
 	{
 		return Promise.promise(true);

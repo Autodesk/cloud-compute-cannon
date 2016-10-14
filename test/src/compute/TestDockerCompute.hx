@@ -316,9 +316,6 @@ class TestDockerCompute extends TestComputeBase
 				return true;
 			})
 			.pipe(function(_) {
-				return DockerJobTools.removeJobContainer(job);
-			})
-			.pipe(function(_) {
 				var outputStorage = fs.appendToRootPath(job.item.outputDir());
 				return outputStorage.listDir()
 					.then(function(files) {

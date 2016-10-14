@@ -45,7 +45,6 @@ class TestServiceBatchCompute extends TestComputeBase
 	{
 		return super.setup()
 			.pipe(function(_) {
-				var out = untyped __js__('require("child_process").execSync("haxe etc/hxml/cli-build.hxml")');
 				//Create a server in a forker process
 				var envCopy = Reflect.copy(js.Node.process.env);
 				Reflect.setField(envCopy, ENV_LOG_LEVEL, "70");//js.npm.bunyan.Bunyan.WARN);

@@ -279,6 +279,7 @@ class Job
 					.pipe(function(_) {
 						var executecallResult = executeJob();
 						executecallResult.promise.catchError(function(err) {
+							log.error(try {Json.stringify(err);} catch(_:Dynamic) {err;});
 							_cancelWorkingJob = null;
 
 							function writeFailure() {
@@ -298,7 +299,7 @@ class Job
 							//Check if we can reach the worker. If not, then the
 							//worker died at an inconvenient time, so we requeue
 							//this job
-							cloud.MachineMonitor.checkMachine(_job.worker.docker, _job.worker.ssh)
+							checkMachine()
 								.then(function(ok) {
 									if (_redis != null) {
 										if (ok) {
@@ -481,6 +482,11 @@ class Job
 		} else {
 			return Promise.promise(null);
 		}
+	}
+
+	function checkMachine() :Promise<Bool>
+	{
+		return cloud.MachineMonitor.checkMachine(_job.worker.docker, _job.worker.ssh);
 	}
 
 	function getContainer() :Promise<DockerContainer>

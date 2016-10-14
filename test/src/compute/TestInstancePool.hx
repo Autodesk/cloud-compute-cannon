@@ -22,6 +22,7 @@ class TestInstancePool extends TestComputeBase
 {
 	public function new() {}
 
+	@timeout(10000)
 	public function testWorkerFailureCycle()
 	{
 		var providerConfig :ServiceConfigurationWorkerProvider = {
@@ -82,7 +83,6 @@ class TestInstancePool extends TestComputeBase
 				return ComputeQueue.getWorkerIdForJob(redis, job.id)
 					.pipe(function(workerId) {
 						assertNotNull(workerId);
-						trace('workerId=$workerId setting failed');
 						return InstancePool.workerFailed(redis, workerId)
 							.thenWait(50)
 							.pipe(function(_) {
@@ -90,7 +90,6 @@ class TestInstancePool extends TestComputeBase
 							})
 							.then(function(blob) {
 								var blobString = Json.stringify(blob, null, "\t");
-								trace('blobString=${blobString}');
 								assertEquals(blobString.indexOf(workerId), -1);
 								return true;
 							});
