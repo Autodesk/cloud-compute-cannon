@@ -16,6 +16,7 @@ services:
     command: ["node", "server/cloud-compute-cannon-server.js"]
     links:
       - redis
+      - fluentd
     environment:
       TRAVIS: "${TRAVIS}"
     # volumes:
@@ -31,3 +32,13 @@ services:
     logging:
       driver: "json-file"
       options: {}
+
+  fluentd:
+    extends:
+      file: docker-compose.core.yml
+      service: fluentd
+    image: fluent/fluentd:v0.14.2
+    volumes:
+      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
+    logging:
+      driver: none

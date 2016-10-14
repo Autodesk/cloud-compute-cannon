@@ -27,6 +27,9 @@ bin/build-docker-images
 
 echo "Running tests"
 #Run the tests
+#Stand-alone tests
+./bin/run-tests-local
+#Server tests
 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm compute node server/cloud-compute-cannon-server.js
 
 if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "Autodesk/cloud-compute-cannon" ];
