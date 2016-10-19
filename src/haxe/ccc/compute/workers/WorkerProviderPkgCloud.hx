@@ -43,6 +43,12 @@ typedef InstanceOptionsAmazon = {
 	@:optional var MaxCount :Int;
 }
 
+@:enum
+abstract AmazonEc2State(String) {
+	var Created = 'created';
+	var Tagged = 'tagged';
+}
+
 class WorkerProviderPkgCloud extends WorkerProviderBase
 {
 	public static function getPublicHostName(config :ServiceConfigurationWorkerProvider) :Promise<HostName>
@@ -85,6 +91,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	@post
 	override public function postInjection()
 	{
+		log.debug('postInjection');
 		Assert.notNull(_config);
 		initClient();
 		//Assume that servers with the same image id are our workers.
@@ -114,6 +121,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			});
 
 		addRunningPromiseToQueue(_ready);
+
 		return _ready;
 	}
 
@@ -408,10 +416,10 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 		}
 	}
 
-	public static function createInstance(config :ServiceConfigurationWorkerProvider, machineType :String, ?log :AbstractLogger) :Promise<WorkerDefinition>
+	public static function createInstance(config :ServiceConfigurationWorkerProvider, machineType :String, ?redis :RedisClient, ?log :AbstractLogger) :Promise<WorkerDefinition>
 	{
 		var provider :CloudProvider = config;
-		return createPkgCloudInstance(config, machineType, log)
+		return createPkgCloudInstance(config, machineType, redis, log)
 			.then(function(serverBlob) {
 				var server = serverBlob.server;
 				var ssh = serverBlob.ssh;
@@ -444,7 +452,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			.thenTrue();
 	}
 
-	public static function createPkgCloudInstance(config :ServiceConfigurationWorkerProvider, machineType :String, ?log :AbstractLogger) :Promise<{server:PkgCloudServer,ssh:ConnectOptions, privateIp: String}>
+	public static function createPkgCloudInstance(config :ServiceConfigurationWorkerProvider, machineType :String, ?redis :RedisClient, ?log :AbstractLogger) :Promise<{server:PkgCloudServer,ssh:ConnectOptions, privateIp: String}>
 	{
 		log = Logger.ensureLog(log, {f:'createPkgCloudInstance'});
 
@@ -493,6 +501,11 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 									// log.trace({message:'runInstances', data:data});
 									var instanceId = data.Instances[0].InstanceId;
 									js.Node.process.stdout.write('        - $instanceId created\n'.green());
+
+									var poolId = ServiceWorkerProviderType.pkgcloud;
+									if (redis != null) {
+										InstancePool.addInstance(redis, poolId, {id:instanceId,hostPublic:null,hostPrivate:null,ssh:null,docker:null}, {cpus:0,memory:0}, MachineStatus.Initializing);
+									}
 
 									//Get tags, merge default and instance specific
 									var tags = [];
