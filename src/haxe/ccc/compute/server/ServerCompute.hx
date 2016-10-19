@@ -76,6 +76,7 @@ class ServerCompute
 		//Embed various files
 		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
 		ErrorToJson;
+		monitorMemory();
 		runServer();
 	}
 
@@ -360,7 +361,7 @@ class ServerCompute
 				}
 
 				var fiveMinutes = 5*60*1000;
-				Node.setTimeout(function() {
+				Node.setInterval(function() {
 					pollWorkers();
 				}, fiveMinutes);
 
@@ -390,18 +391,6 @@ class ServerCompute
 			.pipe(function(_) {
 				status = ServerStatus.BuildingServices_3_5;
 				Log.debug({server_status:status});
-
-				//Log the worker status every minute to track potential bugs
-				var redis :RedisClient = injector.getValue(RedisClient);
-				Node.setInterval(function() {
-					ccc.compute.server.ServerCommands.status(redis)
-						.then(function(status) {
-							Log.info({message: 'status_poll', server_status:status});
-						})
-						.catchError(function(err) {
-							Log.error(err);
-						});
-				}, 10000);//10s
 
 				//Build and inject the app logic
 				//Create services
@@ -588,5 +577,16 @@ class ServerCompute
 					}
 				}
 			});
+	}
+
+	static function monitorMemory()
+	{
+		var memwatch :js.node.events.EventEmitter<Dynamic> = Node.require('memwatch-next');
+		memwatch.on('stats', function(data) {
+			Log.debug({memory_stats:data});
+		});
+		memwatch.on('leak', function(data) {
+			Log.debug({memory_leak:data});
+		});
 	}
 }
