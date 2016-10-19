@@ -6,7 +6,7 @@ services:
     extends:
       file: docker-compose.core.yml
       service: compute
-    image: "quay.io/bionano/cloud-compute-cannon:a44300d2"
+    image: "quay.io/bionano/cloud-compute-cannon:016b4174"
     command: ["nodemon", "-w", "server", "-w", "/app/config/ccc.yml", "server/cloud-compute-cannon-server.js"]
     volumes:
       - ./build/server:/app/server

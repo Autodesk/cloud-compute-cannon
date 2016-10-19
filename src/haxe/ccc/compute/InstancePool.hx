@@ -21,8 +21,10 @@ import ccc.compute.ComputeTools;
 
 import t9.abstracts.time.*;
 
-using Lambda;
+import util.DateFormatTools;
+
 using util.ArrayTools;
+using DateTools;
 
 /**
  * Various Typedefs and definitions.
@@ -30,6 +32,10 @@ using util.ArrayTools;
 
 @:enum
 abstract MachineStatus(String) {
+	/**
+	 * This worker is in the process of creation. Most metadata will not be available
+	 */
+	var Initializing = 'initializing';
 	/**
 	 * This worker is available for job submission
 	 */
@@ -60,6 +66,11 @@ abstract MachineStatus(String) {
 	 * Only the WorkerProvider is allowed to change this status to Available.
 	 */
 	var Deferred = 'deferred';
+	/**
+	 * The worker no longer exists. Records are kept here to ensure instances
+	 * are not lost in between crashes.
+	 */
+	var Terminated = 'terminated';
 }
 
 @:enum
@@ -234,6 +245,11 @@ class InstancePool
 			});
 	}
 
+	public static function getRemovedInstances(client :RedisClient) :Promise<Dynamic>
+	{
+		return RedisPromises.hgetall(client, REDIS_KEY_WORKER_REMOVED_RECORD);
+	}
+
 	public static function getWorker(client :RedisClient, id :MachineId) :Promise<WorkerDefinition>
 	{
 		return RedisPromises.hget(client, REDIS_KEY_WORKERS, id)
@@ -291,12 +307,10 @@ class InstancePool
 
 	public static function addInstance(client :RedisClient, poolId :MachinePoolId, worker :WorkerDefinition, parameters :WorkerParameters, ?state :MachineStatus = MachineStatus.Available) :Promise<Bool>
 	{
-		// Assert.notNull(worker.ssh);
-		// Assert.notNull(worker.ssh.host);
-		// Assert.that(worker.ssh.host != '', worker.ssh + '');
-		Assert.notNull(worker.docker);
-		// Assert.notNull(worker.docker.host);
-		Assert.that(worker.docker.host != '');
+		if (state != MachineStatus.Initializing) {
+			Assert.notNull(worker.docker);
+			Assert.that(worker.docker.host != '');
+		}
 		return evaluateLuaScript(client, SCRIPT_ADD_MACHINE, [poolId, Json.stringify(worker), Json.stringify(parameters), state, Date.now().getTime()])
 			.then(Json.parse);
 	}
@@ -506,6 +520,7 @@ class InstancePool
 	inline public static var REDIS_KEY_WORKER_AVAILABLE_STATUS_WORKING = '${INSTANCE_POOL_PREFIX}worker_available_status_working';//SET <MachineId>
 	inline public static var REDIS_KEY_WORKER_AVAILABLE_STATUS_MAXCAPACITY = '${INSTANCE_POOL_PREFIX}worker_available_status_maxcapacity';//SET <MachineId>
 	inline public static var REDIS_KEY_WORKER_DEFERRED_TIME = '${INSTANCE_POOL_PREFIX}worker_deferred_time';//SortedSet <MachineId>
+	inline public static var REDIS_KEY_WORKER_REMOVED_RECORD = '${INSTANCE_POOL_PREFIX}worker_removed_record';//HASH <MachineId, JsonBlob>
 
 	inline public static var REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX = '${INSTANCE_POOL_PREFIX}worker_status${Constants.SEP}';//channel
 	inline public static var REDIS_KEY_WORKER_AVAILABLE_STATUS_CHANNEL_PREFIX = '${INSTANCE_POOL_PREFIX}worker_available_status${Constants.SEP}';//channel
@@ -526,6 +541,7 @@ class InstancePool
 	inline static var REDIS_KEY_WORKER_POOL_MAP = '${INSTANCE_POOL_PREFIX}worker_pool';//HASH <MachineId, MachinePoolId>
 	inline static var REDIS_KEY_WORKER_AVAILABLE_CPUS = '${INSTANCE_POOL_PREFIX}worker_available_cpus';//HASH <MachineId, Int>
 	inline static var REDIS_KEY_WORKER_PARAMETERS = '${INSTANCE_POOL_PREFIX}worker_parameters';//HASH <MachineId, InstanceJobParams>
+	inline static var REDIS_KEY_WORKER_ADD_TIME = '${INSTANCE_POOL_PREFIX}worker_time_added';//HASH <MachineId, Float>
 	//The first machine added to the pool adds the parameters to this set
 	//so that scaling requirements can be accurately computed
 	inline static var REDIS_KEY_POOL_WORKER_PARAMETERS = '${INSTANCE_POOL_PREFIX}pool_worker_parameters';//HASH <MachinePoolId, InstanceJobParams>
@@ -550,7 +566,9 @@ class InstancePool
 		"cpus"=>REDIS_KEY_WORKER_AVAILABLE_CPUS,
 		"workerParameters"=>REDIS_KEY_WORKER_PARAMETERS,
 		"status"=>REDIS_KEY_WORKER_STATUS,
-		"available_status"=>REDIS_KEY_WORKER_AVAILABLE_STATUS
+		"available_status"=>REDIS_KEY_WORKER_AVAILABLE_STATUS,
+		"removed_record"=>REDIS_KEY_WORKER_REMOVED_RECORD,
+		"time_added"=>REDIS_KEY_WORKER_ADD_TIME
 	];
 	static var WORKER_HASHES_STRING_LUA = WORKER_HASHES.keys().array().map(function(k) return k + '="' + WORKER_HASHES[k] + '"').join(", ");
 
@@ -919,8 +937,20 @@ local poolId = redis.call("HGET", "$REDIS_KEY_WORKER_POOL_MAP", machineId)
 if poolId == nil or type(poolId) == "boolean" then
 	return {err="Cannot remove worker=" .. machineId .. ", no matching poolId. This is bad. poolId=" .. tostring(poolId)}
 end
+
+--Create and set the worker record so that we never forget when and how this was terminated
+local removedRecord = {poolId=poolId, id=machineId}
+removedRecord["parameters"] = cjson.decode(redis.call("HGET", "$REDIS_KEY_WORKER_PARAMETERS", machineId))
+removedRecord["time_removal"] = time
+removedRecord["time_added"] = tonumber(redis.call("HGET", "$REDIS_KEY_WORKER_ADD_TIME", machineId))
+
+removedRecord["time_deferred"] = redis.call("ZSCORE", "$REDIS_KEY_WORKER_DEFERRED_TIME", machineId)
+redis.call("HSET", "$REDIS_KEY_WORKER_REMOVED_RECORD", machineId, cjson.encode(removedRecord))
+
 for k,v in pairs({${WORKER_HASHES.map(function(s) return '\"' + s + '\"').array().join(", ")}}) do
-	redis.call("HDEL", v, machineId)
+	if v ~= "$REDIS_KEY_WORKER_REMOVED_RECORD" then
+		redis.call("HDEL", v, machineId)
+	end
 end
 redis.call("ZREM", "$REDIS_KEY_WORKER_POOLS_PREFIX" .. poolId, machineId)
 redis.call("SREM", "$REDIS_KEY_WORKER_POOLS_SET_PREFIX" .. poolId, machineId)
@@ -965,21 +995,23 @@ end
 for hashkey,rediskey in pairs({${WORKER_HASHES.keys().array().map(function(k) return k + '=\"' + WORKER_HASHES[k] + '\"').join(", ")}}) do
 	local t = {}
 	local all = redis.call("HGETALL", rediskey)
-	for i=1,#all, 2 do
-		if hashkey == "cpus" then
-			t[all[i]] = tonumber(all[i+1])
-		elseif hashkey == "workers" or hashkey == "workerParameters" then
-			local workerDef = cjson.decode(all[i+1])
-			--Remove the key text because it is useless when inspecting
-			if workerDef.ssh then
-				workerDef.ssh.privateKey = nil
+	if all then
+		for i=1,#all, 2 do
+			if hashkey == "cpus" then
+				t[all[i]] = tonumber(all[i+1])
+			elseif hashkey == "workers" or hashkey == "workerParameters" or hashkey == "removed_record" then
+				local workerDef = cjson.decode(all[i+1])
+				--Remove the key text because it is useless when inspecting
+				if workerDef.ssh then
+					workerDef.ssh.privateKey = nil
+				end
+				if workerDef.docker then
+					workerDef.docker.key = nil
+				end
+				t[all[i]] = workerDef
+			else
+				t[all[i]] = all[i+1]
 			end
-			if workerDef.docker then
-				workerDef.docker.key = nil
-			end
-			t[all[i]] = workerDef
-		else
-			t[all[i]] = all[i+1]
 		end
 	end
 	result[hashkey] = t
@@ -1046,7 +1078,6 @@ result.timeouts = workerTimeouts
 	static var scripts :Map<String, String> = [
 			SCRIPT_ADD_MACHINE =>
 '
-print("SCRIPT_ADD_MACHINE")
 local poolId = ARGV[1]
 local workerString = ARGV[2]
 local workerDefinition = cjson.decode(workerString)
@@ -1061,7 +1092,7 @@ end
 
 local availableStatus = "${MachineAvailableStatus.Idle}"
 
-if redis.call("HEXISTS", "$REDIS_KEY_WORKERS", machineId) ~= 0 then
+if redis.call("HGET", "$REDIS_KEY_WORKER_STATUS", machineId) ~= "${MachineStatus.Initializing}" and redis.call("HEXISTS", "$REDIS_KEY_WORKERS", machineId) ~= 0 then
 	print("Adding machine but it already exists=" .. machineId)
 	$SNIPPET_UPDATE_MACHINE_STATUS
 	return
@@ -1073,12 +1104,6 @@ local workerParameters = cjson.decode(workerParametersString)
 if not workerParameters.cpus then
 	return {err="Cannot add worker, missing cpus field in parameters "}
 end
-
---If this worker came from a pool of reserver (out of this model) instances,
---make sure to remove it from that list, otherwise it will be available for
---adding again
-local reservedWorkerSet = "${REDIS_COMPUTE_POOL_PREFIX}" .. poolId .. "${Constants.SEP}instances"
-redis.call("SREM", reservedWorkerSet, machineId)
 
 --Override the pool worker parameters
 redis.call("HSET", "$REDIS_KEY_POOL_WORKER_PARAMETERS", poolId, workerParametersString)
@@ -1095,6 +1120,8 @@ redis.call("HSET", "$REDIS_KEY_WORKER_STATUS", machineId, status)
 redis.call("HSET", "$REDIS_KEY_WORKER_AVAILABLE_STATUS", machineId, availableStatus)
 redis.call("HSET", "$REDIS_KEY_WORKER_POOL_MAP", machineId, poolId)
 redis.call("HSET", "$REDIS_KEY_WORKER_PARAMETERS", machineId, workerParametersString)
+redis.call("HSET", "$REDIS_KEY_WORKER_ADD_TIME", machineId, time)
+
 
 --Set all the parameters. For the moment just set the cpus
 redis.call("HSET", "$REDIS_KEY_WORKER_AVAILABLE_CPUS", machineId, workerParameters.cpus)
@@ -1125,10 +1152,10 @@ $SNIPPET_UPDATE_MACHINE_CHANNEL
 '
 local machineId = ARGV[1]
 
-if redis.call("HEXISTS", "$REDIS_KEY_WORKERS", machineId) == 0 then
-	print("Cannot remove worker, does not exist id=" .. machineId)
-	return
-end
+-- if redis.call("HEXISTS", "$ REDIS_KEY_WORKERS", machineId) == 0 then
+-- 	print("Cannot remove worker, does not exist id=" .. machineId)
+--	return
+-- end
 
 local worker = redis.call("HGET", "$REDIS_KEY_WORKERS", machineId)
 local time = tonumber(ARGV[2]) --Do not need this right now, but want to log
@@ -1443,6 +1470,7 @@ typedef InstancePoolJsonDump = {
 	var totalTargetInstances :Int;
 	var available :Array<MachineId>;
 	var timeouts :TypedDynamicObject<MachineId, Float>;
+	var removed_record :TypedDynamicObject<MachineId, Dynamic>;
 }
 
 typedef JsonDumpInstance = {
@@ -1491,6 +1519,18 @@ abstract InstancePoolJson(InstancePoolJsonDump) from InstancePoolJsonDump
 			if (pool.id == poolId) {
 				arr = pool.instances != null ? pool.instances.map(function(i) return i.id) : [];
 			}
+		}
+		return arr;
+	}
+
+	inline public function getRemovedMachines() :Array<Dynamic>
+	{
+		var arr :Array<Dynamic> = [];
+		for (key in this.removed_record.keys()) {
+			var val :{time_removal:Float, time_added:Float} = this.removed_record.get(key);
+			Reflect.setField(val, "time_removal", DateFormatTools.getFormattedDate(Std.parseFloat(Reflect.field(val, "time_removal"))));
+			Reflect.setField(val, "time_added", DateFormatTools.getFormattedDate(Std.parseFloat(Reflect.field(val, "time_added"))));
+			arr.push(val);
 		}
 		return arr;
 	}

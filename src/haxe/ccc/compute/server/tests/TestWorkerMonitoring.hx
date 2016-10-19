@@ -102,6 +102,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			.pipe(function(_) {
 				return InstancePool.toJson(_redis)
 					.then(function(instancePoolJsonDump) {
+						instancePoolJsonDump.removed_record = null;
 						if (Json.stringify(instancePoolJsonDump).indexOf(workerId) != -1) {
 							traceRed(Json.stringify(instancePoolJsonDump, null, '\t'));
 						}
@@ -288,7 +289,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return WorkerProviderPkgCloud.createInstance(config, machineType);
+				return WorkerProviderPkgCloud.createInstance(config, machineType, null);
 			})
 			.pipe(function(def) {
 				instanceDef = def;

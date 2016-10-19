@@ -42,6 +42,16 @@ typedef ExecuteJobResult = {
 	var cancel :Void->Void;
 	var promise :Promise<BatchJobResult>;
 }
+
+@:enum
+abstract CleanupStep(String) to String from String {
+	var CleanupStep_01_Remove_Container = 'CleanupStep_01_Remove_Container';
+	var CleanupStep_02_Remove_Volumes = 'CleanupStep_02_Remove_Volumes';
+	var CleanupStep_03_Remove_Input_Volume = 'CleanupStep_03_Remove_Input_Volume';
+	var CleanupStep_04_Remove_Output_Volume = 'CleanupStep_04_Remove_Output_Volume';
+	var CleanupStep_05_Complete = 'CleanupStep_05_Complete';
+}
+
 /**
  * Holds jobs waiting to be executed.
  */
@@ -153,8 +163,8 @@ class BatchComputeDocker
 			//Pipe logs to file streams
 			//Copy the files to the remote worker
 			.pipe(function(_) {
-				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingInputs) {
+					log.info({JobWorkingStatus:jobWorkingStatus});
 					if (job.item.inputsPath != null) {
 						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Reading from custom inputs path=' + job.item.inputsPath});
 					}
@@ -166,7 +176,7 @@ class BatchComputeDocker
 							return DockerDataTools.createVolume(outputsVolume);
 						})
 						.pipe(function(_) {
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'copying inputs'});
+							log.debug({JobWorkingStatus:jobWorkingStatus, log:'copying ${job.item.inputs.length} inputs '});
 							if (job.item.inputs.length == 0) {
 								return Promise.promise(null);
 							} else {
@@ -194,8 +204,8 @@ class BatchComputeDocker
 					}
 			})
 			.pipe(function(_) {
-				log.debug({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingImage) {
+					log.debug({JobWorkingStatus:jobWorkingStatus});
 					//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
 					var promise = null;
 					switch(job.item.image.type) {
@@ -243,8 +253,8 @@ class BatchComputeDocker
 				}
 			})
 			.pipe(function(_) {
-				log.debug({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.ContainerRunning) {
+					log.debug({JobWorkingStatus:jobWorkingStatus});
 					/*
 						First check if there is an existing container
 						running, in case we crashed and resumed
@@ -323,8 +333,8 @@ class BatchComputeDocker
 			})
 			// This part will have to be broken up so compute job watching can be resumed
 			.pipe(function(_) {
-				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingOutputs) {
+					log.info({JobWorkingStatus:jobWorkingStatus});
 					// var outputStorage = fs.clone().appendToRootPath(job.item.outputDir());
 					if (job.item.outputsPath != null) {
 						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Writing to custom outputs path=' + job.item.outputsPath});
@@ -348,8 +358,8 @@ class BatchComputeDocker
 				}
 			})
 			.pipe(function(_) {
-				log.info({JobWorkingStatus:jobWorkingStatus});
 				if (jobWorkingStatus == JobWorkingStatus.CopyingLogs) {
+					log.info({JobWorkingStatus:jobWorkingStatus});
 					log.info('Copying logs from to $resultsStorageRemote');
 					return DockerJobTools.copyLogs(docker, job.computeJobId, resultsStorageRemote)
 						.pipe(function(_) {
@@ -374,18 +384,22 @@ class BatchComputeDocker
 			})
 			.then(function(_) {
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
+				log.info({message: 'job is complete, removing container out of band', jobResult:jobResult});
 				//The job is now finished. Clean up the temp worker storage,
 				// out of the promise chain (for speed)
+
+				log.debug({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container});
+
 				getContainer(docker, computeJobId)
 					.pipe(function(containerData) {
 						if (containerData != null) {
 							return DockerPromises.removeContainer(docker.getContainer(containerData.Id), null, 'removeContainer computeJobId=$computeJobId')
 								.then(function(_) {
-									log.debug('Removed container=${containerData.Id}');
+									log.debug({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container, success:true});
 									return true;
 								})
 								.errorPipe(function(err) {
-									log.error('Problem removing container ${containerData.Id} err=${err}');
+									log.error({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container, error:Json.stringify(err)});
 									return Promise.promise(false);
 								});
 						} else {
@@ -393,38 +407,44 @@ class BatchComputeDocker
 						}
 					})
 					.errorPipe(function(err) {
-						log.error('Problem removing container err=${Json.stringify(err)}');
+						log.error({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container, error:Json.stringify(err)});
 						return Promise.promise(true);
 					})
 					.pipe(function(_) {
+						log.debug({CleanupStep: CleanupStep.CleanupStep_02_Remove_Volumes});
 						return Promise.whenAll(
 							[
-								inputVolumeName != null ? DockerPromises.removeVolume(docker.getVolume(inputVolumeName)) : Promise.promise(true)
+								inputVolumeName == null ? Promise.promise(true) : DockerPromises.removeVolume(docker.getVolume(inputVolumeName))
 									.then(function(_) {
 										if (inputVolumeName != null) {
-											log.debug('Removed volume=$inputVolumeName');
+											log.debug({CleanupStep: CleanupStep.CleanupStep_03_Remove_Input_Volume, volume:inputVolumeName, success:true});
 										} else {
-											log.debug('No input volume to remove');
+											log.debug({CleanupStep: CleanupStep.CleanupStep_03_Remove_Input_Volume, volume:'none', success:true});
 										}
 										return true;
 									})
 									.errorPipe(function(err) {
-										log.error('Problem deleting volume ${inputVolumeName} err=${err}');
+										log.error({CleanupStep: CleanupStep.CleanupStep_03_Remove_Input_Volume, error:Json.stringify(err), success:false});
 										return Promise.promise(false);
 									}),
 								DockerPromises.removeVolume(docker.getVolume(outputVolumeName))
 									.then(function(_) {
-										log.debug('Removed volume=$outputVolumeName');
+										log.debug({CleanupStep: CleanupStep.CleanupStep_04_Remove_Output_Volume, volume:outputVolumeName, success:true});
 										return true;
 									})
 									.errorPipe(function(err) {
-										log.error('Problem deleting volume ${outputVolumeName} err=${err}');
+										log.error({CleanupStep: CleanupStep.CleanupStep_04_Remove_Output_Volume, volume:outputVolumeName, error:Json.stringify(err), success:false});
 										return Promise.promise(false);
 									})
-							]);
+							])
+							.thenTrue()
+							.errorPipe(function(err) {
+								log.error('Caught error on Promise.whenAll cleaning up volumes err=${Json.stringify(err)}');
+								return Promise.promise(true);
+							});
 					})
 					.then(function(_) {
-						log.debug('Removed containers and volumes');
+						log.debug({CleanupStep: CleanupStep.CleanupStep_05_Complete, inputVolume:inputVolumeName, outputVolume:outputVolumeName});
 						return true;
 					});
 				return jobResult;
@@ -444,7 +464,7 @@ class BatchComputeDocker
 				}
 			})
 			.errorPipe(function(err) {
-				Log.error('getContainerId err=$err');
+				Log.error('getContainer computeJobId=$computeJobId err=$err');
 				return Promise.promise(null);
 			});
 	}

@@ -192,6 +192,19 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
+		alias:'status-workers',
+		doc:'Get detailed status of all workers'
+	})
+	public function statusWorkers() :Promise<Dynamic>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServerCommands.statusWorkers(_redis);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
 		alias:'serverversion',
 		doc:'Get the server version info'
 	})

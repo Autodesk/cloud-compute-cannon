@@ -9,7 +9,6 @@ mkdir -p $BUILD_DIR/etc/hxml
 cp ./etc/docker/DockerfileBuild $BUILD_DIR/Dockerfile
 cp -r ./etc/hxml/* $BUILD_DIR/etc/hxml/
 cd $BUILD_DIR/
-# docker build -t $CCC_BUILD_IMAGE -f etc/docker/DockerfileBuild .
 docker build -t $CCC_BUILD_IMAGE .
 cd $BASEDIR
 rm -rf build

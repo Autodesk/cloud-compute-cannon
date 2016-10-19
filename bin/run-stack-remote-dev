@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+set -ev
 trap 'kill $(jobs -p)' EXIT
 REMOTE_CCC_PATH="cloudcomputecannon"
 if [ $# -eq 0 ]
@@ -19,9 +20,8 @@ SERVER_HOST=$1
 SERVER_CONFIG_PATH=$2
 SYNC_COMMAND="rsync --copy-links $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PATH/ccc.yml && ./bin/sync-to-remote $SERVER_HOST"
 #Watch for server changes and push if so. This should restart the server
-chokidar 'build/server/cloud-compute-cannon-server.js' "$SERVER_CONFIG_PATH" -c "$SYNC_COMMAND" &
+chokidar 'build/server/*.js' "$SERVER_CONFIG_PATH" -c "$SYNC_COMMAND" &
 eval $SYNC_COMMAND
 DOCKER_COMPOSE="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.dev-server.yml"
-COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` $DOCKER_COMPOSE up"
-echo $COMMAND
+COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f compute && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` $DOCKER_COMPOSE up"
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"

@@ -52,10 +52,11 @@ using promhx.PromiseTools;
 
 @:enum
 abstract ServerStatus(String) {
-	var Booting_1_4 = "Booting_1_4";
-	var ConnectingToRedis_2_4 = "ConnectingToRedis_2_4";
-	var BuildingServices_3_4 = "BuildingServices_3_4";
-	var Ready_4_4 = "Ready_4_4";
+	var Booting_1_5 = "Booting_1_5";
+	var ConnectingToRedis_2_5 = "ConnectingToRedis_2_5";
+	var BuildingServices_3_5 = "BuildingServices_3_5";
+	var InitializingProvider_4_5 = "InitializingProvider_4_5";
+	var Ready_5_5 = "Ready_5_5";
 }
 
 /**
@@ -98,7 +99,11 @@ class ServerCompute
 				message:'crash'
 			}
 			Log.critical(errObj);
-			traceRed(errObj);
+			try {
+				traceRed(Json.stringify(errObj, null, '  '));
+			} catch(e :Dynamic) {
+				traceRed(errObj);
+			}
 			//Ensure crash is logged before exiting.
 			try {
 				if (Logger.IS_FLUENT) {
@@ -123,9 +128,9 @@ class ServerCompute
 
 		Assert.notNull(config);
 		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
-		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
+		Log.info({server_status:ServerStatus.Booting_1_5, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
 
-		var status = ServerStatus.Booting_1_4;
+		var status = ServerStatus.Booting_1_5;
 		var injector = new Injector();
 		injector.map(Injector).toValue(injector); //Map itself
 
@@ -209,7 +214,7 @@ class ServerCompute
 
 		//Check if server is ready
 		app.get(SERVER_PATH_READY, cast function(req, res) {
-			if (status == ServerStatus.Ready_4_4) {
+			if (status == ServerStatus.Ready_5_5) {
 				Log.debug('${SERVER_PATH_READY}=YES');
 				res.status(200).end();
 			} else {
@@ -234,7 +239,7 @@ class ServerCompute
 		//Check if server is ready
 		app.get(SERVER_PATH_WAIT, cast function(req, res) {
 			function check() {
-				if (status == ServerStatus.Ready_4_4) {
+				if (status == ServerStatus.Ready_5_5) {
 					res.status(200).end();
 					return true;
 				} else {
@@ -262,7 +267,7 @@ class ServerCompute
 			res.send('Logged some shit');
 		});
 
-		status = ServerStatus.ConnectingToRedis_2_4;
+		status = ServerStatus.ConnectingToRedis_2_5;
 		Log.info({server_status:status});
 
 		var workerProviders :Array<ccc.compute.workers.WorkerProvider> = [];
@@ -319,6 +324,7 @@ class ServerCompute
 						//Pipe specific logs from redis since while developing
 						// ServiceBatchComputeTools.pipeRedisLogs(redis);
 						injector.map(RedisClient).toValue(redis);
+
 						if (Reflect.field(env, ENV_CLEAR_DB_ON_START) == 'true') {
 							Log.warn('Deleting all keys prior to starting stack');
 							return ComputeQueue.deleteAllKeys(redis)
@@ -335,6 +341,30 @@ class ServerCompute
 					.pipe(function(redis) {
 						return InitConfigTools.initAll(redis);
 					});
+			})
+			.pipe(function(_) {
+				//Print the status of the workers before doing anything
+				var redis :RedisClient = injector.getValue(RedisClient);
+
+				function pollWorkers() {
+					return ccc.compute.server.ServerCommands.statusWorkers(redis)
+						.then(function(data) {
+							Log.info({message:'Workers', workers:data});
+							traceGreen(Json.stringify(data, null, '  '));
+							return true;
+						})
+						.errorPipe(function(err) {
+							Log.error('Failed to get worker status err=${Json.stringify(err)}');
+							return Promise.promise(true);
+						});
+				}
+
+				var fiveMinutes = 5*60*1000;
+				Node.setTimeout(function() {
+					pollWorkers();
+				}, fiveMinutes);
+
+				return pollWorkers();
 			})
 			//Get public/private network addresses
 			.pipe(function(_) {
@@ -357,8 +387,8 @@ class ServerCompute
 							});
 					});
 			})
-			.then(function(_) {
-				status = ServerStatus.BuildingServices_3_4;
+			.pipe(function(_) {
+				status = ServerStatus.BuildingServices_3_5;
 				Log.debug({server_status:status});
 
 				//Log the worker status every minute to track potential bugs
@@ -378,7 +408,10 @@ class ServerCompute
 				workerProviders = config.providers.map(WorkerProviderTools.getProvider);
 				WorkerProvider = workerProviders[0];
 				injector.map(ccc.compute.workers.WorkerProvider).toValue(WorkerProvider);
-
+				injector.injectInto(WorkerProvider);
+				return WorkerProvider.ready;
+			})
+			.then(function(_) {
 				//The queue manager
 				var schedulingService = new ccc.compute.ServiceBatchCompute();
 				injector.map(ServiceBatchCompute).toValue(schedulingService);
@@ -394,9 +427,6 @@ class ServerCompute
 				injector.injectInto(storage);
 				injector.injectInto(schedulingService);
 				injector.injectInto(workerManager);
-				for (workerProvider in workerProviders) {
-					injector.injectInto(workerProvider);
-				}
 
 				//RPC machinery
 				//Server infrastructure. This automatically handles client JSON-RPC remoting and other API requests
@@ -407,11 +437,9 @@ class ServerCompute
 					Log.error(err);
 				});
 
-
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
 				websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
-
 
 				//After all API routes, assume that any remaining requests are for files.
 				//This is nice for local development
@@ -423,7 +451,7 @@ class ServerCompute
 				//Setup a static file server to serve job results
 				app.use('/', StorageRestApi.staticFileRouter(storage));
 
-				status = ServerStatus.Ready_4_4;
+				status = ServerStatus.Ready_5_5;
 				Log.debug({server_status:status});
 				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
 					Node.process.send(Constants.IPC_MESSAGE_READY);

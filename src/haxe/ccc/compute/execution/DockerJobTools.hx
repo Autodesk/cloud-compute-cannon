@@ -423,12 +423,13 @@ class DockerJobTools
 					DockerPromises.listContainers(docker, {all:true})
 						.then(function(containers) {
 							Log.error({log:'Missing container id', computejobid:computeJobId});
-						});
+						})
+						.catchError(function(err) {/* This error is ignored */});
 					return null;
 				}
 			})
 			.errorPipe(function(err) {
-				Log.error({log:'getContainerId', computejobid:computeJobId, error:err});
+				Log.error('getContainerId DockerPromises.listContainers computejobid=$computeJobId error=${Json.stringify(err)}');
 				return Promise.promise(null);
 			});
 	}
