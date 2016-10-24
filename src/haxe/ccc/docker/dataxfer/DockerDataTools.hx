@@ -387,9 +387,9 @@ class DockerDataTools
 					traceCyan('volumeOperation created container=${container.id}');
 #end
 
-					result.StatusCode = dataRun.StatusCode;
-					result.stdout = outBuffer.toString();
-					result.stderr = errBuffer.toString();
+					result.StatusCode = dataRun != null ? dataRun.StatusCode : null;
+					result.stdout = outBuffer.toString() != "" ? outBuffer.toString() : null;
+					result.stderr = errBuffer.toString() != "" ? errBuffer.toString() : null;
 					if (err != null) {
 						traceRed('Error in docker run err=${Json.stringify(err)}');
 						result.error = err;
