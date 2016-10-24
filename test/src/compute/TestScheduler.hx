@@ -104,6 +104,7 @@ class TestScheduler extends TestComputeBase
 				return redis.toJson();
 			})
 			.pipe(function(json) {
+				json.removed_record = null;
 				//Check the JSON dump string for the id string
 				assertTrue(Json.stringify(json).indexOf(machineToDisable.id) == -1);
 				return Promise.promise(true);
