@@ -894,15 +894,6 @@ end
 
 ';
 
-inline public static var SNIPPET_SCALE_WORKERS_DOWN_NO =
-	//Counts idle machines and reduces the target machines by that amount
-'
-local targetWorkerCount = 0
-redis.call("SET", "$REDIS_KEY_WORKER_POOL_TARGET_INSTANCES_TOTAL", 0)
-$SNIPPET_UPDATE_WORKER_COUNTS
-return
-';
-
 inline public static var SNIPPET_SCALE_WORKERS_DOWN =
 	//Counts idle machines and reduces the target machines by that amount
 '

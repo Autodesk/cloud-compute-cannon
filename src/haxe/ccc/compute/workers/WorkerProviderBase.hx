@@ -446,7 +446,7 @@ class WorkerProviderBase
 	var _instanceStatusCache = new Map<MachineId,MachineStatus>();
 	function onWorkerStatusUpdate(statuses :Array<StatusResult>)
 	{
-		// log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
+		log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
 		for (status in statuses) {
 			var instanceId = status.id;
 			if (_instanceStatusCache.get(instanceId) == status.status) {
@@ -457,10 +457,10 @@ class WorkerProviderBase
 
 			switch(status.status) {
 				case Removing:
-					log.trace('WorkerProviderBase.removeWorker ${instanceId}');
+					log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker'});
 					removeWorker(status.id)
 						.errorPipe(function(err) {
-							log.trace('its ok to have this error after removing a worker');
+							log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker, but it threw an error, but this should be ok', err: err});
 							return Promise.promise(true);
 						})
 						.pipe(function(_) {
@@ -476,6 +476,7 @@ class WorkerProviderBase
 								});
 						});
 				case Deferred:
+					log.info({worker:instanceId, worker_status: status.status, action: 'add to deferred list with a timeout'});
 					log.debug('instance=$instanceId deferred');
 					getShutdownDelay(instanceId)
 						.pipe(function(delay) {
@@ -488,7 +489,8 @@ class WorkerProviderBase
 									return true;
 								});
 						});
-				default://Nothing
+				case Available,Failed,Initializing,Terminated,WaitingForRemoval:
+					log.info({worker:instanceId, worker_status: status.status, action: 'nothing'});
 			}
 		}
 	}
