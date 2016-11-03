@@ -209,7 +209,7 @@ class DockerDataTools
 			var promises = [];
 
 			for (copyCommand in credentials.extraS3SyncParameters) {
-				var command = ['aws', 's3', 'sync', sourceUri, targetUri].concat(copyCommand);
+				var command = ['aws', 's3', 'cp', sourceUri, targetUri, '--recursive'].concat(copyCommand);
 				var op :DataTransferOp = {
 					type: DataTransferType.S3,
 					command: {
@@ -264,7 +264,7 @@ class DockerDataTools
 			var op :DataTransferOp = {
 				type: DataTransferType.S3,
 				command: {
-					command: ['aws', 's3', 'sync', sourceUri, targetUri],
+					command: ['aws', 's3', 'cp', sourceUri, targetUri, '--recursive'],
 					env: {
 						AWS_ACCESS_KEY_ID: credentials.keyId,
 						AWS_SECRET_ACCESS_KEY: credentials.key,
