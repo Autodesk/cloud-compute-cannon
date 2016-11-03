@@ -74,7 +74,7 @@ class Logger
  		var streams :Array<Dynamic> = [
 			{
 				level: Bunyan.TRACE,
-				stream: js.Node.process.stdout
+				stream: js.Node.require('bunyan-format')({outputMode:'short'})
 			}
 		];
 

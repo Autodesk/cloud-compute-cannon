@@ -3,6 +3,7 @@ package ccc.compute.execution;
 import util.DockerTools;
 
 import haxe.Json;
+import haxe.remoting.JsonRpc;
 
 import js.Node;
 import js.node.Path;
@@ -207,24 +208,37 @@ class BatchComputeDocker
 				if (jobWorkingStatus == JobWorkingStatus.CopyingImage) {
 					log.debug({JobWorkingStatus:jobWorkingStatus});
 					//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
-					var promise = null;
 					switch(job.item.image.type) {
 						case Image:
 							var docker = job.worker.getInstance().docker();
 							var dockerImage = job.item.image.value;
-							promise = DockerPromises.hasImage(docker, dockerImage)
+							return DockerPromises.hasImage(docker, dockerImage)
 								.pipe(function(imageExists) {
 									if (imageExists) {
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
-										return Promise.promise(true);
+										return setStatus(JobWorkingStatus.ContainerRunning);
 									} else {
 										var pull_options = job.item.image.pull_options != null ? job.item.image.pull_options : {};
 										pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : dockerImage;
 										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Pulling docker image=${dockerImage}', pull_options:pull_options});
 										return DockerTools.pullImage(docker, dockerImage, pull_options, log.child({'level':30}))
-											.then(function(output) {
+											.pipe(function(output) {
 												//Ignoring output for now.
-												return true;
+												return setStatus(JobWorkingStatus.ContainerRunning);
+											})
+											.errorPipe(function(err) {
+												//Convert this error
+												var jsonRpcError :ResponseError = {
+													code: JsonRpcErrorCode.InvalidParams,
+													message: JobSubmissionError.Docker_Image_Unknown,
+													data: {
+														docker_image_name: dockerImage,
+														error: err
+													}
+												}
+												log.error({error:jsonRpcError});
+												error = jsonRpcError;
+												return setStatus(JobWorkingStatus.Failed);
 											});
 									}
 								});
@@ -234,20 +248,16 @@ class BatchComputeDocker
 							var localStorage = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:path});
 							var docker = job.worker.getInstance().docker();
 							var tag = job.id.dockerTag();
-							promise = localStorage.readDir()
+							return localStorage.readDir()
 								.pipe(function(stream) {
 									return DockerTools.buildDockerImage(docker, tag, stream, null, log.child({'level':30}));
 								})
-								.then(function(imageId) {
+								.pipe(function(imageId) {
 									log.debug({JobWorkingStatus:jobWorkingStatus, log:'Built image'});
 									localStorage.close();//Not strictly necessary since it's local, but just always remember to do it
-									return true;
+									return setStatus(JobWorkingStatus.ContainerRunning);
 								});
 					}
-					return promise
-						.pipe(function(_) {
-							return setStatus(JobWorkingStatus.ContainerRunning);
-						});
 				} else {
 					return Promise.promise(true);
 				}
@@ -313,7 +323,6 @@ class BatchComputeDocker
 										return DockerPromises.wait(containerunResult.container)
 											.then(function(status :{StatusCode:Int}) {
 												exitCode = status.StatusCode;
-
 												log.info({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode});
 												if (error != null) {
 													log.error({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode, error:error});
@@ -371,6 +380,7 @@ class BatchComputeDocker
 				}
 			})
 			.errorPipe(function(pipedError) {
+				traceYellow("CAUGHT THROWN ERROR " + pipedError);
 				error = pipedError;
 				log.error(pipedError);
 				return setStatus(JobWorkingStatus.Failed)

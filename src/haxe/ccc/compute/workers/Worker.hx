@@ -74,12 +74,15 @@ class Worker
 			if (status != null && status != _computeStatus) {
 				_computeStatus = status;
 				log.debug({'status':_computeStatus});
-				if (_computeStatus == MachineStatus.Removing) {
-
+				switch(_computeStatus) {
+					case Available,Deferred:
+						if (_redis != null && _monitor != null) {
+							startMonitor();
+						}
+					case Initializing,WaitingForRemoval,Removing,Failed,Terminated:
 				}
 			}
 		});
-		startMonitor();
 	}
 
 	function startMonitor()

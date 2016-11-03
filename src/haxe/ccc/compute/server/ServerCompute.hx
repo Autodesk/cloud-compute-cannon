@@ -128,7 +128,7 @@ class ServerCompute
 		var config :ServiceConfiguration = InitConfigTools.getConfig();
 
 		Assert.notNull(config);
-		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
+		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
 		Log.info({server_status:ServerStatus.Booting_1_5, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
 
 		var status = ServerStatus.Booting_1_5;
@@ -449,17 +449,17 @@ class ServerCompute
 				//Run internal tests
 				Log.debug('Running server functional tests');
 				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true" : "compute=true"}')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "jobs=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
 							var result = results.result;
 							if (result.success) {
 								Log.info({TestResults:result});
-								traceGreen(Json.stringify(result, null, '  '));
+								traceGreen(Json.stringify(result));
 							} else {
 								Log.error({TestResults:result});
-								traceRed(Json.stringify(result, null, '  '));
+								traceRed(Json.stringify(result));
 							}
 							if (isTravisBuild) {
 								Node.process.exit(result.success ? 0 : 1);

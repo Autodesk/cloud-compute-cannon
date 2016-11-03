@@ -91,7 +91,7 @@ class DockerDataTools
 		}
 		return runImageGetStdOut(docker, DOCKER_IMAGE_DEFAULT, ["find", volume.mount, "-type", "f"], [volume])
 			.then(function(stdout) {
-				return stdout != null ? stdout.trim().split('\n').map(function(s) return s.substr(VOLUME_MOUNT_POINT1.length + 1)): [];
+				return stdout != null ? stdout.trim().split('\n').map(function(s) return s.substr(VOLUME_MOUNT_POINT1.length + 1)).filter(function(s) return s.length > 0): [];
 			});
 	}
 
