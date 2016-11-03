@@ -284,9 +284,12 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 
 	override public function shutdownAllWorkers() :Promise<Bool>
 	{
+		log.warn('shutdownAllWorkers');
 		return InstancePool.getInstancesInPool(_redis, id)
 			.pipe(function(workerStatuses) {
+				log.warn('shutdownAllWorkers workerStatuses=${Json.stringify(workerStatuses)}');
 				return Promise.whenAll(workerStatuses.map(function(w) {
+					log.warn('shutdownAllWorkers shutting down ${w.id}');
 					return shutdownWorker(w.id);
 				}));
 			})

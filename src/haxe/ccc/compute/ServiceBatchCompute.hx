@@ -237,6 +237,7 @@ class ServiceBatchCompute
 	public function removeAllJobsAndWorkers() :Promise<Bool>
 	{
 #if ((nodejs && !macro) && !excludeccc)
+		Log.warn('remove-all-workers-and-jobs');
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return _workerProvider.setMinWorkerCount(0);
@@ -245,9 +246,11 @@ class ServiceBatchCompute
 				return _workerProvider.setMaxWorkerCount(0);
 			})
 			.pipe(function(_) {
+				Log.warn('Removing all jobs');
 				return doJobCommand(JobCLICommand.Remove, []);
 			})
 			.pipe(function(_) {
+				Log.warn('Removing all workers');
 				return _workerProvider.shutdownAllWorkers();
 			});
 #else
@@ -704,10 +707,9 @@ class ServiceBatchCompute
 	{
 		getNewJobId()
 			.then(function(jobId) {
-				var jsonrpc :RequestDefTyped<BasicBatchProcessRequest> = null;
 				var promises = [];
 				var returned = false;
-				// var inputs = new Array<ComputeInputSource>();
+				var jsonrpc :RequestDefTyped<BasicBatchProcessRequest> = null;
 				function returnError(err :haxe.extern.EitherType<String, js.Error>) {
 					Log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
 					if (returned) return;
@@ -850,26 +852,8 @@ class ServiceBatchCompute
 								});
 						})
 						.then(function(_) {
-							if (jsonrpc.params.wait == true) {
-								getJobResult(jobId, jsonrpc.params.parameters != null && jsonrpc.params.parameters.maxDuration != null ? jsonrpc.params.parameters.maxDuration : null)
-									.then(function(jobResult) {
-										res.writeHead(200, {'content-type': 'application/json'});
-										var jsonRpcRsponse = {
-											result: jobResult,
-											jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
-											id: jsonrpc.id
-										}
-										res.end(Json.stringify(jsonRpcRsponse));
-									});
-							} else {
-								res.writeHead(200, {'content-type': 'application/json'});
-								var jsonRpcRsponse = {
-									result: {jobId:jobId},
-									jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
-									id: jsonrpc.id
-								}
-								res.end(Json.stringify(jsonRpcRsponse));
-							}
+							var maxDuration = jsonrpc.params.parameters != null && jsonrpc.params.parameters.maxDuration != null ? jsonrpc.params.parameters.maxDuration : null;
+							returnJobResult(res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
 							Log.error(err);
@@ -947,6 +931,43 @@ class ServiceBatchCompute
 			}
 		}
 		return {promise:Promise.whenAll(promises), inputs:inputNames, cancel:function() return _fs.deleteDir(inputsPath)};
+	}
+
+	function returnJobResult(res :ServerResponse, jobId :JobId, jsonRpcId :Dynamic, wait :Bool, maxDuration :Float)
+	{
+		if (wait == true) {
+			getJobResult(jobId, maxDuration)
+				.then(function(jobResult) {
+					var jsonRpcRsponse = {
+						result: jobResult,
+						jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
+						id: jsonRpcId
+					}
+
+					if (jobResult.error != null) {
+						var errorMessage :JobSubmissionError = jobResult.error.message;
+						switch(errorMessage) {
+							//This is a known client submission error
+							case Docker_Image_Unknown:
+								res.writeHead(400, {'content-type': 'application/json'});
+							//Assume the other errors are internal server errors
+							default:
+								res.writeHead(500, {'content-type': 'application/json'});
+						}
+					} else {
+						res.writeHead(200, {'content-type': 'application/json'});
+					}
+					res.end(Json.stringify(jsonRpcRsponse));
+				});
+		} else {
+			res.writeHead(200, {'content-type': 'application/json'});
+			var jsonRpcRsponse = {
+				result: {jobId:jobId},
+				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
+				id: jsonRpcId
+			}
+			res.end(Json.stringify(jsonRpcRsponse));
+		}
 	}
 
 	static function verifyJobCommand(command :String)

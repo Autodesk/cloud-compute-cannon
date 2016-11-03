@@ -6,14 +6,12 @@ services:
     extends:
       file: docker-compose.core.yml
       service: compute
-    image: "quay.io/bionano/cloud-compute-cannon:016b4174"
-    command: ["nodemon", "-w", "server", "-w", "/app/config/ccc.yml", "server/cloud-compute-cannon-server.js"]
+    image: "quay.io/bionano/cloud-compute-cannon:f5728c67"
+    command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
     volumes:
       - ./build/server:/app/server
-      - ./:/app/config
     environment:
       LOG_LEVEL: "${LOG_LEVEL}"
-      CONFIG_PATH: "/app/config/ccc.yml"
     links:
       - redis
       - registry
@@ -48,7 +46,7 @@ services:
     links:
       - elasticsearch
     logging:
-      driver: json-file
+      driver: none
 
   elasticsearch:
     extends:

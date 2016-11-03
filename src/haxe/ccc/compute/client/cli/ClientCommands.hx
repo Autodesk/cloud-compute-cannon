@@ -141,7 +141,7 @@ class ClientCommands
 		args:{
 			command: {doc:'Command to run in the docker container, specified as 1) a single word such as the script path 2) a single quoted string, which will be split (via spaces) into words (e.g. "echo foo") 3) a single string of a JSON array, e.g. \'[\"echo\",\"boo\"]\'. Space delimited commands are problematic to parse correctly.', short:'c'},
 			directory: {doc: 'Path to directory containing the job definition', short:'d'},
-			image: {doc: 'Docker image name [ubuntu:14.04]', short: 'm'},
+			image: {doc: 'Docker image name [docker.io/busybox:latest]', short: 'm'},
 			input: {doc:'Input values (decoded into JSON values) [input]. E.g.: --input foo1=SomeString --input foo2=2 --input foo3="[1,2,3,4]". ', short:'i'},
 			inputfile: {doc:'Input files [inputfile]. E.g. --inputfile foo1=/home/user1/Desktop/test.jpg" --input foo2=/home/me/myserver/myfile.txt ', short:'f'},
 			inputurl: {doc:'Input urls (downloaded from the server) [inputurl]. E.g. --input foo1=http://someserver/test.jpg --input foo2=http://myserver/myfile', short:'u'},
@@ -451,7 +451,7 @@ class ClientCommands
 		alias:'terminate',
 		doc:'Shut down the remote server(s) and workers, and delete server files locally',
 	})
-	public static function serverShutdown(?confirm :Bool = false) :Promise<CLIResult>
+	public static function terminate(?confirm :Bool = false) :Promise<CLIResult>
 	{
 		if (!confirm) {
 			traceYellow('To prevent accidentally destroying the server installation, run this command again with "--confirm" to terminate all instances.');

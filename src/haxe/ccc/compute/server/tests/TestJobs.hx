@@ -19,6 +19,79 @@ class TestJobs extends ServerAPITestBase
 	static var TEST_BASE = 'tests';
 
 	@timeout(120000)
+	public function testExitCodeZero() :Promise<Bool>
+	{
+		var script =
+'#!/bin/sh
+exit 0
+';
+		var scriptName = 'script.sh';
+		var input :ComputeInputSource = {
+			type: InputSource.InputInline,
+			value: script,
+			name: scriptName
+		}
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000)
+			.pipe(function(out) {
+				return ServerTestTools.getJobResult(out.jobId);
+			})
+			.then(function(jobResult :JobResultAbstract) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+				assertEquals(jobResult.exitCode, 0);
+				return true;
+			});
+	}
+
+	@timeout(120000)
+	public function testExitCodeNonZeroScript() :Promise<Bool>
+	{
+		var exitCode = 3;
+		var script =
+'#!/bin/sh
+exit $exitCode
+';
+		var scriptName = 'script.sh';
+		var input :ComputeInputSource = {
+			type: InputSource.InputInline,
+			value: script,
+			name: scriptName
+		}
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000)
+			.pipe(function(out) {
+				return ServerTestTools.getJobResult(out.jobId);
+			})
+			.then(function(jobResult :JobResultAbstract) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+				assertEquals(jobResult.exitCode, exitCode);
+				return true;
+			});
+	}
+
+	@timeout(120000)
+	public function testExitCodeNonZeroCommand() :Promise<Bool>
+	{
+		var exitCode = 4;
+		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '-c', 'exit $exitCode'], [], null, 1, 600000)
+			.pipe(function(out) {
+				return ServerTestTools.getJobResult(out.jobId);
+			})
+			.then(function(jobResult :JobResultAbstract) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+				assertEquals(jobResult.exitCode, exitCode);
+				return true;
+			});
+	}
+
+	@timeout(120000)
 	public function testWaitForJob() :Promise<Bool>
 	{
 		var outputValueStdout = 'out${ShortId.generate()}';
@@ -496,6 +569,113 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 	}
 
 	@timeout(120000)
+	public function testMultipartRPCSubmissionAndWaitNonZeroExitCode() :Promise<Bool>
+	{
+		var url = 'http://${_serverHost}${SERVER_RPC_URL}';
+		var exitCode = 3;
+		var script =
+'#!/bin/sh
+exit $exitCode
+';
+		var scriptName = 'script.sh';
+
+		var jobSubmissionOptions :BasicBatchProcessRequest = {
+			image: DOCKER_IMAGE_DEFAULT,
+			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
+			inputs: [],
+			parameters: {cpus:1, maxDuration:20*60*100000},
+			wait: true
+		};
+
+		var formData :DynamicAccess<Dynamic> = {};
+		formData[JsonRpcConstants.MULTIPART_JSONRPC_KEY] = Json.stringify(
+			{
+				method: RPC_METHOD_JOB_SUBMIT,
+				params: jobSubmissionOptions,
+				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2
+
+			});
+		formData[scriptName] = script;
+
+		var promise = new DeferredPromise();
+		js.npm.request.Request.post({url:url, formData: formData},
+			function(err, httpResponse, body) {
+				if (err != null) {
+					promise.boundPromise.reject(err);
+					return;
+				}
+				traceCyan('httpResponse.statusCode=${httpResponse.statusCode}');
+				if (httpResponse.statusCode == 200) {
+					try {
+						Promise.promise(true)
+							.then(function(out) {
+								var rpcResult :{result:JobResult} = Json.parse(body);
+								return rpcResult.result;
+							})
+							.then(function(jobResult :JobResultAbstract) {
+								if (jobResult == null) {
+									throw 'jobResult should not be null. Check the above section';
+								}
+								traceCyan('jobResult=${jobResult}');
+								return true;
+							})
+							.then(function(passed) {
+								promise.resolve(passed);
+							});
+					} catch (err :Dynamic) {
+						promise.boundPromise.reject(err);
+					}
+				} else {
+					promise.boundPromise.reject('non-200 response body=' + body);
+				}
+			});
+
+		return promise.boundPromise;
+	}
+
+	@timeout(120000)
+	public function testMultipartRPCSubmissionBadDockerImage() :Promise<Bool>
+	{
+		var url = 'http://${_serverHost}${SERVER_RPC_URL}';
+		var script =
+'#!/bin/sh
+exit 0
+';
+		var scriptName = 'script.sh';
+
+		var jobSubmissionOptions :BasicBatchProcessRequest = {
+			image: 'this_docker_image_is_fubar',
+			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
+			inputs: [],
+			parameters: {cpus:1, maxDuration:20*60*100000},
+			wait: true
+		};
+
+		var formData :DynamicAccess<Dynamic> = {};
+		formData[JsonRpcConstants.MULTIPART_JSONRPC_KEY] = Json.stringify(
+			{
+				method: RPC_METHOD_JOB_SUBMIT,
+				params: jobSubmissionOptions,
+				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2
+
+			});
+		formData[scriptName] = script;
+
+		var promise = new DeferredPromise();
+		js.npm.request.Request.post({url:url, formData: formData},
+			function(err, httpResponse, body) {
+				if (err != null) {
+					promise.boundPromise.reject(err);
+					return;
+				}
+				traceCyan('httpResponse.statusCode=${httpResponse.statusCode}');
+				promise.resolve(httpResponse.statusCode == 400);
+			});
+
+		return promise.boundPromise;
+	}
+
+	@timeout(120000)
 	public function testCompleteComputeJobProxy() :Promise<Bool>
 	{
 		var TESTNAME = 'testCompleteComputeJobProxy';
@@ -618,6 +798,6 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 
 	public function new(targetHost :Host)
 	{
-		super(targetHost);
+		super(targetHost != null ? targetHost : new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT)));
 	}
 }

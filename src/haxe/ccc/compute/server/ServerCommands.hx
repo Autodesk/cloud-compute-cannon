@@ -242,7 +242,7 @@ class ServerCommands
 		var haxeCompilerVersion = Version.getHaxeCompilerVersion();
 		var customVersion = null;
 		try {
-			customVersion = Fs.readFileSync('VERSION', {encoding:'utf8'});
+			customVersion = Fs.readFileSync('VERSION', {encoding:'utf8'}).trim();
 		} catch(ignored :Dynamic) {
 			customVersion = null;
 		}

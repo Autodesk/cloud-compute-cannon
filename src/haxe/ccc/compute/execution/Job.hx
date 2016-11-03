@@ -65,6 +65,8 @@ class Job
 			inputs: job.item.inputs,
 			outputs: batchJobResult.outputFiles,
 			error: batchJobResult.error,
+			definition: job.item,
+			stats: job.stats
 		};
 
 		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
@@ -279,6 +281,7 @@ class Job
 					.pipe(function(_) {
 						var executecallResult = executeJob();
 						executecallResult.promise.catchError(function(err) {
+
 							log.error(try {Json.stringify(err);} catch(_:Dynamic) {err;});
 							_cancelWorkingJob = null;
 

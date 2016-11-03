@@ -37,3 +37,5 @@ cd ../../
 #Also create a tag with the npm version
 docker tag $REPO_NAME "cloud-compute-cannon:$PACKAGE_VERSION"
 docker tag $REPO_NAME "cloud-compute-cannon:latest"
+
+echo "Built $REPO_NAME"
