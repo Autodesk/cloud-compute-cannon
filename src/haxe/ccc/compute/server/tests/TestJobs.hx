@@ -32,7 +32,13 @@ exit 0
 			name: scriptName
 		}
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000)
+
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testExitCodeZero/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testExitCodeZero/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testExitCodeZero/$random/results';
+
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -60,7 +66,13 @@ exit $exitCode
 			name: scriptName
 		}
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000)
+
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testExitCodeNonZeroScript/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testExitCodeNonZeroScript/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testExitCodeNonZeroScript/$random/results';
+
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], [input], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -78,7 +90,13 @@ exit $exitCode
 	{
 		var exitCode = 4;
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '-c', 'exit $exitCode'], [], null, 1, 600000)
+
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testExitCodeNonZeroCommand/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testExitCodeNonZeroCommand/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testExitCodeNonZeroCommand/$random/results';
+
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '-c', 'exit $exitCode'], [], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
 			.pipe(function(out) {
 				return ServerTestTools.getJobResult(out.jobId);
 			})
@@ -96,10 +114,12 @@ exit $exitCode
 	{
 		var outputValueStdout = 'out${ShortId.generate()}';
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		var random = ShortId.generate();
-		var customResultsPath = '$TEST_BASE/testWaitForJob/$random/results';
 		var waitForJobToFinish = true;
-		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '-c', 'echo $outputValueStdout'], [], null, 1, 600000, customResultsPath, null, null, waitForJobToFinish)
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testWaitForJob/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testWaitForJob/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testWaitForJob/$random/results';
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '-c', 'echo $outputValueStdout'], [], null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath, waitForJobToFinish)
 			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
@@ -579,11 +599,19 @@ exit $exitCode
 ';
 		var scriptName = 'script.sh';
 
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testMultipartRPCSubmissionAndWaitNonZeroExitCode/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testMultipartRPCSubmissionAndWaitNonZeroExitCode/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testMultipartRPCSubmissionAndWaitNonZeroExitCode/$random/results';
+
 		var jobSubmissionOptions :BasicBatchProcessRequest = {
 			image: DOCKER_IMAGE_DEFAULT,
 			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
 			inputs: [],
 			parameters: {cpus:1, maxDuration:20*60*100000},
+			outputsPath: customOutputsPath,
+			inputsPath: customInputsPath,
+			resultsPath: customResultsPath,
 			wait: true
 		};
 
@@ -604,7 +632,6 @@ exit $exitCode
 					promise.boundPromise.reject(err);
 					return;
 				}
-				traceCyan('httpResponse.statusCode=${httpResponse.statusCode}');
 				if (httpResponse.statusCode == 200) {
 					try {
 						Promise.promise(true)
@@ -616,7 +643,6 @@ exit $exitCode
 								if (jobResult == null) {
 									throw 'jobResult should not be null. Check the above section';
 								}
-								traceCyan('jobResult=${jobResult}');
 								return true;
 							})
 							.then(function(passed) {
@@ -643,11 +669,19 @@ exit 0
 ';
 		var scriptName = 'script.sh';
 
+		var random = ShortId.generate();
+		var customInputsPath = '$TEST_BASE/testMultipartRPCSubmissionBadDockerImage/$random/inputs';
+		var customOutputsPath = '$TEST_BASE/testMultipartRPCSubmissionBadDockerImage/$random/outputs';
+		var customResultsPath = '$TEST_BASE/testMultipartRPCSubmissionBadDockerImage/$random/results';
+
 		var jobSubmissionOptions :BasicBatchProcessRequest = {
 			image: 'this_docker_image_is_fubar',
 			cmd: ['/bin/sh', '/$DIRECTORY_INPUTS/$scriptName'],
 			inputs: [],
 			parameters: {cpus:1, maxDuration:20*60*100000},
+			outputsPath: customOutputsPath,
+			inputsPath: customInputsPath,
+			resultsPath: customResultsPath,
 			wait: true
 		};
 
@@ -729,11 +763,6 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			value: script,
 			name: scriptName
 		}
-
-		var random = ShortId.generate();
-		var customInputsPath = '$TEST_BASE/testReadMultilineStdout/$random/inputs';
-		var customOutputsPath = '$TEST_BASE/testReadMultilineStdout/$random/outputs';
-		var customResultsPath = '$TEST_BASE/testReadMultilineStdout/$random/results';
 
 		var inputsArray = [inputInline, inputUrl, inputScript];
 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
