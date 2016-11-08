@@ -105,11 +105,11 @@ class Worker
 
 		//Output monitoring logs
 		_monitor.docker.then(function(status) {
-			Log.trace({id:_id, monitor:'docker', status:Type.enumConstructor(status)});
+			Log.debug({id:_id, monitor:'docker', status:Type.enumConstructor(status)});
 		});
 
 		_monitor.disk.then(function(status) {
-			Log.trace({id:_id, monitor:'disk', status:Type.enumConstructor(status)});
+			Log.debug({id:_id, monitor:'disk', status:Type.enumConstructor(status)});
 		});
 
 		//The action taken after a failure is detected

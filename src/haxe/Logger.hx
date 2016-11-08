@@ -5,7 +5,7 @@ import js.npm.bunyan.Bunyan;
  */
 class Logger
 {
-	public static var GLOBAL_LOG_LEVEL :Int = 30;
+	public static var GLOBAL_LOG_LEVEL :Int = 20;
 	public static var IS_FLUENT = true;
 
 	public static var log :AbstractLogger;
