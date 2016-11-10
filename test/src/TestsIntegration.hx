@@ -59,6 +59,8 @@ class TestsIntegration
 			return Type.resolveClass('ccc.compute.server.tests.$className');
 		} else if (Type.resolveClass('compute.$className') != null) {
 			return Type.resolveClass('compute.$className');
+		} else if (Type.resolveClass('ccc.docker.dataxfer.$className') != null) {
+			return Type.resolveClass('ccc.docker.dataxfer.$className');
 		} else if (Type.resolveClass('storage.$className') != null) {
 			return Type.resolveClass('storage.$className');
 		} else {
@@ -87,7 +89,7 @@ class TestsIntegration
 
 	static function main()
 	{
-		Node.require('dotenv').config({path: '.env.test'});
+		Node.require('dotenv').config({path: '.env.test', silent: true});
 		if (Reflect.field(Node.process.env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
 			Logger.log.level(100);
@@ -105,6 +107,7 @@ class TestsIntegration
 					var ins :{setup:Void->Promise<Bool>,tearDown:Void->Promise<Bool>} = Type.createInstance(cls, []);
 					var testMethod = Reflect.field(ins, methodName);
 					if (testMethod != null) {
+						Node.setTimeout(function(){}, 1000000000);
 						ins.setup()
 							.orTrue()
 							.pipe(function(_) {
@@ -114,6 +117,16 @@ class TestsIntegration
 							.errorPipe(function(err) {
 								traceRed(err);
 								return Promise.promise(false);
+							})
+							.pipe(function(result) {
+								return ins.tearDown()
+									.then(function(_) {
+										return result;
+									})
+									.errorPipe(function(err) {
+										traceRed(err);
+										return Promise.promise(result);
+									});
 							})
 							.then(function(passed){
 								if (passed) {
@@ -175,7 +188,6 @@ class TestsIntegration
 
 		//Run the unit tests. These do not require any external dependencies
 		if (isUnit) {
-			runner.add(new ccc.compute.server.tests.TestUnit());
 			runner.add(new utils.TestPromiseQueue());
 			runner.add(new utils.TestStreams());
 			runner.add(new storage.TestStorageRestAPI());

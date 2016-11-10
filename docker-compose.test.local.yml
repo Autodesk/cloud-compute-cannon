@@ -1,21 +1,31 @@
-compute:
-  command: ["haxe", "test/testsIntegration.hxml"]
-  environment:
-    AWS: "false"
-    DOCKER: "true"
-    VAGRANT: "false"
+version: '2'
 
-fluentd:
-  log_driver: "none"
+services:
+  compute:
+    image: "cloud-compute-cannon:latest"
+    command: ["${EXECUTABLE}", "build/test/compute_tests.js"]
+    volumes:
+      - ./:/config
+      - ./test:/app/test
+      - ./build:/app/build
+    environment:
+      AWS: "false"
+      DOCKER: "true"
+      VAGRANT: "false"
 
-redis:
-  log_driver: "none"
+  redis:
+    logging:
+      driver: "none"
+      options: {}
 
-registry:
-  log_driver: "none"
+  registry:
+    logging:
+      driver: "none"
+      options: {}
 
-elasticsearch:
-  log_driver: "none"
-
-kibana:
-  log_driver: "none"
+  fluentd:
+    image: fluent/fluentd:v0.14.2
+    volumes:
+      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
+    logging:
+      driver: none

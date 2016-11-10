@@ -1,63 +1,59 @@
-compute:
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./data/computejobs:/computejobs
-    - ./data:/app/data
-  links:
-    - redis
-    - registry
-    - fluentd
-  log_driver: "json-file"
-  log_opt: {}
+version: '2'
 
+services:
 
-redis:
-  #This config disables persistance to disk since we do not need it for development
-  command: redis-server /usr/local/etc/redis/redis.conf
-  volumes:
-    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
-    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-    - ./data/redis:/data
-  ports:
-    - "6379:6379"
-  links:
-    - fluentd
+  compute:
+    build:
+      context: .
+    volumes:
+      - ./ccc_local_storage:/app/ccc_local_storage
+      - ./:/config
+    links:
+      - redis
+      - registry
+      - fluentd
+    logging:
+      driver: json-file
 
+  redis:
+    #This config disables persistance to disk since we do not need it for development
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      #Don't expose this port to the host, only linked containers.
+      - "6379:6379"
+    links:
+      - fluentd
 
-registry:
-  volumes:
-    - ./data/registry:/var/lib/registry
-  environment:
-    SETTINGS_FLAVOR: local
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
-  links:
-    - fluentd
-  log_driver: "none"
-  log_opt: {}
+  registry:
+    environment:
+      SETTINGS_FLAVOR: local
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    links:
+      - fluentd
+    logging:
+      driver: none
 
+  fluentd:
+    build: ./etc/log/
+    volumes:
+      - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+    links:
+      - elasticsearch
+    logging:
+      driver: none
 
-fluentd:
-  build: ./etc/log/
-  volumes:
-    - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
-    - ./etc/log/plugins:/fluentd/plugins
-  links:
-    - elasticsearch
-  log_driver: "none"
-  log_opt: {}
+  elasticsearch:
+    extends:
+      file: docker-compose.core.yml
+      service: elasticsearch
+    logging:
+      driver: none
 
-
-elasticsearch:
-  extends:
-    file: docker-compose.core.yml
-    service: elasticsearch
-  log_driver: "none"
-  log_opt: {}
-
-
-kibana:
-  extends:
-    file: docker-compose.core.yml
-    service: kibana
-  links:
-    - elasticsearch
+  kibana:
+    extends:
+      file: docker-compose.core.yml
+      service: kibana
+    links:
+      - elasticsearch

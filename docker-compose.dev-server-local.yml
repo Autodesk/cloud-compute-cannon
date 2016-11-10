@@ -1,0 +1,64 @@
+version: '2'
+
+services:
+
+  compute:
+    extends:
+      file: docker-compose.core.yml
+      service: compute
+    image: "quay.io/bionano/cloud-compute-cannon:f5728c67"
+    command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    volumes:
+      - ./build/server:/app/server
+      - ./ccc_local_storage:/app/ccc_local_storage
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL}"
+    links:
+      - redis
+      - registry
+      - fluentd
+    logging:
+      driver: json-file
+
+  redis:
+    extends:
+      file: docker-compose.core.yml
+      service: redis
+    volumes:
+      - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      #Don't expose this port to the host, only linked containers.
+      - "6379:6379"
+
+  registry:
+    extends:
+      file: docker-compose.core.yml
+      service: registry
+    environment:
+      SETTINGS_FLAVOR: local
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    logging:
+      driver: none
+
+  fluentd:
+    build: ./etc/log/
+    volumes:
+      - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+    links:
+      - elasticsearch
+    logging:
+      driver: none
+
+  elasticsearch:
+    extends:
+      file: docker-compose.core.yml
+      service: elasticsearch
+    logging:
+      driver: none
+
+  kibana:
+    extends:
+      file: docker-compose.core.yml
+      service: kibana
+    links:
+      - elasticsearch

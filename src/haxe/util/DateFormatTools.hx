@@ -23,4 +23,11 @@ class DateFormatTools
 			return '${dateBlob.seconds}s';
 		}
 	}
+
+	public static function getFormattedDate(time :Float, ?formatString:String, ?tz :String) :String
+	{
+		tz = tz == null ? "America/Los_Angeles" : tz;
+		formatString = formatString == null ? "YYYY-MM-DDTHH:mm:ss z" : formatString;
+		return new js.npm.moment.MomentTimezone(time).tz(tz).format(formatString).toString();
+	}
 }

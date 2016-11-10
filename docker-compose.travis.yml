@@ -1,0 +1,44 @@
+version: '2'
+
+volumes:
+  redis-data:
+    driver: local
+  ccc-local-storage:
+    driver: local
+
+services:
+
+  compute:
+    extends:
+      file: docker-compose.core.yml
+      service: compute
+    image: "cloud-compute-cannon:${VERSION}"
+    command: ["node", "server/cloud-compute-cannon-server.js"]
+    links:
+      - redis
+      - fluentd
+    environment:
+      TRAVIS: "${TRAVIS}"
+    # volumes:
+      # - ./build:/app/build
+    logging:
+      driver: "json-file"
+      options: {}
+
+  redis:
+    extends:
+      file: docker-compose.core.yml
+      service: redis
+    logging:
+      driver: "json-file"
+      options: {}
+
+  fluentd:
+    extends:
+      file: docker-compose.core.yml
+      service: fluentd
+    image: fluent/fluentd:v0.14.2
+    volumes:
+      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
+    logging:
+      driver: none

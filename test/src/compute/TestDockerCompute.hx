@@ -316,9 +316,6 @@ class TestDockerCompute extends TestComputeBase
 				return true;
 			})
 			.pipe(function(_) {
-				return DockerJobTools.removeJobContainer(job);
-			})
-			.pipe(function(_) {
 				var outputStorage = fs.appendToRootPath(job.item.outputDir());
 				return outputStorage.listDir()
 					.then(function(files) {
@@ -469,7 +466,7 @@ class TestDockerCompute extends TestComputeBase
 			jobId: jobId,
 			computeJobId: computeJobId,
 			worker: worker,
-			image: {type:DockerImageSourceType.Image, value:'busybox'},
+			image: {type:DockerImageSourceType.Image, value:DOCKER_IMAGE_DEFAULT},
 			inputs: FsExtended.listFilesSync(inputDirLocalFull),
 			command: command,
 			inputsPath: inputDir,

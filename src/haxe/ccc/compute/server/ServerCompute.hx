@@ -41,6 +41,8 @@ import ccc.storage.ServiceStorage;
 import ccc.storage.StorageRestApi;
 import ccc.storage.ServiceStorageLocalFileSystem;
 
+import promhx.Stream;
+
 import util.RedisTools;
 import util.DockerTools;
 
@@ -50,10 +52,11 @@ using promhx.PromiseTools;
 
 @:enum
 abstract ServerStatus(String) {
-	var Booting_1_4 = "Booting_1_4";
-	var ConnectingToRedis_2_4 = "ConnectingToRedis_2_4";
-	var BuildingServices_3_4 = "BuildingServices_3_4";
-	var Ready_4_4 = "Ready_4_4";
+	var Booting_1_5 = "Booting_1_5";
+	var ConnectingToRedis_2_5 = "ConnectingToRedis_2_5";
+	var BuildingServices_3_5 = "BuildingServices_3_5";
+	var InitializingProvider_4_5 = "InitializingProvider_4_5";
+	var Ready_5_5 = "Ready_5_5";
 }
 
 /**
@@ -64,6 +67,7 @@ class ServerCompute
 {
 	public static var StorageService :ServiceStorage;
 	public static var WorkerProvider :WorkerProvider;
+	public static var StatusStream :Stream<JobStatusUpdate>;
 
 	static function main()
 	{
@@ -72,6 +76,7 @@ class ServerCompute
 		//Embed various files
 		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
 		ErrorToJson;
+		monitorMemory();
 		runServer();
 	}
 
@@ -81,18 +86,37 @@ class ServerCompute
 		js.Node.process.stderr.setMaxListeners(100);
 
 		//Load env vars from an .env file if present
-		Node.require('dotenv').config({path: '/config/.env', silent: true});
+		Node.require('dotenv').config({path: '.env', silent: true});
+		Node.require('dotenv').config({path: 'config/.env', silent: true});
 
 		var env = Node.process.env;
 
-		Logger.log = new AbstractLogger({name: APP_NAME_COMPACT});
-		// haxe.Log.trace = function(v :Dynamic, ?infos : haxe.PosInfos ) :Void {
-		// 	Log.trace(v, infos);
-		// }
-
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
-			Log.critical({crash:err.stack, message:'crash'});
-			Node.process.exit(1);
+			var errObj = {
+				stack:try err.stack catch(e :Dynamic){null;},
+				error:err,
+				errorJson: try untyped err.toJSON() catch(e :Dynamic){null;},
+				errorString: try untyped err.toString() catch(e :Dynamic){null;},
+				message:'crash'
+			}
+			Log.critical(errObj);
+			try {
+				traceRed(Json.stringify(errObj, null, '  '));
+			} catch(e :Dynamic) {
+				traceRed(errObj);
+			}
+			//Ensure crash is logged before exiting.
+			try {
+				if (Logger.IS_FLUENT) {
+					ccc.compute.FluentTools.logToFluent(Json.stringify(errObj), function() {
+						Node.process.exit(1);
+					});
+				} else {
+					Node.process.exit(1);
+				}
+			} catch(e :Dynamic) {
+				Node.process.exit(1);
+			}
 		});
 
 		//Sanity checks
@@ -102,11 +126,12 @@ class ServerCompute
 		}
 
 		var config :ServiceConfiguration = InitConfigTools.getConfig();
-		Assert.notNull(config);
-		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
-		Log.info({server_status:ServerStatus.Booting_1_4, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
 
-		var status = ServerStatus.Booting_1_4;
+		Assert.notNull(config);
+		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
+		Log.info({server_status:ServerStatus.Booting_1_5, config:LogTools.removePrivateKeys(config), config_path:CONFIG_PATH, HOST_PWD:env['HOST_PWD']});
+
+		var status = ServerStatus.Booting_1_5;
 		var injector = new Injector();
 		injector.map(Injector).toValue(injector); //Map itself
 
@@ -118,18 +143,20 @@ class ServerCompute
 
 		if (Reflect.field(env, ENV_VAR_DISABLE_LOGGING) == 'true') {
 			untyped __js__('console.log = function() {}');
-			Logger.log.level(100);
+			Log.warn('Disabled logging');
+			Logger.GLOBAL_LOG_LEVEL = 100;
 		} else {
 			Log.info('$ENV_LOG_LEVEL=${Reflect.field(env, ENV_LOG_LEVEL)}');
 			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
 				var newLogLevel = Std.int(Reflect.field(env, ENV_LOG_LEVEL));
-				Logger.log.level(newLogLevel);
+				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
 			}
 			trace({log_check:'haxe_trace'});
 			trace('trace_without_objectifying');
+			Log.trace('Log.trace');
 		}
 
-		Log.info('CCC server start');
+		Log.info({start:'CCC server start', version: ServerCommands.version()});
 
 		Log.trace({log_check:'trace'});
 		Log.trace('trace');
@@ -164,6 +191,11 @@ class ServerCompute
 
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
+			res.send(versionBlob.VERSION);
+		});
+
+		app.get('/version_extra', function(req, res) {
+			var versionBlob = ServerCommands.version();
 			res.send(Json.stringify(versionBlob));
 		});
 
@@ -183,7 +215,7 @@ class ServerCompute
 
 		//Check if server is ready
 		app.get(SERVER_PATH_READY, cast function(req, res) {
-			if (status == ServerStatus.Ready_4_4) {
+			if (status == ServerStatus.Ready_5_5) {
 				Log.debug('${SERVER_PATH_READY}=YES');
 				res.status(200).end();
 			} else {
@@ -193,9 +225,22 @@ class ServerCompute
 		});
 
 		//Check if server is ready
+		app.get('/crash', cast function(req, res) {
+			Node.process.stdout.write('NAKEDBUS\n');
+			Node.process.nextTick(function() {
+				throw new Error('FAKE CRASH');
+			});
+		});
+
+		app.get('/log2*', cast function(req, res) {
+			Node.process.stdout.write('\nPOLYGLOT\n');
+			res.status(200).end();
+		});
+
+		//Check if server is ready
 		app.get(SERVER_PATH_WAIT, cast function(req, res) {
 			function check() {
-				if (status == ServerStatus.Ready_4_4) {
+				if (status == ServerStatus.Ready_5_5) {
 					res.status(200).end();
 					return true;
 				} else {
@@ -223,7 +268,7 @@ class ServerCompute
 			res.send('Logged some shit');
 		});
 
-		status = ServerStatus.ConnectingToRedis_2_4;
+		status = ServerStatus.ConnectingToRedis_2_5;
 		Log.info({server_status:status});
 
 		var workerProviders :Array<ccc.compute.workers.WorkerProvider> = [];
@@ -280,16 +325,51 @@ class ServerCompute
 						//Pipe specific logs from redis since while developing
 						// ServiceBatchComputeTools.pipeRedisLogs(redis);
 						injector.map(RedisClient).toValue(redis);
+
+						if (Reflect.field(env, ENV_CLEAR_DB_ON_START) == 'true') {
+							Log.warn('Deleting all keys prior to starting stack');
+							return ComputeQueue.deleteAllKeys(redis)
+								.pipe(function(_) {
+									return InstancePool.deleteAllKeys(redis);
+								})
+								.then(function(_) {
+									return redis;
+								});
+						} else {
+							return Promise.promise(redis);
+						}
+					})
+					.pipe(function(redis) {
 						return InitConfigTools.initAll(redis);
 					});
+			})
+			.pipe(function(_) {
+				//Print the status of the workers before doing anything
+				var redis :RedisClient = injector.getValue(RedisClient);
+
+				function pollWorkers() {
+					return ccc.compute.server.ServerCommands.statusWorkers(redis)
+						.then(function(data) {
+							Log.info({message:'Workers', workers:data});
+							traceGreen(Json.stringify(data, null, '  '));
+							return true;
+						})
+						.errorPipe(function(err) {
+							Log.error('Failed to get worker status err=${Json.stringify(err)}');
+							return Promise.promise(true);
+						});
+				}
+
+				var fiveMinutes = 5*60*1000;
+				Node.setInterval(function() {
+					pollWorkers();
+				}, fiveMinutes);
+
+				return pollWorkers();
 			})
 			//Get public/private network addresses
 			.pipe(function(_) {
 				var redis :RedisClient = injector.getValue(RedisClient);
-				// ServerCommands.status(redis)
-				// 	.then(function(blob) {
-				// 		traceGreen(Json.stringify(blob, null, '\t'));
-				// 	});
 				return Promise.promise(true)
 					.pipe(function(_) {
 						return WorkerProviderTools.getPrivateHostName(config.providers[0])
@@ -308,15 +388,19 @@ class ServerCompute
 							});
 					});
 			})
-			.then(function(_) {
-				status = ServerStatus.BuildingServices_3_4;
+			.pipe(function(_) {
+				status = ServerStatus.BuildingServices_3_5;
 				Log.debug({server_status:status});
+
 				//Build and inject the app logic
 				//Create services
 				workerProviders = config.providers.map(WorkerProviderTools.getProvider);
 				WorkerProvider = workerProviders[0];
 				injector.map(ccc.compute.workers.WorkerProvider).toValue(WorkerProvider);
-
+				injector.injectInto(WorkerProvider);
+				return WorkerProvider.ready;
+			})
+			.then(function(_) {
 				//The queue manager
 				var schedulingService = new ccc.compute.ServiceBatchCompute();
 				injector.map(ServiceBatchCompute).toValue(schedulingService);
@@ -332,18 +416,19 @@ class ServerCompute
 				injector.injectInto(storage);
 				injector.injectInto(schedulingService);
 				injector.injectInto(workerManager);
-				for (workerProvider in workerProviders) {
-					injector.injectInto(workerProvider);
-				}
 
 				//RPC machinery
 				//Server infrastructure. This automatically handles client JSON-RPC remoting and other API requests
 				app.use(SERVER_API_URL, cast schedulingService.router());
 
+				StatusStream = RedisTools.createJsonStream(injector.getValue(RedisClient), ComputeQueue.REDIS_CHANNEL_STATUS);
+				StatusStream.catchError(function(err) {
+					Log.error(err);
+				});
+
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
 				websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
-
 
 				//After all API routes, assume that any remaining requests are for files.
 				//This is nice for local development
@@ -355,7 +440,7 @@ class ServerCompute
 				//Setup a static file server to serve job results
 				app.use('/', StorageRestApi.staticFileRouter(storage));
 
-				status = ServerStatus.Ready_4_4;
+				status = ServerStatus.Ready_5_5;
 				Log.debug({server_status:status});
 				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
 					Node.process.send(Constants.IPC_MESSAGE_READY);
@@ -363,24 +448,34 @@ class ServerCompute
 
 				//Run internal tests
 				Log.debug('Running server functional tests');
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?core=true&worker=false')
+				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "jobs=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
 							var result = results.result;
 							if (result.success) {
 								Log.info({TestResults:result});
-								traceGreen(Json.stringify(result, null, '  '));
+								traceGreen(Json.stringify(result));
 							} else {
 								Log.error({TestResults:result});
-								traceRed(Json.stringify(result, null, '  '));
+								traceRed(Json.stringify(result));
+							}
+							if (isTravisBuild) {
+								Node.process.exit(result.success ? 0 : 1);
 							}
 						} catch(err :Dynamic) {
 							Log.error({error:err, message:'Failed to parse test results'});
+							if (isTravisBuild) {
+								Node.process.exit(1);
+							}
 						}
 					})
 					.catchError(function(err) {
 						Log.error({error:err, message:'failed tests!'});
+						if (isTravisBuild) {
+							Node.process.exit(1);
+						}
 					});
 			});
 	}
@@ -467,7 +562,7 @@ class ServerCompute
 			});
 		});
 
-		var stream = RedisTools.createJsonStream(redis, ComputeQueue.REDIS_CHANNEL_STATUS)
+		StatusStream
 			.then(function(status :JobStatusUpdate) {
 				if (status.jobId == null) {
 					Log.warn('No jobId for status=${Json.stringify(status)}');
@@ -482,8 +577,16 @@ class ServerCompute
 					}
 				}
 			});
-		stream.catchError(function(err) {
-			Log.error(err);
+	}
+
+	static function monitorMemory()
+	{
+		var memwatch :js.node.events.EventEmitter<Dynamic> = Node.require('memwatch-next');
+		memwatch.on('stats', function(data) {
+			Log.debug({memory_stats:data});
+		});
+		memwatch.on('leak', function(data) {
+			Log.debug({memory_leak:data});
 		});
 	}
 }

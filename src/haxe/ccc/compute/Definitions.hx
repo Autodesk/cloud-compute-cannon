@@ -4,6 +4,8 @@ import haxe.DynamicAccess;
 
 import util.ObjectTools;
 
+import ccc.storage.StorageDefinition;
+
 #if (nodejs && !macro)
 	import js.npm.docker.Docker;
 	import js.npm.ssh2.Ssh;
@@ -11,7 +13,6 @@ import util.ObjectTools;
 
 	import ccc.storage.ServiceStorage;
 	import ccc.storage.StorageTools;
-	import ccc.storage.StorageDefinition;
 #end
 
 /**
@@ -95,6 +96,7 @@ typedef ComputeInputSource = {
 typedef BasicBatchProcessRequest = {
 	@:optional var inputs :Array<ComputeInputSource>;
 	@:optional var image :String;
+	@:optional var pull_options :PullImageOptions;
 	@:optional var cmd :Array<String>;
 	@:optional var workingDir :String;
 	@:optional var parameters :JobParams;
@@ -104,8 +106,20 @@ typedef BasicBatchProcessRequest = {
 	@:optional var inputsPath :String;
 	@:optional var outputsPath :String;
 	@:optional var contextPath :String;
+	/* Returns the result.json when the job is finished */
+	@:optional var wait :Bool;
+	/* Metadata logged and saved in the job definition and results.json  */
+	@:optional var meta :Dynamic;
 }
 
+/**
+ * This enumerates all the possible error conditions that will return
+ * a 400 status code on job requests or results requests.
+ */
+@:enum
+abstract JobSubmissionError(String) to String from String {
+	var Docker_Image_Unknown = 'Docker_Image_Unknown';
+}
 
 /**
  *********************************************
@@ -121,6 +135,7 @@ abstract DockerImageSourceType(String) {
 
 typedef DockerImageSource = {
 	var type :DockerImageSourceType;
+	@:optional var pull_options :PullImageOptions;
 	@:optional var value :String;//If an image, image name, if a context, the URL of the path
 #if (nodejs && !macro)
 	@:optional var options :BuildImageOptions;
@@ -167,7 +182,7 @@ typedef InstanceDefinition = {
 	var id :MachineId;
 	var hostPublic :HostName;
 	var hostPrivate :HostName;
-#if nodejs
+#if (nodejs && !macro)
 	var ssh :ConnectOptions;
 	var docker :DockerConnectionOpts;
 #else
@@ -199,12 +214,6 @@ abstract MachinePoolId(String) to String
 	inline public function new (s: String)
 	{
 		this = s;
-	}
-
-	@:from
-	inline static public function fromString (s: String)
-	{
-		return new MachinePoolId(s);
 	}
 }
 
@@ -308,7 +317,7 @@ typedef JobStatusUpdate = {
 /**
  * Example:
  * {
-	id : 3519F65B-10EA-46F3-92F8-368CF377DFCF,
+	jobId : asd74gf,
 	status : Success,
 	exitCode : 0,
 	stdout : https://s3-us-west-1.amazonaws.com/bionano-platform-test/3519F65B-10EA-46F3-92F8-368CF377DFCF/stdout,
@@ -321,23 +330,27 @@ typedef JobStatusUpdate = {
 }
  */
 typedef JobResult = {
-	var id :JobId;
-	var status :JobFinishedStatus;
-	var exitCode :Int;
-	var stdout :String;
-	var stderr :String;
-	var resultJson :String;
+	var jobId :JobId;
+	@:optional var status :JobFinishedStatus;
+	@:optional var exitCode :Int;
+	@:optional var stdout :String;
+	@:optional var stderr :String;
+	@:optional var resultJson :String;
 	@:optional var inputsBaseUrl :String;
 	@:optional var inputs :Array<String>;
 	@:optional var outputsBaseUrl :String;
 	@:optional var outputs :Array<String>;
 	@:optional var error :Dynamic;
+	@:optional var stats :Array<Float>;
+	@:optional var definition :DockerJobDefinition;
 }
 
 typedef SystemStatus = {
-	var pending :Array<JobId>;
+	var pendingTop5 :Array<JobId>;
+	var pendingCount :Int;
 	var workers :Array<{id :MachineId, jobs:Array<{id:JobId,enqueued:String,started:String,duration:String}>,cpus:String}>;
-	var finished :TypedDynamicObject<JobFinishedStatus,Array<JobId>>;
+	var finishedTop5 :TypedDynamicObject<JobFinishedStatus,Array<JobId>>;
+	var finishedCount :Int;
 }
 
 /**
@@ -421,6 +434,7 @@ typedef ClientVersionBlob = {
 @:enum
 abstract JobCLICommand(String) from String {
 	var Remove = 'remove';
+	var RemoveComplete = 'removeComplete';
 	var Status = 'status';
 	var ExitCode = 'exitcode';
 	var Kill = 'kill';
@@ -441,6 +455,8 @@ abstract CLIServerPathRoot(String) from String
 {
 	inline public function new(s :String)
 		this = s;
+
+#if (js && !macro)
 
 	inline public function getServerYamlConfigPath() :String
 	{
@@ -467,6 +483,8 @@ abstract CLIServerPathRoot(String) from String
 			return false;
 		}
 	}
+
+#end
 
 	public function toString() :String
 	{
@@ -553,6 +571,18 @@ abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigura
 		return instanceDefinition;
 	}
 
+	inline public function getShortName() :String
+	{
+		return switch(this.type) {
+			case boot2docker: 'local';
+			case vagrant: 'vagrant';
+			case pkgcloud:
+				var credentials :js.npm.PkgCloud.ClientOptionsAmazon = this.credentials;
+				credentials.provider + '';
+			default: 'unknown';
+		}
+	}
+
 	inline public function getMachineKey(machineType :String) :String
 	{
 		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
@@ -591,4 +621,26 @@ typedef ServiceConfigurationWorkerProvider = {
 	/* SSH keys for connecting to the instances */
 	@:optional var keys :DynamicAccess<String>;
 	@:optional var machines :DynamicAccess<ProviderInstanceDefinition>;
+}
+
+@:forward
+abstract JobResultAbstract(JobResult) from JobResult to JobResult
+{
+	inline function new (val: JobResult)
+		this = val;
+
+	inline public function getOutputUrl(outputName :String) :String
+	{
+		return outputName.startsWith('http') ? outputName : (this.outputsBaseUrl != null && this.outputsBaseUrl.startsWith('http') ? '${this.outputsBaseUrl}${outputName}' : 'http://${SERVER_LOCAL_HOST}/${this.outputsBaseUrl}${outputName}');
+	}
+
+	inline public function getStdoutUrl() :String
+	{
+		return this.stdout.startsWith('http') ? this.stdout : 'http://${SERVER_LOCAL_HOST}/${this.stdout}';
+	}
+
+	inline public function getStderrUrl() :String
+	{
+		return this.stderr.startsWith('http') ? this.stderr : 'http://${SERVER_LOCAL_HOST}/${this.stderr}';
+	}
 }

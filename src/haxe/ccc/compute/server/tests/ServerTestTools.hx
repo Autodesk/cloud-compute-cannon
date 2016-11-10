@@ -4,9 +4,9 @@ class ServerTestTools
 {
 	public static function getServerAddress() :Host
 	{
-		var env = Node.process.env;
-		if (Reflect.hasField(env, ENV_VAR_CCC_ADDRESS)) {
-			return Reflect.field(env, ENV_VAR_CCC_ADDRESS);
+		var env = Sys.environment();
+		if (env.exists(ENV_VAR_CCC_ADDRESS)) {
+			return env.get(ENV_VAR_CCC_ADDRESS);
 		} else {
 			return new Host(new HostName('localhost'), new Port(SERVER_HTTP_PORT));
 		}

@@ -5,11 +5,12 @@ ENV APP /app
 RUN mkdir -p $APP
 WORKDIR $APP
 
-ADD ./package.json $APP/package.json
+ADD package.json $APP/package.json
 
 RUN apk add --no-cache nodejs && \
 	apk add --no-cache make gcc g++ python linux-headers udev && \
 	npm install && \
+	npm install -g forever nodemon && \
 	apk del make gcc g++ python linux-headers udev
 
 COPY ::APP_SERVER_FILE:: $APP/

@@ -1,64 +1,44 @@
-compute:
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    #Mount local storage, even though it might use S3, we don't know at this point.
-    - ./data/computejobs:/computejobs
-    - ./data/ServiceStorageLocalFileSystem:/app/data/ServiceStorageLocalFileSystem
-    - ./data/registry:/app/data/registry
-    #TODO: this is bad
-    - ./ccc.yml:/app/ccc.yml
-  links:
-    - redis
-    - registry
-    - fluentd
-  environment:
-    CLIENT_DEPLOYMENT: "true"
+version: '2'
 
+services:
 
-redis:
-  command: redis-server /usr/local/etc/redis/redis.conf
-  volumes:
-    - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
-    # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-    - ./data/redis:/data
-  ports:
-    #Don't expose this port to the host, only linked containers.
-    - "6379"
+  compute:
+    image: "quay.io/bionano/cloud-compute-cannon:${VERSION}"
+    command: ["forever", "server/cloud-compute-cannon-server.js"]
+    volumes:
+      - ./:/app/config/
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL}"
+      CONFIG_PATH: "/app/config/ccc.yml"
+      CLIENT_DEPLOYMENT: "true"
+    logging:
+      driver: json-file
 
+  redis:
+    volumes:
+      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    logging:
+      driver: "fluentd"
+      options:
+        tag: "docker.ccc{{.ImageName}}/{{.ID}}"
+        fluentd-address: "localhost:24225"
 
-registry:
-  volumes:
-    #Always persist the registry locally. This makes it easier to clean.
-    - ./data/registry:/var/lib/registry
-  #TODO: use a more sophisticated cleanup mechanism, and use redis?
-  environment:
-    SETTINGS_FLAVOR: local
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
-  links:
-    - fluentd
+  registry:
+    #TODO: use a more sophisticated cleanup mechanism, and use redis?
+    environment:
+      SETTINGS_FLAVOR: local
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    links:
+      - fluentd
+    logging:
+      driver: "fluentd"
+      options:
+        tag: "docker.ccc{{.ImageName}}/{{.ID}}"
+        fluentd-address: "localhost:24225"
 
-
-fluentd:
-  build: ./etc/log/
-  volumes:
-    #WARNING TODO: currently disabled the fluent.prod.conf since
-    #the target separate elasticsearch does not work
-    - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
-  links:
-    - elasticsearch
-
-
-elasticsearch:
-  extends:
-    file: docker-compose.core.yml
-    service: elasticsearch
-  log_driver: "json-file"
-  log_opt: {}
-
-
-kibana:
-  extends:
-    file: docker-compose.core.yml
-    service: kibana
-  links:
-    - elasticsearch
+  fluentd:
+    image: fluent/fluentd:v0.14.2
+    volumes:
+      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
+    logging:
+      driver: json-file

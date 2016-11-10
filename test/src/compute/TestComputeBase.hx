@@ -57,6 +57,10 @@ class TestComputeBase extends TestBase
 				var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
 				Assert.notNull(storage);
 				_injector.map(ServiceStorage).toValue(storage);
+
+				if (_workerProvider != null) {
+					_injector.map(ccc.compute.workers.WorkerProvider).toValue(_workerProvider);
+				}
 				return true;
 			});
 	}

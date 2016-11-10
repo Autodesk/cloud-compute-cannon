@@ -3,7 +3,7 @@
 *.sublime-workspace
 .aws
 .bundle
-.env
+.env*
 .haxelib
 .idea
 .vagrant
@@ -12,7 +12,7 @@ build
 node_modules
 npm-debug.log
 platform
-ccc.yml
+ccc*.yml
 tmp
 data/computejobs/[a-zA-Z0-9_]*
 data/registry/[a-zA-Z0-9_]*
@@ -21,3 +21,5 @@ data/redis
 .cloudcomputecannon
 client.py
 results
+INSTANCE_VERSION
+ccc_local*

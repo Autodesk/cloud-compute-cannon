@@ -52,7 +52,7 @@ class WorkerProviderTools
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
 			default:
-				throw 'Not yet implemented';
+				throw 'WorkerProviderTools.getPublicHostName Not yet implemented';
 		}
 	}
 
@@ -64,7 +64,7 @@ class WorkerProviderTools
 			case boot2docker:
 				return Promise.promise(new HostName('localhost'));
 			default:
-				throw 'Not yet implemented';
+				throw 'WorkerProviderTools.getPrivateHostName Not yet implemented';
 		}
 	}
 
@@ -98,11 +98,11 @@ class WorkerProviderTools
 			});
 	}
 
-	public static function pollInstanceUntilSshReady(sshOptions :ConnectOptions) :Promise<Bool>
+	public static function pollInstanceUntilSshReady(sshOptions :ConnectOptions, ?attemptCallback :Void->Void) :Promise<Bool>
 	{
 		var retryAttempts = 240;
-		var doublingTimeInterval = 2000;
-		return SshTools.getSsh(sshOptions, retryAttempts, doublingTimeInterval, promhx.RetryPromise.PollType.regular, 'pollInstanceUntilSshReady')
+		var intervalMs = 2000;
+		return SshTools.getSsh(sshOptions, retryAttempts, intervalMs, promhx.RetryPromise.PollType.regular, 'pollInstanceUntilSshReady', false, attemptCallback)
 			.then(function(ssh) {
 				ssh.end();
 				return true;

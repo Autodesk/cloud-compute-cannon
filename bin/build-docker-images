@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#Build and tag the docker images locally
+echo "Building and tagging images"
+set -ev
+git submodule update --init --recursive
+
+./bin/compile
+
+GIT_TAG=`git rev-parse HEAD`
+if [ ! -z "$TRAVIS_COMMIT" ]; then
+	GIT_TAG=$TRAVIS_COMMIT
+fi
+GIT_TAG=${GIT_TAG:0:8}
+
+#Now build the final minimal docker image, and tag it
+PACKAGE_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+REPO_NAME="cloud-compute-cannon:$GIT_TAG"
+
+BUILD_DIR=build/docker
+mkdir -p $BUILD_DIR
+cp -r build/server $BUILD_DIR/
+cp etc/docker/Dockerfile $BUILD_DIR/
+cp package.json $BUILD_DIR/package.json
+echo $GIT_TAG > $BUILD_DIR/VERSION
+cd $BUILD_DIR/
+ls
+docker build -t $REPO_NAME .
+
+cd ../../
+
+#Also create a tag with the npm version
+docker tag $REPO_NAME "cloud-compute-cannon:$PACKAGE_VERSION"
+docker tag $REPO_NAME "cloud-compute-cannon:latest"
+
+echo "Built $REPO_NAME"

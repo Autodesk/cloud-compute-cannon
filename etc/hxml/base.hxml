@@ -2,7 +2,7 @@
 -cp lib/haxe-json-rpc/src/haxe
 
 -lib msignal:1.2.4
--lib hx-color-trace:0.0.3
+-lib hx-color-trace:0.0.4
 -lib version
 -lib abstracts-core:0.1.1
 -lib yaml:1.2.1

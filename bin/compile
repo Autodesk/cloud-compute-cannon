@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#Build docker image needed for compiling haxe source in Javascript
+echo "Building and tagging images"
+set -ev
+BASEDIR=$PWD
+CCC_BUILD_IMAGE="cccbuild"
+BUILD_DIR="build/docker/compile_image"
+mkdir -p $BUILD_DIR/etc/hxml
+cp ./etc/docker/DockerfileBuild $BUILD_DIR/Dockerfile
+cp -r ./etc/hxml/* $BUILD_DIR/etc/hxml/
+cd $BUILD_DIR/
+docker build -t $CCC_BUILD_IMAGE .
+cd $BASEDIR
+rm -rf build
+mkdir build
+docker run --rm -v $PWD/build:/app/build -v $PWD/etc/docker:/app/etc/docker -v $PWD/src:/app/src -v $PWD/etc:/app/etc -v $PWD/test:/app/test -v $PWD/lib:/app/lib -v $PWD/.git:/app/.git -v $PWD/package.json:/app/package.json -v $PWD/docker-compose.yml:/app/docker-compose.yml -v $PWD/docker-compose.core.yml:/app/docker-compose.core.yml -v $PWD/docker-compose.prod.yml:/app/docker-compose.prod.yml -v $PWD/docker-compose.override.yml:/app/docker-compose.override.yml $CCC_BUILD_IMAGE haxe etc/hxml/build-all.hxml

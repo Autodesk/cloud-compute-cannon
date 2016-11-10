@@ -14,7 +14,7 @@ import t9.abstracts.net.*;
 
 interface WorkerProvider
 {
-	var id (default, null) :String;
+	var id (default, null) :ServiceWorkerProviderType;
 	var redis (get, null) :RedisClient;
 	var ready (get, null) :Promise<Bool>;
 	var log (default, null) :AbstractLogger;
@@ -23,6 +23,7 @@ interface WorkerProvider
 
 	function setPriority(val :Int) :Promise<Bool>;
 	function setMaxWorkerCount(val :WorkerCount) :Promise<Bool>;
+	function setMinWorkerCount(val :WorkerCount) :Promise<Bool>;
 	function setWorkerCount(val :WorkerCount) :Promise<Bool>;
 
 	function removeWorker(id :MachineId) :Promise<Bool>;

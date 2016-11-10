@@ -40,7 +40,7 @@ class DockerPromises
 		return listImages(docker)
 			.then(function(images) {
 				return images.exists(function(e) {
-					return e.RepoTags.exists(function(tag :DockerUrl) {
+					return e.RepoTags != null && e.RepoTags.exists(function(tag :DockerUrl) {
 						return DockerUrlTools.matches(imageUrl, tag);
 					});
 				});
@@ -119,9 +119,9 @@ class DockerPromises
 			.thenTrue();
 	}
 
-	public static function removeContainer(container :DockerContainer, ?opts :RemoveContainerOpts) :Promise<Bool>
+	public static function removeContainer(container :DockerContainer, ?opts :RemoveContainerOpts, ?logString :String) :Promise<Bool>
 	{
-		return promhx.RetryPromise.pollDecayingInterval(__removeContainer.bind(container, opts), RETRIES, RETRIES_TIME_INTERVAL, 'removeContainer');
+		return promhx.RetryPromise.pollDecayingInterval(__removeContainer.bind(container, opts), RETRIES, RETRIES_TIME_INTERVAL, logString != null ? logString : 'removeContainer');
 	}
 
 	public static function wait(container :DockerContainer) :Promise<{StatusCode:Int}>
@@ -153,6 +153,18 @@ class DockerPromises
 		return promise;
 	}
 
+	public static function ensureImage(docker :Docker, image :String, ?opts :PullImageOptions) :Promise<Bool>
+	{
+		return DockerPromises.hasImage(docker, image)
+			.pipe(function(isImage) {
+				if (isImage) {
+					return Promise.promise(true);
+				} else {
+					return DockerPromises.pull(docker, image, opts);
+				}
+			});
+	}
+
 	public static function pull(docker :Docker, image :String, ?opts :PullImageOptions) :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
@@ -166,7 +178,6 @@ class DockerPromises
 
 			var errorEncounteredInStream :Bool = false;
 
-			// stream.on('close', function () {
 			// it doesn't send the 'close' event - DEH 20151221
 			stream.on(ReadableEvent.End, function () {
 				if (promise != null) {
@@ -175,19 +186,40 @@ class DockerPromises
 				}
 			});
 
-			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
-				if (buf != null) {
-					var bufferString = buf.toString();
+			function filterEmpty(s :String) {
+				return s != null && s.length > 0;
+			}
+
+			function trim(s :String) {
+				return s.trim();
+			}
+
+			function processLine(bufferString :String) {
+				try {
 					var data :{status :String, id:String, error :Dynamic} = Json.parse(bufferString);
 					if (data.status != null) {
 						if (data.status.startsWith('Status:')) {
-							Log.info(data.status);
+							// Log.trace(data.status);
 						}
 					} else if (data.error != null) {
 						Log.error('error: ${Json.stringify(data)}');
 						errorEncounteredInStream = true;
 					} else {
 						Log.error('Cannot handle stream data=$data');
+					}
+				} catch(err :Dynamic) {
+					traceRed('Could not parse ${bufferString} type=${untyped __typeof__(bufferString)}');
+				}
+			}
+
+			stream.on(ReadableEvent.Data, function(buf :js.node.Buffer) {
+				if (buf != null) {
+					var bufferString = buf.toString();
+					var lines = bufferString.split('\n')
+						.map(trim)
+						.filter(filterEmpty);
+					for (line in lines) {
+						processLine(line);
 					}
 				}
 			});
@@ -199,8 +231,14 @@ class DockerPromises
 	public static function ping(docker :Docker) :Promise<Bool>
 	{
 		var promise = new CallbackPromise();
-		trace('docker ping');
 		docker.ping(promise.cb1);
 		return promise.thenTrue();
+	}
+
+	public static function removeVolume(volume :DockerVolume) :Promise<Bool>
+	{
+		var promise = new promhx.CallbackPromise();
+		volume.remove(promise.cb1);
+		return promise;
 	}
 }

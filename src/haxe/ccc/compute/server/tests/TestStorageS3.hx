@@ -31,6 +31,18 @@ class TestStorageS3 extends TestStorageBase
 			});
 	}
 
+	@timeout(10000)
+	override public function testFileExists() :Promise<Bool>
+	{
+		return super.testFileExists();
+	}
+
+	@timeout(10000)
+	override public function testGettingFileThatDoesNotExist() :Promise<Bool>
+	{
+		return super.testGettingFileThatDoesNotExist();
+	}
+
 	@timeout(1000)
 	public function testPathsS3() :Promise<Bool>
 	{
@@ -227,7 +239,7 @@ class TestStorageS3 extends TestStorageBase
 
 	// function XtestStorageDefinitionFromServiceConfiguration() :Promise<Bool>
 	// {
-	// 	var configFilePath = 'server/servers/etc/serverconfig.amazon.s3.template.yaml';
+	// 	var configFilePath = 'server/servers/etc/serverconfig.amazon.s3.template.yml';
 	// 	var config = InitConfigTools.getConfig(configFilePath);
 	// 	var storageDefinition = config.server.storage;//ServiceStorageS3.getS3ConfigFromServiceConfiguration(serviceConfiguration);
 	// 	return Promise.promise(true)

@@ -15,10 +15,10 @@ class CallbackPromise<T> extends Promise<T>
 	public var cb1 (get, null) :Null<Error>->Void;
 	public var cb2 (get, null) :Null<Error>->T->Void;
 
-	public function new()
+	public function new(#if debug ?pos:haxe.PosInfos #end)
 	{
 		_deferred = new Deferred();
-		super(_deferred);
+		super(_deferred #if debug, pos #end);
 	}
 
 	function get_cb0() :Void->Void

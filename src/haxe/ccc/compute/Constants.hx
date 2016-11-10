@@ -18,7 +18,7 @@ class Constants
 	public static var SERVER_HOSTNAME_PUBLIC :String;
 
 	/* General */
-	inline public static var BUILD_DIR = 'build';
+	inline public static var BUILD_DIR_SERVER = 'build/server';
 	inline public static var APP_NAME = 'cloud-compute-cannon';
 	public static var APP_SERVER_FILE = APP_NAME + '-server.js';
 	public static var APP_NAME_COMPACT = APP_NAME.replace('-', '');
@@ -55,8 +55,10 @@ class Constants
 	inline public static var ENV_VAR_CCC_ADDRESS = 'CCC_ADDRESS';
 	inline public static var ENV_DISABLE_SERVER_CHECKS = 'DISABLE_SERVER_CHECKS';
 	inline public static var ENV_LOG_LEVEL = 'LOG_LEVEL';
+	inline public static var ENV_TRAVIS = 'TRAVIS';
 	/* A flag ("true") to determine if the CLI installed this server */
 	inline public static var ENV_CLIENT_DEPLOYMENT = 'CLIENT_DEPLOYMENT';
+	inline public static var ENV_CLEAR_DB_ON_START = 'CLEAR_DB_ON_START';
 
 	/* Server */
 	public static var REGISTRY :Host;
@@ -77,18 +79,24 @@ class Constants
 	inline public static var SERVER_PATH_WAIT = '/wait';
 	inline public static var SERVER_API_URL = '/api';
 	inline public static var SERVER_API_RPC_URL_FRAGMENT = '/rpc';
-	inline public static var SERVER_RPC_URL = '$SERVER_API_URL/rpc';
+	inline public static var SERVER_RPC_URL = '${SERVER_API_URL}${SERVER_API_RPC_URL_FRAGMENT}';
 	inline public static var SERVER_URL_API_DOCKER_IMAGE_BUILD = '$SERVER_API_URL/build';
 	inline public static var ADDRESS_REGISTRY_DEFAULT = 'localhost:$REGISTRY_DEFAULT_PORT';
-	inline public static var DOCKER_IMAGE_DEFAULT = 'busybox';
+	inline public static var DOCKER_IMAGE_DEFAULT = 'docker.io/busybox:latest';
 	inline public static var SERVER_CONTAINER_TAG_SERVER = 'ccc_server';
 	inline public static var SERVER_CONTAINER_TAG_REDIS = 'ccc_redis';
 	inline public static var SERVER_CONTAINER_TAG_REGISTRY = 'ccc_registry';
 	inline public static var SERVER_INSTALL_COMPOSE_SCRIPT = 'etc/server/install_docker_compose.sh';
 	inline public static var SERVER_MOUNTED_CONFIG_FILE_NAME = 'ccc.yml';
-	inline public static var SERVER_MOUNTED_CONFIG_FILE_DEFAULT = '/config/$SERVER_MOUNTED_CONFIG_FILE_NAME';
+	inline public static var SERVER_MOUNTED_CONFIG_FILE_DEFAULT = 'config/$SERVER_MOUNTED_CONFIG_FILE_NAME';
 	public static var SERVER_LOCAL_HOST :Host = new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT));
 	public static var SERVER_LOCAL_RPC_URL :UrlString = '${SERVER_DEFAULT_PROTOCOL}://${SERVER_LOCAL_HOST}${SERVER_RPC_URL}';
+
+	/* WORKER TAGS */
+	inline public static var INSTANCE_TAG_TYPE_KEY = 'CCC_TYPE';
+	inline public static var INSTANCE_TAG_TYPE_VALUE_WORKER = 'worker';
+	inline public static var INSTANCE_TAG_TYPE_VALUE_SERVER = 'server';
+	inline public static var INSTANCE_TAG_OWNER_KEY = 'CCC_OWNER';
 
 	/* Fluent/logging */
 	inline public static var FLUENTD_SOURCE_PORT = 24225;
@@ -126,7 +134,11 @@ class Constants
 	inline public static var WORKER_COREOS_OS_MEMORY_USAGE = 2048;//mb
 	inline public static var WORKER_JOB_DEFAULT_MEMORY_REQUIRED = 512;//mb
 
-#if nodejs
+	/* docker */
+	inline public static var LOCAL_STORAGE_VOLUME = 'ccc-local-storage';
+
+
+#if (nodejs && !macro)
 	public static var ROOT = (js.Node.process.platform == "win32") ? js.Node.process.cwd().split(js.node.Path.sep)[0] : "/";
 #end
 

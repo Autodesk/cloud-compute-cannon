@@ -37,27 +37,20 @@ class TestTools
 	{
 		//Create a server in a forker process
 		var promise = new DeferredPromise();
-		var command = 'haxe etc/hxml/server-build.hxml';
-		try{
-			var out = ChildProcess.execSync(command);
-		} catch (err :Dynamic) {
-			promise.boundPromise.reject(err);
-			return promise.boundPromise;
-		}
 
 		env = env != null ? env : Reflect.copy(js.Node.process.env);
 		if (disableLogging) {
 			Reflect.setField(env, ENV_VAR_DISABLE_LOGGING, "true");
 		}
 
-		var serverChildProcess = ChildProcess.fork('$BUILD_DIR/$APP_SERVER_FILE', {env: env, silent:true});
+		var serverChildProcess = ChildProcess.fork('$BUILD_DIR_SERVER/$APP_SERVER_FILE', {env: env, silent:true});
 		serverChildProcess.on(ChildProcessEvent.Message, function(message, sendHandle) {
 			if (message == IPC_MESSAGE_READY) {
 				promise.resolve(serverChildProcess);
 			}
 		});
 		serverChildProcess.on(ChildProcessEvent.Error, function(err) {
-			Log.error({f:'forkServerCompute', command:command, error:err});
+			Log.error({f:'forkServerCompute', error:err});
 			if (!promise.isResolved()) {
 				promise.boundPromise.reject(err);
 			}

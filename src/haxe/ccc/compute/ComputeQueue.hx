@@ -333,13 +333,10 @@ class ComputeQueue
 		return RedisPromises.hget(redis, REDIS_KEY_COMPUTEJOB_WORKING_STATE, computeJobId);
 	}
 
-	public static function requeueJob<T>(redis :RedisClient, computeJobId :ComputeJobId) :Promise<Stats>
+	public static function requeueJob<T>(redis :RedisClient, computeJobId :ComputeJobId) :Promise<Bool>
 	{
 		return evaluateLuaScript(redis, SCRIPT_REQUEUE, [computeJobId, Date.now().getTime()])
-			.then(function(s :String) {
-				var obj = Json.parse(s);
-				return obj;
-			});
+			.thenTrue();
 	}
 
 	public static function setAutoscaling(redis :RedisClient, autoscale :Bool) :Promise<Bool>
@@ -825,11 +822,11 @@ if not computeJobId then
 	return {err="Must provide computeJobId"}
 end
 
+local jobId = redis.call("HGET", "$REDIS_KEY_COMPUTE_ID_TO_JOB_ID", computeJobId)
+
 $SNIPPET_REQUEUE_COMPUTE_JOB
 
 $SNIPPET_PROCESS_PENDING
-
-return cjson.encode(stats)
 ',
 		SCRIPT_CHECK_TIMEOUTS =>
 '
@@ -1211,7 +1208,7 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 		}
 	}
 
-	inline public function getFinishedAndStatus() :TypedDynamicObject<JobFinishedStatus,Array<JobId>>
+	inline public function getFinishedAndStatus(?max :Int = -1) :TypedDynamicObject<JobFinishedStatus,Array<JobId>>
 	{
 		if (this.jobStatus == null || Reflect.fields(this.jobStatus).length == 0) {
 			return {};
@@ -1219,6 +1216,9 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 			var results :TypedDynamicObject<JobFinishedStatus,Array<JobId>> = {};
 			var jobids = this.jobStatus.keys();
 			jobids.sort(Reflect.compare);
+			if (max > -1) {
+				jobids = jobids.slice(0, max);
+			}
 			for (jobId in jobids) {
 				var statusUpdate :JobStatusUpdate = this.jobStatus[jobId];
 				if (statusUpdate.JobStatus == JobStatus.Finished) {
@@ -1230,6 +1230,20 @@ abstract QueueJson(QueueJsonDump) from QueueJsonDump
 				}
 			}
 			return results;
+		}
+	}
+
+	inline public function getFinishedJobs() :Array<JobId>
+	{
+		if (this.jobStatus == null || Reflect.fields(this.jobStatus).length == 0) {
+			return [];
+		} else {
+			var jobids = this.jobStatus.keys();
+			jobids.sort(Reflect.compare);
+			jobids = jobids.filter(function(jobId) {
+				return this.jobStatus[jobId].JobStatus == JobStatus.Finished;
+			});
+			return jobids;
 		}
 	}
 

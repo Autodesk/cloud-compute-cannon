@@ -37,7 +37,7 @@ typedef MachineRemovalDelayed = {
 class WorkerProviderBase
 	implements WorkerProvider
 {
-	public var id (default, null) :String;
+	public var id (default, null) :ServiceWorkerProviderType;
 	public var redis (get, null) :RedisClient;
 	public var ready (get, null) :Promise<Bool>;
 	public var log :AbstractLogger;
@@ -70,7 +70,7 @@ class WorkerProviderBase
 		log.debug({f:'postInjection'});
 		Assert.that(_streamMachineCount == null, Type.getClassName(Type.getClass(this)) + ' has already been injected');
 		if (id == null) {
-			throw 'Must set id before calling super constructor';
+			throw 'Must set id before calling postInjection';
 		}
 
 		_ready = Promise.promise(true)
@@ -87,45 +87,127 @@ class WorkerProviderBase
 						return true;
 					});
 			})
-			//Check all workers. No retrying allowed, if a worker does not
-			//respond immediately, remove it
 			.pipe(function(_) {
-				log.debug({f:'postInjection', log:'check all existing workers id=$id'});
+				//Check all workers for those in the process of initializing
+				//which would mean this process crashed
+				//if found, kill the worker, since we would need to refactor code
+				//to re-add them
+				log.debug({f:'postInjection', message:'check workers initializing'});
 				return InstancePool.getInstancesInPool(_redis, id)
 					.pipe(function(workerStatus :Array<StatusResult>) {
-						log.debug('workerStatus=${workerStatus}');
 						var promises = [];
 						for (workerStatus in workerStatus) {
 							switch(workerStatus.status) {
-								case Available,Deferred:
-									log.debug('checking ${workerStatus.id}');
-									promises.push(
-										InstancePool.getWorker(_redis, workerStatus.id)
-											.pipe(function(workerDef) {
-												return DockerPromises.ping(new Docker(workerDef.docker));
-											})
-											.then(function(ok) {
-												//Instance is ok
-												log.debug('${workerStatus.id} docker ping OK');
-												return false;
-											})
-											.errorPipe(function(err) {
-												log.warn('${workerStatus.id} docker ping FAILED');
-												return InstancePool.workerFailed(_redis, workerStatus.id)
-													.errorPipe(function(err) {
-														log.error({message: 'Failed to fail worker that we cannot reach', error:err});
-														return Promise.promise(true);
-													});
-											}));
-								case WaitingForRemoval,Removing,Failed://Ignored
+								case Available,Deferred,WaitingForRemoval,Removing,Failed,Terminated:
+									//These states are handled by the superclass
+								case Initializing:
+									log.warn('${workerStatus.id} status=initializing on startup, likely from crashing. Terminating and removing from the worker set');
+									promises.push(destroyInstance(workerStatus.id)
+										.errorPipe(function(err) {
+											log.error('Failed to destroy worker that was initializing on startup id=${workerStatus.id} error=${Json.stringify(err)}');
+											return Promise.promise(true);
+										})
+										.pipe(function(_) {
+											return InstancePool.removeInstance(_redis, workerStatus.id)
+												.thenTrue();
+										})
+										.errorPipe(function(err) {
+											log.error('Failed to remove worker that was initializing on startup id=${workerStatus.id} error=${Json.stringify(err)}');
+											return Promise.promise(true);
+										}));
 							}
 						}
-
-
 						return Promise.whenAll(promises)
 							.thenTrue();
 					});
 			})
+			.pipe(function(_) {
+				//Check all ready workers if we can reach them
+				log.debug({f:'postInjection', message:'check workers reachability'});
+				return InstancePool.getInstancesInPool(_redis, id)
+					.pipe(function(workerStatus :Array<StatusResult>) {
+						var promises = [];
+						for (workerStatus in workerStatus) {
+							switch(workerStatus.status) {
+								case Initializing,WaitingForRemoval,Removing,Failed,Terminated:
+									//Ignore this status
+								case Available,Deferred:
+									log.warn('${workerStatus.id} status=initializing on startup, likely from crashing. Terminating and removing from the worker set');
+									promises.push(InstancePool.getWorker(_redis, workerStatus.id)
+										.pipe(function(worker) {
+											log.warn('On startup checking worker=${workerStatus.id}');
+											return cloud.MachineMonitor.checkMachine(worker.docker, worker.ssh)
+												.pipe(function(ok) {
+													if (ok) {
+														log.warn('On startup worker=${workerStatus.id} is ok');
+														return Promise.promise(true);
+													} else {
+														log.warn('On startup worker=${workerStatus.id} is unreachable. Removing.');
+														return InstancePool.workerFailed(_redis, workerStatus.id)
+															.errorPipe(function(err) {
+																log.error('Failed to mark unreachable');
+																return Promise.promise(true);
+															})
+															.pipe(function(_) {
+																return destroyInstance(workerStatus.id)
+																	.errorPipe(function(err) {
+																		log.error('Failed to destroy failed worker=${workerStatus.id} err=${Json.stringify(err)}');
+																		return Promise.promise(true);
+																	});
+															});
+													}
+												});
+										})
+										.errorPipe(function(err) {
+											log.error('Failed monitor/check worker=${workerStatus.id} err=${Json.stringify(err)}');
+											return Promise.promise(true);
+										}));
+							}
+						}
+						return Promise.whenAll(promises)
+							.thenTrue();
+					});
+			})
+			//Check all workers. No retrying allowed, if a worker does not
+			//respond immediately, remove it
+			// .pipe(function(_) {
+			// 	log.debug({f:'postInjection', log:'check all existing workers id=$id'});
+			// 	return InstancePool.getInstancesInPool(_redis, id)
+			// 		.pipe(function(workerStatus :Array<StatusResult>) {
+			// 			log.debug('workerStatus=${workerStatus}');
+			// 			var promises = [];
+			// 			for (workerStatus in workerStatus) {
+			// 				switch(workerStatus.status) {
+			// 					case Available,Deferred:
+			// 						log.debug('checking ${workerStatus.id}');
+			// 						promises.push(
+			// 							InstancePool.getWorker(_redis, workerStatus.id)
+			// 								.pipe(function(workerDef) {
+			// 									return DockerPromises.ping(new Docker(workerDef.docker));
+			// 								})
+			// 								.then(function(ok) {
+			// 									//Instance is ok
+			// 									log.debug('${workerStatus.id} docker ping OK');
+			// 									return false;
+			// 								})
+			// 								.errorPipe(function(err) {
+			// 									log.warn('${workerStatus.id} docker ping FAILED');
+			// 									return InstancePool.workerFailed(_redis, workerStatus.id)
+			// 										.errorPipe(function(err) {
+			// 											log.error({message: 'Failed to fail worker that we cannot reach', error:err});
+			// 											return Promise.promise(true);
+			// 										});
+			// 								}));
+			// 					case Initializing:
+			// 						//This is handled by the sub-classes
+			// 					case WaitingForRemoval,Removing,Failed,Terminated://Ignored
+			// 				}
+			// 			}
+
+			// 			return Promise.whenAll(promises)
+			// 				.thenTrue();
+			// 		});
+			// })
 			.pipe(function(_) {
 				log.debug({f:'postInjection', log:'updateConfig'});
 				return updateConfig(_config);
@@ -161,6 +243,12 @@ class WorkerProviderBase
 			.thenTrue();
 	}
 
+	public function setMinWorkerCount(val :WorkerCount) :Promise<Bool>
+	{
+		return InstancePool.setMinInstances(_redis, id, val)
+			.thenTrue();
+	}
+
 	public function setPriority(val :Int) :Promise<Bool>
 	{
 		return InstancePool.setPoolPriority(_redis, id, val)
@@ -178,7 +266,7 @@ class WorkerProviderBase
 
 	public function setWorkerCount(newCount :Int) :Promise<Bool>
 	{
-		// Log.info('setWorkerCount newCount=$newCount _targetWorkerCount=$_targetWorkerCount _actualWorkerCount=$_actualWorkerCount');
+		log.debug('setWorkerCount $newCount');
 		if (newCount > _config.maxWorkers || newCount < _config.minWorkers) {
 			//This can occur if counts are set in between config updates
 			// Log.info('   newCount=$newCount not [${_config.minWorkers} - ${_config.maxWorkers}], ignoring.');
@@ -200,6 +288,7 @@ class WorkerProviderBase
 					});
 				_updateCountPromise.catchError(function(err) {
 					_updateCountPromise = null;
+					log.error('Error in updateWorkerCount err=${Json.stringify(err)}');
 					// Log.info('  setWorkerCount FINISHED WITH ERR=$err _actualWorkerCount=$_actualWorkerCount _targetWorkerCount=$_targetWorkerCount');
 				});
 				_promiseQueue.enqueue(function() {
@@ -217,26 +306,10 @@ class WorkerProviderBase
 		}
 	}
 
-	/**
-	 * Sets the worker state to 'deferred' and marks it for actual
-	 * shutdown after some cloud provider specific delay.
-	 * @param  workerId :MachineId    [description]
-	 * @return          [description]
-	 */
 	public function removeWorker(workerId :MachineId) :Promise<Bool>
 	{
 		log.debug('WorkerProviderBase.removeWorker $workerId');
 		return destroyInstance(workerId);
-		// return getShutdownDelay(workerId)
-		// 	.pipe(function(delay) {
-		// 		var removalTimeStamp :TimeStamp = TimeStamp.now().addSeconds(delay.toSeconds());
-		// 		// Log.info('removeWorker $workerId delay=${delay.toString()} removalTimeStamp=$removalTimeStamp');
-		// 		return InstancePool.setWorkerTimeout(redis, workerId, removalTimeStamp)
-		// 			.then(function(_) {
-		// 				addWorkerToDeferred(workerId, removalTimeStamp);
-		// 				return true;
-		// 			});
-		// 	});
 	}
 
 	public function createWorker() :Promise<WorkerDefinition>
@@ -373,7 +446,7 @@ class WorkerProviderBase
 	var _instanceStatusCache = new Map<MachineId,MachineStatus>();
 	function onWorkerStatusUpdate(statuses :Array<StatusResult>)
 	{
-		// log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
+		log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
 		for (status in statuses) {
 			var instanceId = status.id;
 			if (_instanceStatusCache.get(instanceId) == status.status) {
@@ -384,10 +457,10 @@ class WorkerProviderBase
 
 			switch(status.status) {
 				case Removing:
-					log.trace('WorkerProviderBase.removeWorker ${instanceId}');
+					log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker'});
 					removeWorker(status.id)
 						.errorPipe(function(err) {
-							log.trace('its ok to have this error after removing a worker');
+							log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker, but it threw an error, but this should be ok', err: err});
 							return Promise.promise(true);
 						})
 						.pipe(function(_) {
@@ -403,6 +476,7 @@ class WorkerProviderBase
 								});
 						});
 				case Deferred:
+					log.info({worker:instanceId, worker_status: status.status, action: 'add to deferred list with a timeout'});
 					log.debug('instance=$instanceId deferred');
 					getShutdownDelay(instanceId)
 						.pipe(function(delay) {
@@ -415,7 +489,8 @@ class WorkerProviderBase
 									return true;
 								});
 						});
-				default://Nothing
+				case Available,Failed,Initializing,Terminated,WaitingForRemoval:
+					log.info({worker:instanceId, worker_status: status.status, action: 'nothing'});
 			}
 		}
 	}
@@ -565,12 +640,17 @@ class WorkerProviderBase
 			.pipe(function(statuses :Array<StatusResult>) {
 				//Then take action
 				var promises = new Array<Promise<Dynamic>>();
-				var readyMachines = statuses.filter(InstancePool.isAvailable);
+				var readyMachines = statuses.filter(function(status) {
+					return switch(status.status) {
+						case Available,Initializing: true;
+						case WaitingForRemoval,Removing,Failed,Deferred,Terminated: false;
+					}
+				});
 				//Add new machines?
 				if (newWorkerCount > readyMachines.length) {
 					var numNewMachines = newWorkerCount - readyMachines.length;
 					//First just change idle machines instead of spinning up new ones
-					var deferredMachines = statuses.filter(InstancePool.isStatus([MachineStatus.WaitingForRemoval]));
+					var deferredMachines = statuses.filter(InstancePool.isStatus([MachineStatus.Deferred]));
 					while(numNewMachines > 0 && deferredMachines.length > 0) {
 						var machineId = deferredMachines.pop().id;
 						//Is it really idle? What if it had jobs but was waiting to be shut down?

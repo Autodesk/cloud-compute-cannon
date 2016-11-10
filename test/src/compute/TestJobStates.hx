@@ -135,7 +135,7 @@ class TestJobStates extends TestComputeBase
 #if PromhxExposeErrors
 		#error 'Cannot have -D PromhxExposeErrors because the throw error will be exposed rather than handled by the internal system';
 #end
-		var maxDuration = 1;
+		var maxDuration = 10;
 
 		var jobCount = 10;
 		var jobs = [];

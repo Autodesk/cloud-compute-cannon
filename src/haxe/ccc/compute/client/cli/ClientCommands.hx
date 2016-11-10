@@ -1,6 +1,7 @@
 package ccc.compute.client.cli;
 
 import ccc.compute.client.ClientCompute;
+import ccc.compute.client.ClientTools;
 import ccc.compute.JobTools;
 import ccc.compute.InitConfigTools;
 import ccc.compute.ServiceBatchCompute;
@@ -35,6 +36,7 @@ using promhx.PromiseTools;
 using StringTools;
 using DateTools;
 using Lambda;
+using t9.util.ColorTraces;
 
 enum ClientResult {
 	Websocket;
@@ -54,7 +56,8 @@ typedef JobWaitingStatus = {
 
 @:enum
 abstract DevTestCommand(String) to String from String {
-	var Longjob = 'longjob';
+	var longjob = 'longjob';
+	var shellcommand = 'shellcommand';
 }
 
 typedef SubmissionDataBlob = {
@@ -84,26 +87,49 @@ class ClientCommands
 			});
 	}
 
+	static var DEV_TEST_JOBS = 'longjob | shellcommand';
 	@rpc({
 		alias:'devtest',
-		doc:'Various convenience functions for dev testing. [longjob]',
+		doc:'Various convenience functions for dev testing. [longjob | shellcommand]',
 		args:{
-			'command':{doc: 'Output is JSON'}
+			'command':{doc: 'longjob | shellcommand'}
 		}
 	})
-	public static function devtest(command :String) :Promise<CLIResult>
+	public static function devtest(command :String, ?shell :String) :Promise<CLIResult>
 	{
 		var devCommand :DevTestCommand = command;
+		if (devCommand == null && shell != null) {
+			devCommand = DevTestCommand.shellcommand;
+		}
 		if (devCommand == null) {
-			log('Available commands: [longjob]');
+			log('Available commands: [$DEV_TEST_JOBS]');
 			return Promise.promise(CLIResult.Success);
 		} else {
 			return switch(command) {
-				case Longjob:
-					runclient(['sleep', '500'], 'busybox')
+				case longjob:
+					var jobRequest :BasicBatchProcessRequest = {
+						image: DOCKER_IMAGE_DEFAULT,
+						cmd: ['sleep', '500'],
+						wait: true
+					}
+					runInternal(jobRequest)
+						.then(function(jobResult) {
+							traceGreen(Json.stringify(jobResult, null, '  '));
+						})
+						.thenVal(CLIResult.Success);
+				case shellcommand:
+					var jobRequest :BasicBatchProcessRequest = {
+						image: DOCKER_IMAGE_DEFAULT,
+						cmd: ['/bin/sh', '-c', shell],
+						wait: true
+					}
+					runInternal(jobRequest)
+						.then(function(jobResult) {
+							traceGreen(Json.stringify(jobResult, null, '  '));
+						})
 						.thenVal(CLIResult.Success);
 				default:
-					log('Unknown command=$command. Available commands: [longjob]');
+					log('Unknown command=$command. Available commands: [$DEV_TEST_JOBS]');
 					Promise.promise(CLIResult.PrintHelpExit1);
 			}
 		}
@@ -115,11 +141,12 @@ class ClientCommands
 		args:{
 			command: {doc:'Command to run in the docker container, specified as 1) a single word such as the script path 2) a single quoted string, which will be split (via spaces) into words (e.g. "echo foo") 3) a single string of a JSON array, e.g. \'[\"echo\",\"boo\"]\'. Space delimited commands are problematic to parse correctly.', short:'c'},
 			directory: {doc: 'Path to directory containing the job definition', short:'d'},
-			image: {doc: 'Docker image name [ubuntu:14.04]', short: 'm'},
+			image: {doc: 'Docker image name [docker.io/busybox:latest]', short: 'm'},
 			input: {doc:'Input values (decoded into JSON values) [input]. E.g.: --input foo1=SomeString --input foo2=2 --input foo3="[1,2,3,4]". ', short:'i'},
 			inputfile: {doc:'Input files [inputfile]. E.g. --inputfile foo1=/home/user1/Desktop/test.jpg" --input foo2=/home/me/myserver/myfile.txt ', short:'f'},
 			inputurl: {doc:'Input urls (downloaded from the server) [inputurl]. E.g. --input foo1=http://someserver/test.jpg --input foo2=http://myserver/myfile', short:'u'},
 			results: {doc: 'Results directory [./<results_dir>/<date string>__<jobId>/]. The contents of that folder will have an inputs/ and outputs/ directories. ', short:'r'},
+			wait: {doc: 'Wait until the job is finished before returning (default is to return the jobId immediately, then query using that jobId, since jobs may take a long time)', short:'w'},
 		},
 		docCustom: 'Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\\\"Hello World!\\\")"]\''
 	})
@@ -130,7 +157,8 @@ class ClientCommands
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?results :String
+		?results :String,
+		?wait :Bool = false
 		)
 	{
 		var commandArray :Array<String> = null;
@@ -148,6 +176,7 @@ class ClientCommands
 			cmd: commandArray,
 			parameters: {cpus:1, maxDuration:60*1000*10},
 			inputs: [],
+			wait: wait
 		};
 		return runCli(jobParams, input, inputfile, inputurl, results);
 	}
@@ -168,10 +197,14 @@ class ClientCommands
 		?input :Array<String>,
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
-		?results: String
+		?results: String,
+		?wait: Bool = false
 		)
 	{
 		var jobParams :BasicBatchProcessRequest = Json.parse(Fs.readFileSync(jsonfile, 'utf8'));
+		if (jobParams.wait == null) {
+			jobParams.wait = wait;
+		}
 		return runCli(jobParams, input, inputfile, inputurl, results);
 	}
 
@@ -184,7 +217,7 @@ class ClientCommands
 		?json :Bool = true) :Promise<CLIResult>
 	{
 		return runInternal(jobParams, input, inputfile, inputurl, results)
-			.then(function(submissionData :SubmissionDataBlob) {
+			.then(function(submissionData :JobResult) {
 				//Write the client job file
 				var dateString = Date.now().format("%Y-%m-%d");
 				var resultsBaseDir = results != null ? results : 'results';
@@ -208,7 +241,7 @@ class ClientCommands
 		?inputfile :Array<String>,
 		?inputurl :Array<String>,
 		?results: String,
-		?json :Bool = true) :Promise<SubmissionDataBlob>
+		?json :Bool = true) :Promise<JobResult>
 	{
 		// var dateString = Date.now().format("%Y-%m-%d");
 		// var resultsBaseDir = results != null ? results : 'results';
@@ -258,14 +291,7 @@ class ClientCommands
 		var address = getServerAddress();
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return ClientCompute.postJob(address, jobParams, inputStreams)
-					.then(function(result) {
-						var submissionData :SubmissionDataBlob = {
-							jobId: result.jobId,
-							// jobRequest: jobParams
-						}
-						return submissionData;
-					});
+				return ClientTools.postJob(address, jobParams, inputStreams);
 			});
 	}
 
@@ -422,11 +448,16 @@ class ClientCommands
 	// }
 
 	@rpc({
-		alias:'server-remove',
-		doc:'Shut down the remote server, delete server files locally',
+		alias:'terminate',
+		doc:'Shut down the remote server(s) and workers, and delete server files locally',
 	})
-	public static function serverShutdown() :Promise<CLIResult>
+	public static function terminate(?confirm :Bool = false) :Promise<CLIResult>
 	{
+		if (!confirm) {
+			traceYellow('To prevent accidentally destroying the server installation, run this command again with "--confirm" to terminate all instances.');
+			return Promise.promise(CLIResult.Success);
+		}
+
 		var path :CLIServerPathRoot = Node.process.cwd();
 		if (!isServerConnection(path)) {
 			log('No server configuration @${path.getServerYamlConfigPath()}. Nothing to shut down.');
@@ -446,7 +477,7 @@ class ClientCommands
 				if (stderr != null) {
 					Node.process.stderr.write(stderr);
 				}
-				js.node.ChildProcess.exec('docker-compose rm -fv', {cwd:localServerPath}, function(err, stdout, stderr) {
+				js.node.ChildProcess.exec('docker-compose rm -f', {cwd:localServerPath}, function(err, stdout, stderr) {
 					if (err != null) {
 						log(err);
 					}
@@ -467,14 +498,23 @@ class ClientCommands
 					return CLIResult.Success;
 				});
 		} else {
-			var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
-			trace('shutting down server ${serverBlob.server.id}');
-			trace('TODO: properly clean up workers');
-			return provider.destroyInstance(serverBlob.server.id)
-				.then(function(_) {
-					trace('deleting connection file');
-					deleteServerConnection(path);
-					return CLIResult.Success;
+			var host = getHost();
+			var clientProxy = getProxy(host.rpcUrl());
+			traceYellow('- Removing entire CCC cloud installation:');
+			traceYellow('  - Destroying all workers and removing all jobs');
+			return clientProxy.removeAllJobsAndWorkers()
+				.pipe(function(_) {
+					traceGreen('    - OK');
+					var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
+					traceYellow('  - Removing CCC server(s) ${serverBlob.server.id}');
+					return provider.destroyInstance(serverBlob.server.id)
+						.then(function(_) {
+							traceGreen('    - OK');
+							traceYellow('  - Removing local files');
+							deleteServerConnection(path);
+							traceGreen('    - OK');
+							return CLIResult.Success;
+						});
 				});
 		}
 	}
@@ -588,7 +628,7 @@ class ClientCommands
 	}
 
 	@rpc({
-		alias:'server-install',
+		alias:'install',
 		doc:'Install the cloudcomputecannon server locally or on a remote provider',
 		args:{
 			'config':{doc: '<Path to server config yaml file>', short:'c'},
@@ -602,6 +642,7 @@ class ClientCommands
 	})
 	public static function install(?config :String, ?host :HostName, ?key :String, ?username :String, ?force :Bool = false, ?uploadonly :Bool = false) :Promise<CLIResult>
 	{
+		traceGreen('Beginning install');
 		//Docker version check
 		var incompatibleVersionError = 'Incompatible docker version. Needs 1.12.x';
 		try {
@@ -631,96 +672,145 @@ class ClientCommands
 		if (config != null) {
 			//Missing config file check
 			if (!FsExtended.existsSync(config)) {
-				log('Missing configuration file: $config');
+				traceRed('...Missing configuration file: $config');
 				return Promise.promise(CLIResult.PrintHelpExit1);
 			}
 
-			if (isServerConnection(path)) {
-				log('Existing installation @${path.getServerYamlConfigPath()}. If there is an existing installation, you cannot override with a new installation without first removing the current installation.');
-				return Promise.promise(CLIResult.PrintHelpExit1);
-			}
+
+			// if (isServerConnection(path)) {
+			// 	traceRed('  Existing installation @ ${path.getServerYamlConfigPath()}.\n  You cannot create a new installation without first removing the current installation.');
+			// 	traceRed('  To remove an existing server run:\n      ccc server-remove');
+			// 	return Promise.promise(CLIResult.ExitCode(1));
+			// }
 
 			return Promise.promise(true)
 				.pipe(function(_) {
-					var serverConfig = InitConfigTools.getConfigFromFile(config);
-					var serverBlob :ServerConnectionBlob = {
-						host: null,
-						provider: serverConfig
-					};
-					//If a host is supplied, try to get the credentials
-					var sshConfig = null;
-					if (host != null) {
-						//Use the provided server
-						//Search the ~/.ssh/config in case the key is defined there.
-						if (key == null) {
-							sshConfig = CliTools.getSSHConfigHostData(host);
-							if (sshConfig == null) {
-								throw 'No key supplied for host=$host and the host entry was not found in ~/.ssh/config';
-							}
-						} else {
-							try {
-								key = Fs.readFileSync(key, {encoding:'utf8'});
-							} catch (err :Dynamic) {}
-							if (username == null) {
-								throw 'No username supplied for host=$host and the host entry was not found in ~/.ssh/config';
-							}
-							sshConfig = {
-								privateKey: key,
-								host: host,
-								username: username
-							}
-							serverBlob.server = {
-								id: null,
-								hostPublic: new HostName(sshConfig.host),
-								hostPrivate: null,
-								ssh: sshConfig,
-								docker: null
-							}
-						}
+					if (isServerConnection(path)) {
+						var configPath :CLIServerPathRoot = findExistingServerConfigPath();
+						var serverBlob :ServerConnectionBlob = configPath != null ? readServerConnection(configPath) : null;
+						var sshOptions = serverBlob.server.ssh;
 
-						//Write it without the ssh config data, since
-						//we'll pick it up from the ~/.ssh/config every time
-						serverBlob.host = new Host(new HostName(host), new Port(SERVER_DEFAULT_PORT));
-						writeServerConnection(serverBlob, path);
-
-						//Use the actual ssh host for the main host field
-						serverBlob.host = new Host(new HostName(sshConfig.host), new Port(SERVER_DEFAULT_PORT));
-
-						//But add it here so the install procedure will work
-						serverBlob.server = {
-							id :null,
-							hostPublic: new HostName(sshConfig.host),
-							hostPrivate: null,
-							ssh: sshConfig,
-							docker: null
-						}
-						return Promise.promise(serverBlob);
-					} else {
-						//Create the server instance.
-						//It doesn't validate or check the running containers, that is the next step
-						var providerConfig = serverConfig.providers[0];
-						return ProviderTools.createServerInstance(providerConfig)
-							.then(function(instanceDef) {
-								var serverBlob :ServerConnectionBlob = {
-									host: new Host(new HostName(instanceDef.hostPublic), new Port(SERVER_DEFAULT_PORT)),
-									server: instanceDef,
-									provider: serverConfig
-								};
+						Node.process.stdout.write('  - Existing server config found @ $configPath, checking ${sshOptions.host} \n'.yellow());
+						var retryAttempts = 1;
+						var intervalMs = 2000;
+						return SshTools.getSsh(sshOptions, retryAttempts, intervalMs, promhx.RetryPromise.PollType.regular, 'pollExistingServer', false)
+							.then(function(ssh) {
+								ssh.end();
+								Node.process.stdout.write('    - Could connect to existing server ${sshOptions.host} \n'.green());
+								return true;
+							})
+							.errorPipe(function(err) {
+								traceRed(err);
+								Node.process.stdout.write('    - Failed to connect to ${sshOptions.host} \n'.red());
+								return Promise.promise(false);
+							})
+							.then(function(isRunning) {
+								if (!isRunning) {
+									throw 'Failed to connect to existing server config found @ $configPath, run "ccc server-remove" to remove this stale config';
+								}
+								return serverBlob;
+							})
+							//Write the new configuration
+							.then(function(serverBlob) {
+								var serverConfig = InitConfigTools.getConfigFromFile(config);
+								serverBlob.provider = serverConfig;
+								Node.process.stdout.write('    - Writing updated server configuration to ${path} \n'.green());
 								writeServerConnection(serverBlob, path);
 								return serverBlob;
+							});
+					} else {
+						return Promise.promise(true)
+							.pipe(function(_) {
+								var serverConfig = InitConfigTools.getConfigFromFile(config);
+								var serverBlob :ServerConnectionBlob = {
+									host: null,
+									provider: serverConfig
+								};
+								//If a host is supplied, try to get the credentials
+								var sshConfig = null;
+								if (host != null) {
+									//Use the provided server
+									//Search the ~/.ssh/config in case the key is defined there.
+									if (key == null) {
+										sshConfig = CliTools.getSSHConfigHostData(host);
+										if (sshConfig == null) {
+											throw 'No key supplied for host=$host and the host entry was not found in ~/.ssh/config';
+										}
+										traceGreen('...Using SSH host credentials found in ~/.ssh/config: host=${sshConfig.host}');
+									} else {
+										try {
+											key = Fs.readFileSync(key, {encoding:'utf8'});
+										} catch (err :Dynamic) {}
+										if (username == null) {
+											throw 'No username supplied for host=$host and the host entry was not found in ~/.ssh/config';
+										}
+
+										sshConfig = {
+											privateKey: key,
+											host: host,
+											username: username
+										}
+										serverBlob.server = {
+											id: null,
+											hostPublic: new HostName(sshConfig.host),
+											hostPrivate: null,
+											ssh: sshConfig,
+											docker: null
+										}
+									}
+
+									//Write it without the ssh config data, since
+									//we'll pick it up from the ~/.ssh/config every time
+									serverBlob.host = new Host(new HostName(host), new Port(SERVER_DEFAULT_PORT));
+									traceGreen('...Writing server connection to $path');
+									writeServerConnection(serverBlob, path);
+
+									//Use the actual ssh host for the main host field
+									serverBlob.host = new Host(new HostName(sshConfig.host), new Port(SERVER_DEFAULT_PORT));
+
+									//But add it here so the install procedure will work
+									serverBlob.server = {
+										id :null,
+										hostPublic: new HostName(sshConfig.host),
+										hostPrivate: null,
+										ssh: sshConfig,
+										docker: null
+									}
+									return Promise.promise(serverBlob);
+								} else {
+									//Create the server instance.
+									//It doesn't validate or check the running containers, that is the next step
+									var providerConfig = serverConfig.providers[0];
+									return ProviderTools.createServerInstance(providerConfig)
+										.then(function(instanceDef) {
+											var serverBlob :ServerConnectionBlob = {
+												host: new Host(new HostName(instanceDef.hostPublic), new Port(SERVER_DEFAULT_PORT)),
+												server: instanceDef,
+												provider: serverConfig
+											};
+											writeServerConnection(serverBlob, path);
+											return serverBlob;
+										});
+								}
 							});
 					}
 				})
 				//Don't assume anything is working except ssh/docker connections.
 				.pipe(function(serverBlob) {
-					return ProviderTools.installServer(serverBlob, force, uploadonly);
+					traceYellow('  - install server components');
+					return ProviderTools.installServer(serverBlob, force, uploadonly)
+						.then(function(_) {
+							return serverBlob;
+						});
 				})
+				.traceThen('  - cloud server successfully installed!'.green())
 				.thenVal(CLIResult.Success)
 				.errorPipe(function(err) {
-					warn(err);
+					traceRed(Json.stringify(err, null, '  '));
 					return Promise.promise(CLIResult.ExitCode(1));
 				});
 		} else {
+			traceYellow('No configuration specified, installing locally');
 			//Install and run via docker
 			//First check if there is a local instance running
 			var hostName :HostName = null;
@@ -1009,37 +1099,24 @@ class ClientCommands
 			parameters: {cpus:1, maxDuration:60*1000*10},
 			inputs: [],
 			outputsPath: 'someTestOutputPath/outputs',
-			inputsPath: 'someTestInputPath/inputs'
+			inputsPath: 'someTestInputPath/inputs',
+			wait: true
 		};
 		return runInternal(jobParams, ['$inputFile=input1$rand'], [], [], './tmp/results')
-			.pipe(function(submissionData :SubmissionDataBlob) {
-				if (submissionData != null) {
-					var jobId = submissionData.jobId;
-					return waitInternal([jobId])
-						.pipe(function(out) {
-							if (out.length > 0) {
-								var jobResult = out[0].job;
-								if (jobResult != null && jobResult.exitCode == 0) {
-									var address = getServerAddress();
-									return Promise.promise(true)
-										.pipe(function(_) {
-											return RequestPromises.get('http://' + jobResult.stdout)
-												.then(function(stdout) {
-													log('stdout=${stdout.trim()}');
-													Assert.that(stdout.trim() == stdoutText);
-													return true;
-												});
-										});
-								} else {
-									log('jobResult is null ');
-									return Promise.promise(false);
-								}
-							} else {
-								log('No waiting jobs');
-								return Promise.promise(false);
-							}
+			.pipe(function(jobResult) {
+				if (jobResult != null && jobResult.exitCode == 0) {
+					var address = getServerAddress();
+					return Promise.promise(true)
+						.pipe(function(_) {
+							return RequestPromises.get('http://' + jobResult.stdout)
+								.then(function(stdout) {
+									log('stdout=${stdout.trim()}');
+									Assert.that(stdout.trim() == stdoutText);
+									return true;
+								});
 						});
 				} else {
+					log('jobResult is null $jobResult');
 					return Promise.promise(false);
 				}
 			})

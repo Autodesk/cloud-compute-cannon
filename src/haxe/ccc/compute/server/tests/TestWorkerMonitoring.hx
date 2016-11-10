@@ -32,9 +32,9 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	 * Parallelize these tests for speed
 	 * @return [description]
 	 */
-	public function XtestWorkerMonitor() :Promise<Bool>
+	public function testWorkerMonitor() :Promise<Bool>
 	{
-		var promises = [_testWorkerDockerMonitor(), _testWorkerDiskFull()];
+		var promises = [_testWorkerDiskFull(), _testWorkerDockerMonitor()];
 
 		return Promise.whenAll(promises)
 			.then(function(results) {
@@ -52,7 +52,8 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 		var promise = new DeferredPromise();
 		var provider :ccc.compute.workers.WorkerProviderPkgCloud = _injector.getValue(ccc.compute.workers.WorkerProvider);
 		if (Type.getClass(provider) != WorkerProviderPkgCloud) {
-			return Promise.promise(false);
+			traceYellow('Cannot run test testJobRescheduledAfterWorkerFailure, it does not work on the local compute provider');
+			return Promise.promise(true);
 		}
 		var serverHostRPCAPI = 'http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}';
 		var proxy = ServerTestTools.getProxy(serverHostRPCAPI);
@@ -60,31 +61,31 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 		//Submit a long running job
 		var jobId :JobId = null;
 		var workerId :MachineId = null;
-		return proxy.submitJob('busybox', ['sleep', '40'])
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ['sleep', '40'])
 			.pipe(function(out) {
 				jobId = out.jobId;
 				//Kill the machine the job is on
 
 				//First wait until it is assigned a worker, then get the worker id
 				return PromiseTools.untilTrue(function() {
-					return proxy.status()
-						.then(function(systemStatus :SystemStatus) {
-							if (!systemStatus.pending.has(jobId)) {
-								//Get the worker
-								var worker = systemStatus.workers.find(function(w) {
-									return w.jobs.exists(function(j) {
-										return j.id == jobId;
-									});
-								});
-								if (worker == null) {
-									traceRed('jobId=$jobId');
-									traceRed(Json.stringify(systemStatus, null, '\t'));
-								}
-								assertNotNull(worker);
-								workerId = worker.id;
-								return true;
+					return proxy.pending()
+						.pipe(function(pending) {
+							if (pending.has(jobId)) {
+								return Promise.promise(false);
 							} else {
-								return false;
+								return proxy.status()
+									.then(function(systemStatus :SystemStatus) {
+										//Get the worker
+										var worker = systemStatus.workers.find(function(w) {
+											return w.jobs.exists(function(j) {
+												return j.id == jobId;
+											});
+										});
+										assertNotNull(worker);
+										assertNotEquals(worker.id, workerId);
+										workerId = worker.id;
+										return true;
+									});
 							}
 						});
 				})
@@ -101,6 +102,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			.pipe(function(_) {
 				return InstancePool.toJson(_redis)
 					.then(function(instancePoolJsonDump) {
+						instancePoolJsonDump.removed_record = null;
 						if (Json.stringify(instancePoolJsonDump).indexOf(workerId) != -1) {
 							traceRed(Json.stringify(instancePoolJsonDump, null, '\t'));
 						}
@@ -110,20 +112,23 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			})
 			.pipe(function(_) {
 				return PromiseTools.untilTrue(function() {
-					return proxy.status()
-						.then(function(systemStatus :SystemStatus) {
-							if (!systemStatus.pending.has(jobId)) {
-								//Get the worker
-								var worker = systemStatus.workers.find(function(w) {
-									return w.jobs.exists(function(j) {
-										return j.id == jobId;
-									});
-								});
-								assertNotNull(worker);
-								assertNotEquals(worker.id, workerId);
-								return true;
+					return proxy.pending()
+						.pipe(function(pending) {
+							if (pending.has(jobId)) {
+								return Promise.promise(false);
 							} else {
-								return false;
+								return proxy.status()
+									.then(function(systemStatus :SystemStatus) {
+										//Get the worker
+										var worker = systemStatus.workers.find(function(w) {
+											return w.jobs.exists(function(j) {
+												return j.id == jobId;
+											});
+										});
+										assertNotNull(worker);
+										assertNotEquals(worker.id, workerId);
+										return true;
+									});
 							}
 						});
 				});
@@ -135,7 +140,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	/**
 	 * Workers that do not exist should fail correctly
 	 */
-	public function XtestWorkerMissingOnStartup() :Promise<Bool>
+	public function testWorkerMissingOnStartup() :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
 		var monitor = new MachineMonitor()
@@ -284,7 +289,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return WorkerProviderPkgCloud.createInstance(config, machineType);
+				return WorkerProviderPkgCloud.createInstance(config, machineType, null);
 			})
 			.pipe(function(def) {
 				instanceDef = def;

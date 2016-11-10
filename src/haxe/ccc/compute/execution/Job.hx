@@ -54,7 +54,7 @@ class Job
 		var externalBaseUrl = fs.getExternalUrl();
 
 		var jobResult :JobResult = {
-			id: job.id,
+			jobId: job.id,
 			status: finishedStatus,
 			exitCode: batchJobResult.exitCode,
 			stdout: fs.getExternalUrl(job.item.stdoutPath()),
@@ -65,6 +65,8 @@ class Job
 			inputs: job.item.inputs,
 			outputs: batchJobResult.outputFiles,
 			error: batchJobResult.error,
+			definition: job.item,
+			stats: job.stats
 		};
 
 		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
@@ -279,6 +281,8 @@ class Job
 					.pipe(function(_) {
 						var executecallResult = executeJob();
 						executecallResult.promise.catchError(function(err) {
+
+							log.error(try {Json.stringify(err);} catch(_:Dynamic) {err;});
 							_cancelWorkingJob = null;
 
 							function writeFailure() {
@@ -298,7 +302,7 @@ class Job
 							//Check if we can reach the worker. If not, then the
 							//worker died at an inconvenient time, so we requeue
 							//this job
-							cloud.MachineMonitor.checkMachine(_job.worker.docker, _job.worker.ssh)
+							checkMachine()
 								.then(function(ok) {
 									if (_redis != null) {
 										if (ok) {
@@ -427,26 +431,14 @@ class Job
 
 	public function removeJobFromDockerHost() :Promise<Bool>
 	{
-		if (_removedFromDockerHost) {
-			return Promise.promise(true);
-		} else {
-			_removedFromDockerHost = true;
-			if (_job != null && _job.worker != null) {
-				var docker = _job.worker.getInstance().docker();
-				var suppressErrorIfContainerNotFound = true;
-				return DockerJobTools.removeContainer(docker, id, suppressErrorIfContainerNotFound)
-					.then(function(_) {
-						log.debug({log:'Removed container from docker'});
-						return true;
-					})
-					.errorPipe(function(err) {
-						Log.error({log:'Failed to remove container from docker, perhaps it was never created', error:err});
-						return Promise.promise(false);
-					});
-			} else {
-				return Promise.promise(false);
-			}
-		}
+		/**
+		 * This is now handled from BatchComputeDocker due to the
+		 * need to remove the container before removing the volumes
+		 * but I'm keep this here just in case I need to refactor
+		 * and forget to remove containers from the docker host
+		 */
+		_removedFromDockerHost = true;
+		return Promise.promise(true);
 	}
 
 	public function dispose() :Promise<Bool>
@@ -493,6 +485,11 @@ class Job
 		} else {
 			return Promise.promise(null);
 		}
+	}
+
+	function checkMachine() :Promise<Bool>
+	{
+		return cloud.MachineMonitor.checkMachine(_job.worker.docker, _job.worker.ssh);
 	}
 
 	function getContainer() :Promise<DockerContainer>

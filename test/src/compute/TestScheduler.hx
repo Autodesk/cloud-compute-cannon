@@ -44,7 +44,7 @@ class TestScheduler extends TestComputeBase
 			poolId1 => 2,
 			poolId2 => 1
 		];
-		var pools :Map<String, Array<WorkerDefinition>> = [
+		var pools :Map<MachinePoolId, Array<WorkerDefinition>> = [
 			poolId1 => [],
 			poolId2 => [],
 		];
@@ -104,6 +104,7 @@ class TestScheduler extends TestComputeBase
 				return redis.toJson();
 			})
 			.pipe(function(json) {
+				json.removed_record = null;
 				//Check the JSON dump string for the id string
 				assertTrue(Json.stringify(json).indexOf(machineToDisable.id) == -1);
 				return Promise.promise(true);
@@ -119,11 +120,11 @@ class TestScheduler extends TestComputeBase
 		var poolId1 = new MachinePoolId('poolid1');
 		var poolId2 = new MachinePoolId('poolid2');
 
-		var priorities :Map<String, Int> = [
+		var priorities :Map<MachinePoolId, Int> = [
 			poolId1 => 2,
 			poolId2 => 1
 		];
-		var pools :Map<String, Array<WorkerDefinition>> = [
+		var pools :Map<MachinePoolId, Array<WorkerDefinition>> = [
 			poolId1 => [],
 			poolId2 => [],
 		];

@@ -13,7 +13,7 @@ class TestRestartAfterCrashVagrant extends TestRestartAfterCrashBase
 		return super.setup()
 			.then(function(_) {
 				_env = cast Reflect.copy(js.Node.process.env);
-				Reflect.setField(_env, ENV_VAR_COMPUTE_CONFIG, js.node.Fs.readFileSync('etc/config/serverconfig.vagrant.template.yaml', {encoding:'utf8'}));
+				Reflect.setField(_env, ENV_VAR_COMPUTE_CONFIG, js.node.Fs.readFileSync('etc/config/serverconfig.vagrant.template.yml', {encoding:'utf8'}));
 				return true;
 			})
 			.pipe(function(_) {

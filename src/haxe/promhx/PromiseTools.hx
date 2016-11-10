@@ -61,9 +61,13 @@ class PromiseTools
 	public static function error<A>(err :Dynamic) :Promise<A>
 	{
 		var p = new Promise();
+#if (js && !macro)
 		js.Node.setTimeout(function() {
 			p.reject(err);
 		}, 1);
+#else
+		throw 'Not implemented';
+#end
 		return p;
 	}
 
@@ -201,7 +205,7 @@ class PromiseTools
 		return deferredPromise.boundPromise;
 	}
 
-#if nodejs
+#if (nodejs && !macro)
 	public static function streamToPromise(stream :js.node.stream.Readable<Dynamic>) :Promise<String>
 	{
 		var deferredPromise = new DeferredPromise();

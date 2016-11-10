@@ -32,8 +32,35 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 		if (storage != null) {
 			_storage = storage;
 			var date = DateTools.format(Date.now(), '%Y%m%d-%H%M%S');
-			_storage = _storage.appendToRootPath('tests/$date');
+			_storage = _storage.appendToRootPath('tests/storage/$date');
 		}
+	}
+
+	@timeout(1200000)
+	public function testFileExists() :Promise<Bool>
+	{
+		return _storage.exists('sdfsdfafsadfasdcfsfcasfsadf')
+			.then(function(exists) {
+				assertFalse(exists);
+				return true;
+			})
+			.errorPipe(function(err) {
+				assertIsNull(err);
+				return Promise.promise(false);
+			});
+	}
+
+	@timeout(120000)
+	public function testGettingFileThatDoesNotExist() :Promise<Bool>
+	{
+		return _storage.readFile('sdfsdfafsadfasdcfsfcasfsadf')
+			.then(function(_) {
+				assertTrue(false);
+				return true;
+			})
+			.errorPipe(function(err) {
+				return Promise.promise(true);
+			});
 	}
 
 	function doPathParsing(s :ServiceStorage) :Promise<Bool>
@@ -179,6 +206,23 @@ class TestStorageBase extends haxe.unit.async.PromiseTest
 												return true;
 											});
 									});
+							});
+					});
+			})
+			//Test piping in a http request readable stream
+			.pipe(function(_) {
+				var url = 'https://commons.wikimedia.org/static/images/wikimedia-button-2x.png';
+				var fileName = 'wikimedia-button-2x.png';
+				var stream = js.npm.request.Request.get(url);
+				return storage.writeFile(fileName, stream)
+					.pipe(function(_) {
+						return storage.readFile(fileName)
+							.pipe(function(readStream) {
+								return StreamPromises.streamToBuffer(readStream);
+							})
+							.then(function(buffer) {
+								var md5 = js.node.Crypto.createHash('md5').update(buffer).digest('hex');
+								assertEquals(md5, 'b6d63aa25f73a7e0e1c1cfe063fc5eb9');
 							});
 					});
 			})

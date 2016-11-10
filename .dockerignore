@@ -1,17 +1,29 @@
 *.sublime-*
 .aws
 .DS_Store
+.jenkins-config
 .env*
-#.git
 .haxelib
+lib/janicek-core-haxe/doc
+lib/janicek-core-haxe/test
+lib/janicek-core-haxe/lib
+lib/haxe-json-rpc/lib
+lib/haxe-json-rpc/node_modules
+lib/haxe-json-rpc/test
+lib/haxe-json-rpc/build
+lib/promhx/bin
+lib/promhx/demo
+lib/promhx/lib
+lib/promhx/tools
+
 /build.hxml
 build
-node_modules/
+**/node_modules/
 serverconfig.yaml
+ccc.yaml
 tmp/
-data/computejobs/**
-data/registry/**
-data/ServiceStorageLocalFileSystem/**
+results/
+data/
 
 #REMOVE THIS WHEN WORKING
 #./etc/log

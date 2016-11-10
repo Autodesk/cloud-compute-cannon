@@ -1,6 +1,7 @@
 package ccc.compute;
 
-#if (nodejs && !macro)
+import js.npm.docker.Docker;
+#if ((nodejs && !macro) && !excludeccc)
 	import haxe.remoting.JsonRpc;
 	import t9.js.jsonrpc.Routes;
 
@@ -21,6 +22,7 @@ package ccc.compute;
 	import promhx.StreamPromises;
 	import promhx.PromiseTools;
 	import promhx.DockerPromises;
+	import promhx.Stream;
 
 	import ccc.compute.server.ServerCommands;
 	import ccc.compute.server.ServerCommands.*;
@@ -46,6 +48,7 @@ package ccc.compute;
 	typedef Express=Dynamic;
 	typedef IncomingMessage=Dynamic;
 	typedef ServerResponse=Dynamic;
+	typedef DockerUrl=Dynamic;
 #end
 
 /**
@@ -54,12 +57,125 @@ package ccc.compute;
 class ServiceBatchCompute
 {
 	@rpc({
+		alias:'job-wait',
+		doc:'Waits until a job has finished before returning'
+	})
+	public function getJobResult(jobId :JobId, ?timeout :Float = 1000000) :Promise<JobResult>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		if (timeout == null) {
+			timeout = 1000000;
+		}
+		var getJobResultInternal = function() {
+			return doJobCommand(JobCLICommand.Result, [jobId])
+				.then(function(out) {
+					return out[jobId];
+				});
+		}
+
+		var promise = new DeferredPromise();
+		var timeoutId = null;
+		var stream :Stream<Void> = null;
+
+		function cleanUp() {
+			if (stream != null) {
+				stream.end();
+			}
+			if (timeoutId != null) {
+				Node.clearTimeout(timeoutId);
+				timeoutId = null;
+			}
+		}
+
+		function resolve(result) {
+			cleanUp();
+			if (promise != null) {
+				promise.resolve(result);
+				promise = null;
+			}
+		}
+		function reject(err) {
+			cleanUp();
+			if (promise != null) {
+				promise.boundPromise.reject(err);
+				promise = null;
+			}
+		}
+
+		timeoutId = Node.setTimeout(function() {
+			reject('Timeout');
+		}, Std.int(timeout));
+
+		stream = ccc.compute.server.ServerCompute.StatusStream
+			.then(function(status :JobStatusUpdate) {
+				if (status != null && jobId == status.jobId) {
+					switch(status.JobStatus) {
+						case Pending, Working, Finalizing:
+						case Finished:
+							getJobResultInternal()
+								.then(function (result) {
+									resolve(result);
+								});
+					}
+				}
+			});
+		stream.catchError(reject);
+
+		getJobResultInternal()
+			.then(function (result) {
+				if (result != null) {
+					resolve(result);
+				}
+			});
+		return promise.boundPromise;
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	/** For debugging */
+	@rpc({
 		alias:'nudge',
 		doc:'Force the model to check pending jobs'
 	})
-	public function nudge() :Promise<ProcessResult>
+	public function nudge() :Promise<Dynamic>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		return ComputeQueue.processPending(_redis);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
+		alias:'log',
+		doc:'Set the log level'
+	})
+	public function logLevel(?level :Null<Int>) :Promise<Int>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		if (level != null) {
+			level = Std.parseInt(level + '');
+			Log.warn('Setting log level=$level');
+			Logger.GLOBAL_LOG_LEVEL = level;
+		}
+		return Promise.promise(Logger.GLOBAL_LOG_LEVEL);
+#else
+		return Promise.promise(1);
+#end
+	}
+
+	@rpc({
+		alias:'pending',
+		doc:'Get pending jobs'
+	})
+	public function pending() :Promise<Array<JobId>>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServerCommands.pending(_redis);
+#else
+		return Promise.promise(null);
+#end
 	}
 
 	@rpc({
@@ -68,7 +184,24 @@ class ServiceBatchCompute
 	})
 	public function status() :Promise<SystemStatus>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		return ServerCommands.status(_redis);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
+		alias:'status-workers',
+		doc:'Get detailed status of all workers'
+	})
+	public function statusWorkers() :Promise<Dynamic>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServerCommands.statusWorkers(_redis);
+#else
+		return Promise.promise(null);
+#end
 	}
 
 	@rpc({
@@ -77,7 +210,11 @@ class ServiceBatchCompute
 	})
 	public function serverVersion() :Promise<ServerVersionBlob>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		return Promise.promise(ServerCommands.version());
+#else
+		return Promise.promise(null);
+#end
 	}
 
 	@rpc({
@@ -86,7 +223,39 @@ class ServiceBatchCompute
 	})
 	public function serverReset() :Promise<Bool>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		return ServerCommands.serverReset(_redis, _fs);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
+		alias:'remove-all-workers-and-jobs',
+		doc:'Removes a worker'
+	})
+	public function removeAllJobsAndWorkers() :Promise<Bool>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		Log.warn('remove-all-workers-and-jobs');
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return _workerProvider.setMinWorkerCount(0);
+			})
+			.pipe(function(_) {
+				return _workerProvider.setMaxWorkerCount(0);
+			})
+			.pipe(function(_) {
+				Log.warn('Removing all jobs');
+				return doJobCommand(JobCLICommand.Remove, []);
+			})
+			.pipe(function(_) {
+				Log.warn('Removing all workers');
+				return _workerProvider.shutdownAllWorkers();
+			});
+#else
+		return Promise.promise(false);
+#end
 	}
 
 	@rpc({
@@ -95,8 +264,12 @@ class ServiceBatchCompute
 	})
 	public function workerRemove(id :MachineId) :Promise<Bool>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		Assert.notNull(id);
 		return ccc.compute.InstancePool.workerFailed(_redis, id);
+#else
+		return Promise.promise(false);
+#end
 	}
 
 	@rpc({
@@ -107,9 +280,15 @@ class ServiceBatchCompute
 			opts: {doc: 'ADD ME', short:'o'}
 		}
 	})
+#if ((nodejs && !macro) && !excludeccc)
 	public function pullRemoteImageIntoRegistry(image :String, ?tag :String, ?opts: PullImageOptions) :Promise<DockerUrl>
 	{
 		return ServerCommands.pushImageIntoRegistry(image, tag, opts);
+#else
+	public function pullRemoteImageIntoRegistry(image :String, ?tag :String, ?opts: PullImageOptions) :Promise<Dynamic>
+	{
+		return Promise.promise(null);
+#end
 	}
 
 	@rpc({
@@ -118,6 +297,7 @@ class ServiceBatchCompute
 		args:{
 			'command': {'doc':'Command to run in the docker container. E.g. --command=\'["echo", "foo"]\''},
 			'image': {'doc': 'Docker image name [busybox].'},
+			'pull_options': {'doc': 'Docker image pull options, e.g. auth credentials'},
 			'inputs': {'doc': 'Array of input source objects {type:[url|inline(default)], name:<filename>, value:<string>, encoding:[utf8(default)|base64|ascii|hex]} See https://nodejs.org/api/buffer.html for more info about supported encodings.'},
 			'workingDir': {'doc': 'The current working directory for the process in the docker container.'},
 			'cpus': {'doc': 'Minimum number of CPUs required for this process.'},
@@ -125,10 +305,13 @@ class ServiceBatchCompute
 			'resultsPath': {'doc': 'Custom path on the storage service for the generated job.json, stdout, and stderr files.'},
 			'inputsPath': {'doc': 'Custom path on the storage service for the inputs files.'},
 			'outputsPath': {'doc': 'Custom path on the storage service for the outputs files.'},
+			'wait': {'doc': 'Do not return request until compute job is finished. Only use for short jobs.'},
+			'meta': {'doc': 'Metadata logged and saved with the job description and results.json'}
 		}
 	})
 	public function submitJob(
 		?image :String,
+		?pull_options :PullImageOptions,
 		?command :Array<String>,
 		?inputs :Array<ComputeInputSource>,
 		?workingDir :String,
@@ -136,11 +319,14 @@ class ServiceBatchCompute
 		?maxDuration :Int = 600000,
 		?resultsPath :String,
 		?inputsPath :String,
-		?outputsPath :String
-		) :Promise<{jobId:JobId}>
+		?outputsPath :String,
+		?wait :Bool = false,
+		?meta :Dynamic
+		) :Promise<JobResult>
 	{
 		var request :BasicBatchProcessRequest = {
 			image: image,
+			pull_options: pull_options,
 			cmd: command,
 			inputs: inputs,
 			workingDir: workingDir,
@@ -148,9 +334,31 @@ class ServiceBatchCompute
 			resultsPath: resultsPath,
 			inputsPath: inputsPath,
 			outputsPath: outputsPath,
+			wait: wait,
+			meta: meta
 		}
 
+#if ((nodejs && !macro) && !excludeccc)
 		return runComputeJobRequest(request);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
+		alias:'submitJobJson',
+		doc:'Submit a job as a JSON object',
+		args:{
+			'job': {'doc':'BasicBatchProcessRequest'}
+		}
+	})
+	public function submitJobJson(job :BasicBatchProcessRequest) :Promise<JobResult>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return runComputeJobRequest(job);
+#else
+		return Promise.promise(null);
+#end
 	}
 
 	@rpc({
@@ -159,7 +367,11 @@ class ServiceBatchCompute
 	})
 	public function jobs() :Promise<Array<JobId>>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		return ComputeQueue.getAllJobIds(_redis);
+#else
+		return Promise.promise(null);
+#end
 	}
 
 	@rpc({
@@ -174,6 +386,7 @@ class ServiceBatchCompute
 	})
 	public function doJobCommand(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = true) :Promise<TypedDynamicObject<JobId,Dynamic>>
 	{
+#if ((nodejs && !macro) && !excludeccc)
 		if (command == null) {
 			return PromiseTools.error('Missing command.');
 		}
@@ -228,13 +441,16 @@ class ServiceBatchCompute
 					return results;
 				});
 		}
+#else
+		return Promise.promise(null);
+#end
 	}
 
 	function __doJobCommandInternal(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = false) :Promise<TypedDynamicObject<JobId,Dynamic>>
 	{
-#if (nodejs && !macro)
+#if ((nodejs && !macro) && !excludeccc)
 		switch(command) {
-			case Remove,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
+			case Remove,RemoveComplete,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
 			default:
 				return Promise.promise(cast {error:'Unrecognized job subcommand=\'$command\' [remove | kill | result | status | exitcode | stats | definition | time]'});
 		}
@@ -244,7 +460,9 @@ class ServiceBatchCompute
 		function getResultForJob(job) :Promise<Dynamic> {
 			return switch(command) {
 				case Remove:
-					removeJob(_redis, _fs, job);
+					ComputeQueue.removeJob(_redis, job);
+				case RemoveComplete:
+					removeJobComplete(_redis, _fs, job);
 				case Kill:
 					killJob(_redis, job);
 				case Status:
@@ -292,12 +510,12 @@ class ServiceBatchCompute
 #end
 	}
 
-
-#if (nodejs && !macro)
+#if ((nodejs && !macro) && !excludeccc)
 	@inject public var _fs :ServiceStorage;
 	@inject public var _redis :RedisClient;
 	@inject public var _config :StorageDefinition;
 	@inject public var _storage :ServiceStorage;
+	@inject public var _workerProvider :WorkerProvider;
 	@inject public var _injector :minject.Injector;
 
 	public function new() {}
@@ -385,7 +603,7 @@ class ServiceBatchCompute
 			});
 	}
 
-	function runComputeJobRequest(job :BasicBatchProcessRequest) :Promise<{jobId:JobId}>
+	function runComputeJobRequest(job :BasicBatchProcessRequest) :Promise<JobResult>
 	{
 		if (job == null) {
 			throw 'Null job argument in ServiceBatchCompute.run(...)';
@@ -410,14 +628,17 @@ class ServiceBatchCompute
 				deleteInputs = inputFilesObj.cancel;
 				var dockerJob :DockerJobDefinition = {
 					jobId: jobId,
-					image: {type:DockerImageSourceType.Image, value:job.image},
+					image: {type:DockerImageSourceType.Image, value:job.image, pull_options:job.pull_options},
 					command: job.cmd,
 					inputs: inputFilesObj.inputs,
 					workingDir: job.workingDir,
 					inputsPath: job.inputsPath,
 					outputsPath: job.outputsPath,
-					resultsPath: job.resultsPath
+					resultsPath: job.resultsPath,
+					meta: job.meta
 				};
+
+				Log.info({job_submission :dockerJob});
 
 				if (dockerJob.command != null && untyped __typeof__(dockerJob.command) == 'string') {
 					throw 'command field must be an array, not a string';
@@ -464,11 +685,16 @@ class ServiceBatchCompute
 				}
 				return Promise.promise(true);
 			})
-			.then(function(_) {
+			.pipe(function(_) {
 				if (error != null) {
 					throw error;
 				}
-				return {jobId:jobId};
+				if (job.wait == true) {
+					return getJobResult(jobId, job.parameters != null && job.parameters.maxDuration != null ? job.parameters.maxDuration : null);
+				} else {
+					var jobResult :JobResult = {jobId:jobId};
+					return Promise.promise(jobResult);
+				}
 			});
 	}
 
@@ -481,10 +707,9 @@ class ServiceBatchCompute
 	{
 		getNewJobId()
 			.then(function(jobId) {
-				var jsonrpc :RequestDefTyped<BasicBatchProcessRequest> = null;
 				var promises = [];
 				var returned = false;
-				// var inputs = new Array<ComputeInputSource>();
+				var jsonrpc :RequestDefTyped<BasicBatchProcessRequest> = null;
 				function returnError(err :haxe.extern.EitherType<String, js.Error>) {
 					Log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
 					if (returned) return;
@@ -600,14 +825,17 @@ class ServiceBatchCompute
 
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,
-								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image},
+								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options},
 								command: jsonrpc.params.cmd,
 								inputs: inputFileNames,
 								workingDir: jsonrpc.params.workingDir,
 								inputsPath: jsonrpc.params.inputsPath,
 								outputsPath: jsonrpc.params.outputsPath,
-								resultsPath: jsonrpc.params.resultsPath
+								resultsPath: jsonrpc.params.resultsPath,
+								meta: jsonrpc.params.meta
 							};
+
+							Log.info({job_submission :dockerJob});
 
 							if (jsonrpc.params.cmd != null && untyped __typeof__(jsonrpc.params.cmd) == 'string') {
 								throw 'command field must be an array, not a string';
@@ -619,28 +847,13 @@ class ServiceBatchCompute
 								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
 							}
 							return Promise.promise(true)
-								// .pipe(function(_) {
-								// 	var dockerUrl :DockerUrl = dockerJob.image.value;
-								// 	trace('ORIGINAL URL=$dockerUrl');
-								// 	return ServiceBatchComputeTools.checkRegistryForDockerUrl(dockerUrl)
-								// 		.then(function(url) {
-								// 			trace('FINAL URL=$url');
-								// 			dockerJob.image.value = url;
-								// 			return true;
-								// 		});
-								// })
 								.pipe(function(_) {
 									return ComputeQueue.enqueue(_redis, job);
 								});
 						})
 						.then(function(_) {
-							res.writeHead(200, {'content-type': 'application/json'});
-							var jsonRpcRsponse = {
-								result: {jobId:jobId},
-								jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
-								id: jsonrpc.id
-							}
-							res.end(Json.stringify(jsonRpcRsponse));
+							var maxDuration = jsonrpc.params.parameters != null && jsonrpc.params.parameters.maxDuration != null ? jsonrpc.params.parameters.maxDuration : null;
+							returnJobResult(res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
 							Log.error(err);
@@ -687,20 +900,24 @@ class ServiceBatchCompute
 				}
 				switch(type) {
 					case InputInline:
-						var buffer = new Buffer(input.value, encoding);
-						promises.push(_fs.writeFile(inputFilePath, Streamifier.createReadStream(buffer)));//{encoding:encoding}
-						inputNames.push(input.name);
+						if (input.value != null) {
+							var buffer = new Buffer(input.value, encoding);
+							promises.push(_fs.writeFile(inputFilePath, Streamifier.createReadStream(buffer)));//{encoding:encoding}
+							inputNames.push(input.name);
+						}
 					case InputUrl:
 						if (input.value == null) {
 							throw 'input.value is null for $input';
 						}
 						var url :String = input.value;
 						if (url.startsWith('http')) {
-							// Log.info('Got input "${input.name}" url=${input.value}');
 							var request :String->IReadable = Node.require('request');
-							promises.push(_fs.writeFile(inputFilePath, request(input.value)));
+							//Fuck the request library
+							//https://github.com/request/request/issues/887
+							var readable :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+							request(input.value).pipe(readable);
+							promises.push(_fs.writeFile(inputFilePath, readable));
 						} else {
-							// Log.info('Got input "${input.name}" local fs=${input.value}');
 							promises.push(
 								_fs.readFile(url)
 									.pipe(function(stream) {
@@ -714,6 +931,43 @@ class ServiceBatchCompute
 			}
 		}
 		return {promise:Promise.whenAll(promises), inputs:inputNames, cancel:function() return _fs.deleteDir(inputsPath)};
+	}
+
+	function returnJobResult(res :ServerResponse, jobId :JobId, jsonRpcId :Dynamic, wait :Bool, maxDuration :Float)
+	{
+		if (wait == true) {
+			getJobResult(jobId, maxDuration)
+				.then(function(jobResult) {
+					var jsonRpcRsponse = {
+						result: jobResult,
+						jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
+						id: jsonRpcId
+					}
+
+					if (jobResult.error != null) {
+						var errorMessage :JobSubmissionError = jobResult.error.message;
+						switch(errorMessage) {
+							//This is a known client submission error
+							case Docker_Image_Unknown:
+								res.writeHead(400, {'content-type': 'application/json'});
+							//Assume the other errors are internal server errors
+							default:
+								res.writeHead(500, {'content-type': 'application/json'});
+						}
+					} else {
+						res.writeHead(200, {'content-type': 'application/json'});
+					}
+					res.end(Json.stringify(jsonRpcRsponse));
+				});
+		} else {
+			res.writeHead(200, {'content-type': 'application/json'});
+			var jsonRpcRsponse = {
+				result: {jobId:jobId},
+				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
+				id: jsonRpcId
+			}
+			res.end(Json.stringify(jsonRpcRsponse));
+		}
 	}
 
 	static function verifyJobCommand(command :String)

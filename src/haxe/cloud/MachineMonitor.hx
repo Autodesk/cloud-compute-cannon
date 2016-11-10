@@ -106,7 +106,7 @@ class MachineMonitor
 			});
 	}
 
-	public static function createDockerPoll(credentials :DockerConnectionOpts, pollType :PollType, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
+	public static function createDockerPoll(credentials :DockerConnectionOpts, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
 	{
 		var docker = new Docker(credentials);
 		return PollStreams.pollForError(
@@ -119,7 +119,7 @@ class MachineMonitor
 			doublingRetryIntervalMilliseconds);
 	}
 
-	public static function createDiskPoll(credentials :ConnectOptions, maxUsageCapacity :Float, pollType :PollType, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
+	public static function createDiskPoll(credentials :ConnectOptions, maxUsageCapacity :Float, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
 	{
 		Assert.that(maxUsageCapacity != null);
 		Assert.that(maxUsageCapacity > 0.0);
@@ -171,7 +171,11 @@ class MachineMonitor
 				case CriticalFailure(failure): dispose();
 				default://Ignored
 			}
+		})
+		.catchError(function(err) {
+			//Catch but ignore stream errors
 		});
+
 		_docker.then(function(dockerStatus) {
 			switch(dockerStatus) {
 				case NotConfigured,Connecting:
@@ -180,7 +184,11 @@ class MachineMonitor
 				case ContactLost:
 					_status.resolve(MachineConnectionStatus.CriticalFailure(MachineFailureType.DockerConnectionLost));
 			}
+		})
+		.catchError(function(err) {
+			//Catch but ignore stream errors
 		});
+
 		_disk.then(function(diskStatus) {
 			switch(diskStatus) {
 				case NotConfigured,Connecting:
@@ -189,6 +197,9 @@ class MachineMonitor
 				case DiskSpaceExceeded:
 					_status.resolve(MachineConnectionStatus.CriticalFailure(MachineFailureType.DiskCapacityCritical));
 			}
+		})
+		.catchError(function(err) {
+			//Catch but ignore stream errors
 		});
 	}
 
@@ -228,7 +239,7 @@ class MachineMonitor
 			cred.timeout = 2000;
 		}
 
-		_dockerPoll = createDockerPoll(cred, PollType.regular, pollIntervalMilliseconds, maxRetries, doublingRetryIntervalMilliseconds)
+		_dockerPoll = createDockerPoll(cred, pollIntervalMilliseconds, maxRetries, doublingRetryIntervalMilliseconds)
 			.then(function(ok) {
 				if (_docker != null) {
 					if (ok) {
@@ -248,7 +259,7 @@ class MachineMonitor
 			_diskPoll.end();
 			_diskPoll = null;
 		}
-		_diskPoll = createDiskPoll(cred, maxDiskUsage, PollType.regular, pollIntervalMilliseconds, maxRetries, doublingRetryIntervalMilliseconds)
+		_diskPoll = createDiskPoll(cred, maxDiskUsage, pollIntervalMilliseconds, maxRetries, doublingRetryIntervalMilliseconds)
 			.then(function(ok) {
 				if (_disk != null) {
 					if (ok) {

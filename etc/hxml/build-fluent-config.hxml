@@ -1,7 +1,0 @@
-etc/hxml/base-nodejs.hxml
-
--main ccc.scripts.BuildFluentConfig
-
--js build/scripts/buildfluentconfig.js
-
--cmd node build/scripts/buildfluentconfig.js

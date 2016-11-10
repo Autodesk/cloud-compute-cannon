@@ -35,6 +35,13 @@ class RedisPromises
 		return promise;
 	}
 
+	inline public static function hgetall(redis :RedisClient, hashkey :String) :Promise<Dynamic>
+	{
+		var promise = new promhx.CallbackPromise();
+		redis.hgetall(hashkey, promise.cb2);
+		return promise;
+	}
+
 	inline public static function hkeys(redis :RedisClient, hashkey :String) :Promise<Array<Dynamic>>
 	{
 		var promise = new promhx.CallbackPromise();

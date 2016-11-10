@@ -54,7 +54,7 @@ class TestCLISansServer extends TestComputeBase
 		assertEquals(findExistingServerConfigPath(serverConfigPath1), null);
 		assertEquals(findExistingServerConfigPath(serverConfigPath2), null);
 
-		assertNotNull(haxe.Resource.getString('etc/config/serverconfig.template.yaml'));
+		assertNotNull(haxe.Resource.getString('etc/config/serverconfig.template.yml'));
 
 		//Write the files, make sure we get the closest
 		writeServerConnection(serverConfigPath2, fakeServerConfig);

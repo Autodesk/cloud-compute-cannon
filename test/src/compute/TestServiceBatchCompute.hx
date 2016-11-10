@@ -26,6 +26,7 @@ import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 import ccc.compute.client.ClientCompute;
+import ccc.compute.client.ClientTools;
 import ccc.storage.StorageTools;
 import ccc.storage.ServiceStorage;
 
@@ -44,7 +45,6 @@ class TestServiceBatchCompute extends TestComputeBase
 	{
 		return super.setup()
 			.pipe(function(_) {
-				var out = untyped __js__('require("child_process").execSync("haxe etc/hxml/cli-build.hxml")');
 				//Create a server in a forker process
 				var envCopy = Reflect.copy(js.Node.process.env);
 				Reflect.setField(envCopy, ENV_LOG_LEVEL, "70");//js.npm.bunyan.Bunyan.WARN);
@@ -89,7 +89,7 @@ class TestServiceBatchCompute extends TestComputeBase
 					]
 				}
 
-				return ClientCompute.postJob(HOST, jobParams)
+				return ClientTools.postJob(HOST, jobParams)
 					.thenWait(5000)
 					.pipe(function(result) {
 						var jobId = result.jobId;

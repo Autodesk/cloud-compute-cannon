@@ -22,8 +22,6 @@ RUN apt-get update && \
 	mkdir /root/neko && \
 	wget -O - http://nekovm.org/_media/neko-2.0.0-linux64.tar.gz | tar xzf - --strip=1 -C "/root/neko"
 
-RUN npm install -g forever nodemon bunyan
-
 ENV APP /app
 RUN mkdir -p $APP
 WORKDIR $APP
@@ -33,6 +31,7 @@ RUN haxelib newrepo
 #Only install npm packages if the package.json changes
 ADD ./package.json $APP/package.json
 RUN npm install
+RUN npm install -g forever nodemon bunyan
 
 #Only install haxe packages if the package.json changes
 ADD ./etc/hxml/base.hxml $APP/etc/hxml/base.hxml

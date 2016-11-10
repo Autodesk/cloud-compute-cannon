@@ -16,6 +16,7 @@ import promhx.CallbackPromise;
 
 import ccc.compute.InstancePool;
 import ccc.compute.ComputeQueue;
+import ccc.compute.workers.WorkerProvider;
 
 import util.DockerTools;
 import util.RedisTools;
@@ -36,6 +37,7 @@ class Worker
 	public var id (get, null) :MachineId;
 
 	@inject public var _redis :RedisClient;
+	@inject public var _provider :WorkerProvider;
 	var _definition :WorkerDefinition;
 	var _id :MachineId;
 	var _computeStatus :MachineStatus;
@@ -72,8 +74,12 @@ class Worker
 			if (status != null && status != _computeStatus) {
 				_computeStatus = status;
 				log.debug({'status':_computeStatus});
-				if (_computeStatus == MachineStatus.Removing) {
-
+				switch(_computeStatus) {
+					case Available,Deferred:
+						if (_redis != null && _monitor != null) {
+							startMonitor();
+						}
+					case Initializing,WaitingForRemoval,Removing,Failed,Terminated:
 				}
 			}
 		});
@@ -81,10 +87,32 @@ class Worker
 
 	function startMonitor()
 	{
-		_monitor = new MachineMonitor()
-			.monitorDocker(_definition.docker)
-			.monitorDiskSpace(_definition.ssh);
+		_monitor = new MachineMonitor();
 
+		//Always monitor the docker daemon
+		_monitor.monitorDocker(_definition.docker, 2000);
+
+		//Monitoring disk space only makes sense for certain providers
+		var type :ServiceWorkerProviderType = _provider.id;
+		switch(type) {
+			case pkgcloud,vagrant:
+				log.info("Setting up disk monitoring");
+				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 2000);
+			default:
+				log.info('NOT setting up disk monitoring because type=$type is not [${ServiceWorkerProviderType.pkgcloud} or ${ServiceWorkerProviderType.vagrant}]');
+
+		}
+
+		//Output monitoring logs
+		_monitor.docker.then(function(status) {
+			Log.debug({id:_id, monitor:'docker', status:Type.enumConstructor(status)});
+		});
+
+		_monitor.disk.then(function(status) {
+			Log.debug({id:_id, monitor:'disk', status:Type.enumConstructor(status)});
+		});
+
+		//The action taken after a failure is detected
 		_monitor.status.then(function(machineStatus) {
 			switch(machineStatus) {
 				case Connecting,OK:

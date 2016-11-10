@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
-docker-compose rm -fv redis registry fluentd elasticsearch kibana && docker-compose build fluentd && docker-compose up redis registry fluentd elasticsearch kibana
+# docker-compose rm -f redis registry fluentd elasticsearch kibana && docker-compose build fluentd && docker-compose up redis registry fluentd elasticsearch kibana
+docker-compose rm -f redis registry && docker-compose up redis registry

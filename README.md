@@ -1,4 +1,5 @@
-# Cloud Compute Cannon
+# Cloud Compute Cannon [![Build Status](https://travis-ci.org/dionjwa/cloud-compute-cannon.svg?branch=master)](https://travis-ci.org/dionjwa/cloud-compute-cannon)
+
 
 Cloud Compute Cannon is a tool aimed at scientists and more general users who want to use cheap cloud providers (such as Amazon) to perform large scale computes (number crunching). It aims to lower some of the biggest barriers and learning curves in getting data and custom code running on distributed cloud infrastructure. It can be run both as a command-line tool, or as a server for integrating into other tools via a REST API/websockets.
 
@@ -143,6 +144,12 @@ In the above configuration, only the `credentials.keyId` and `credentials.key` v
       keyId: "your keyId"
       key: "your key"
       region: "us-west-1"
+    # Optionally add arbitrary  copy parameters if using S3:
+    # http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
+    extraS3SyncParameters: [
+        ['--exclude', '*', '--include', '*.ext2'],
+        ['--exclude', '*', '--include', '*.ext3']
+      ]
 ```
 
 More coming soon!

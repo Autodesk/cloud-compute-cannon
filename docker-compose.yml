@@ -1,30 +1,45 @@
-compute:
-  extends:
-    file: docker-compose.core.yml
-    service: compute
-  links:
-    - redis
-    - registry
-    - fluentd
+version: '2'
 
+volumes:
+  redis-data:
+    driver: local
+  ccc-local-storage:
+    driver: local
+  registry-data:
+    driver: local
 
-redis:
-  extends:
-    file: docker-compose.core.yml
-    service: redis
-  links:
-    - fluentd
+services:
+  compute:
+    extends:
+      file: docker-compose.core.yml
+      service: compute
+    links:
+      - redis
+      - registry
+      - fluentd
 
+  redis:
+    extends:
+      file: docker-compose.core.yml
+      service: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+      - redis-data:/data
+    links:
+      - fluentd
 
-registry:
-  extends:
-    file: docker-compose.core.yml
-    service: registry
-  links:
-    - fluentd
+  registry:
+    extends:
+      file: docker-compose.core.yml
+      service: registry
+    volumes:
+      #Always persist the registry locally. This makes it easier to clean.
+      - registry-data:/var/lib/registry
+    links:
+      - fluentd
 
-
-fluentd:
-  extends:
-    file: docker-compose.core.yml
-    service: fluentd
+  fluentd:
+    extends:
+      file: docker-compose.core.yml
+      service: fluentd
