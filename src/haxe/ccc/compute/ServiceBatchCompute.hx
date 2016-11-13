@@ -60,11 +60,11 @@ class ServiceBatchCompute
 		alias:'job-wait',
 		doc:'Waits until a job has finished before returning'
 	})
-	public function getJobResult(jobId :JobId, ?timeout :Float = 1000000) :Promise<JobResult>
+	public function getJobResult(jobId :JobId, ?timeout :Float = 86400000) :Promise<JobResult>
 	{
 #if ((nodejs && !macro) && !excludeccc)
 		if (timeout == null) {
-			timeout = 1000000;
+			timeout = 86400000;
 		}
 		var getJobResultInternal = function() {
 			return doJobCommand(JobCLICommand.Result, [jobId])
@@ -548,7 +548,7 @@ class ServiceBatchCompute
 		_injector.injectInto(serviceTests);
 		serverContext.registerService(serviceTests);
 		serverContext.registerService(ccc.compute.server.ServerCommands);
-		var timeout = 1000*60*10;
+		var timeout = 1000*60*30;//30m
 		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext, timeout));
 		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT, timeout));
 
