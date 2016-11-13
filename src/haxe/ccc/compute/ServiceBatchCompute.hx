@@ -57,6 +57,15 @@ import js.npm.docker.Docker;
 class ServiceBatchCompute
 {
 	@rpc({
+		alias:'jobs-delete-delete',
+		doc:'Deletes all pending jobs'
+	})
+	public function deletePending()
+	{
+		return ServerCommands.deletingPending(_redis, _fs);
+	}
+
+	@rpc({
 		alias:'job-wait',
 		doc:'Waits until a job has finished before returning'
 	})

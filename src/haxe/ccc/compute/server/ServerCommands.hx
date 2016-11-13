@@ -47,6 +47,28 @@ class ServerCommands
 			});
 	}
 
+	public static function deletingPending(redis :RedisClient, fs :ServiceStorage) :Promise<DynamicAccess<String>>
+	{
+		return pending(redis)
+			.pipe(function(jobIds) {
+				var result :DynamicAccess<String> = {};
+				return Promise.whenAll(jobIds.map(function(jobId) {
+					return removeJobComplete(redis, fs, jobId, true)
+						.then(function(removeJobResult) {
+							result.set(jobId, removeJobResult);
+							return true;
+						})
+						.errorPipe(function(err) {
+							result.set(jobId, 'Failed to remove jobId=$jobId err=$err');
+							return Promise.promise(false);
+						});
+				}))
+				.then(function(_) {
+					return result;
+				});
+			});
+	}
+
 	public static function pending(redis :RedisClient) :Promise<Array<JobId>>
 	{
 		return ComputeQueue.toJson(redis)
@@ -467,7 +489,7 @@ class ServerCommands
 							return ComputeQueue.removeJob(redis, jobId);
 						})
 						.then(function(_) {
-							return 'removed $jobId';
+							return '$jobId removed';
 						});
 				}
 			});
