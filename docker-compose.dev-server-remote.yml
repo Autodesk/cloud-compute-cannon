@@ -13,7 +13,7 @@ services:
       - ./:/app/config
     environment:
       LOG_LEVEL: "${LOG_LEVEL}"
-      CONFIG_PATH: "/app/config"
+      CONFIG_PATH: "/app/config/ccc.yml"
     links:
       - redis
       - registry

@@ -109,9 +109,18 @@ class MachineMonitor
 	public static function createDockerPoll(credentials :DockerConnectionOpts, pollIntervalMilliseconds: Int, maxRetries:Int, doublingRetryIntervalMilliseconds: Int) :Stream<Bool>
 	{
 		var docker = new Docker(credentials);
+		var opts :ListContainerOptions = {limit:2};
 		return PollStreams.pollForError(
 			function() {
-				return DockerPromises.ping(docker);
+				var promise = new promhx.CallbackPromise();
+				/**
+				 * Use docker ps instead of docker ping.
+				 * If the daemon gets into a bad state the
+				 * sometimes the ping API works but the
+				 * daemon is actually not responding.
+				 */
+				docker.listContainers(opts, promise.cb2);
+				return promise;
 			},
 			PollType.regular,
 			pollIntervalMilliseconds,

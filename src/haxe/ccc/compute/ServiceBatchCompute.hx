@@ -548,8 +548,9 @@ class ServiceBatchCompute
 		_injector.injectInto(serviceTests);
 		serverContext.registerService(serviceTests);
 		serverContext.registerService(ccc.compute.server.ServerCommands);
-		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext));
-		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT));
+		var timeout = 1000*60*10;
+		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext, timeout));
+		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT, timeout));
 
 		router.post('/build/*', buildDockerImageRouter);
 		return router;

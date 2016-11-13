@@ -84,9 +84,9 @@ class ServiceTests
 			runner.add(new ccc.docker.dataxfer.TestDataTransfer());
 		}
 
-		if (registry) {
-			runner.add(new TestRegistry(targetHost));
-		}
+		// if (registry) {
+		// 	runner.add(new TestRegistry(targetHost));
+		// }
 
 		if (worker) {
 			var testWorkers = new TestWorkerMonitoring();

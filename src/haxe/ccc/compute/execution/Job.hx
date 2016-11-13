@@ -321,12 +321,19 @@ class Job
 							.pipe(function(batchJobResult) {
 								_cancelWorkingJob = null;
 								if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
-									var finishedStatus = batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success;
-									return writeJobResults(_job, _fs, batchJobResult, finishedStatus)
-										.pipe(function(_) {
-											return finishJob(finishedStatus, batchJobResult.error)
-												.thenTrue();
-										});
+									if (batchJobResult.exitCode == 137) {
+										log.warn('Job failed (exitCode == 137) which means there was a docker issue, requeuing');
+										ComputeQueue.requeueJob(_redis, _job.computeJobId);
+										dispose();
+										return Promise.promise(true);
+									} else {
+										var finishedStatus = batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success;
+										return writeJobResults(_job, _fs, batchJobResult, finishedStatus)
+											.pipe(function(_) {
+												return finishJob(finishedStatus, batchJobResult.error)
+													.thenTrue();
+											});
+									}
 								} else {
 									return Promise.promise(true);
 								}
@@ -463,7 +470,7 @@ class Job
 					return streams != null ? streams.dispose() : Promise.promise(true);
 				})
 				.errorPipe(function(err) {
-					log.error({log:'Failed to removeJobFromDockerHost', error:err});
+					log.warn({log:'Failed to removeJobFromDockerHost', error:err});
 					return Promise.promise(true);
 				})
 				.then(function(_) {
