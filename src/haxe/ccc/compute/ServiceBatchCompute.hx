@@ -78,12 +78,12 @@ class ServiceBatchCompute
 		var stream :Stream<Void> = null;
 
 		function cleanUp() {
-			if (stream != null) {
-				stream.end();
-			}
 			if (timeoutId != null) {
 				Node.clearTimeout(timeoutId);
 				timeoutId = null;
+			}
+			if (stream != null) {
+				stream.end();
 			}
 		}
 
@@ -103,7 +103,7 @@ class ServiceBatchCompute
 		}
 
 		timeoutId = Node.setTimeout(function() {
-			reject('getJobResult.Timeout jobId=$jobId');
+			reject('getJobResult.Timeout jobId=$jobId timeout=${Std.int(timeout)}');
 		}, Std.int(timeout));
 
 		stream = ccc.compute.server.ServerCompute.StatusStream
