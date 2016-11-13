@@ -48,10 +48,6 @@ exit 0
 				}
 				assertEquals(jobResult.exitCode, 0);
 				return true;
-			})
-			.errorPipe(function(err) {
-				assertIsNull(err);
-				return Promise.promise(false);
 			});
 	}
 

@@ -167,6 +167,7 @@ typedef DockerBatchComputeJob = {
 	@:optional var outputsPath :String;
 	/* Stores the stdout, stderr, and result.json. */
 	@:optional var resultsPath :String;
+	@:optional var parameters :JobParams;
 }
 
 

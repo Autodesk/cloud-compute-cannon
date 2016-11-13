@@ -103,7 +103,7 @@ class ServiceBatchCompute
 		}
 
 		timeoutId = Node.setTimeout(function() {
-			reject('getJobResult.Timeout jobId=$jobId timeout=${Std.int(timeout)}');
+			reject({error:'Job Timeout', jobId: jobId, timeout:timeout, httpStatusCode:400});
 		}, Std.int(timeout));
 
 		stream = ccc.compute.server.ServerCompute.StatusStream
@@ -625,6 +625,7 @@ class ServiceBatchCompute
 				var inputs = null;
 				var inputPath = job.inputsPath != null ? (job.inputsPath.endsWith('/') ? job.inputsPath : job.inputsPath + '/') : jobId.defaultInputDir();
 
+				var parameters :JobParams = job.parameters == null ? {cpus:1, maxDuration:2 * 60000} : job.parameters;
 				var inputFilesObj = writeInputFiles(job.inputs, inputPath);
 				deleteInputs = inputFilesObj.cancel;
 				var dockerJob :DockerJobDefinition = {
@@ -636,6 +637,7 @@ class ServiceBatchCompute
 					inputsPath: job.inputsPath,
 					outputsPath: job.outputsPath,
 					resultsPath: job.resultsPath,
+					parameters: parameters,
 					meta: job.meta
 				};
 
@@ -664,7 +666,7 @@ class ServiceBatchCompute
 						var job :QueueJobDefinitionDocker = {
 							id: jobId,
 							item: dockerJob,
-							parameters: job.parameters == null ? {cpus:1, maxDuration:2 * 60000} : job.parameters,
+							parameters: parameters,
 						}
 						return ComputeQueue.enqueue(_redis, job);
 					})
@@ -691,7 +693,8 @@ class ServiceBatchCompute
 					throw error;
 				}
 				if (job.wait == true) {
-					return getJobResult(jobId, job.parameters != null && job.parameters.maxDuration != null ? job.parameters.maxDuration : null);
+					// return getJobResult(jobId, job.parameters != null && job.parameters.maxDuration != null ? job.parameters.maxDuration : null);
+					return getJobResult(jobId);
 				} else {
 					var jobResult :JobResult = {jobId:jobId};
 					return Promise.promise(jobResult);
@@ -824,6 +827,7 @@ class ServiceBatchCompute
 						})
 						.pipe(function(_) {
 
+							var parameters :JobParams = jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters;
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,
 								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options},
@@ -833,6 +837,7 @@ class ServiceBatchCompute
 								inputsPath: jsonrpc.params.inputsPath,
 								outputsPath: jsonrpc.params.outputsPath,
 								resultsPath: jsonrpc.params.resultsPath,
+								parameters: parameters,
 								meta: jsonrpc.params.meta
 							};
 
@@ -845,7 +850,7 @@ class ServiceBatchCompute
 							var job :QueueJobDefinitionDocker = {
 								id: jobId,
 								item: dockerJob,
-								parameters: jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters,
+								parameters: parameters
 							}
 							return Promise.promise(true)
 								.pipe(function(_) {
@@ -854,9 +859,11 @@ class ServiceBatchCompute
 						})
 						.then(function(_) {
 							var maxDuration = jsonrpc.params.parameters != null && jsonrpc.params.parameters.maxDuration != null ? jsonrpc.params.parameters.maxDuration : null;
+							traceCyan("returnJobResult");
 							returnJobResult(res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
+							traceRed('CAUGHT returnJobResult error');
 							Log.error(err);
 							returnError(err);
 						});
@@ -937,7 +944,7 @@ class ServiceBatchCompute
 	function returnJobResult(res :ServerResponse, jobId :JobId, jsonRpcId :Dynamic, wait :Bool, maxDuration :Float)
 	{
 		if (wait == true) {
-			getJobResult(jobId, maxDuration)
+			getJobResult(jobId)
 				.then(function(jobResult) {
 					var jsonRpcRsponse = {
 						result: jobResult,
@@ -959,6 +966,10 @@ class ServiceBatchCompute
 						res.writeHead(200, {'content-type': 'application/json'});
 					}
 					res.end(Json.stringify(jsonRpcRsponse));
+				})
+				.catchError(function(err) {
+					res.writeHead(500, {'content-type': 'application/json'});
+					res.end(Json.stringify(err));
 				});
 		} else {
 			res.writeHead(200, {'content-type': 'application/json'});
