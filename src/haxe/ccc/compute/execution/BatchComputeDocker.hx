@@ -103,18 +103,21 @@ class BatchComputeDocker
 		var killed = false;
 		var eventStream :Stream<EventStreamItem> = null;
 		eventStream = DockerTools.createEventStream(job.worker.docker);
-		eventStream.then(function(event) {
-			if (containerId != null && event.id != null && event.id == containerId) {
-				if (event.status == EventStreamItemStatus.kill) {
-					log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
-					killed = false;
+		//It is null if using the local docker daemon
+		if (eventStream != null) {
+			eventStream.then(function(event) {
+				if (containerId != null && event.id != null && event.id == containerId) {
+					if (event.status == EventStreamItemStatus.kill) {
+						log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
+						killed = false;
+					}
 				}
-			}
-		});
-		eventStream.catchError(function(err) {
-			eventStream.end();
-			log.warn('error on event stream err=$err');
-		});
+			});
+			eventStream.catchError(function(err) {
+				eventStream.end();
+				log.warn('error on event stream err=$err');
+			});
+		}
 
 		/*
 			Set the job JobWorkingStatus. This is to
@@ -131,7 +134,9 @@ class BatchComputeDocker
 			if (jobWorkingStatus == JobWorkingStatus.Cancelled) {
 				return;
 			}
-			eventStream.end();
+			if (eventStream != null) {
+				eventStream.end();
+			}
 			//This will break out of the chain below
 			//There's no need to publish the job working status since it will be removed in the db after cancelling
 			jobWorkingStatus = JobWorkingStatus.Cancelled;
@@ -438,7 +443,9 @@ class BatchComputeDocker
 				// out of the promise chain (for speed)
 
 				log.debug({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container});
-				eventStream.end();
+				if (eventStream != null) {
+					eventStream.end();
+				}
 
 				getContainer(docker, computeJobId)
 					.pipe(function(containerData) {
