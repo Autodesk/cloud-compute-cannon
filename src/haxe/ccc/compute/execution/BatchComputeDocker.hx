@@ -74,6 +74,7 @@ class BatchComputeDocker
 		var parentLog = log;
 		log = parentLog.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
 		untyped log._level = parentLog._level;
+		var containerId = null;
 
 		// log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
 		log.info({log:'executeJob', job:LogTools.removePrivateKeys(job)});
@@ -99,6 +100,22 @@ class BatchComputeDocker
 			name: outputVolumeName,
 		};
 
+		var killed = false;
+		var eventStream :Stream<EventStreamItem> = null;
+		eventStream = DockerTools.createEventStream(job.worker.docker);
+		eventStream.then(function(event) {
+			if (containerId != null && event.id != null && event.id == containerId) {
+				if (event.status == EventStreamItemStatus.kill) {
+					log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
+					killed = false;
+				}
+			}
+		});
+		eventStream.catchError(function(err) {
+			eventStream.end();
+			log.warn('error on event stream err=$err');
+		});
+
 		/*
 			Set the job JobWorkingStatus. This is to
 			resume the job in case the Node.js process
@@ -114,6 +131,7 @@ class BatchComputeDocker
 			if (jobWorkingStatus == JobWorkingStatus.Cancelled) {
 				return;
 			}
+			eventStream.end();
 			//This will break out of the chain below
 			//There's no need to publish the job working status since it will be removed in the db after cancelling
 			jobWorkingStatus = JobWorkingStatus.Cancelled;
@@ -273,13 +291,11 @@ class BatchComputeDocker
 						.pipe(function(container) {
 							if (container != null) {
 								/* Container exists. Is it finished? */
-								log.info({JobWorkingStatus:jobWorkingStatus, log:'Waiting on already running container=${container.Id}'});
+								containerId = container.Id;
+								log = log.child({container:containerId});
+								log.info({JobWorkingStatus:jobWorkingStatus, log:'Waiting on already running container=${containerId}'});
 								var container = docker.getContainer(container.Id);
-								return DockerPromises.wait(container)
-									.pipe(function(status :{StatusCode:Int}) {
-										exitCode = status.StatusCode;
-										return setStatus(JobWorkingStatus.CopyingOutputs);
-									});
+								return Promise.promise(container);
 							} else {
 								/*
 									There is no existing container, so create one
@@ -318,21 +334,44 @@ class BatchComputeDocker
 								}
 
 								return DockerJobTools.runDockerContainer(docker, job.computeJobId, imageId, job.item.command, mounts, job.item.workingDir, labels, log)
-									.pipe(function(containerunResult) {
+									.then(function(containerunResult) {
 										error = containerunResult.error;
-										return DockerPromises.wait(containerunResult.container)
-											.then(function(status :{StatusCode:Int}) {
-												exitCode = status.StatusCode;
-												log.info({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode});
-												if (error != null) {
-													log.error({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode, error:error});
-													throw error;
-												}
-												return true;
-											})
-											.pipe(function(_) {
-												return setStatus(JobWorkingStatus.CopyingOutputs);
-											});
+										containerId = containerunResult != null && containerunResult.container != null ? containerunResult.container.id : null;
+										log = log.child({container:containerId});
+										return containerunResult != null ? containerunResult.container : null;
+									});
+							}
+						})
+						.pipe(function(container) {
+							log.info('container=$containerId');
+							if (container == null) {
+								jobWorkingStatus = JobWorkingStatus.Failed;
+								return Promise.promise(true);
+							} else {
+								//Wait for the container to finish, but also monitor
+								//the state of the job. If it becomes 'stopped'
+
+								return DockerPromises.wait(container)
+									.then(function(status :{StatusCode:Int}) {
+										exitCode = status.StatusCode;
+										//This is caused by a job failure
+										if (exitCode == 137) {
+											error = "Job exitCode==137 this is caused by docker killing the container, likely on a restart. Requeuing this job";
+										}
+										if (killed) {
+											exitCode == 137;
+											error = "Job killed, this is caused by docker killing the container, likely on a restart. Requeuing this job";
+										}
+
+										log.info({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode});
+										if (error != null) {
+											log.error({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode, error:error});
+											throw error;
+										}
+										return true;
+									})
+									.pipe(function(_) {
+										return setStatus(JobWorkingStatus.CopyingOutputs);
 									});
 							}
 						});
@@ -399,6 +438,7 @@ class BatchComputeDocker
 				// out of the promise chain (for speed)
 
 				log.debug({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container});
+				eventStream.end();
 
 				getContainer(docker, computeJobId)
 					.pipe(function(containerData) {

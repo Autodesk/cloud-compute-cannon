@@ -47,6 +47,105 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	 * should be rescheduled (and not failed).
 	 */
 	@timeout(600000)//10m
+	public function testJobOkWorkerOkAfterDockerDaemonReboot() :Promise<Bool>
+	{
+		var promise = new DeferredPromise();
+		var provider :ccc.compute.workers.WorkerProviderPkgCloud = _injector.getValue(ccc.compute.workers.WorkerProvider);
+		if (Type.getClass(provider) != WorkerProviderPkgCloud) {
+			traceYellow('Cannot run test testJobOkWorkerOkAfterDockerDaemonReboot, it does not work on the local compute provider');
+			return Promise.promise(true);
+		}
+		var serverHostRPCAPI = 'http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}';
+		var proxy = ServerTestTools.getProxy(serverHostRPCAPI);
+
+		//Submit a long running job
+		var jobId :JobId = null;
+		var workerId :MachineId = null;
+		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ['sleep', '40'])
+			.pipe(function(out) {
+				jobId = out.jobId;
+				//Reboot docker on the machine the job is on
+
+				//First wait until it is assigned a worker, then get the worker id
+				return PromiseTools.untilTrue(function() {
+					return proxy.pending()
+						.pipe(function(pending) {
+							if (pending.has(jobId)) {
+								return Promise.promise(false);
+							} else {
+								return proxy.status()
+									.then(function(systemStatus :SystemStatus) {
+										//Get the worker
+										var worker = systemStatus.workers.find(function(w) {
+											return w.jobs.exists(function(j) {
+												return j.id == jobId;
+											});
+										});
+										assertNotNull(worker);
+										assertNotEquals(worker.id, workerId);
+										workerId = worker.id;
+										return true;
+									});
+							}
+						});
+				})
+				.then(function(_) {
+					return workerId;
+				});
+			})
+			//Then restart the docker daemon on the worker
+			.pipe(function(workerId) {
+				return ccc.compute.InstancePool.getWorker(_redis, workerId)
+					.pipe(function(worker) {
+						return SshTools.execute(worker.ssh, "sudo systemctl restart docker.service");
+					});
+			})
+			//The daemon will be restarted, but the job won't be
+			.thenWait(400)
+			//There should be no trace of the worker in the InstancePool
+			// .pipe(function(_) {
+			// 	return InstancePool.toJson(_redis)
+			// 		.then(function(instancePoolJsonDump) {
+			// 			instancePoolJsonDump.removed_record = null;
+			// 			if (Json.stringify(instancePoolJsonDump).indexOf(workerId) != -1) {
+			// 				traceRed(Json.stringify(instancePoolJsonDump, null, '\t'));
+			// 			}
+			// 			assertTrue(Json.stringify(instancePoolJsonDump).indexOf(workerId) == -1);
+			// 			return true;
+			// 		});
+			// })
+			.pipe(function(_) {
+				return PromiseTools.untilTrue(function() {
+					return proxy.pending()
+						.pipe(function(pending) {
+							if (pending.has(jobId)) {
+								return Promise.promise(false);
+							} else {
+								return proxy.status()
+									.then(function(systemStatus :SystemStatus) {
+										//Get the worker
+										traceCyan(systemStatus);
+										// var worker = systemStatus.workers.find(function(w) {
+										// 	return w.jobs.exists(function(j) {
+										// 		return j.id == jobId;
+										// 	});
+										// });
+										// assertNotNull(worker);
+										// assertNotEquals(worker.id, workerId);
+										return true;
+									});
+							}
+						});
+				});
+			})
+			.thenTrue();
+	}
+
+	/**
+	 * A job is assigned to a worker, the worker is killed, then the job
+	 * should be rescheduled (and not failed).
+	 */
+	@timeout(600000)//10m
 	public function testJobRescheduledAfterWorkerFailure() :Promise<Bool>
 	{
 		var promise = new DeferredPromise();

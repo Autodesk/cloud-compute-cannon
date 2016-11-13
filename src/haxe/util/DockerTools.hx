@@ -13,6 +13,7 @@ import js.node.stream.Readable;
 import js.node.stream.Writable;
 
 import promhx.Promise;
+import promhx.Stream;
 import promhx.CallbackPromise;
 import promhx.DockerPromises;
 import promhx.RetryPromise;
@@ -626,6 +627,30 @@ class DockerTools
 					});
 			}
 		};
+	}
+
+	public static function createEventStream(docker :DockerConnectionOpts) :Stream<EventStreamItem>
+	{
+		if (docker.host == null) {
+			return null;
+		}
+
+		var now = Std.int(Date.now().getTime());
+
+		var dockerUrl = '${docker.protocol != null ? docker.protocol : "http"}://${docker.host}:${docker.port}/events?since=$now';
+		traceYellow('dockerUrl=$dockerUrl');
+
+		var eventStream = promhx.HttpStreams.createHttpGetStream(dockerUrl);
+
+		var stream = eventStream.then(function(s :String) {
+			return Json.parse(s);
+		});
+
+		stream.endThen(function(_) {
+			eventStream.end();
+		});
+
+		return stream;
 	}
 
 	public static function listImages(docker :Docker) :Promise<Array<ImageData>>

@@ -146,6 +146,7 @@ class WorkerProviderTools
 							//Start the socket and restart docker
 							'sudo systemctl start docker-tcp.socket',
 							'sudo systemctl start docker',
+							'sudo systemctl stop update-engine', //If workers reboot, it can cause problems for jobs
 							'sudo mkdir -p "$WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT"',
 							'sudo chmod 777 "$WORKER_JOB_DATA_DIRECTORY_HOST_MOUNT"'
 						]);
