@@ -103,7 +103,7 @@ class ServiceBatchCompute
 		}
 
 		timeoutId = Node.setTimeout(function() {
-			reject('Timeout');
+			reject('getJobResult.Timeout jobId=$jobId');
 		}, Std.int(timeout));
 
 		stream = ccc.compute.server.ServerCompute.StatusStream
