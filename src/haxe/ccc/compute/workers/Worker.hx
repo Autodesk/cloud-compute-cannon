@@ -99,7 +99,7 @@ class Worker
 		switch(type) {
 			case pkgcloud,vagrant:
 				log.info("Setting up disk monitoring");
-				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 10*000);
+				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 10*1000);
 			default:
 				log.info('NOT setting up disk monitoring because type=$type is not [${ServiceWorkerProviderType.pkgcloud} or ${ServiceWorkerProviderType.vagrant}]');
 		}
