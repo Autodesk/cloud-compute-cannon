@@ -868,11 +868,9 @@ class ServiceBatchCompute
 						})
 						.then(function(_) {
 							var maxDuration = jsonrpc.params.parameters != null && jsonrpc.params.parameters.maxDuration != null ? jsonrpc.params.parameters.maxDuration : null;
-							traceCyan("returnJobResult");
 							returnJobResult(res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
-							traceRed('CAUGHT returnJobResult error');
 							Log.error(err);
 							returnError(err);
 						});
