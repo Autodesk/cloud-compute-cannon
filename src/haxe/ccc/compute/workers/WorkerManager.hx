@@ -139,7 +139,7 @@ class WorkerManager
 									var worker = createWorker(workerDef);
 									_workers.set(workerDef.id, worker);
 									_injector.injectInto(worker);
-									// Log.info('Creating a new worker id=${workerDef.id} total=${getWorkers().length}');
+									Log.debug('Creating a new worker id=${workerDef.id} total=${getWorkers().length}');
 								}
 							}));
 					}
@@ -150,7 +150,7 @@ class WorkerManager
 					if (!targetSet.has(id)) {
 						var workerToRemove = _workers.get(id);
 						_workers.remove(id);
-						// Log.info('Removing worker id=${workerToRemove.id}  total=${getWorkers().length}');
+						Log.debug('Removing worker id=${workerToRemove.id} total=${getWorkers().length}');
 						workerToRemove.dispose();
 					}
 				}

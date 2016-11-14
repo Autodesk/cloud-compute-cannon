@@ -77,7 +77,7 @@ class Worker
 				log.debug({'status':_computeStatus});
 				switch(_computeStatus) {
 					case Available,Deferred:
-						if (_redis != null && _monitor != null) {
+						if (_redis != null && _monitor == null) {
 							startMonitor();
 						}
 					case Initializing,WaitingForRemoval,Removing,Failed,Terminated:
@@ -88,20 +88,20 @@ class Worker
 
 	function startMonitor()
 	{
+		log.debug("Starting worker monitor");
 		_monitor = new MachineMonitor();
 
 		//Always monitor the docker daemon
-		_monitor.monitorDocker(_definition.docker, 2000);
+		_monitor.monitorDocker(_definition.docker, 5000);
 
 		//Monitoring disk space only makes sense for certain providers
 		var type :ServiceWorkerProviderType = _provider.id;
 		switch(type) {
 			case pkgcloud,vagrant:
 				log.info("Setting up disk monitoring");
-				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 2000);
+				_monitor.monitorDiskSpace(_definition.ssh, 0.9, 10*000);
 			default:
 				log.info('NOT setting up disk monitoring because type=$type is not [${ServiceWorkerProviderType.pkgcloud} or ${ServiceWorkerProviderType.vagrant}]');
-
 		}
 
 		//Output monitoring logs
@@ -127,13 +127,14 @@ class Worker
 		_eventStream = DockerTools.createEventStream(_definition.docker);
 		//It is null if using the local docker daemon
 		if (_eventStream != null) {
-			_eventStream.then(function(event) {
-				log.debug(event);
-			});
-			_eventStream.catchError(function(err) {
-				_eventStream.end();
-				log.warn('error on event stream err=${Json.stringify(err)}');
-			});
+			_eventStream
+				.then(function(event) {
+					log.debug({docker_daemon_event:event});
+				})
+				.catchError(function(err) {
+					_eventStream.end();
+					log.warn('error on event stream err=${Json.stringify(err)}');
+				});
 		}
 	}
 
