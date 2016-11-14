@@ -132,7 +132,7 @@ class Worker
 			});
 			_eventStream.catchError(function(err) {
 				_eventStream.end();
-				log.warn('error on event stream err=$err');
+				log.warn('error on event stream err=${Json.stringify(err)}');
 			});
 		}
 	}

@@ -143,6 +143,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 		return super.destroyInstance(instanceId)
 			.pipe(function(_) {
 				if (_compute != null) {
+					Log.info('destroy_instance');
 					return compute.destroyServer(instanceId)
 						.then(function(_) {
 							log.info({log:'instance_destroyed', instance:instanceId, f:'destroyIntance'});
@@ -204,7 +205,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 								log.error('Failed to connect to worker=${workerDef.id}, destroying server and retrying err=$err');
 								return InstancePool.removeInstance(_redis, workerDef.id)
 									.pipe(function(_) {
-										log.info('_compute.destroyServer');
+										log.info('destroy_instance');
 										return _compute.destroyServer(workerDef.id);
 									})
 									.then(function(_) {
@@ -451,6 +452,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 	public static function destroyPkgCloudInstance(credentials :ProviderCredentials, machineId :String) :Promise<Bool>
 	{
 		var client :ComputeClientP = cast PkgCloud.compute.createClient(credentials);
+		Log.info('destroy_instance');
 		return client.destroyServer(machineId)
 			.thenTrue();
 	}
@@ -493,6 +495,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 								instanceOpts.MinCount = 1;
 								instanceOpts.MaxCount = 1;
 								log.debug({message:'AWS $machineType', options:LogTools.removePrivateKeys(instanceOpts)});
+								log.info("create_instance");
 								var promise = new DeferredPromise();
 								js.Node.process.stdout.write('    - creating instance\n'.yellow());
 								ec2.runInstances(instanceOpts, function(err, data :{Instances:Array<Dynamic>}) {
