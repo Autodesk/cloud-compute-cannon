@@ -109,13 +109,13 @@ class BatchComputeDocker
 				if (containerId != null && event.id != null && event.id == containerId) {
 					if (event.status == EventStreamItemStatus.kill) {
 						log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
-						killed = false;
+						killed = true;
 					}
 				}
 			});
 			eventStream.catchError(function(err) {
 				eventStream.end();
-				log.warn('error on event stream err=$err');
+				log.warn('error on event stream err=${Json.stringify(err)}');
 			});
 		}
 

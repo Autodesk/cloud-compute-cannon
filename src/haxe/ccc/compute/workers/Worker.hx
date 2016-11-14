@@ -44,6 +44,7 @@ class Worker
 	var _stateChangeStream :Stream<MachineStatus>;
 	var log :AbstractLogger;
 	var _monitor :MachineMonitor;
+	var _eventStream :Stream<EventStreamItem>;
 
 	static var ALL_WORKERS = new Map<MachineId, Worker>();
 
@@ -122,6 +123,18 @@ class Worker
 					}
 			}
 		});
+
+		_eventStream = DockerTools.createEventStream(_definition.docker);
+		//It is null if using the local docker daemon
+		if (_eventStream != null) {
+			_eventStream.then(function(event) {
+				log.debug(event);
+			});
+			_eventStream.catchError(function(err) {
+				_eventStream.end();
+				log.warn('error on event stream err=$err');
+			});
+		}
 	}
 
 	/**
@@ -157,6 +170,10 @@ class Worker
 		_stateChangeStream.end();
 		_stateChangeStream = null;
 		log = null;
+		if (_eventStream != null) {
+			_eventStream.end();
+			_eventStream = null;
+		}
 		return Promise.promise(true);
 	}
 
