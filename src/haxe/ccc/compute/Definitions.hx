@@ -96,11 +96,14 @@ typedef ComputeInputSource = {
 typedef BasicBatchProcessRequest = {
 	@:optional var inputs :Array<ComputeInputSource>;
 	@:optional var image :String;
+	@:optional var createOptions :CreateContainerOptions;
 	@:optional var pull_options :PullImageOptions;
 	@:optional var cmd :Array<String>;
 	@:optional var workingDir :String;
 	@:optional var parameters :JobParams;
 	@:optional var md5 :String;
+	@:optional var containerInputsMountPath :String;
+	@:optional var containerOutputsMountPath :String;
 	/* Stores the stdout, stderr, and result.json */
 	@:optional var resultsPath :String;
 	@:optional var inputsPath :String;
@@ -138,9 +141,11 @@ typedef DockerImageSource = {
 	@:optional var pull_options :PullImageOptions;
 	@:optional var value :String;//If an image, image name, if a context, the URL of the path
 #if (nodejs && !macro)
-	@:optional var options :BuildImageOptions;
+	@:optional var optionsBuild :BuildImageOptions;
+	@:optional var optionsCreate :CreateContainerOptions;
 #else
-	@:optional var options :Dynamic;
+	@:optional var optionsBuild :Dynamic;
+	@:optional var optionsCreate :Dynamic;
 #end
 }
 
@@ -158,6 +163,8 @@ typedef DockerBatchComputeJob = {
 	@:optional var meta :Dynamic<String>;
 #end
 	@:optional var workingDir :String;
+	@:optional var containerInputsMountPath :String;
+	@:optional var containerOutputsMountPath :String;
 	/**
 	 * Only specify the inputsPath, outputsPath,
 	 * or resultsPath if you have a reason to change

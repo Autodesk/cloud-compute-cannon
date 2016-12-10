@@ -1134,9 +1134,14 @@ abstract Stats(Array<Float>)
 	@:from
 	inline static public function fromString (s: String) :Stats
 	{
-		var bytes = Bytes.ofString(s);
-		var arr :Array<Float> = MsgPack.decode(bytes);
-		return fromFloatArray(arr);
+		try {
+			var bytes = Bytes.ofString(s);
+			var arr :Array<Float> = MsgPack.decode(bytes);
+			return fromFloatArray(arr);
+		} catch(err :Dynamic) {
+			Log.error('Failed to parse msgpack string="$s"');
+			return new Stats();
+		}
 	}
 
 	@:from

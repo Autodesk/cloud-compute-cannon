@@ -53,6 +53,9 @@ class Job
 		/* The e.g. S3 URL. Otherwise empty */
 		var externalBaseUrl = fs.getExternalUrl();
 
+		var appendStdOut = false;
+		var appendStdErr = false;
+
 		var jobResult :JobResult = {
 			jobId: job.id,
 			status: finishedStatus,
@@ -79,14 +82,58 @@ class Job
 						.pipe(function(exists) {
 							if (!exists) {
 								jobResult.stdout = null;
+								return Promise.promise(true);
+							} else {
+								if (appendStdOut) {
+									return jobResultsStorage.readFile(STDOUT_FILE)
+										.pipe(function(stream) {
+											return StreamPromises.streamToString(stream)
+												.then(function(stdoutString) {
+													if (stdoutString != null) {
+														Reflect.setField(jobResult, 'stdout', stdoutString.split('\n'));
+													} else {
+														Reflect.setField(jobResult, 'stdout', null);
+													}
+													return true;
+												})
+												.errorPipe(function(err) {
+													Log.error(Json.stringify(err));
+													return Promise.promise(true);
+												});
+										});
+								} else {
+									return Promise.promise(true);
+								}
 							}
+
 							return jobResultsStorage.exists(STDERR_FILE);
 						})
-						.then(function(exists) {
+						.pipe(function(exists) {
 							if (!exists) {
 								jobResult.stderr = null;
+								return Promise.promise(true);
+							} else {
+								if (appendStdErr) {
+									return jobResultsStorage.readFile(STDERR_FILE)
+										.pipe(function(stream) {
+											return StreamPromises.streamToString(stream)
+												.then(function(stderrString) {
+													if (stderrString != null) {
+														Reflect.setField(jobResult, 'stderr', stderrString.split('\n'));
+													} else {
+														Reflect.setField(jobResult, 'stderr', null);
+													}
+													return true;
+												})
+												.errorPipe(function(err) {
+													Log.error(Json.stringify(err));
+													return Promise.promise(true);
+												});
+										});
+								} else {
+									return Promise.promise(true);
+								}
 							}
-							return true;
 						});
 				} else {
 					jobResult.stdout = null;

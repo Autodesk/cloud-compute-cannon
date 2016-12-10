@@ -329,6 +329,8 @@ class ServiceBatchCompute
 		?resultsPath :String,
 		?inputsPath :String,
 		?outputsPath :String,
+		?containerInputsMountPath :String,
+		?containerOutputsMountPath :String,
 		?wait :Bool = false,
 		?meta :Dynamic
 		) :Promise<JobResult>
@@ -343,6 +345,8 @@ class ServiceBatchCompute
 			resultsPath: resultsPath,
 			inputsPath: inputsPath,
 			outputsPath: outputsPath,
+			containerInputsMountPath: containerInputsMountPath,
+			containerOutputsMountPath: containerOutputsMountPath,
 			wait: wait,
 			meta: meta
 		}
@@ -639,13 +643,15 @@ class ServiceBatchCompute
 				deleteInputs = inputFilesObj.cancel;
 				var dockerJob :DockerJobDefinition = {
 					jobId: jobId,
-					image: {type:DockerImageSourceType.Image, value:job.image, pull_options:job.pull_options},
+					image: {type:DockerImageSourceType.Image, value:job.image, pull_options:job.pull_options, optionsCreate:job.createOptions},
 					command: job.cmd,
 					inputs: inputFilesObj.inputs,
 					workingDir: job.workingDir,
 					inputsPath: job.inputsPath,
 					outputsPath: job.outputsPath,
 					resultsPath: job.resultsPath,
+					containerInputsMountPath: job.containerInputsMountPath,
+					containerOutputsMountPath: job.containerOutputsMountPath,
 					parameters: parameters,
 					meta: job.meta
 				};
@@ -718,97 +724,156 @@ class ServiceBatchCompute
 
 	public function handleMultiformBatchComputeRequest(req :IncomingMessage, res :ServerResponse, next :?Dynamic->Void) :Void
 	{
-		getNewJobId()
-			.then(function(jobId) {
-				var promises = [];
-				var returned = false;
-				var jsonrpc :RequestDefTyped<BasicBatchProcessRequest> = null;
-				function returnError(err :haxe.extern.EitherType<String, js.Error>) {
-					Log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
-					if (returned) return;
-					res.writeHead(500, {'content-type': 'application/json'});
-					res.end(Json.stringify({error: err}));
-					returned = true;
-					//Cleanup
-					Promise.whenAll(promises)
-						.then(function(_) {
-							if (jsonrpc != null && jsonrpc.params != null && jsonrpc.params.inputsPath != null) {
-								_fs.deleteDir(jsonrpc.params.inputsPath)
-									.then(function(_) {
-										Log.info('Got error, deleted job ${jsonrpc.params.inputsPath}');
-									});
-							} else {
-								_fs.deleteDir(jobId)
-									.then(function(_) {
-										Log.info('Deleted job dir err=$err');
-									});
-							}
-						});
+		var returned = false;
+		var jsonrpc :RequestDefTyped<BasicBatchProcessRequest> = null;
+		var promises = [];
+		var jobId :JobId = null;
+		var inputPath = null;
+		var inputFileNames :Array<String> = [];
+
+		function returnError(err :haxe.extern.EitherType<String, js.Error>, ?statusCode :Int = 500) {
+			Log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
+			if (returned) return;
+			res.writeHead(statusCode, {'content-type': 'application/json'});
+			res.end(Json.stringify({error: err}));
+			returned = true;
+			//Cleanup
+			Promise.whenAll(promises)
+				.then(function(_) {
+					if (jsonrpc != null && jsonrpc.params != null && jsonrpc.params.inputsPath != null) {
+						_fs.deleteDir(jsonrpc.params.inputsPath)
+							.then(function(_) {
+								Log.info('Got error, deleted job ${jsonrpc.params.inputsPath}');
+							});
+					} else {
+						_fs.deleteDir(jobId)
+							.then(function(_) {
+								Log.info('Deleted job dir err=$err');
+							});
+					}
+				});
+		}
+
+		function parseJsonRpc(val :String) {
+			var fieldName = JsonRpcConstants.MULTIPART_JSONRPC_KEY;
+			traceRed('val' + Json.stringify(val));
+			try {
+				try {
+					jsonrpc = Json.parse(val);
+				} catch (err :Dynamic) {
+					//Try URL-decoding
+					val = StringTools.urlDecode(val);
+					jsonrpc = Json.parse(val);
+				}
+				if (jsonrpc.method == null || jsonrpc.method != Constants.RPC_METHOD_JOB_SUBMIT) {
+					returnError('JsonRpc method ${Constants.RPC_METHOD_JOB_SUBMIT} != ${jsonrpc.method}');
+					return;
+				}
+				if (jsonrpc.method == null || jsonrpc.method != Constants.RPC_METHOD_JOB_SUBMIT) {
+					returnError('JsonRpc method ${Constants.RPC_METHOD_JOB_SUBMIT} != ${jsonrpc.method}');
+					return;
 				}
 
-				var inputFileNames :Array<String> = [];
+				inputPath = jsonrpc.params.inputsPath != null ? (jsonrpc.params.inputsPath.endsWith('/') ? jsonrpc.params.inputsPath : jsonrpc.params.inputsPath + '/') : jobId.defaultInputDir();
+				if (jsonrpc.params.inputs != null) {
+					var inputFilesObj = writeInputFiles(jsonrpc.params.inputs, inputPath);
+					promises.push(inputFilesObj.promise.thenTrue());
+					inputFilesObj.inputs.iter(inputFileNames.push);
+				}
+			} catch(err :Dynamic) {
+				Log.error(err);
+				returnError('Failed to parse JSON, err=$err val=$val');
+			}
+		}
+
+		getNewJobId()
+			.then(function(newJobId) {
+				jobId = newJobId;
 				var tenGBInBytes = 10737418240;
 				var busboy = new Busboy({headers:req.headers, limits:{fieldNameSize:500, fieldSize:tenGBInBytes}});
-				var inputPath = null;
 				var deferredFieldHandling = [];//If the fields come in out of order, we'll have to handle the non-JSON-RPC subsequently
 				busboy.on(BusboyEvent.File, function(fieldName, stream, fileName, encoding, mimetype) {
-					Log.info('BusboyEvent.File writing input file $fieldName encoding=$encoding mimetype=$mimetype stream=${stream != null}');
-					var inputFilePath = inputPath + fieldName;
 
-					stream.on(ReadableEvent.Error, function(err) {
-						Log.error('Error in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype error=$err');
-					});
-					stream.on('limit', function() {
-						Log.error('Limit event in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype');
-					});
+					if (fieldName == JsonRpcConstants.MULTIPART_JSONRPC_KEY) {
+						StreamPromises.streamToString(stream)
+							.then(function(jsonrpcString) {
+								traceRed('jsonrpcString=' + Json.stringify(jsonrpcString));
+								parseJsonRpc(jsonrpcString);
+							});
+					} else {
+						// if (inputPath == null) {
+						// 	returnError('fieldName=$fieldName fileName=$fileName inputPath is null for a file input, meaning either there is no jsonrpc entry, or it has not finished loading, or the jsonrpc file is after this. The \'jsonrpc\' key must be first in the multipart request.', 400);
+						// 	return;
+						// }
+						var attemptsMax = 8;
+						var attempts = 0;
+						function attempLoad() {
+							if (inputPath == null) {
+								attempts++;
+								return false;
+							}
 
-					var fileWritePromise = _fs.writeFile(inputFilePath, stream);
-					fileWritePromise
-						.then(function(_) {
-							Log.info('    finished writing input file $fieldName');
+							Log.info('BusboyEvent.File writing input file $fieldName encoding=$encoding mimetype=$mimetype stream=${stream != null}');
+							var inputFilePath = inputPath + fieldName;
+
+							stream.on(ReadableEvent.Error, function(err) {
+								Log.error('Error in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype error=$err');
+							});
+							stream.on('limit', function() {
+								Log.error('Limit event in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype');
+							});
+
+							var fileWritePromise = _fs.writeFile(inputFilePath, stream);
+							fileWritePromise
+								.then(function(_) {
+									Log.info('    finished writing input file $fieldName');
+									return true;
+								})
+								.errorThen(function(err) {
+									Log.info('    error writing input file $fieldName err=$err');
+									throw err;
+									return true;
+								});
+							promises.push(fileWritePromise);
+							inputFileNames.push(fieldName);
 							return true;
-						})
-						.errorThen(function(err) {
-							Log.info('    error writing input file $fieldName err=$err');
-							throw err;
-							return true;
-						});
-					promises.push(fileWritePromise);
-					inputFileNames.push(fieldName);
+						}
+
+						var delay :Void->Void = null;
+						delay = function() {
+							attempts++;
+							if (returned) {
+								return;
+							}
+							if (attempts > attemptsMax) {
+								returnError('fieldName=$fieldName fileName=$fileName inputPath is null for a file input, meaning either there is no jsonrpc entry, or it has not finished loading, or the jsonrpc file is after this. The \'jsonrpc\' key must be first in the multipart request.', 400);
+							} else {
+								Node.setTimeout(function() {
+									traceYellow('attempts=${attempts}');
+									if (!attempLoad()) {
+										delay();
+									}
+								}, 100);
+							}
+						}
+
+						if (!attempLoad()) {
+							delay();
+						}
+					}
 				});
 				busboy.on(BusboyEvent.Field, function(fieldName, val, fieldnameTruncated, valTruncated) {
+					traceYellow('BusboyEvent.Field fieldName=$fieldName');
 					if (returned) {
 						return;
 					}
 					if (fieldName == JsonRpcConstants.MULTIPART_JSONRPC_KEY) {
-						try {
-							try {
-								jsonrpc = Json.parse(val);
-							} catch (err :Dynamic) {
-								//Try URL-decoding
-								val = StringTools.urlDecode(val);
-								jsonrpc = Json.parse(val);
-							}
-							if (jsonrpc.method == null || jsonrpc.method != Constants.RPC_METHOD_JOB_SUBMIT) {
-								returnError('JsonRpc method ${Constants.RPC_METHOD_JOB_SUBMIT} != ${jsonrpc.method}');
-								return;
-							}
-							if (jsonrpc.method == null || jsonrpc.method != Constants.RPC_METHOD_JOB_SUBMIT) {
-								returnError('JsonRpc method ${Constants.RPC_METHOD_JOB_SUBMIT} != ${jsonrpc.method}');
-								return;
-							}
-
-							inputPath = jsonrpc.params.inputsPath != null ? (jsonrpc.params.inputsPath.endsWith('/') ? jsonrpc.params.inputsPath : jsonrpc.params.inputsPath + '/') : jobId.defaultInputDir();
-							if (jsonrpc.params.inputs != null) {
-								var inputFilesObj = writeInputFiles(jsonrpc.params.inputs, inputPath);
-								promises.push(inputFilesObj.promise.thenTrue());
-								inputFilesObj.inputs.iter(inputFileNames.push);
-							}
-						} catch(err :Dynamic) {
-							Log.error(err);
-							returnError('Failed to parse JSON, err=$err val=$val');
-						}
+						traceRed('val' + Json.stringify(val));
+						parseJsonRpc(val);
 					} else {
+						if (jsonrpc == null) {
+							throw 'The "jsonrpc" multipart key must be the FIRST entry in the multipart request form';
+						}
 						var inputFilePath = (jsonrpc.params.inputsPath != null ? (jsonrpc.params.inputsPath.endsWith('/') ? jsonrpc.params.inputsPath : jsonrpc.params.inputsPath + '/') : jobId.defaultInputDir()) + fieldName;
 						var fileWritePromise = _fs.writeFile(inputFilePath, Streamifier.createReadStream(val));
 						fileWritePromise
@@ -827,6 +892,7 @@ class ServiceBatchCompute
 				});
 
 				busboy.on(BusboyEvent.Finish, function() {
+					traceYellow('BusboyEvent.Finish returned=$returned');
 					if (returned) {
 						return;
 					}
@@ -836,15 +902,18 @@ class ServiceBatchCompute
 						})
 						.pipe(function(_) {
 
+							traceGreen('jsonrpc=' + Json.stringify(jsonrpc));
 							var parameters :JobParams = jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters;
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,
-								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options},
+								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options, optionsCreate:jsonrpc.params.createOptions},
 								command: jsonrpc.params.cmd,
 								inputs: inputFileNames,
 								workingDir: jsonrpc.params.workingDir,
 								inputsPath: jsonrpc.params.inputsPath,
 								outputsPath: jsonrpc.params.outputsPath,
+								containerInputsMountPath: jsonrpc.params.containerInputsMountPath,
+								containerOutputsMountPath: jsonrpc.params.containerOutputsMountPath,
 								resultsPath: jsonrpc.params.resultsPath,
 								parameters: parameters,
 								meta: jsonrpc.params.meta
@@ -883,6 +952,10 @@ class ServiceBatchCompute
 				});
 				busboy.on(BusboyEvent.FieldsLimit, function() {
 					Log.error('BusboyEvent ${BusboyEvent.FieldsLimit}');
+				});
+				busboy.on('error', function(err) {
+					Log.error('BusboyEvent error=' + Json.stringify(err));
+					returnError(err);
 				});
 				req.pipe(busboy);
 			});

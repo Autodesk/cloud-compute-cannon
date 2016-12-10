@@ -638,12 +638,18 @@ class DockerTools
 		var now = Std.int(Date.now().getTime());
 
 		var dockerUrl = '${docker.protocol != null ? docker.protocol : "http"}://${docker.host}:${docker.port}/events?since=$now';
-		traceYellow('dockerUrl=$dockerUrl');
 
 		var eventStream = promhx.HttpStreams.createHttpGetStream(dockerUrl);
 
 		var stream = eventStream.then(function(s :String) {
-			return Json.parse(s);
+			try {
+				return Json.parse(s);
+			} catch (err :Dynamic) {
+				throw {
+					error: 'Cannot JSON parse event string',
+					json_string: s
+				};
+			}
 		});
 
 		stream.endThen(function(_) {

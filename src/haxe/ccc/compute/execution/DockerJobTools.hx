@@ -251,32 +251,11 @@ class DockerJobTools
 	//On end, copy output files into storage
 	//
 
-	public static function runDockerContainer(docker :Docker, computeJobId :ComputeJobId, imageId :String, cmd :Array<String>, mounts :Array<Mount>, workingDir :String, labels :Dynamic<String>, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
+	public static function runDockerContainer(docker :Docker, opts :CreateContainerOptions, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
 	{
-		log = Logger.ensureLog(log, {image:imageId, computejobid:computeJobId, dockerhost:docker.modem.host});
-		log.info({log:'run_docker_container', cmd:'[${cmd != null ? cmd.join(",") : ''}]', mounts:'[${mounts != null ? mounts.map(function(e) return Json.stringify(e)).join(",") : ''}]', workingDir:workingDir, labels:labels});
+		log = Logger.ensureLog(log, {image:opts.Image, computejobid:opts.Labels.computeJobId, dockerhost:docker.modem.host});
+		log.info({log:'run_docker_container', opts:opts});
 		var promise = new DeferredPromise();
-		imageId = imageId.toLowerCase();
-		Assert.notNull(docker);
-		Assert.notNull(imageId);
-		var hostConfig :CreateContainerHostConfig = {};
-		hostConfig.Binds = [];
-		//Ensure json-file logging so we can get to the logs
-		hostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
-		for (mount in mounts) {
-			hostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
-		}
-
-		var opts :CreateContainerOptions = {
-			Image: imageId,
-			Cmd: cmd,
-			AttachStdout: false,
-			AttachStderr: false,
-			Tty: false,
-			Labels: labels,
-			HostConfig: hostConfig,
-			WorkingDir: workingDir
-		}
 		log.debug({log:'run_docker_container', opts:opts});
 		docker.createContainer(opts, function(createContainerError, container) {
 			if (createContainerError != null) {
