@@ -86,12 +86,16 @@ class BatchComputeDocker
 			job.item.inputs = [];
 		}
 
+		var containerInputsPath = job.item.containerInputsMountPath == null ? '/${DIRECTORY_INPUTS}' : job.item.containerInputsMountPath;
+		var containerOutputsPath = job.item.containerOutputsMountPath == null ? '/${DIRECTORY_OUTPUTS}' : job.item.containerOutputsMountPath;
+
 		//Create the various remote/local/worker storage services.
-		var inputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerInputDir());
-		var outputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerOutputDir());
+		// var inputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerInputDir());
+		// var outputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerOutputDir());
 		var inputStorageRemote = fs.clone().appendToRootPath(job.item.inputDir());
 		var outputStorageRemote = fs.clone().appendToRootPath(job.item.outputDir());
 		var resultsStorageRemote = fs.clone().appendToRootPath(job.item.resultDir());
+
 
 		var inputVolumeName = job.item.inputs.length > 0 ? JobTools.getWorkerVolumeNameInputs(job.computeJobId) : null;
 		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(job.computeJobId);
@@ -106,7 +110,7 @@ class BatchComputeDocker
 		//It is null if using the local docker daemon
 		if (eventStream != null) {
 			eventStream.then(function(event) {
-				if (containerId != null && event.id != null && event.id == containerId) {
+				if (event != null && containerId != null && event.id != null && event.id == containerId) {
 					if (event.status == EventStreamItemStatus.kill) {
 						log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
 						killed = true;
@@ -114,8 +118,7 @@ class BatchComputeDocker
 				}
 			});
 			eventStream.catchError(function(err) {
-				eventStream.end();
-				log.warn('error on event stream err=${Json.stringify(err)}');
+				log.error('error on event stream err=${Json.stringify(err)}');
 			});
 		}
 
@@ -302,13 +305,15 @@ class BatchComputeDocker
 								var container = docker.getContainer(container.Id);
 								return Promise.promise(container);
 							} else {
+
+
 								/*
 									There is no existing container, so create one
 									and run it
 								 */
 								var outputVolume = {
 									Source: outputVolumeName,
-									Destination: '/${DIRECTORY_OUTPUTS}',
+									Destination: containerOutputsPath,
 									Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 									RW: true
 								};
@@ -318,19 +323,13 @@ class BatchComputeDocker
 								if (inputVolumeName != null) {
 									inputVolume = {
 										Source: inputVolumeName,
-										Destination: '/${DIRECTORY_INPUTS}',
+										Destination: containerInputsPath,
 										Mode: 'r',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
 										RW: true
 									};
 									mounts.push(inputVolume);
 								}
 
-								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:(inputVolume != null ? '${inputVolume.Source}=>${inputVolume.Destination}' : null), mountOutputs:'${outputVolume.Source}=>${outputVolume.Destination}'});
-
-								var labels :Dynamic<String> = {
-									jobId: job.id,
-									computeId: job.computeJobId
-								}
 								var imageId = switch(job.item.image.type) {
 									case Image:
 										job.item.image.value;
@@ -338,7 +337,101 @@ class BatchComputeDocker
 										job.id;
 								}
 
-								return DockerJobTools.runDockerContainer(docker, job.computeJobId, imageId, job.item.command, mounts, job.item.workingDir, labels, log)
+								var opts :CreateContainerOptions = job.item.image.optionsCreate;
+								if (opts == null) {
+									opts = {
+										Image: null,//Set below
+										AttachStdout: false,
+										AttachStderr: false,
+										Tty: false,
+									}
+								}
+
+								opts.Cmd = opts.Cmd != null ? opts.Cmd : job.item.command;
+								opts.WorkingDir = opts.WorkingDir != null ? opts.WorkingDir : job.item.workingDir;
+								opts.HostConfig = opts.HostConfig != null ? opts.HostConfig : {};
+								opts.HostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
+								opts.HostConfig.Binds = opts.HostConfig.Binds != null ? opts.HostConfig.Binds : [];
+								for (mount in mounts) {
+									opts.HostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
+								}
+
+								opts.Image = opts.Image != null ? opts.Image : imageId.toLowerCase();
+								traceRed(Json.stringify(opts, null, '  '));
+								opts.Env = js.npm.redis.RedisLuaTools.isArrayObjectEmpty(opts.Env) ? [] : opts.Env;
+								traceCyan(Json.stringify(opts, null, '  '));
+								for (env in [
+									'INPUTS=$containerInputsPath',
+									'OUTPUTS=$containerOutputsPath',
+									'INPUTS_HOST_MOUNT=$inputVolumeName',
+									'OUTPUTS_HOST_MOUNT=$outputVolumeName'
+									]) {
+									opts.Env.push(env);
+								}
+
+								opts.Labels = opts.Labels != null ? opts.Labels : {};
+								Reflect.setField(opts.Labels, 'jobId', job.id);
+								Reflect.setField(opts.Labels, 'computeId', job.computeJobId);
+
+
+								// var labels :Dynamic<String> = {
+								// 	jobId: job.id,
+								// 	computeId: job.computeJobId
+								// }
+
+
+								// opts.WorkingDir = workingDir;
+
+								// imageId = imageId.toLowerCase();
+		Assert.notNull(docker);
+		// Assert.notNull(imageId);
+		// var hostConfig :CreateContainerHostConfig = {};
+		// hostConfig.Binds = [];
+		//Ensure json-file logging so we can get to the logs
+		// hostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
+		// for (mount in mounts) {
+		// 	hostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
+		// }
+
+		// var opts :CreateContainerOptions = {
+		// 	Image: imageId,
+		// 	Cmd: cmd,
+		// 	AttachStdout: false,
+		// 	AttachStderr: false,
+		// 	Tty: false,
+		// 	Labels: labels,
+		// 	HostConfig: hostConfig,
+		// 	WorkingDir: workingDir,
+		// 	Env: env
+		// 	// Entrypoint: "/bin/bash"
+		// }
+
+
+
+
+
+
+
+
+
+
+								
+
+								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:(inputVolume != null ? '${inputVolume.Source}=>${inputVolume.Destination}' : null), mountOutputs:'${outputVolume.Source}=>${outputVolume.Destination}'});
+
+								// var labels :Dynamic<String> = {
+								// 	jobId: job.id,
+								// 	computeId: job.computeJobId
+								// }
+								
+
+								// var env = [
+								// 	'INPUTS=$containerInputsPath',
+								// 	'OUTPUTS=$containerOutputsPath',
+								// ];
+
+								return DockerJobTools.runDockerContainer(docker, opts, log)
+								// return DockerJobTools.runDockerContainer(docker, job.computeJobId, imageId, job.item.command, mounts, job.item.workingDir, labels, env, log)
 									.then(function(containerunResult) {
 										error = containerunResult.error;
 										containerId = containerunResult != null && containerunResult.container != null ? containerunResult.container.id : null;
