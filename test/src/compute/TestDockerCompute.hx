@@ -278,7 +278,7 @@ class TestDockerCompute extends TestComputeBase
 			jobId: jobId,
 			computeJobId: computeJobId,
 			worker: worker,
-			image: {type:DockerImageSourceType.Context, value:sourceDockerContext, options:{t:computeJobId}},
+			image: {type:DockerImageSourceType.Context, value:sourceDockerContext, optionsBuild:{t:computeJobId}},
 			inputs: FsExtended.listFilesSync(inputDir),
 		};
 
