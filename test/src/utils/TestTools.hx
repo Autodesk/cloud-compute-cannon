@@ -148,7 +148,7 @@ class TestTools
 			jobId: jobId,
 			computeJobId: computeJobId,
 			worker: null,
-			image: {type:DockerImageSourceType.Context, value:contextPath, options:{t:computeJobId}},
+			image: {type:DockerImageSourceType.Context, value:contextPath, optionsBuild:{t:computeJobId}},
 			inputs: FsExtended.listFilesSync(inputsPath),
 		};
 
