@@ -69,7 +69,7 @@ class Worker
 		Assert.notNull(_redis.connectionOption);
 		_id = _definition.id;
 
-		var machineStateChannel = '${InstancePool.REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX}_id';
+		var machineStateChannel = '${InstancePool.REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX}${_id}';
 		_stateChangeStream = RedisTools.createStreamFromHash(_redis, machineStateChannel, InstancePool.REDIS_KEY_WORKER_STATUS, _id);
 		_stateChangeStream.then(function(status) {
 			if (status != null && status != _computeStatus) {
