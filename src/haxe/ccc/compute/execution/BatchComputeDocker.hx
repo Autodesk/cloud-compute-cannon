@@ -116,6 +116,8 @@ class BatchComputeDocker
 						killed = true;
 					}
 				}
+			}).catchError(function(err) {
+				log.error('error on event stream err=${Json.stringify(err)}');
 			});
 			eventStream.catchError(function(err) {
 				log.error('error on event stream err=${Json.stringify(err)}');
