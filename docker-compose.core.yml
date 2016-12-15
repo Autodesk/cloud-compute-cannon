@@ -3,7 +3,6 @@ version: '2'
 services:
 
   compute:
-    restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # #This volume is needed for running computes locally

@@ -132,9 +132,14 @@ class Worker
 					log.debug({docker_daemon_event:event});
 				})
 				.catchError(function(err) {
-					_eventStream.end();
-					log.warn('error on event stream err=${Json.stringify(err)}');
+					//Don't do anything, the error is handled below;
 				});
+			_eventStream.catchError(function(err) {
+				if (_eventStream != null) {
+					_eventStream.end();
+				}
+				log.warn('error on event stream err=${Json.stringify(err)}');
+			});
 		}
 	}
 

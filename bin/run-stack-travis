@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-TRAVIS=true VERSION=latest docker-compose -f docker-compose.travis.yml run --rm compute node server/cloud-compute-cannon-server.js
+TRAVIS=true VERSION=latest docker-compose -f docker-compose.travis.yml run --rm compute
