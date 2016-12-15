@@ -9,7 +9,7 @@ volumes:
 services:
 
   compute:
-    restart: no
+    restart: "no"
     extends:
       file: docker-compose.core.yml
       service: compute
