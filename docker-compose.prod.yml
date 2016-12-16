@@ -5,7 +5,6 @@ services:
   compute:
     restart: "always"
     image: "quay.io/bionano/cloud-compute-cannon:${VERSION}"
-    command: ["forever", "server/cloud-compute-cannon-server.js"]
     volumes:
       - ./:/app/config/
     environment:

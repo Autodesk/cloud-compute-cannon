@@ -127,19 +127,15 @@ class Worker
 		_eventStream = DockerTools.createEventStream(_definition.docker);
 		//It is null if using the local docker daemon
 		if (_eventStream != null) {
-			_eventStream
+			_eventStream = _eventStream
 				.then(function(event) {
 					log.debug({docker_daemon_event:event});
+					return null;
 				})
-				.catchError(function(err) {
-					//Don't do anything, the error is handled below;
+				.errorPipe(function(err) {
+					log.warn('error on event stream err=${Json.stringify(err)}');
+					return Stream.stream(null);
 				});
-			_eventStream.catchError(function(err) {
-				if (_eventStream != null) {
-					_eventStream.end();
-				}
-				log.warn('error on event stream err=${Json.stringify(err)}');
-			});
 		}
 	}
 

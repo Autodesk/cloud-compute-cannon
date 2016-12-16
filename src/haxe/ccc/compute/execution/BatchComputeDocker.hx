@@ -109,19 +109,19 @@ class BatchComputeDocker
 		eventStream = DockerTools.createEventStream(job.worker.docker);
 		//It is null if using the local docker daemon
 		if (eventStream != null) {
-			eventStream.then(function(event) {
-				if (event != null && containerId != null && event.id != null && event.id == containerId) {
-					if (event.status == EventStreamItemStatus.kill) {
-						log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
-						killed = true;
+			eventStream = eventStream
+				.then(function(event) {
+					if (event != null && containerId != null && event.id != null && event.id == containerId) {
+						if (event.status == EventStreamItemStatus.kill) {
+							log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
+							killed = true;
+						}
 					}
-				}
-			}).catchError(function(err) {
-				log.error('error on event stream err=${Json.stringify(err)}');
-			});
-			eventStream.catchError(function(err) {
-				log.error('error on event stream err=${Json.stringify(err)}');
-			});
+					return null;
+				}).errorPipe(function(err) {
+					log.error('error on event stream err=${Json.stringify(err)}');
+					return Stream.stream(null);
+				});
 		}
 
 		/*
