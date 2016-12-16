@@ -645,10 +645,12 @@ class DockerTools
 			try {
 				return Json.parse(s);
 			} catch (err :Dynamic) {
-				throw {
-					error: 'Cannot JSON parse event string',
-					json_string: s
-				};
+				s = s.replace('\\"', '\\');
+				try {
+					return Json.parse(s);
+				} catch (err2 :Dynamic) {
+					throw new js.Error('Cannot JSON parse event string [[[$s]]] err=${Json.stringify(err)}');
+				}
 			}
 		});
 

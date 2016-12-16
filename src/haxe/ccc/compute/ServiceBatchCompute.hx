@@ -756,7 +756,6 @@ class ServiceBatchCompute
 
 		function parseJsonRpc(val :String) {
 			var fieldName = JsonRpcConstants.MULTIPART_JSONRPC_KEY;
-			traceRed('val' + Json.stringify(val));
 			try {
 				try {
 					jsonrpc = Json.parse(val);
