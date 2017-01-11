@@ -599,12 +599,12 @@ class ProviderTools
 				}
 				return PromiseTools.chainPipePromises(promises);
 			})
-			//Copy the docker-compose.prod.yml which is not quite a template
+			//Copy the docker-compose.npm-prod.yml which is not quite a template
 			.pipe(function(_) {
-				var dockerComposeProdString = Resource.getString('docker-compose.prod.yml');
+				var dockerComposeProdString = Resource.getString('docker-compose.npm-prod.yml');
 				var gitSha = Version.getGitCommitHash().substr(0,8);
 				dockerComposeProdString = dockerComposeProdString.replace("${VERSION}", gitSha);
-				return storage.writeFile('docker-compose.prod.yml', StreamTools.stringToStream(dockerComposeProdString));
+				return storage.writeFile('docker-compose.npm-prod.yml', StreamTools.stringToStream(dockerComposeProdString));
 			})
 			.then(function(_) {
 				return true;

@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon",
-  "version": "0.1.26",
+  "version": "0.1.30",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "bin": {
     "ccc": "bin/cloudcomputecannon.js",

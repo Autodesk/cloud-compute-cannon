@@ -8,6 +8,7 @@ etc/hxml/base-nodejs.hxml
 -resource docker-compose.core.yml@docker-compose.core.yml
 -resource docker-compose.override.yml@docker-compose.override.yml
 -resource docker-compose.prod.yml@docker-compose.prod.yml
+-resource docker-compose.npm-prod.yml@docker-compose.npm-prod.yml
 
 -debug
 # -D PromhxExposeErrors
