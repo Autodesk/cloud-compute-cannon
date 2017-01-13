@@ -570,7 +570,6 @@ class ServerCompute
 				if (map.exists(status.jobId)) {
 					switch(status.JobStatus) {
 						case Pending, Working, Finalizing:
-							// trace('job=${status.jobId} status=${status.JobStatus}');
 						case Finished:
 							notifyJobFinished(status.jobId, status, status.job);
 					}

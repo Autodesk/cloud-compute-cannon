@@ -359,9 +359,7 @@ class BatchComputeDocker
 								}
 
 								opts.Image = opts.Image != null ? opts.Image : imageId.toLowerCase();
-								traceRed(Json.stringify(opts, null, '  '));
 								opts.Env = js.npm.redis.RedisLuaTools.isArrayObjectEmpty(opts.Env) ? [] : opts.Env;
-								traceCyan(Json.stringify(opts, null, '  '));
 								for (env in [
 									'INPUTS=$containerInputsPath',
 									'OUTPUTS=$containerOutputsPath',
@@ -375,65 +373,11 @@ class BatchComputeDocker
 								Reflect.setField(opts.Labels, 'jobId', job.id);
 								Reflect.setField(opts.Labels, 'computeId', job.computeJobId);
 
+								Assert.notNull(docker);
 
-								// var labels :Dynamic<String> = {
-								// 	jobId: job.id,
-								// 	computeId: job.computeJobId
-								// }
-
-
-								// opts.WorkingDir = workingDir;
-
-								// imageId = imageId.toLowerCase();
-		Assert.notNull(docker);
-		// Assert.notNull(imageId);
-		// var hostConfig :CreateContainerHostConfig = {};
-		// hostConfig.Binds = [];
-		//Ensure json-file logging so we can get to the logs
-		// hostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
-		// for (mount in mounts) {
-		// 	hostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
-		// }
-
-		// var opts :CreateContainerOptions = {
-		// 	Image: imageId,
-		// 	Cmd: cmd,
-		// 	AttachStdout: false,
-		// 	AttachStderr: false,
-		// 	Tty: false,
-		// 	Labels: labels,
-		// 	HostConfig: hostConfig,
-		// 	WorkingDir: workingDir,
-		// 	Env: env
-		// 	// Entrypoint: "/bin/bash"
-		// }
-
-
-
-
-
-
-
-
-
-
-								
-
-								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', mountInputs:(inputVolume != null ? '${inputVolume.Source}=>${inputVolume.Destination}' : null), mountOutputs:'${outputVolume.Source}=>${outputVolume.Destination}'});
-
-								// var labels :Dynamic<String> = {
-								// 	jobId: job.id,
-								// 	computeId: job.computeJobId
-								// }
-								
-
-								// var env = [
-								// 	'INPUTS=$containerInputsPath',
-								// 	'OUTPUTS=$containerOutputsPath',
-								// ];
+								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', opts:opts});
 
 								return DockerJobTools.runDockerContainer(docker, opts, log)
-								// return DockerJobTools.runDockerContainer(docker, job.computeJobId, imageId, job.item.command, mounts, job.item.workingDir, labels, env, log)
 									.then(function(containerunResult) {
 										error = containerunResult.error;
 										containerId = containerunResult != null && containerunResult.container != null ? containerunResult.container.id : null;
