@@ -351,7 +351,6 @@ class ServerCompute
 					return ccc.compute.server.ServerCommands.statusWorkers(redis)
 						.then(function(data) {
 							Log.info({message:'Workers', workers:data});
-							traceGreen(Json.stringify(data, null, '  '));
 							return true;
 						})
 						.errorPipe(function(err) {

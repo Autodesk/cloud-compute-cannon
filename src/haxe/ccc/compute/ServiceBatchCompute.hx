@@ -796,7 +796,6 @@ class ServiceBatchCompute
 					if (fieldName == JsonRpcConstants.MULTIPART_JSONRPC_KEY) {
 						StreamPromises.streamToString(stream)
 							.then(function(jsonrpcString) {
-								traceRed('jsonrpcString=' + Json.stringify(jsonrpcString));
 								parseJsonRpc(jsonrpcString);
 							});
 					} else {
@@ -862,12 +861,10 @@ class ServiceBatchCompute
 					}
 				});
 				busboy.on(BusboyEvent.Field, function(fieldName, val, fieldnameTruncated, valTruncated) {
-					traceYellow('BusboyEvent.Field fieldName=$fieldName');
 					if (returned) {
 						return;
 					}
 					if (fieldName == JsonRpcConstants.MULTIPART_JSONRPC_KEY) {
-						traceRed('val' + Json.stringify(val));
 						parseJsonRpc(val);
 					} else {
 						if (jsonrpc == null) {
@@ -891,7 +888,6 @@ class ServiceBatchCompute
 				});
 
 				busboy.on(BusboyEvent.Finish, function() {
-					traceYellow('BusboyEvent.Finish returned=$returned');
 					if (returned) {
 						return;
 					}
@@ -901,7 +897,6 @@ class ServiceBatchCompute
 						})
 						.pipe(function(_) {
 
-							traceGreen('jsonrpc=' + Json.stringify(jsonrpc));
 							var parameters :JobParams = jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters;
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,

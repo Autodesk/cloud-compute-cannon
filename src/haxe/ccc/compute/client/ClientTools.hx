@@ -147,12 +147,6 @@ class ClientTools
 			return postApi(host, 'job', {command: JobCLICommand.Result,jobId:[jobId]})
 				.then(function(out :DynamicAccess<JobResult>) {
 					return out[jobId];
-					// traceGreen('out=${out}');
-					// traceGreen('out json=${Json.parse(out)}');
-					// return Json.parse(out);
-					// var result :JobResult = Reflect.field(out, jobId);
-					// JobTools.prependJobResultsUrls(result, host + '/');
-					// return result;
 				});
 		}
 	}
