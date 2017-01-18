@@ -6,7 +6,7 @@ import js.Node;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
 
-import ccc.compute.InstancePool;
+import ccc.compute.server.InstancePool;
 
 import promhx.Promise;
 import promhx.Promise;

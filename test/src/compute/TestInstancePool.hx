@@ -4,9 +4,9 @@ import js.npm.RedisClient;
 
 import promhx.Promise;
 
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeTools;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.ComputeQueue;
 import ccc.compute.server.ServerCommands;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerProvider;
@@ -16,7 +16,7 @@ import t9.abstracts.time.*;
 import t9.abstracts.net.*;
 
 using promhx.PromiseTools;
-using ccc.compute.InstancePool;
+using ccc.compute.server.InstancePool;
 
 class TestInstancePool extends TestComputeBase
 {

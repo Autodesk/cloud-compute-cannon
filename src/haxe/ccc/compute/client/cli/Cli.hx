@@ -13,11 +13,11 @@ import js.npm.RedisClient;
 import promhx.Promise;
 
 import batcher.servers.compute.ClientCompute;
-import ccc.compute.ComputeQueue;
-import ccc.compute.InstancePool;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.InstancePool;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.InitConfigTools;
-import ccc.compute.ConnectionToolsDocker;
+import ccc.compute.server.ConnectionToolsDocker;
 import ccc.compute.ServiceBatchCompute;
 
 import util.streams.StdStreams;

@@ -17,8 +17,8 @@ import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 import promhx.RedisPromises;
 
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.InstancePool;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools;
 import ccc.compute.workers.WorkerProviderVagrantTools as Tools;
@@ -29,7 +29,7 @@ import t9.abstracts.net.*;
 import t9.abstracts.time.Minutes;
 
 using StringTools;
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 using promhx.PromiseTools;
 using util.MapTools;
 using Lambda;

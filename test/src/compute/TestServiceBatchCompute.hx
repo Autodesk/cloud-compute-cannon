@@ -17,10 +17,10 @@ import promhx.RequestPromises;
 
 import util.RedisTools;
 
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
-import ccc.compute.JobTools;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.JobTools;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;

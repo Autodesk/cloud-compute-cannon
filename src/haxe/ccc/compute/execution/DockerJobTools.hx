@@ -17,8 +17,8 @@ import promhx.deferred.DeferredPromise;
 import promhx.DockerPromises;
 import promhx.StreamPromises;
 
-import ccc.compute.ComputeTools;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.ComputeQueue;
 import ccc.docker.dataxfer.DockerDataTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
@@ -28,7 +28,7 @@ import ccc.storage.StorageSourceType;
 import util.DockerTools;
 import util.streams.StreamTools;
 
-using ccc.compute.JobTools;
+using ccc.compute.server.JobTools;
 using ccc.compute.workers.WorkerTools;
 using StringTools;
 using promhx.PromiseTools;

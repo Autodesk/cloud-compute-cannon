@@ -18,8 +18,8 @@ import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 import promhx.RedisPromises;
 
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.InstancePool;
 import ccc.compute.workers.VagrantTools;
 
 import util.SshTools;
@@ -28,7 +28,7 @@ import util.streams.StdStreams;
 import t9.abstracts.net.*;
 
 using StringTools;
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 using promhx.PromiseTools;
 using util.MapTools;
 using Lambda;

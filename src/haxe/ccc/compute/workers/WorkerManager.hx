@@ -21,13 +21,7 @@ import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 import promhx.CallbackPromise;
 
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-
 import util.RedisTools;
-
-using promhx.PromiseTools;
-using Lambda;
 
 class WorkerManager
 {

@@ -1,0 +1,21 @@
+{
+  "name": "cloud-compute-cannon-client",
+  "version": "0.1.23-test",
+  "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
+  "main": "lib.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Autodesk/cloud-compute-cannon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Autodesk/cloud-compute-cannon/issues"
+  },
+  "dependencies": {
+    "busboy": "^0.2.13",
+    "request": "^2.75.0",
+    "shortid": "^2.2.6",
+    "source-map-support": "^0.2.10"
+  },
+  "preferGlobal": false,
+  "private": false
+}

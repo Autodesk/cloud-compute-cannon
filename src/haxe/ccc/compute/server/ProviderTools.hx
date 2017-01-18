@@ -1,11 +1,11 @@
 package ccc.compute.server;
 
-import ccc.compute.client.ClientTools;
-import ccc.compute.InitConfigTools;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.workers.WorkerProviderVagrantTools;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-import ccc.compute.workers.WorkerProviderTools;
+import ccc.compute.server.client.ClientTools;
+import ccc.compute.server.InitConfigTools;
+import ccc.compute.server.workers.WorkerProviderBoot2Docker;
+import ccc.compute.server.workers.WorkerProviderVagrantTools;
+import ccc.compute.server.workers.WorkerProviderPkgCloud;
+import ccc.compute.server.workers.WorkerProviderTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.ServiceStorageLocalFileSystem;
 

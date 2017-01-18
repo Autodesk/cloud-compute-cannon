@@ -1,6 +1,6 @@
 package ccc.compute.server.tests;
 
-import ccc.compute.ConnectionToolsRegistry;
+import ccc.compute.server.ConnectionToolsRegistry;
 
 import util.DockerRegistryTools;
 

@@ -49,7 +49,7 @@ class StreamPromises
 		readable.on('response', function(response :{statusCode:Int}) {
 			if (Reflect.hasField(response, 'statusCode')) {
 				if (response.statusCode >= 400) {
-					reject(ErrorTools.create({statusCode:response.statusCode, errorContext:errorContext}));
+					reject(util.ErrorTools.create({statusCode:response.statusCode, errorContext:errorContext}));
 					disableErrorLogs = true;
 					try {
 						readable.unpipe(writable);

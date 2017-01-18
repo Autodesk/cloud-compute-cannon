@@ -6,14 +6,14 @@ import js.npm.RedisClient;
 
 import promhx.Promise;
 
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.ComputeTools;
 
 import t9.abstracts.net.*;
 
 using promhx.PromiseTools;
-using ccc.compute.InstancePool;
+using ccc.compute.server.InstancePool;
 using Lambda;
 
 class TestComputeQueue extends TestComputeBase

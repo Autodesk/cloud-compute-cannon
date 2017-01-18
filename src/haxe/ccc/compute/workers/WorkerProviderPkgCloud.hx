@@ -11,7 +11,7 @@ import js.npm.PkgCloud;
 import js.npm.RedisClient;
 import js.npm.ssh2.Ssh;
 
-import ccc.compute.InstancePool;
+import ccc.compute.server.InstancePool;
 import ccc.compute.execution.Job;
 
 import promhx.Promise;
@@ -444,7 +444,7 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			});
 	}
 
-	public static function destroyCloudInstance(config :ServiceConfigurationWorkerProvider, machineId :ccc.compute.Definitions.MachineId) :Promise<Bool>
+	public static function destroyCloudInstance(config :ServiceConfigurationWorkerProvider, machineId :ccc.compute.server.Definitions.MachineId) :Promise<Bool>
 	{
 		return destroyPkgCloudInstance(config.credentials, machineId);
 	}

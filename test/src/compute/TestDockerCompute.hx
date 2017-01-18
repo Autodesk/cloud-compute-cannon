@@ -27,9 +27,9 @@ import ccc.storage.ServiceStorage;
 import ccc.storage.ServiceStorageLocalFileSystem;
 import ccc.storage.StorageTools;
 import ccc.storage.StorageSourceType;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.ComputeQueue;
 import ccc.compute.ServiceBatchCompute;
-import ccc.compute.ComputeTools;
+import ccc.compute.server.ComputeTools;
 import ccc.compute.execution.BatchComputeDocker;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
@@ -44,7 +44,7 @@ using Lambda;
 using DateTools;
 using promhx.PromiseTools;
 using ccc.compute.workers.WorkerTools;
-using ccc.compute.JobTools;
+using ccc.compute.server.JobTools;
 
 class TestDockerCompute extends TestComputeBase
 {

@@ -17,9 +17,9 @@ import promhx.RequestPromises;
 import promhx.RetryPromise;
 
 import ccc.compute.workers.WorkerProvider;
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
-import ccc.compute.ConnectionToolsDocker;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ConnectionToolsDocker;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
@@ -31,7 +31,7 @@ import t9.abstracts.net.*;
 
 using StringTools;
 using util.RedisTools;
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 using promhx.PromiseTools;
 
 /**

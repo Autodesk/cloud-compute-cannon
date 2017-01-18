@@ -22,7 +22,7 @@ import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderVagrant;
 import ccc.compute.workers.WorkerProviderVagrantTools;
 import ccc.compute.workers.WorkerTools;
-import ccc.compute.ComputeTools;
+import ccc.compute.server.ComputeTools;
 import util.SshTools;
 
 import util.DockerTools;

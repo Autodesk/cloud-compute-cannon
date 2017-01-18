@@ -1,6 +1,10 @@
 package util;
 
+import ccc.compute.server.AbstractLogger;
+import ccc.compute.server.Logger;
+
 import haxe.Json;
+import haxe.DynamicAccess;
 
 import js.Node;
 import js.node.Fs;
@@ -383,7 +387,7 @@ class DockerTools
 	public static function addExposedPortsToContainerCreation(opts :CreateContainerOptions, ports :Map<Int,Int>)
 	{
 		//https://groups.google.com/forum/#!searchin/docker-user/port$20redirection/docker-user/aHbNFACcTfs/nLY-oUihEAIJ
-		var exposedPortsObj :TypedDynamicObject<String, {}>;
+		var exposedPortsObj :DynamicAccess<{}>;
 		if (ports != null) {
 			exposedPortsObj = {};
 			for (port in ports.keys()) {

@@ -25,7 +25,7 @@ import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
 import ccc.storage.StorageSourceType;
 import ccc.storage.ServiceStorageSftp;
-import ccc.compute.ConnectionToolsDocker;
+import ccc.compute.server.ConnectionToolsDocker;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 import ccc.compute.execution.DockerJobTools;
 import ccc.storage.ServiceStorageLocalFileSystem;

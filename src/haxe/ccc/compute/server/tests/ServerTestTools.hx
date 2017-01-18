@@ -21,7 +21,7 @@ class ServerTestTools
 
 	public static function getProxy(rpcUrl :UrlString)
 	{
-		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.ServiceBatchCompute, true)
+		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.server.ServiceBatchCompute, true)
 			.setConnection(new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(rpcUrl));
 		return proxy;
 	}

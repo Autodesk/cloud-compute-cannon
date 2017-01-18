@@ -6,7 +6,7 @@ package ccc.compute.workers;
 
 import js.npm.RedisClient;
 
-import ccc.compute.InstancePool;
+import ccc.compute.server.InstancePool;
 
 import promhx.Promise;
 
