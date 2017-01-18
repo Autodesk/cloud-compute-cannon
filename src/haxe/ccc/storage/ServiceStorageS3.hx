@@ -61,7 +61,7 @@ Bucket policy (where <USER> is the id of the user account, and
 }
  */
 
-import ccc.compute.Definitions;
+import ccc.compute.server.Definitions;
 import ccc.storage.ServiceStorage;
 import ccc.storage.*;
 

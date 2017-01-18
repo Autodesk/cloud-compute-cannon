@@ -95,7 +95,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 			})
 			//Then restart the docker daemon on the worker
 			.pipe(function(workerId) {
-				return ccc.compute.InstancePool.getWorker(_redis, workerId)
+				return ccc.compute.server.InstancePool.getWorker(_redis, workerId)
 					.pipe(function(worker) {
 						return SshTools.execute(worker.ssh, "sudo systemctl restart docker.service");
 					});

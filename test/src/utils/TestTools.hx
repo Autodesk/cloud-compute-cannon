@@ -16,10 +16,10 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.RequestPromises;
 
-import ccc.compute.JobTools;
+import ccc.compute.server.JobTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.ComputeQueue;
 
 using StringTools;
 using Lambda;

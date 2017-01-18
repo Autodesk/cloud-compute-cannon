@@ -2,7 +2,7 @@ package ccc.compute.client;
 
 import haxe.remoting.JsonRpc;
 
-import ccc.compute.JobTools;
+import ccc.compute.server.JobTools;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.client.cli.CliTools.*;
 
@@ -10,7 +10,7 @@ import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 
 using StringTools;
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 
 typedef JobDataBlob = {>JobResult,
 	var url :String;

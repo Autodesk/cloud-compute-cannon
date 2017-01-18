@@ -1,1 +1,1 @@
-typedef Log=Logger;
+typedef Log=LogDefault;

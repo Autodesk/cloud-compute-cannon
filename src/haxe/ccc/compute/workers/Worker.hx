@@ -14,8 +14,8 @@ import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 import promhx.CallbackPromise;
 
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeQueue;
 import ccc.compute.workers.WorkerProvider;
 
 import util.DockerTools;

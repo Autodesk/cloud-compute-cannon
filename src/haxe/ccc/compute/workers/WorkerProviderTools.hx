@@ -21,8 +21,8 @@ import promhx.deferred.DeferredPromise;
 import promhx.RedisPromises;
 import promhx.DockerPromises;
 
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.InstancePool;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 
@@ -35,7 +35,7 @@ import util.TarTools;
 
 using StringTools;
 using util.RedisTools;
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 using ccc.compute.workers.WorkerProviderTools;
 using ccc.compute.workers.WorkerTools;
 using promhx.PromiseTools;

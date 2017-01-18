@@ -215,7 +215,7 @@ class ServiceStorageLocalFileSystem
 		super.setRootPath(val);
 		//This breaks the clean package separation maintained until now.
 		//But it's only used testing.
-		if (!ccc.compute.ConnectionToolsDocker.isInsideContainer()) {
+		if (!ccc.compute.server.ConnectionToolsDocker.isInsideContainer()) {
 			_rootPath = js.node.Path.resolve(_rootPath);
 		}
 		_rootPath = ensureEndsWithSlash(_rootPath);

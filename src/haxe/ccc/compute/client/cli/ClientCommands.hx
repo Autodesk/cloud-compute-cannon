@@ -2,7 +2,7 @@ package ccc.compute.client.cli;
 
 import ccc.compute.client.ClientCompute;
 import ccc.compute.client.ClientTools;
-import ccc.compute.JobTools;
+import ccc.compute.server.JobTools;
 import ccc.compute.InitConfigTools;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.workers.WorkerProviderTools;
@@ -31,7 +31,7 @@ import yaml.Yaml;
 import util.SshTools;
 import util.streams.StreamTools;
 
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 using promhx.PromiseTools;
 using StringTools;
 using DateTools;

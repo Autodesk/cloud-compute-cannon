@@ -10,9 +10,9 @@ import js.npm.RedisClient;
 import js.npm.docker.Docker;
 import js.npm.redis.RedisLuaTools;
 
-import ccc.compute.ComputeQueue;
-import ccc.compute.InstancePool;
-import ccc.compute.JobTools;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.JobTools;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.workers.WorkerTools;
 import ccc.storage.ServiceStorage;
@@ -318,7 +318,7 @@ class ServerCommands
 					})
 					//Clean all workers
 					.pipe(function(_) {
-						return ccc.compute.InstancePool.getAllWorkers(redis)
+						return ccc.compute.server.InstancePool.getAllWorkers(redis)
 							.pipe(function(workerDefs) {
 								return Promise.whenAll(workerDefs.map(
 									function(instance) {

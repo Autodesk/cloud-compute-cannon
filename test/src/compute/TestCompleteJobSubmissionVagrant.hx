@@ -7,9 +7,9 @@ import js.npm.fsextended.FsExtended;
 
 import promhx.Promise;
 
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.ComputeTools;
 import ccc.compute.ServiceBatchCompute;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderVagrant;
@@ -17,7 +17,7 @@ import ccc.compute.workers.WorkerProviderVagrant;
 import utils.TestTools;
 
 using promhx.PromiseTools;
-using ccc.compute.InstancePool;
+using ccc.compute.server.InstancePool;
 using ccc.compute.workers.WorkerProviderTools;
 using StringTools;
 using Lambda;

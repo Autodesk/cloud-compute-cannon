@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+
+BUILD_DIR="build/client/js"
+
+#Build and publish the js client
+bin/build-client
+
+cd $BUILD_DIR
+
+npm publish .

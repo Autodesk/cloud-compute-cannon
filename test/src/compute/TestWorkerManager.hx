@@ -17,9 +17,9 @@ import promhx.PromiseTools;
 import promhx.RedisPromises;
 
 import ccc.compute.InitConfigTools;
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeTools;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.ComputeQueue;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerTools;
 import ccc.compute.workers.WorkerProvider;
@@ -32,7 +32,7 @@ using StringTools;
 using Lambda;
 using DateTools;
 using promhx.PromiseTools;
-using ccc.compute.InstancePool;
+using ccc.compute.server.InstancePool;
 
 class TestWorkerManager extends TestComputeBase
 {

@@ -2,6 +2,7 @@ package util.streams;
 
 import haxe.extern.EitherType;
 
+import js.node.Buffer;
 import js.node.stream.Transform;
 import js.node.stream.Readable;
 import js.node.stream.Duplex;

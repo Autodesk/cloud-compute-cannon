@@ -1,5 +1,8 @@
 package ccc.compute.client;
 
+import ccc.compute.server.Definitions;
+import ccc.compute.server.JobWebSocket;
+
 import haxe.DynamicAccess;
 import haxe.remoting.JsonRpc;
 
@@ -11,7 +14,7 @@ import promhx.RequestPromises;
 import promhx.RetryPromise;
 import promhx.deferred.DeferredPromise;
 
-using ccc.compute.ComputeTools;
+using ccc.compute.server.ComputeTools;
 
 /**
  * Methods used by both the client, server, and util classes.
@@ -19,7 +22,7 @@ using ccc.compute.ComputeTools;
 class ClientTools
 {
 	@:expose
-	public static function postJob(host :Host, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<JobResult>
+	public static function postJob(host :String, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<JobResult>
 	{
 		var promise = new DeferredPromise();
 		var jsonRpcRequest :RequestDef = {
@@ -39,7 +42,7 @@ class ClientTools
 		}
 		//Simply by making this request a multi-part request is is assumed
 		//to be a job submission.
-		js.npm.request.Request.post({url:host.rpcUrl(), formData:formData},
+		js.npm.request.Request.post({url:rpcUrl(host), formData:formData},
 			function(err :js.Error, httpResponse :js.npm.request.Request.HttpResponse, body:js.npm.request.Request.Body) {
 				if (err != null) {
 					Log.error(err);
@@ -59,6 +62,17 @@ class ClientTools
 				}
 			});
 		return promise.boundPromise;
+	}
+
+	inline public static function rpcUrl(host :String) :UrlString
+	{
+		if (!host.startsWith('http')) {
+			host = 'http://$host';
+		}
+		if (!host.endsWith(Constants.SERVER_RPC_URL)) {
+			host = '$host${Constants.SERVER_RPC_URL}';
+		}
+		return new UrlString(host);
 	}
 
 	public static function postApi<T>(host :Host, method :String, params :Dynamic) :Promise<T>

@@ -6,9 +6,9 @@ import js.npm.fsextended.FsExtended;
 import promhx.Promise;
 import promhx.StreamPromises;
 
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.ComputeTools;
 import ccc.compute.ConnectionToolsRedis;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.execution.Jobs;
@@ -22,10 +22,10 @@ import ccc.storage.StorageTools;
 import utils.TestTools;
 
 using promhx.PromiseTools;
-using ccc.compute.InstancePool;
-using ccc.compute.JobTools;
+using ccc.compute.server.InstancePool;
+using ccc.compute.server.JobTools;
 using ccc.compute.workers.WorkerProviderTools;
-using ccc.compute.JobTools;
+using ccc.compute.server.JobTools;
 using StringTools;
 using Lambda;
 

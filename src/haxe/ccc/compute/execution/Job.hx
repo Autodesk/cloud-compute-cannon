@@ -8,6 +8,8 @@ package ccc.compute.execution;
 
 import util.DockerTools;
 
+import ccc.compute.server.FluentTools;
+
 import haxe.Json;
 
 import js.Node;
@@ -15,10 +17,10 @@ import js.npm.RedisClient;
 import js.npm.ssh2.Ssh;
 import js.npm.docker.Docker;
 
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-import ccc.compute.LogStreams;
+import ccc.compute.server.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.LogStreams;
 import ccc.compute.execution.BatchComputeDocker;
 import ccc.compute.server.ServerCommands;
 import ccc.storage.ServiceStorage;
@@ -39,7 +41,7 @@ import util.SshTools;
 
 using StringTools;
 using util.RedisTools;
-using ccc.compute.JobTools;
+using ccc.compute.server.JobTools;
 using ccc.compute.workers.WorkerTools;
 using promhx.PromiseTools;
 using Lambda;

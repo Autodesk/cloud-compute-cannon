@@ -1,6 +1,7 @@
 package ccc.compute.server;
 
 import haxe.remoting.JsonRpc;
+import haxe.DynamicAccess;
 
 import js.Error;
 import js.Node;
@@ -21,13 +22,13 @@ import js.npm.RedisClient;
 
 import minject.Injector;
 
-import ccc.compute.InitConfigTools;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.InitConfigTools;
+import ccc.compute.server.ComputeQueue;
+import ccc.compute.server.ServiceBatchCompute;
 import ccc.compute.execution.Job;
 import ccc.compute.execution.Jobs;
-import ccc.compute.ConnectionToolsDocker;
-import ccc.compute.ConnectionToolsRedis;
+import ccc.compute.server.ConnectionToolsDocker;
+import ccc.compute.server.ConnectionToolsRedis;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 import ccc.compute.workers.WorkerProviderVagrant;
@@ -47,7 +48,7 @@ import util.RedisTools;
 import util.DockerTools;
 
 using Lambda;
-using ccc.compute.JobTools;
+using ccc.compute.server.JobTools;
 using promhx.PromiseTools;
 
 @:enum
@@ -89,7 +90,22 @@ class ServerCompute
 		Node.require('dotenv').config({path: '.env', silent: true});
 		Node.require('dotenv').config({path: 'config/.env', silent: true});
 
-		var env = Node.process.env;
+		var env :DynamicAccess<String> = Node.process.env;
+
+		if (env[ENV_VAR_DISABLE_LOGGING] == 'true') {
+			untyped __js__('console.log = function() {}');
+			Log.warn('Disabled logging');
+			Logger.GLOBAL_LOG_LEVEL = 100;
+		} else {
+			Log.info('$ENV_LOG_LEVEL=${env[ENV_LOG_LEVEL]}');
+			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
+				trace('env[ENV_LOG_LEVEL]=${env[ENV_LOG_LEVEL]}');
+				traceYellow('env=${Json.stringify(env)}');
+				var newLogLevel = Std.parseInt(env[ENV_LOG_LEVEL]);
+				trace('newLogLevel=$newLogLevel');
+				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
+			}
+		}
 
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
 			var errObj = {
@@ -108,7 +124,7 @@ class ServerCompute
 			//Ensure crash is logged before exiting.
 			try {
 				if (Logger.IS_FLUENT) {
-					ccc.compute.FluentTools.logToFluent(Json.stringify(errObj), function() {
+					ccc.compute.server.FluentTools.logToFluent(Json.stringify(errObj), function() {
 						Node.process.exit(1);
 					});
 				} else {
@@ -139,21 +155,6 @@ class ServerCompute
 			if (key != 'storage' && key != 'providers') {
 				Reflect.setField(env, key, Reflect.field(config, key));
 			}
-		}
-
-		if (Reflect.field(env, ENV_VAR_DISABLE_LOGGING) == 'true') {
-			untyped __js__('console.log = function() {}');
-			Log.warn('Disabled logging');
-			Logger.GLOBAL_LOG_LEVEL = 100;
-		} else {
-			Log.info('$ENV_LOG_LEVEL=${Reflect.field(env, ENV_LOG_LEVEL)}');
-			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
-				var newLogLevel = Std.int(Reflect.field(env, ENV_LOG_LEVEL));
-				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
-			}
-			trace({log_check:'haxe_trace'});
-			trace('trace_without_objectifying');
-			Log.trace('Log.trace');
 		}
 
 		Log.info({start:'CCC server start', version: ServerCommands.version()});
@@ -401,7 +402,7 @@ class ServerCompute
 			})
 			.then(function(_) {
 				//The queue manager
-				var schedulingService = new ccc.compute.ServiceBatchCompute();
+				var schedulingService = new ccc.compute.server.ServiceBatchCompute();
 				injector.map(ServiceBatchCompute).toValue(schedulingService);
 
 				//Monitor workers

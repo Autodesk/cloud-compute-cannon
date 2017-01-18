@@ -150,7 +150,7 @@ class TestUnit extends haxe.unit.async.PromiseTest
 //      RequestTTY yes
 // 		';
 
-// 		var hostData = ccc.compute.client.cli.CliTools.getSSHConfigHostData(new HostName('awsworker'), sshConfigData);
+// 		var hostData = ccc.compute.server.client.cli.CliTools.getSSHConfigHostData(new HostName('awsworker'), sshConfigData);
 // 		assertNotNull(hostData);
 // 		assertEquals(hostData.username, 'core');
 // 		assertEquals(hostData.privateKey, fakeKeyData);

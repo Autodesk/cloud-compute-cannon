@@ -16,8 +16,8 @@ import promhx.PromiseTools;
 import promhx.RedisPromises;
 
 import ccc.compute.ServiceBatchCompute;
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeTools;
+import ccc.compute.server.InstancePool;
+import ccc.compute.server.ComputeTools;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderVagrant;
 import ccc.compute.workers.VagrantTools;
@@ -30,7 +30,7 @@ using StringTools;
 using Lambda;
 using DateTools;
 using promhx.PromiseTools;
-using ccc.compute.InstancePool;
+using ccc.compute.server.InstancePool;
 
 class TestScalingVagrant extends TestScalingBase
 {
