@@ -5,9 +5,9 @@ import js.npm.RedisClient;
 import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 import ccc.compute.execution.Jobs;
-import ccc.compute.ConnectionToolsRedis;
+import ccc.compute.server.ConnectionToolsRedis;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerProviderBase;
 import ccc.storage.*;
@@ -25,7 +25,7 @@ class TestComputeBase extends TestBase
 	var _workerProvider :WorkerProviderBase;
 	var _workerManager :WorkerManager;
 	var _jobsManager :Jobs;
-	var _stack :ccc.compute.Stack;
+	var _stack :ccc.compute.server.Stack;
 	var _fs :ServiceStorage;
 	var _redis :RedisClient;
 

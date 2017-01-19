@@ -3,7 +3,7 @@ package compute;
 import promhx.Promise;
 
 import ccc.compute.server.InstancePool;
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 import ccc.storage.StorageTools;
 import ccc.storage.ServiceStorage;

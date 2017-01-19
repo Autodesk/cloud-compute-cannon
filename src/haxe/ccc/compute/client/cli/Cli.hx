@@ -16,9 +16,9 @@ import batcher.servers.compute.ClientCompute;
 import ccc.compute.server.ComputeQueue;
 import ccc.compute.server.InstancePool;
 import ccc.compute.workers.VagrantTools;
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 import ccc.compute.server.ConnectionToolsDocker;
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.ServiceBatchCompute;
 
 import util.streams.StdStreams;
 

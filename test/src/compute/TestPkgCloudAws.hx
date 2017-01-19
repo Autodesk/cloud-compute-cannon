@@ -9,7 +9,7 @@ import promhx.Deferred;
 import promhx.Stream;
 import promhx.PromiseTools;
 
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 import ccc.compute.workers.WorkerProviderPkgCloud;
 
 using StringTools;

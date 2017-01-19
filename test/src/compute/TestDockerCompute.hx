@@ -28,7 +28,7 @@ import ccc.storage.ServiceStorageLocalFileSystem;
 import ccc.storage.StorageTools;
 import ccc.storage.StorageSourceType;
 import ccc.compute.server.ComputeQueue;
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.ServiceBatchCompute;
 import ccc.compute.server.ComputeTools;
 import ccc.compute.execution.BatchComputeDocker;
 import ccc.compute.execution.DockerJobTools;

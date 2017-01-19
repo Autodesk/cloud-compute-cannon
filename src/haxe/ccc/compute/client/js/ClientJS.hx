@@ -29,7 +29,7 @@ class ClientJS
 		var client = connect('http://localhost:9000');
 		client.status().then(function(result) {
 			trace(result);
-		}).error(function(err) {
+		}).catchError(function(err) {
 			trace(err);
 		});
 
@@ -37,9 +37,12 @@ class ClientJS
 			image: "docker.io/busybox:latest",
 			cmd: ["ls", "/inputs"]
 		};
-		client.run(job, {testthing:"ssdfsdfdsf"})
+		untyped client.run(job, {testthing:"ssdfsdfdsf"})
 			.then(function(result) {
-
+				trace(result);
+			})
+			.catchError(function(err) {
+				trace(err);
 			});
 		// client.status()
 		// 	.then(function(status) {

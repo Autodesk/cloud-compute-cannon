@@ -4,8 +4,8 @@ package ccc.compute.server;
  * Convenient holder of all the stack subcomponents.
  */
 
-import ccc.compute.server.workers.*;
-import ccc.compute.server.execution.*;
+import ccc.compute.workers.*;
+import ccc.compute.execution.*;
 
 typedef StackDef = {
 	var manager :WorkerManager;

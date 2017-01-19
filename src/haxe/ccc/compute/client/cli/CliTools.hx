@@ -2,7 +2,7 @@ package ccc.compute.client.cli;
 
 import ccc.compute.server.ProviderTools;
 import ccc.compute.server.ProviderTools.*;
-import ccc.compute.InitConfigTools.*;
+import ccc.compute.server.InitConfigTools.*;
 
 
 import js.Node;

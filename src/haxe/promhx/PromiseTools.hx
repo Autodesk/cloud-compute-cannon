@@ -8,6 +8,19 @@ import promhx.deferred.DeferredPromise;
 
 class PromiseTools
 {
+	public static function promhx<T>(promise :js.npm.bluebird.Bluebird<T, Dynamic>) :Promise<T>
+	{
+		var p = new DeferredPromise();
+		promise
+			.then(function(val) {
+				p.resolve(val);
+			})
+			.error(function(err) {
+				p.boundPromise.reject(err);
+			});
+		return p.boundPromise;
+	}
+
 	public static function untilTrue(f :Void->Promise<Bool>, ?interval :Int = 1000, ?max :Int = 100) :Promise<Bool>
 	{
 		var promise = new DeferredPromise();

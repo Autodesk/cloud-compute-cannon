@@ -19,3 +19,11 @@ test/testsCompile.hxml
 --next
 
 etc/hxml/cli-build.hxml
+
+--next
+
+-cmd echo "Building js npm client"
+
+--next
+
+etc/hxml/client-js-build.hxml

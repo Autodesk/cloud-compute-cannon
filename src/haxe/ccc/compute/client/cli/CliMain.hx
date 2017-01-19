@@ -149,7 +149,7 @@ class CliMain
 
 		//Server methods
 		//ccc.compute.server.ServerCommands, 
-		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.ServiceBatchCompute, ccc.compute.server.tests.ServiceTests);
+		var serverMethodDefinitions = t9.remoting.jsonrpc.Macros.getMethodDefinitions(ccc.compute.server.ServiceBatchCompute, ccc.compute.server.tests.ServiceTests);
 		for (def in serverMethodDefinitions) {
 			rpcDefinitionMap.set(def.alias, {isClient:false, def:def});
 			rpcAlias.push(def.alias);

@@ -2,7 +2,7 @@ package compute;
 
 import promhx.Promise;
 
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 
 class TestRestartAfterCrashAWS extends TestRestartAfterCrashBase
 {

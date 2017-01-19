@@ -7,7 +7,7 @@ class ProxyTools
 {
 	public static function getProxy(rpcUrl :UrlString)
 	{
-		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.ServiceBatchCompute)
+		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.server.ServiceBatchCompute)
 			.setConnection(new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(rpcUrl));
 		return proxy;
 	}

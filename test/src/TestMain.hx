@@ -3,7 +3,7 @@ import js.node.child_process.ChildProcess;
 
 import haxe.unit.async.PromiseTestRunner;
 
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 
 using Lambda;
 using StringTools;
@@ -24,7 +24,7 @@ class TestMain
 		//Required for source mapping
 		js.npm.sourcemapsupport.SourceMapSupport;
 		util.EmbedMacros.embedFiles('etc', ['etc/hxml/.*']);
-		ErrorToJson;
+		ccc.compute.server.ErrorToJson;
 
 		//Prevents warning messages since we have a lot of streams piping to the stdout/err streams.
 		js.Node.process.stdout.setMaxListeners(20);

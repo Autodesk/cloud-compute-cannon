@@ -18,7 +18,7 @@ import promhx.RedisPromises;
 import ccc.compute.server.InstancePool;
 import ccc.compute.server.ComputeTools;
 import ccc.compute.server.ComputeQueue;
-import ccc.compute.ConnectionToolsRedis;
+import ccc.compute.server.ConnectionToolsRedis;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderBase;

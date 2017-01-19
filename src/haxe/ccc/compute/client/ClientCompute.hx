@@ -3,7 +3,7 @@ package ccc.compute.client;
 import haxe.remoting.JsonRpc;
 
 import ccc.compute.server.JobTools;
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.ServiceBatchCompute;
 import ccc.compute.client.cli.CliTools.*;
 
 import promhx.Promise;

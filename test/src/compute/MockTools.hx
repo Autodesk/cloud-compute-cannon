@@ -2,7 +2,7 @@ package compute;
 
 import ccc.compute.workers.*;
 import ccc.compute.execution.*;
-import ccc.compute.Stack;
+import ccc.compute.server.Stack;
 
 import minject.Injector;
 

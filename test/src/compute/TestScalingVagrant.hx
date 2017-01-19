@@ -15,7 +15,7 @@ import promhx.deferred.DeferredPromise;
 import promhx.PromiseTools;
 import promhx.RedisPromises;
 
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.ServiceBatchCompute;
 import ccc.compute.server.InstancePool;
 import ccc.compute.server.ComputeTools;
 import ccc.compute.workers.WorkerProvider;

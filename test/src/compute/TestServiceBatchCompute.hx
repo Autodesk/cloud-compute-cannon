@@ -21,7 +21,7 @@ import ccc.compute.server.ComputeQueue;
 import ccc.compute.server.ComputeTools;
 import ccc.compute.server.InstancePool;
 import ccc.compute.server.JobTools;
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.ServiceBatchCompute;
 import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;
 import ccc.compute.workers.WorkerProviderBoot2Docker;

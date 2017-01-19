@@ -10,7 +10,7 @@ import promhx.Promise;
 import ccc.compute.server.InstancePool;
 import ccc.compute.server.ComputeQueue;
 import ccc.compute.server.ComputeTools;
-import ccc.compute.ServiceBatchCompute;
+import ccc.compute.server.ServiceBatchCompute;
 import ccc.compute.workers.WorkerProvider;
 import ccc.compute.workers.WorkerProviderBoot2Docker;
 

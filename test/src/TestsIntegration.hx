@@ -4,7 +4,7 @@ import js.node.child_process.ChildProcess;
 import haxe.unit.async.PromiseTestRunner;
 
 import ccc.compute.server.ConnectionToolsDocker;
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.InitConfigTools;
 
 using Lambda;
 using StringTools;

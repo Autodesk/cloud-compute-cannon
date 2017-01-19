@@ -9,7 +9,7 @@ import promhx.StreamPromises;
 import ccc.compute.server.InstancePool;
 import ccc.compute.server.ComputeQueue;
 import ccc.compute.server.ComputeTools;
-import ccc.compute.ConnectionToolsRedis;
+import ccc.compute.server.ConnectionToolsRedis;
 import ccc.compute.execution.DockerJobTools;
 import ccc.compute.execution.Jobs;
 import ccc.compute.workers.WorkerManager;

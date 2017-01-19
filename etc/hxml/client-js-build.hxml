@@ -7,6 +7,7 @@ etc/hxml/base-nodejs.hxml
 
 -debug
 -D excludeccc
+-D promise=js.npm.bluebird.Bluebird
 
 ccc.compute.client.js.ClientJS
 
