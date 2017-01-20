@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon-client",
-  "version": "0.1.31",
+  "version": "0.1.38",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "main": "lib.js",
   "repository": {
@@ -11,10 +11,18 @@
     "url": "https://github.com/Autodesk/cloud-compute-cannon/issues"
   },
   "dependencies": {
+    "base64-stream": "^0.1.3",
+    "bluebird": "^3.4.7",
     "busboy": "^0.2.13",
+    "dockerode": "^2.3.1",
+    "fs-extended": "^0.2.1",
     "request": "^2.75.0",
     "shortid": "^2.2.6",
-    "source-map-support": "^0.2.10"
+    "source-map-support": "^0.2.10",
+    "ssh2": "^0.5.4",
+    "tar-fs": "^1.15.0",
+    "tar-stream": "^1.5.2",
+    "ws": "^1.1.1"
   },
   "preferGlobal": false,
   "private": false

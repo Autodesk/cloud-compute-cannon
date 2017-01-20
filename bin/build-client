@@ -4,6 +4,7 @@ BUILD_DIR="build/client/js"
 rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR/bin
 
+# ./bin/compile
 haxe etc/hxml/client-js-build.hxml
 
 cp etc/client/js/package.json $BUILD_DIR/

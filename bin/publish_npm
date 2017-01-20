@@ -26,8 +26,3 @@ git push origin
 git push upstream
 
 npm install -g cloud-compute-cannon
-
-bin/publish_npm_client
-
-
-
