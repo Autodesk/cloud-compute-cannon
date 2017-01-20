@@ -9,14 +9,13 @@ haxe etc/hxml/client-js-build.hxml
 cp etc/client/js/package.json $BUILD_DIR/
 cp README.md $BUILD_DIR/README.md
 
-
-
-# cd $BUILD_DIR
-# PACKAGE_VERSION=$(cat package.json \
-#   | grep version \
-#   | head -1 \
-#   | awk -F: '{ print $2 }' \
-#   | sed 's/[",]//g' \
-#   | tr -d '[[:space:]]')
-# npm pack
-# npm install -g cloud-compute-cannon-client-$PACKAGE_VERSION.tgz
+cd $BUILD_DIR
+PACKAGE_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+npm pack
+npm install -g cloud-compute-cannon-client-$PACKAGE_VERSION.tgz
+rm cloud-compute-cannon-client-$PACKAGE_VERSION.tgz

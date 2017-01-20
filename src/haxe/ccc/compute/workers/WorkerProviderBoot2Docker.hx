@@ -44,7 +44,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 	{
 		//The mount point for worker job data (inputs/outputs mounted to the job container)
 		//depends on if the server is running in a docker container or not.
-		if (ConnectionToolsDocker.isInsideContainer()) {
+		if (util.DockerTools.isInsideContainer()) {
 			if (Node.process.env['HOST_PWD'] == null || Node.process.env['HOST_PWD'] == '') {
 				Log.critical('WorkerProviderBoot2Docker needs HOST_PWD defined if running inside a container.');
 				js.Node.process.exit(-1);
@@ -107,7 +107,7 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		Constants.REGISTRY = new Host(hostName, new Port(REGISTRY_DEFAULT_PORT));
 		setHostWorkerDirectoryMount();
 		_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
-		if (!ConnectionToolsDocker.isInsideContainer()) {
+		if (!util.DockerTools.isInsideContainer()) {
 			//If inside the container, use the mounted directory for file system access.
 			_localJobData = Constants.LOCAL_WORKER_HOST_MOUNT_PREFIX + WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
 		}

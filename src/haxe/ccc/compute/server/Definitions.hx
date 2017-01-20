@@ -112,6 +112,9 @@ typedef BasicBatchProcessRequest = {
 	@:optional var wait :Bool;
 	/* Metadata logged and saved in the job definition and results.json  */
 	@:optional var meta :Dynamic;
+	@:optional var appendStdOut :Bool;
+	@:optional var appendStdErr :Bool;
+	@:optional var mountApiServer :Bool;
 }
 
 /**
@@ -170,6 +173,9 @@ typedef DockerBatchComputeJob = {
 	/* Stores the stdout, stderr, and result.json. */
 	@:optional var resultsPath :String;
 	@:optional var parameters :JobParams;
+	@:optional var appendStdOut :Bool;
+	@:optional var appendStdErr :Bool;
+	@:optional var mountApiServer :Bool;
 }
 
 

@@ -9,10 +9,10 @@ volumes:
     driver: local
 
 services:
-  compute:
+  ccc:
     extends:
       file: docker-compose.core.yml
-      service: compute
+      service: ccc
     links:
       - redis
       - registry

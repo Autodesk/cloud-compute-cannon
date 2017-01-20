@@ -2,7 +2,7 @@ version: '2'
 
 services:
 
-  compute:
+  ccc:
     build:
       context: .
     volumes:

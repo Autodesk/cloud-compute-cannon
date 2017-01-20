@@ -8,11 +8,11 @@ volumes:
 
 services:
 
-  compute:
+  ccc:
     restart: "no"
     extends:
       file: docker-compose.core.yml
-      service: compute
+      service: ccc
     image: "cloud-compute-cannon:${VERSION}"
     command: ["node", "server/cloud-compute-cannon-server.js"]
     links:

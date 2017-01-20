@@ -86,6 +86,8 @@ class ServerCompute
 		js.Node.process.stdout.setMaxListeners(100);
 		js.Node.process.stderr.setMaxListeners(100);
 
+		Constants.DOCKER_CONTAINER_ID = DockerTools.getContainerId();
+
 		//Load env vars from an .env file if present
 		Node.require('dotenv').config({path: '.env', silent: true});
 		Node.require('dotenv').config({path: 'config/.env', silent: true});
@@ -136,7 +138,7 @@ class ServerCompute
 		});
 
 		//Sanity checks
-		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
+		if (util.DockerTools.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
 			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
 			js.Node.process.exit(-1);
 		}
@@ -320,6 +322,13 @@ class ServerCompute
 		});
 
 		Promise.promise(true)
+			.pipe(function(_) {
+				return DockerTools.getThisContainerName()
+					.then(function(containerName) {
+						Constants.DOCKER_CONTAINER_NAME = containerName;
+						return true;
+					});
+			})
 			.pipe(function(_) {
 				return ConnectionToolsRedis.getRedisClient()
 					.pipe(function(redis) {

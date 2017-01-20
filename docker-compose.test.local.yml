@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  compute:
+  ccc:
     image: "cloud-compute-cannon:latest"
     command: ["${EXECUTABLE}", "build/test/compute_tests.js"]
     volumes:

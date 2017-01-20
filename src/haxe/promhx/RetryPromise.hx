@@ -1,5 +1,7 @@
 package promhx;
 
+import haxe.Json;
+
 import promhx.Deferred;
 import promhx.Promise;
 
@@ -36,12 +38,12 @@ class RetryPromise
 			p.catchError(function(err) {
 				if (attempts < maxRetryAttempts) {
 					if (!supressLogs) {
-						Log.debug('$logPrefix Failed attempt $attempts err=$err');
+						Log.debug('$logPrefix Failed attempt $attempts err=${Json.stringify(err)}');
 					}
 					js.Node.setTimeout(retry, intervalMilliseconds);
 				} else {
 					if (!supressLogs) {
-						Log.error('$logPrefix Failed all $maxRetryAttempts err=$err');
+						Log.error('$logPrefix Failed all $maxRetryAttempts err=${Json.stringify(err)}');
 					}
 					deferred.boundPromise.reject(err);
 				}
@@ -70,13 +72,13 @@ class RetryPromise
 			p.catchError(function(err) {
 				if (attempts < maxRetryAttempts) {
 					if (!supressLogs) {
-						Log.debug('$logPrefix Failed attempt $attempts err=$err');
+						Log.debug('$logPrefix Failed attempt $attempts err=${Json.stringify(err)}');
 					}
 					js.Node.setTimeout(retry, currentDelay);
 					currentDelay *= 2;
 				} else {
 					if (!supressLogs) {
-						Log.error('$logPrefix Failed all $maxRetryAttempts err=$err');
+						Log.error('$logPrefix Failed all $maxRetryAttempts err=${Json.stringify(err)}');
 					}
 					deferred.boundPromise.reject(err);
 				}

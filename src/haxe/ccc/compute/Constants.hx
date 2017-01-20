@@ -17,6 +17,7 @@ class Constants
 	inline public static var APP_NAME = 'cloud-compute-cannon';
 	public static var APP_SERVER_FILE = APP_NAME + '-server.js';
 	public static var APP_NAME_COMPACT = APP_NAME.replace('-', '');
+	public static var DOCKER_COMPOSE_SERVICE = 'ccc';
 	public static var CLI_COMMAND = APP_NAME_COMPACT;
 
 	/* Redis */
@@ -57,6 +58,8 @@ class Constants
 
 	/* Server */
 	public static var REGISTRY :Host;
+	public static var DOCKER_CONTAINER_ID :String = null;
+	public static var DOCKER_CONTAINER_NAME :String = null;
 	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
 	inline public static var SERVER_DEFAULT_PORT = 9000;
 	public static var SERVER_PUBLIC_HOST = new Host(new HostName('ccc.bionano.autodesk.com'), new Port(SERVER_DEFAULT_PORT));

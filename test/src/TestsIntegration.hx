@@ -193,7 +193,7 @@ class TestsIntegration
 			runner.add(new storage.TestStorageRestAPI());
 			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
 			runner.add(new compute.TestRedisMock());
-			if (isInternet && !ConnectionToolsDocker.isInsideContainer()) {
+			if (isInternet && !util.DockerTools.isInsideContainer()) {
 				runner.add(new storage.TestStorageSftp());
 			}
 		}

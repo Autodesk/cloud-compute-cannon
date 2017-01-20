@@ -55,8 +55,8 @@ class Job
 		/* The e.g. S3 URL. Otherwise empty */
 		var externalBaseUrl = fs.getExternalUrl();
 
-		var appendStdOut = false;
-		var appendStdErr = false;
+		var appendStdOut = job.item.appendStdOut == true;
+		var appendStdErr = job.item.appendStdErr == true;
 
 		var jobResult :JobResult = {
 			jobId: job.id,

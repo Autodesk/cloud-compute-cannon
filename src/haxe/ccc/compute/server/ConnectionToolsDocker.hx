@@ -9,6 +9,7 @@ import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 
 import t9.abstracts.net.*;
+import util.DockerTools.*;
 
 using promhx.PromiseTools;
 using Lambda;
@@ -108,18 +109,6 @@ class ConnectionToolsDocker
 			return true;
 		} catch(err :Dynamic) {
 			//No local file, ignore this error
-			return false;
-		}
-	}
-
-	public static function isInsideContainer() :Bool
-	{
-		//http://stackoverflow.com/questions/23513045/how-to-check-if-a-process-is-running-inside-docker-container
-		try {
-			var stdout :String = js.node.ChildProcess.execSync('cat /proc/1/cgroup', {stdio:['ignore','pipe','ignore']});
-			var output = Std.string(stdout);
-			return output.indexOf('/docker') > -1;
-		} catch (ignored :Dynamic) {
 			return false;
 		}
 	}

@@ -363,10 +363,12 @@ class BatchComputeDocker
 								for (env in [
 									'INPUTS=$containerInputsPath',
 									'OUTPUTS=$containerOutputsPath',
-									'INPUTS_HOST_MOUNT=$inputVolumeName',
 									'OUTPUTS_HOST_MOUNT=$outputVolumeName'
 									]) {
 									opts.Env.push(env);
+								}
+								if (inputVolumeName != null) {
+									opts.Env.push('INPUTS_HOST_MOUNT=$inputVolumeName');
 								}
 
 								opts.Labels = opts.Labels != null ? opts.Labels : {};
@@ -374,6 +376,15 @@ class BatchComputeDocker
 								Reflect.setField(opts.Labels, 'computeId', job.computeJobId);
 
 								Assert.notNull(docker);
+
+								/**
+								 * Can we mount the ccc server locally? This allows jobs to call the API.
+								 * This can be a pretty big security hole, since it will essentially allow
+								 * jobs to create unlimited jobs. Use at your own risk.
+								 */
+								if (job.item.mountApiServer == true) {
+									opts.HostConfig.NetworkMode = 'container:${Constants.DOCKER_CONTAINER_NAME}';
+								}
 
 								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', opts:opts});
 

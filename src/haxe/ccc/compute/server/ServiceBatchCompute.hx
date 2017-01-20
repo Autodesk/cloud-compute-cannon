@@ -656,7 +656,10 @@ class ServiceBatchCompute
 					containerInputsMountPath: job.containerInputsMountPath,
 					containerOutputsMountPath: job.containerOutputsMountPath,
 					parameters: parameters,
-					meta: job.meta
+					meta: job.meta,
+					appendStdOut: job.appendStdOut,
+					appendStdErr: job.appendStdErr,
+					mountApiServer: job.mountApiServer
 				};
 
 				Log.info({job_submission :dockerJob});
@@ -913,7 +916,10 @@ class ServiceBatchCompute
 								containerOutputsMountPath: jsonrpc.params.containerOutputsMountPath,
 								resultsPath: jsonrpc.params.resultsPath,
 								parameters: parameters,
-								meta: jsonrpc.params.meta
+								meta: jsonrpc.params.meta,
+								appendStdOut: jsonrpc.params.appendStdOut,
+								appendStdErr: jsonrpc.params.appendStdErr,
+								mountApiServer: jsonrpc.params.mountApiServer
 							};
 
 							Log.info({job_submission :dockerJob});
