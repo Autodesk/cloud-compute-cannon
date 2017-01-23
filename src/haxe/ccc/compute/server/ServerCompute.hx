@@ -96,17 +96,14 @@ class ServerCompute
 
 		if (env[ENV_VAR_DISABLE_LOGGING] == 'true') {
 			untyped __js__('console.log = function() {}');
-			Log.warn('Disabled logging');
+			Log.info('Disabled logging');
 			Logger.GLOBAL_LOG_LEVEL = 100;
 		} else {
-			Log.info('$ENV_LOG_LEVEL=${env[ENV_LOG_LEVEL]}');
 			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
-				trace('env[ENV_LOG_LEVEL]=${env[ENV_LOG_LEVEL]}');
-				traceYellow('env=${Json.stringify(env)}');
 				var newLogLevel = Std.parseInt(env[ENV_LOG_LEVEL]);
-				trace('newLogLevel=$newLogLevel');
 				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
 			}
+			Log.info('GLOBAL_LOG_LEVEL=${GLOBAL_LOG_LEVEL}');
 		}
 
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
@@ -360,7 +357,7 @@ class ServerCompute
 				function pollWorkers() {
 					return ccc.compute.server.ServerCommands.statusWorkers(redis)
 						.then(function(data) {
-							Log.info({message:'Workers', workers:data});
+							Log.debug({message:'Workers', workers:data});
 							return true;
 						})
 						.errorPipe(function(err) {
@@ -464,7 +461,6 @@ class ServerCompute
 							var results = Json.parse(out);
 							var result = results.result;
 							if (result.success) {
-								Log.info({TestResults:result});
 								traceGreen(Json.stringify(result));
 							} else {
 								Log.error({TestResults:result});
