@@ -28,6 +28,7 @@ ccc.compute.client.js.ClientJS
 
 # -debug
 # -D excludeccc
+# -D promise=js.npm.bluebird.Bluebird
 # -D test
 
 # -main ccc.compute.client.js.ClientJS

@@ -27,9 +27,6 @@ services:
       service: redis
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
-    ports:
-      #Don't expose this port to the host, only linked containers.
-      - "6379:6379"
 
   registry:
     extends:

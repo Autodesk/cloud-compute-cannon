@@ -447,6 +447,9 @@ class Job
 						} else {
 							return Promise.promise(true);
 						};
+					})
+					.catchError(function(err) {
+						log.error({log:'ComputeQueue.jobFinalized', error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
 					});
 			case Finished:
 				if (!_disposed) {
