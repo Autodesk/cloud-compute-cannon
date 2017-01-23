@@ -103,7 +103,7 @@ class ServerCompute
 				var newLogLevel = Std.parseInt(env[ENV_LOG_LEVEL]);
 				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
 			}
-			Log.info('GLOBAL_LOG_LEVEL=${GLOBAL_LOG_LEVEL}');
+			Log.info('GLOBAL_LOG_LEVEL=${Logger.GLOBAL_LOG_LEVEL}');
 		}
 
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
