@@ -21,7 +21,7 @@ class TestCompute extends ServerAPITestBase
 {
 	static var TEST_BASE = 'tests';
 
-	@timeout(120000)
+	@timeout(240000)
 	public function testCompleteComputeJobDirect() :Promise<Bool>
 	{
 		var TESTNAME = 'testCompleteComputeJobDirect';

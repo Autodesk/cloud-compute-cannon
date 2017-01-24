@@ -641,7 +641,7 @@ class ServiceBatchCompute
 				var inputs = null;
 				var inputPath = job.inputsPath != null ? (job.inputsPath.endsWith('/') ? job.inputsPath : job.inputsPath + '/') : jobId.defaultInputDir();
 
-				var parameters :JobParams = job.parameters == null ? {cpus:1, maxDuration:2 * 60000} : job.parameters;
+				var parameters :JobParams = job.parameters == null ? DEFAULT_JOB_PARAMS : job.parameters;
 				var inputFilesObj = writeInputFiles(job.inputs, inputPath);
 				deleteInputs = inputFilesObj.cancel;
 				var dockerJob :DockerJobDefinition = {
@@ -903,7 +903,7 @@ class ServiceBatchCompute
 						})
 						.pipe(function(_) {
 
-							var parameters :JobParams = jsonrpc.params.parameters == null ? {cpus:1, maxDuration:2 * 60000} : jsonrpc.params.parameters;
+							var parameters :JobParams = jsonrpc.params.parameters == null ? DEFAULT_JOB_PARAMS : jsonrpc.params.parameters;
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,
 								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options, optionsCreate:jsonrpc.params.createOptions},
