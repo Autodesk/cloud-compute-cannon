@@ -72,6 +72,9 @@ class Worker
 		var machineStateChannel = '${InstancePool.REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX}${_id}';
 		_stateChangeStream = RedisTools.createStreamFromHash(_redis, machineStateChannel, InstancePool.REDIS_KEY_WORKER_STATUS, _id);
 		_stateChangeStream.then(function(status) {
+			if (_redis == null) {
+				return;
+			}
 			if (status != null && status != _computeStatus) {
 				_computeStatus = status;
 				log.debug({'status':_computeStatus});
