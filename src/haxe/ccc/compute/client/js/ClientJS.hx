@@ -15,12 +15,12 @@ class ClientJS
 	@:expose('connect')
 	public static function connect (host :String)
 	{
-		var rpcUrl = 'sdsddsf';//ClientJSTools.rpcUrl(host);
+		var rpcUrl = ClientJSTools.rpcUrl(host);
 		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient("ccc.compute.server.ServiceBatchCompute", false)
 			.setUrl(rpcUrl);
-		// Reflect.setField(proxy, 'run', function(job, ?forms :Dynamic) {
-		// 	return ClientJSTools.postJob(host, job, forms);
-		// });
+		Reflect.setField(proxy, 'run', function(job, ?forms :Dynamic) {
+			return ClientJSTools.postJob(host, job, forms);
+		});
 		return proxy;
 	}
 }
