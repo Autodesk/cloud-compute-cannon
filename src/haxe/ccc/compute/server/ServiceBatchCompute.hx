@@ -1,9 +1,13 @@
 package ccc.compute.server;
 
+import promhx.Promise;
 import ccc.compute.shared.TypedDynamicObject;
-import t9.util.ColorTraces.*;
+import js.npm.bluebird.Bluebird;
 
 #if ((nodejs && !macro) && !excludeccc)
+
+	import t9.util.ColorTraces.*;
+
 	import haxe.remoting.JsonRpc;
 	import t9.js.jsonrpc.Routes;
 
@@ -319,7 +323,11 @@ class ServiceBatchCompute
 	})
 	public function submitJob(
 		?image :String,
+#if ((nodejs && !macro) && !excludeccc)
 		?pull_options :PullImageOptions,
+#else
+		?pull_options :Dynamic,
+#end
 		?command :Array<String>,
 		?inputs :Array<ComputeInputSource>,
 		?workingDir :String,

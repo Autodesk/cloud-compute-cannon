@@ -2,6 +2,7 @@ package ccc.compute.client.cli;
 
 import ccc.compute.client.js.ClientJSTools;
 import ccc.compute.client.cli.CliTools.*;
+import ccc.compute.client.util.ClientCompute;
 
 import haxe.Resource;
 

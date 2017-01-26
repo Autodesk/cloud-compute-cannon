@@ -1,5 +1,7 @@
 package ccc.compute.server.workers;
 
+import ccc.compute.shared.AbstractLogger;
+
 import haxe.Resource;
 
 import js.npm.docker.Docker;
@@ -14,7 +16,6 @@ import util.Predicates;
 import util.SshTools;
 import util.TarTools;
 import util.streams.StdStreams;
-
 
 using util.RedisTools;
 using ccc.compute.server.ComputeTools;

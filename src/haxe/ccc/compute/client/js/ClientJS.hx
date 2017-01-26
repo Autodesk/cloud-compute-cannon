@@ -1,7 +1,7 @@
 package ccc.compute.client.js;
 
 import ccc.compute.shared.Definitions;
-import ccc.compute.shared.*;
+// import ccc.compute.shared.*;
 /**
  * Client package for node.js servers to use when interacting with
  * external CCC servers.

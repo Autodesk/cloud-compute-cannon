@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 BUILD_DIR="build/client/js"
 
 #Build and publish the js client

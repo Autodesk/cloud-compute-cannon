@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 BUILD_DIR="build/client/js"
 rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR/bin

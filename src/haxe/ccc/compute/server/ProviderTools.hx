@@ -1,5 +1,7 @@
 package ccc.compute.server;
 
+import ccc.compute.client.util.ClientTools;
+
 import haxe.Resource;
 import haxe.Template;
 

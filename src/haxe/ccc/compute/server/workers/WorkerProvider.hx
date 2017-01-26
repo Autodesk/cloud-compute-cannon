@@ -4,9 +4,10 @@ package ccc.compute.server.workers;
  * bit more about it.
  */
 
-import js.npm.RedisClient;
-
+import ccc.compute.shared.AbstractLogger;
 import ccc.compute.server.InstancePool;
+
+import js.npm.RedisClient;
 
 import promhx.Promise;
 

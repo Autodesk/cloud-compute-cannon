@@ -16,10 +16,6 @@ import t9.abstracts.net.*;
 using StringTools;
 using ccc.compute.server.ComputeTools;
 
-typedef JobDataBlob = {>JobResult,
-	var url :String;
-}
-
 /**
  * Exposes the API of the server is a more convenient way,
  * and provides some utility methods.

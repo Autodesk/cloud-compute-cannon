@@ -585,7 +585,6 @@ class WorkerProviderBase
 		return _ready;
 	}
 
-#if debug
 	public function getTargetWorkerCount() :Int
 	{
 		return _targetWorkerCount;
@@ -595,6 +594,8 @@ class WorkerProviderBase
 	{
 		return _promiseQueue.whenEmpty();
 	}
+
+#if debug
 
 	public function getDeferredWorkerIds() :Array<MachineId>
 	{

@@ -651,6 +651,10 @@ typedef ServiceConfigurationWorkerProvider = {
 	@:optional var machines :DynamicAccess<ProviderInstanceDefinition>;
 }
 
+typedef JobDataBlob = {>JobResult,
+	var url :String;
+}
+
 @:forward
 abstract JobResultAbstract(JobResult) from JobResult to JobResult
 {
