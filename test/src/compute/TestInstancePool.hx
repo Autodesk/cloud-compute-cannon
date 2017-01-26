@@ -1,23 +1,5 @@
 package compute;
 
-import js.npm.RedisClient;
-
-import promhx.Promise;
-
-import ccc.compute.server.InstancePool;
-import ccc.compute.server.ComputeTools;
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.server.ServerCommands;
-import ccc.compute.workers.WorkerManager;
-import ccc.compute.workers.WorkerProvider;
-import ccc.compute.execution.Jobs;
-
-import t9.abstracts.time.*;
-import t9.abstracts.net.*;
-
-using promhx.PromiseTools;
-using ccc.compute.server.InstancePool;
-
 class TestInstancePool extends TestComputeBase
 {
 	public function new() {}

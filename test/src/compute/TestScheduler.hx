@@ -1,34 +1,5 @@
 package compute;
 
-import haxe.Json;
-
-import js.Node;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.fsextended.FsExtended;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-import promhx.PromiseTools;
-
-import util.RedisTools;
-import ccc.compute.server.InstancePool;
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.server.ComputeTools;
-import ccc.compute.server.JobTools;
-
-import utils.TestTools;
-import t9.abstracts.net.*;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
-using ccc.compute.server.InstancePool;
-
 class TestScheduler extends TestComputeBase
 {
 	public function new() {}

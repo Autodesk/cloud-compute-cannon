@@ -3,15 +3,8 @@ package ccc.compute.server;
 import haxe.remoting.JsonRpc;
 import haxe.DynamicAccess;
 
-import js.Error;
-import js.Node;
-import js.node.Fs;
-import js.node.Path;
 import js.node.Process;
 import js.node.http.*;
-import js.node.Http;
-import js.node.Url;
-import js.node.stream.Readable;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
 import js.npm.Express;
@@ -22,34 +15,12 @@ import js.npm.RedisClient;
 
 import minject.Injector;
 
-import ccc.compute.server.InitConfigTools;
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.server.ServiceBatchCompute;
-import ccc.compute.execution.Job;
-import ccc.compute.execution.Jobs;
-import ccc.compute.server.ConnectionToolsDocker;
-import ccc.compute.server.ConnectionToolsRedis;
-import ccc.compute.workers.WorkerProvider;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.workers.WorkerProviderVagrant;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-import ccc.compute.workers.WorkerProviderTools;
-import ccc.compute.workers.WorkerManager;
-import ccc.storage.StorageSourceType;
-import ccc.storage.StorageTools;
-import ccc.storage.StorageDefinition;
-import ccc.storage.ServiceStorage;
-import ccc.storage.StorageRestApi;
-import ccc.storage.ServiceStorageLocalFileSystem;
-
-import promhx.Stream;
+import ccc.storage.*;
 
 import util.RedisTools;
 import util.DockerTools;
 
-using Lambda;
 using ccc.compute.server.JobTools;
-using promhx.PromiseTools;
 
 @:enum
 abstract ServerStatus(String) {
@@ -67,7 +38,7 @@ abstract ServerStatus(String) {
 class ServerCompute
 {
 	public static var StorageService :ServiceStorage;
-	public static var WorkerProvider :WorkerProvider;
+	public static var WorkerProviderInstance :WorkerProvider;
 	public static var StatusStream :Stream<JobStatusUpdate>;
 
 	static function main()
@@ -271,7 +242,7 @@ class ServerCompute
 		status = ServerStatus.ConnectingToRedis_2_5;
 		Log.info({server_status:status});
 
-		var workerProviders :Array<ccc.compute.workers.WorkerProvider> = [];
+		var workerProviders :Array<WorkerProvider> = [];
 
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
@@ -401,15 +372,17 @@ class ServerCompute
 				//Build and inject the app logic
 				//Create services
 				workerProviders = config.providers.map(WorkerProviderTools.getProvider);
-				WorkerProvider = workerProviders[0];
-				injector.map(ccc.compute.workers.WorkerProvider).toValue(WorkerProvider);
-				injector.injectInto(WorkerProvider);
-				return WorkerProvider.ready;
+				WorkerProviderInstance = workerProviders[0];
+				injector.map(WorkerProvider).toValue(WorkerProviderInstance);
+				injector.injectInto(WorkerProviderInstance);
+				return WorkerProviderInstance.ready;
 			})
 			.then(function(_) {
+				traceRed('HERE111111');
 				//The queue manager
-				var schedulingService = new ccc.compute.server.ServiceBatchCompute();
-				injector.map(ServiceBatchCompute).toValue(schedulingService);
+				var schedulingService = new ServiceBatchCompute();
+				traceRed('HERE22222');
+				injector.map(ccc.compute.server.ServiceBatchCompute).toValue(schedulingService);
 
 				//Monitor workers
 				var workerManager = new WorkerManager();

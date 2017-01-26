@@ -1,9 +1,5 @@
 package compute;
 
-import promhx.Promise;
-
-import ccc.compute.server.InitConfigTools;
-
 class TestRestartAfterCrashAWS extends TestRestartAfterCrashBase
 {
 	public function new() {super();}

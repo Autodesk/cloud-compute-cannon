@@ -1,25 +1,5 @@
 package compute;
 
-import haxe.Json;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-import promhx.PromiseTools;
-import promhx.RedisPromises;
-
-import ccc.compute.client.ClientCompute;
-import ccc.compute.client.ClientTools;
-import ccc.compute.server.ServiceBatchCompute;
-import ccc.compute.server.ConnectionToolsRedis;
-
-import utils.TestTools;
-
-import t9.abstracts.net.*;
-
-using promhx.PromiseTools;
-
 class TestRestartAfterCrashBase extends TestBase
 {
 	var _env :TypedDynamicObject<String, String>;
@@ -68,7 +48,7 @@ class TestRestartAfterCrashBase extends TestBase
 					parameters: {cpus:1, maxDuration:60*1000*10}
 				};
 				//Get the job id
-				return ClientTools.postJob(hostport, jobParams)
+				return ClientJSTools.postJob(hostport, jobParams)
 					.then(function(result) {
 						jobId = result.jobId;
 						return true;

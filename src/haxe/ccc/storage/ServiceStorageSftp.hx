@@ -23,7 +23,7 @@ using StringTools;
 class ServiceStorageSftp
 	extends ServiceStorageBase
 {
-	public static function fromInstance(instance :ccc.compute.server.Definitions.InstanceDefinition, ?rootPath :String = '')
+	public static function fromInstance(instance :ccc.compute.shared.Definitions.InstanceDefinition, ?rootPath :String = '')
 	{
 		var config :StorageDefinition = {
 			type: StorageSourceType.Sftp,

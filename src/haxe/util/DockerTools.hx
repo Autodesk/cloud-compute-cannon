@@ -1,7 +1,7 @@
 package util;
 
-import ccc.compute.server.AbstractLogger;
-import ccc.compute.server.Logger;
+import ccc.compute.shared.AbstractLogger;
+import ccc.compute.shared.Logger;
 
 import haxe.Json;
 import haxe.DynamicAccess;

@@ -1,22 +1,5 @@
 package compute;
 
-import haxe.Json;
-import haxe.unit.async.PromiseTest;
-
-import js.Node;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-
-import util.RedisTools;
-
-using StringTools;
-
 class TestRedisMock extends haxe.unit.async.PromiseTest
 {
 	public function new() {}

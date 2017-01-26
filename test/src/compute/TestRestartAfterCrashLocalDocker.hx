@@ -1,8 +1,5 @@
 package compute;
 
-
-import promhx.Promise;
-
 class TestRestartAfterCrashLocalDocker extends TestRestartAfterCrashBase
 {
 	public function new() {super();}

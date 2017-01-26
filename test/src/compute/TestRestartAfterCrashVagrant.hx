@@ -1,9 +1,5 @@
 package compute;
 
-import promhx.Promise;
-
-import ccc.compute.workers.WorkerProviderVagrant;
-
 class TestRestartAfterCrashVagrant extends TestRestartAfterCrashBase
 {
 	public function new() {super();}

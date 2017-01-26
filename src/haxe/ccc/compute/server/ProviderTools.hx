@@ -1,42 +1,21 @@
 package ccc.compute.server;
 
-import ccc.compute.client.ClientTools;
-import ccc.compute.server.InitConfigTools;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.workers.WorkerProviderVagrantTools;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-import ccc.compute.workers.WorkerProviderTools;
-import ccc.storage.ServiceStorage;
-import ccc.storage.ServiceStorageLocalFileSystem;
-
-import haxe.Json;
 import haxe.Resource;
 import haxe.Template;
 
-import js.Node;
 import js.node.Os;
-import js.node.Path;
 import js.npm.fsextended.FsExtended;
 import js.npm.docker.Docker;
 import js.npm.ssh2.Ssh;
-
-import promhx.Promise;
-import promhx.RequestPromises;
-import promhx.deferred.DeferredPromise;
-
-import t9.abstracts.net.*;
 
 import util.DockerTools;
 import util.Predicates;
 import util.SshTools;
 import util.streams.StreamTools;
 
-import yaml.Yaml;
-
-using Lambda;
-using StringTools;
-using promhx.PromiseTools;
 using t9.util.ColorTraces;
+
+import yaml.Yaml;
 
 typedef ProviderConfig=ServiceConfigurationWorkerProvider;
 

@@ -1,3 +1,3 @@
 package ccc.docker;
 
-typedef Log=ccc.compute.server.Logger;
+typedef Log=ccc.compute.shared.Logger;

@@ -1,23 +1,6 @@
 package compute;
 
-import haxe.Json;
-
-import js.npm.RedisClient;
-
-import promhx.Promise;
-
-import ccc.compute.server.InstancePool;
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.server.ComputeTools;
-import ccc.compute.workers.WorkerManager;
-
 import compute.TestComputeQueue.*;
-
-import utils.TestTools;
-
-using promhx.PromiseTools;
-using ccc.compute.server.InstancePool;
-using Lambda;
 
 class TestJobStates extends TestComputeBase
 {

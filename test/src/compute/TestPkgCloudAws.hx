@@ -1,20 +1,4 @@
- package compute;
-
-import js.Node;
-import js.npm.PkgCloud;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.PromiseTools;
-
-import ccc.compute.server.InitConfigTools;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-
-using StringTools;
-using Lambda;
-using promhx.PromiseTools;
+package compute;
 
 class TestPkgCloudAws extends TestComputeBase
 {

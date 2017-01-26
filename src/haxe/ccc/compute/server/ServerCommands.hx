@@ -2,35 +2,15 @@ package ccc.compute.server;
 
 import haxe.Resource;
 
-import js.node.Fs;
-import js.node.Path;
-import js.node.stream.Readable;
-import js.node.stream.Writable;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
 import js.npm.redis.RedisLuaTools;
-
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.server.InstancePool;
-import ccc.compute.server.JobTools;
-import ccc.compute.execution.DockerJobTools;
-import ccc.compute.workers.WorkerTools;
-import ccc.storage.ServiceStorage;
-
-import promhx.PromiseTools;
-import promhx.StreamPromises;
-import promhx.DockerPromises;
-import promhx.CallbackPromise;
-import promhx.StreamPromises;
-import promhx.RequestPromises;
 
 import util.DockerTools;
 import util.DockerUrl;
 import util.DockerRegistryTools;
 import util.DateFormatTools;
 
-using promhx.PromiseTools;
-using DateTools;
 
 /**
  * Server API methods

@@ -1,6 +1,5 @@
 package compute;
 
-// import batcher.cli.ProviderTools;
 import batcher.cli.ProviderTools.*;
 import batcher.cli.CliTools.*;
 import ccc.compute.workers.WorkerProviderBoot2Docker;

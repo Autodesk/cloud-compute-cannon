@@ -23,6 +23,10 @@ import promhx.StreamPromises;
 
 import util.streams.StreamTools;
 
+import t9.util.ColorTraces.*;
+
+using Lambda;
+using StringTools;
 using promhx.DockerPromises;
 using promhx.PromiseTools;
 
