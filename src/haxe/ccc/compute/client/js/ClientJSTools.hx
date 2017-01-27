@@ -76,7 +76,7 @@ class ClientJSTools
 #if (promise == "js.npm.bluebird.Bluebird")
 		return new Promise(execute);
 #else
-		var promise = new DeferredPromise();
+		var promise = new promhx.deferred.DeferredPromise();
 		execute(promise.resolve, promise.boundPromise.reject);
 		return promise.boundPromise;
 #end
