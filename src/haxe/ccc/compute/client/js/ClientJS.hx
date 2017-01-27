@@ -1,14 +1,12 @@
 package ccc.compute.client.js;
 
 import ccc.compute.shared.Definitions;
-// import ccc.compute.shared.*;
+import t9.abstracts.net.*;
+
 /**
  * Client package for node.js servers to use when interacting with
  * external CCC servers.
  */
-
-import t9.abstracts.net.*;
-
 @:keep
 class ClientJS
 {

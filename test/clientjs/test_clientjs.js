@@ -5,7 +5,6 @@ const cccUrl = 'localhost:9000';
 const ccc = CCCC.connect(cccUrl);
 
 ccc.status()
-
 	.then(statusResult => {
 		console.log({statusResult});
 
@@ -31,3 +30,13 @@ ccc.status()
 	.catch(err => {
 		console.error("Failed", err);
 	});
+	
+
+// var request = require('request');
+// request.post({url:'http://localhost:34545'}, (err, status, body) => {
+// 	if (err) {
+// 		console.error(err);
+// 		return;
+// 	}
+// 	console.log({status});
+// });
