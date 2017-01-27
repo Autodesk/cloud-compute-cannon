@@ -52,6 +52,7 @@ class Job
 		};
 
 		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
+		Log.trace(Json.stringify(jobResult, null, '  '));
 		var jobResultsStorage = jobStorage.appendToRootPath(job.item.resultDir());
 		return Promise.promise(true)
 			.pipe(function(_) {

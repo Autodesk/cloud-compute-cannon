@@ -14,6 +14,7 @@ services:
       - ./.env:/app/.env
     environment:
       LOG_LEVEL: "${LOG_LEVEL}"
+      STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
     links:
       - redis
       - registry
