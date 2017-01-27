@@ -16,6 +16,7 @@ import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
 import ccc.storage.ServiceStorage;
+import ccc.storage.StorageConstants.*;
 
 using Lambda;
 using StringTools;
@@ -31,6 +32,8 @@ class ServiceStorageLocalFileSystem
 		return new ServiceStorageLocalFileSystem().setRootPath(path);
 	}
 
+	var _httpAccessUrl :String;
+
 	public function new()
 	{
 		super();
@@ -41,6 +44,42 @@ class ServiceStorageLocalFileSystem
 	{
 		super.postInjection();
 		_rootPath = _rootPath == null ? STORAGE_LOCAL_DEFAULT_PATH : _rootPath;
+		_httpAccessUrl = _config.httpAccessUrl != null ? ensureEndsWithSlash(_config.httpAccessUrl) : null;
+		if (Reflect.hasField(Node.process.env, STORAGE_HTTP_PREFIX)) {
+			_httpAccessUrl = ensureEndsWithSlash(Reflect.field(Node.process.env, STORAGE_HTTP_PREFIX));
+		}
+	}
+
+	override public function getExternalUrl(?path :String) :String
+	{
+		if (path != null && path.startsWith('http')) {
+			return path;
+		}
+
+		path = path == null ? '' : path;
+		path = _rootPath != null ? path.replace(_rootPath, '') : path;
+		while(path.indexOf('//') > -1) {
+			path = path.replace('//', '/');
+		}
+		if (_httpAccessUrl != null) {
+			if (path.startsWith('/')) {
+				path = path.substr(1);
+			} else {
+
+			}
+			return _httpAccessUrl + path;
+		} else {
+			return path;
+		}
+	}
+
+	override public function getPath(p :String) :String
+	{
+		if (p != null && _httpAccessUrl != null) {
+			p = p.replace(_httpAccessUrl, '');
+		}
+		p = super.getPath(p);
+		return p;
 	}
 
 	override public function readFile(path :String) :Promise<IReadable>
@@ -138,23 +177,6 @@ class ServiceStorageLocalFileSystem
 			});
 	}
 
-	// override public function getFileWritable(path :String) :Promise<IWritable>
-	// {
-	// 	path = getPath(path);
-	// 	return Promise.promise(true)
-	// 		.pipe(function(_) {
-	// 			var dir = Path.dirname(path);
-	// 			if (dir != null) {
-	// 				return FsPromises.mkdir(dir);
-	// 			} else {
-	// 				return Promise.promise(true);
-	// 			}
-	// 		})
-	// 		.then(function(_) {
-	// 			return cast Fs.createWriteStream(path);
-	// 		});
-	// }
-
 	override public function copyFile(source :String, target :String) :Promise<Bool>
 	{
 		Assert.notNull(source);
@@ -229,7 +251,7 @@ class ServiceStorageLocalFileSystem
 
 	override public function toString()
 	{
-		return '[StorageLocal _rootPath=$_rootPath]';
+		return '[StorageLocal rootPath=$_rootPath httpAccessUrl=$_httpAccessUrl]';
 	}
 
 	public function getAbsolutePath(path :String) :String
