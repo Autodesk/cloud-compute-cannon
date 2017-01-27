@@ -1,46 +1,5 @@
 package compute;
 
-import haxe.Json;
-
-import js.Node;
-import js.node.Http;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.docker.Docker;
-import js.npm.fsextended.FsExtended;
-import js.npm.FsPromises;
-import js.npm.RedisClient;
-import js.npm.HttpPromises;
-import js.npm.ssh2.Ssh;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.CallbackPromise;
-import promhx.deferred.DeferredPromise;
-
-import ccc.storage.ServiceStorage;
-import ccc.storage.ServiceStorageLocalFileSystem;
-import ccc.storage.StorageRestApi;
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.ServiceBatchCompute;
-import ccc.compute.server.ComputeTools;
-import ccc.compute.execution.DockerJobTools;
-import ccc.compute.workers.VagrantTools;
-import ccc.compute.workers.WorkerProviderVagrantTools;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-
-import util.RedisTools;
-import util.SshTools;
-import util.DockerTools;
-import util.streams.StreamTools;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
-using ccc.compute.workers.WorkerTools;
-
 class TestDockerVagrant extends TestComputeBase
 {
 	public static var ROOT_PATH = 'tmp/TestDockerCompute/';

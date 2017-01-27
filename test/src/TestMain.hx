@@ -12,7 +12,7 @@ class TestMain
 {
 	public static function setupTestExecutable()
 	{
-		ccc.compute.workers.WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
+		WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
 		// trace('$ENV_LOG_LEVEL=${Reflect.field(Node.process.env, ENV_LOG_LEVEL)}');
 		if (Reflect.hasField(Node.process.env, ENV_LOG_LEVEL)) {
 			Logger.log.level(Std.int(Reflect.field(Node.process.env, ENV_LOG_LEVEL)));

@@ -1,5 +1,7 @@
 package ccc.compute.server.tests;
 
+import ccc.compute.client.js.ClientJSTools;
+
 import haxe.DynamicAccess;
 import haxe.io.*;
 
@@ -96,7 +98,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 		var forms :DynamicAccess<Dynamic> = {};
 		forms[inputUrl.name] = js.npm.request.Request.get(inputUrl.value);
 
-		return ccc.compute.client.ClientTools.postJob(_serverHost, request, forms)
+		return ClientJSTools.postJob(_serverHost, request, forms)
 			.pipe(function(jobResult :JobResultAbstract) {
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';

@@ -1,17 +1,5 @@
 package compute;
 
-import promhx.Promise;
-
-import ccc.compute.workers.WorkerProvider;
-import ccc.compute.workers.WorkerProviderBase;
-import ccc.compute.server.InstancePool;
-import ccc.compute.server.Set;
-
-import t9.abstracts.net.*;
-
-using promhx.PromiseTools;
-using Lambda;
-
 /**
  * This doesn't actually do any 'workers', it just provides
  * access to the local boot2docker/docker system.

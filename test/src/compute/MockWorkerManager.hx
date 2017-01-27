@@ -1,8 +1,5 @@
 package compute;
 
-import ccc.compute.workers.WorkerManager;
-import ccc.compute.workers.Worker;
-
 class MockWorkerManager extends WorkerManager
 {
 	public function new()

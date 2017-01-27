@@ -1,40 +1,43 @@
-etc/hxml/base-nodejs.hxml
-
---macro exclude('ccc.compute.server')
---macro exclude('ccc.docker.dataxfer')
-
-# -resource package.json@package.json
-
 -debug
+-D nodejs
+-D clientjs
 -D excludeccc
 -D promise=js.npm.bluebird.Bluebird
+-D promhx
+
+-lib hx-color-trace:0.0.4
+-lib abstracts-core:0.1.1
+-lib logshim:0.0.4
+-lib hxnodejs:4.0.9
+
+-cp lib/hxnodelibs
+-cp lib/haxe-json-rpc/src/haxe
+-cp lib/promhx/src/main
+-cp src/haxe
+
+--macro exclude('ccc.compute.client.cli')
+--macro exclude('ccc.compute.client.util')
+--macro exclude('ccc.compute.server')
+--macro exclude('ccc.docker')
+--macro exclude('ccc.storage')
+--macro exclude('cloud')
+--macro exclude('util')
+--macro exclude('promhx.DockerPromises')
+--macro exclude('promhx.HttpStreams')
+--macro exclude('promhx.PollStreams')
+--macro exclude('promhx.PromiseQueue')
+--macro exclude('promhx.RedisPromises')
+--macro exclude('promhx.RequestPromises')
+--macro exclude('promhx.StreamPromises')
+--macro exclude('promhx.PromiseTools')
+--macro exclude('minject')
+--macro exclude('js.npm')
 
 ccc.compute.client.js.ClientJS
 
 #std/full
-# -dce full
 -dce std
 
 -js build/client/js/lib.js
 
 -cmd cp etc/client/js/* build/client/js/
-
-# --next
-
-# etc/hxml/base-nodejs.hxml
-
-# --macro exclude('ccc.compute.server')
-# --macro exclude('ccc.docker.dataxfer')
-
-# -debug
-# -D excludeccc
-# -D promise=js.npm.bluebird.Bluebird
-# -D test
-
-# -main ccc.compute.client.js.ClientJS
-
-# -dce std
-
-# -js build/client/js-test/main.js
-
-# -cmd node build/client/js-test/main.js

@@ -1,6 +1,13 @@
 package ccc.compute.server;
 
+import promhx.Promise;
+import ccc.compute.shared.TypedDynamicObject;
+import js.npm.bluebird.Bluebird;
+
 #if ((nodejs && !macro) && !excludeccc)
+
+	import t9.util.ColorTraces.*;
+
 	import haxe.remoting.JsonRpc;
 	import t9.js.jsonrpc.Routes;
 
@@ -23,15 +30,8 @@ package ccc.compute.server;
 	import promhx.DockerPromises;
 	import promhx.Stream;
 
-	import ccc.compute.server.ServerCommands;
+	import ccc.storage.*;
 	import ccc.compute.server.ServerCommands.*;
-	import ccc.compute.workers.WorkerProvider;
-	import ccc.compute.server.InstancePool;
-
-	import ccc.storage.ServiceStorage;
-	import ccc.storage.StorageDefinition;
-	import ccc.storage.StorageSourceType;
-	import ccc.storage.StorageTools;
 
 	import util.DockerTools;
 	import util.DockerUrl;
@@ -39,8 +39,6 @@ package ccc.compute.server;
 	using ccc.compute.server.ComputeTools;
 	using ccc.compute.server.ComputeQueue;
 	using ccc.compute.server.JobTools;
-	using promhx.PromiseTools;
-	using DateTools;
 #else
 	typedef Express=Dynamic;
 	typedef IncomingMessage=Dynamic;
@@ -54,6 +52,8 @@ package ccc.compute.server;
  */
 class ServiceBatchCompute
 {
+	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:10 * 60000};//10 minutes
+
 	@rpc({
 		alias:'jobs-pending-delete',
 		doc:'Deletes all pending jobs'
@@ -323,7 +323,11 @@ class ServiceBatchCompute
 	})
 	public function submitJob(
 		?image :String,
+#if ((nodejs && !macro) && !excludeccc)
 		?pull_options :PullImageOptions,
+#else
+		?pull_options :Dynamic,
+#end
 		?command :Array<String>,
 		?inputs :Array<ComputeInputSource>,
 		?workingDir :String,

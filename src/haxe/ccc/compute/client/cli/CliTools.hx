@@ -3,6 +3,7 @@ package ccc.compute.client.cli;
 import ccc.compute.server.ProviderTools;
 import ccc.compute.server.ProviderTools.*;
 import ccc.compute.server.InitConfigTools.*;
+import ccc.compute.client.util.ProxyTools;
 
 
 import js.Node;
@@ -23,12 +24,12 @@ class CliTools
 {
 	public static function getProxy(rpcUrl :UrlString)
 	{
-		return ccc.compute.client.ProxyTools.getProxy(rpcUrl);
+		return ProxyTools.getProxy(rpcUrl);
 	}
 
 	public static function getTestsProxy(rpcUrl :UrlString)
 	{
-		return ccc.compute.client.ProxyTools.getTestsProxy(rpcUrl);
+		return ProxyTools.getTestsProxy(rpcUrl);
 	}
 
 	public static function getHost() :Host

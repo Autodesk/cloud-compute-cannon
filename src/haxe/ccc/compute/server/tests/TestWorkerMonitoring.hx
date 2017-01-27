@@ -1,7 +1,5 @@
 package ccc.compute.server.tests;
 
-import ccc.compute.workers.WorkerProviderPkgCloud;
-
 import cloud.MachineMonitor;
 
 import js.npm.PkgCloud;
@@ -11,6 +9,9 @@ import js.npm.ssh2.Ssh;
 import minject.Injector;
 
 import util.SshTools;
+
+import t9.util.ColorTraces;
+import t9.util.ColorTraces.*;
 
 class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 {
@@ -50,7 +51,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	public function testJobOkWorkerOkAfterDockerDaemonReboot() :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
-		var provider :ccc.compute.workers.WorkerProviderPkgCloud = _injector.getValue(ccc.compute.workers.WorkerProvider);
+		var provider :WorkerProviderPkgCloud = _injector.getValue(WorkerProvider);
 		if (Type.getClass(provider) != WorkerProviderPkgCloud) {
 			traceYellow('Cannot run test testJobOkWorkerOkAfterDockerDaemonReboot, it does not work on the local compute provider');
 			return Promise.promise(true);
@@ -149,7 +150,7 @@ class TestWorkerMonitoring extends haxe.unit.async.PromiseTest
 	public function testJobRescheduledAfterWorkerFailure() :Promise<Bool>
 	{
 		var promise = new DeferredPromise();
-		var provider :ccc.compute.workers.WorkerProviderPkgCloud = _injector.getValue(ccc.compute.workers.WorkerProvider);
+		var provider :WorkerProviderPkgCloud = _injector.getValue(WorkerProvider);
 		if (Type.getClass(provider) != WorkerProviderPkgCloud) {
 			traceYellow('Cannot run test testJobRescheduledAfterWorkerFailure, it does not work on the local compute provider');
 			return Promise.promise(true);

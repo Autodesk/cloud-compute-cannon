@@ -1,39 +1,5 @@
 package compute;
 
-import haxe.Json;
-import haxe.unit.async.PromiseTest;
-
-import js.Node;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.fsextended.FsExtended;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-import promhx.PromiseTools;
-import promhx.RedisPromises;
-
-import ccc.compute.InitConfigTools;
-import ccc.compute.server.InstancePool;
-import ccc.compute.server.ComputeTools;
-import ccc.compute.server.ComputeQueue;
-import ccc.compute.workers.WorkerManager;
-import ccc.compute.workers.WorkerTools;
-import ccc.compute.workers.WorkerProvider;
-import ccc.compute.workers.WorkerProviderVagrant;
-import ccc.compute.workers.VagrantTools;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.workers.WorkerProviderTools;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
-using ccc.compute.server.InstancePool;
-
 class TestWorkerManager extends TestComputeBase
 {
 	public function new() {}

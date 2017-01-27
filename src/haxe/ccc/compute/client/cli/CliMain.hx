@@ -12,6 +12,8 @@ import js.node.Path;
 
 import js.npm.commander.Commander;
 
+import promhx.Promise;
+
 import t9.remoting.jsonrpc.cli.CommanderTools;
 
 using Lambda;

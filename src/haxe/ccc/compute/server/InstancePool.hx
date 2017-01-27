@@ -17,6 +17,7 @@ import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 import promhx.RedisPromises;
 
+import ccc.compute.shared.TypedDynamicObject;
 import ccc.compute.server.ComputeTools;
 
 import t9.abstracts.time.*;
@@ -80,7 +81,7 @@ abstract MachineAvailableStatus(String) {
 	var MaxCapacity = 'max_capacity';
 }
 
-typedef StatusResult = {
+typedef InstanceStatusResult = {
 	var id :MachineId;
 	var status :MachineStatus;
 	var availableStatus :MachineAvailableStatus;
@@ -106,7 +107,7 @@ typedef JobSubmissionResult = {
 
 class InstancePool
 {
-	inline public static var REDIS_COMPUTE_POOL_PREFIX = 'workerpool${Constants.SEP}';
+	inline public static var REDIS_COMPUTE_POOL_PREFIX = 'workerpool${SEP}';
 	inline public static var DEFAULT_COMPUTE_POOL_SCORE = 1;
 
 	public static function registerComputePool(client :RedisClient, pool :MachinePoolId, priority :WorkerPoolPriority, maxInstances :WorkerCount, minInstances :WorkerCount, billingIncrement :Minutes) :Promise<Int>
@@ -233,7 +234,7 @@ class InstancePool
 			});
 	}
 
-	public static function getInstancesInPool(client :RedisClient, poolId :MachinePoolId) :Promise<Array<StatusResult>>
+	public static function getInstancesInPool(client :RedisClient, poolId :MachinePoolId) :Promise<Array<InstanceStatusResult>>
 	{
 		return evaluateLuaScript(client, SCRIPT_GET_WORKERS_IN_POOL, [poolId])
 			.then(function(resultString) {
@@ -281,26 +282,26 @@ class InstancePool
 		return promise;
 	}
 
-	public static function isAvailable(m :StatusResult) :Bool
+	public static function isAvailable(m :InstanceStatusResult) :Bool
 	{
 		return m.status == MachineStatus.Available;
 	}
 
-	public static function isStatus(status :Array<MachineStatus>) :StatusResult->Bool
+	public static function isStatus(status :Array<MachineStatus>) :InstanceStatusResult->Bool
 	{
-		return function(m :StatusResult) {
+		return function(m :InstanceStatusResult) {
 			return status.has(m.status);
 		};
 	}
 
-	public static function toMachineStatus(m :StatusResult) :MachineStatus
+	public static function toMachineStatus(m :InstanceStatusResult) :MachineStatus
 	{
 		return m.status;
 	}
 
-	public static function isAvailableStatus(status :MachineAvailableStatus) :StatusResult->Bool
+	public static function isAvailableStatus(status :MachineAvailableStatus) :InstanceStatusResult->Bool
 	{
-		return function(m :StatusResult) {
+		return function(m :InstanceStatusResult) {
 			return m.availableStatus == status;
 		};
 	}
@@ -511,7 +512,7 @@ class InstancePool
 	static var SCRIPT_SHAS :Map<String, String>;
 	static var SCRIPT_SHAS_TOIDS :Map<String, String>;
 
-	inline static var INSTANCE_POOL_PREFIX = 'compute_pool${Constants.SEP}';
+	inline static var INSTANCE_POOL_PREFIX = 'compute_pool${SEP}';
 
 	inline public static var REDIS_KEY_WORKER_STATUS = '${INSTANCE_POOL_PREFIX}worker_status';//HASH <MachineId, MachineStatus>
 	inline public static var REDIS_KEY_WORKER_STATUS_AVAILABLE = '${INSTANCE_POOL_PREFIX}worker_status_available';//SET <MachineId>
@@ -522,16 +523,16 @@ class InstancePool
 	inline public static var REDIS_KEY_WORKER_DEFERRED_TIME = '${INSTANCE_POOL_PREFIX}worker_deferred_time';//SortedSet <MachineId>
 	inline public static var REDIS_KEY_WORKER_REMOVED_RECORD = '${INSTANCE_POOL_PREFIX}worker_removed_record';//HASH <MachineId, JsonBlob>
 
-	inline public static var REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX = '${INSTANCE_POOL_PREFIX}worker_status${Constants.SEP}';//channel
-	inline public static var REDIS_KEY_WORKER_AVAILABLE_STATUS_CHANNEL_PREFIX = '${INSTANCE_POOL_PREFIX}worker_available_status${Constants.SEP}';//channel
+	inline public static var REDIS_KEY_WORKER_STATUS_CHANNEL_PREFIX = '${INSTANCE_POOL_PREFIX}worker_status${SEP}';//channel
+	inline public static var REDIS_KEY_WORKER_AVAILABLE_STATUS_CHANNEL_PREFIX = '${INSTANCE_POOL_PREFIX}worker_available_status${SEP}';//channel
 
 	inline static var REDIS_KEY_WORKERS = '${INSTANCE_POOL_PREFIX}workers';//HASH <MachineId, MachineDefinition (ssh,docker stuff)>
-	public inline static var REDIS_KEY_WORKER_POOLS_PREFIX = '${INSTANCE_POOL_PREFIX}worker_pool${Constants.SEP}';//SortedSet<MachineId>
-	public inline static var REDIS_KEY_WORKER_POOLS_SET_PREFIX = '${INSTANCE_POOL_PREFIX}worker_pool_set${Constants.SEP}';//Set<MachineId>
-	public inline static var REDIS_KEY_WORKER_POOLS_AVAILABLE_PREFIX = '${INSTANCE_POOL_PREFIX}worker_pool_available${Constants.SEP}';//Set<MachineId>
-	public inline static var REDIS_KEY_WORKER_POOLS_CHANNEL_PREFIX = '${REDIS_KEY_WORKER_POOLS_PREFIX}channel${Constants.SEP}';//Key
-	inline public static var REDIS_KEY_WORKER_JOBS_PREFIX = '${INSTANCE_POOL_PREFIX}worker_jobs${Constants.SEP}';//Set<ComputeJobId>
-	inline public static var REDIS_KEY_POOL_JOBS_PREFIX = '${INSTANCE_POOL_PREFIX}pool_jobs${Constants.SEP}';//Set<ComputeJobId>
+	public inline static var REDIS_KEY_WORKER_POOLS_PREFIX = '${INSTANCE_POOL_PREFIX}worker_pool${SEP}';//SortedSet<MachineId>
+	public inline static var REDIS_KEY_WORKER_POOLS_SET_PREFIX = '${INSTANCE_POOL_PREFIX}worker_pool_set${SEP}';//Set<MachineId>
+	public inline static var REDIS_KEY_WORKER_POOLS_AVAILABLE_PREFIX = '${INSTANCE_POOL_PREFIX}worker_pool_available${SEP}';//Set<MachineId>
+	public inline static var REDIS_KEY_WORKER_POOLS_CHANNEL_PREFIX = '${REDIS_KEY_WORKER_POOLS_PREFIX}channel${SEP}';//Key
+	inline public static var REDIS_KEY_WORKER_JOBS_PREFIX = '${INSTANCE_POOL_PREFIX}worker_jobs${SEP}';//Set<ComputeJobId>
+	inline public static var REDIS_KEY_POOL_JOBS_PREFIX = '${INSTANCE_POOL_PREFIX}pool_jobs${SEP}';//Set<ComputeJobId>
 	inline static var REDIS_KEY_WORKER_POOL_PRIORITY = '${INSTANCE_POOL_PREFIX}worker_pool_priority';//SortedSet<MachinePoolId>
 	inline static var REDIS_KEY_WORKER_POOL_MAX_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_max_instances';//Hash<MachinePoolId, Int>
 	inline static var REDIS_KEY_WORKER_POOL_MIN_INSTANCES = '${INSTANCE_POOL_PREFIX}worker_pool_min_instances';//Hash<MachinePoolId, Int>

@@ -7,24 +7,14 @@ package ccc.compute.server;
  * c) ?
  */
 
-import js.Node;
-import haxe.Json;
-
-import js.Node;
 import js.node.Fs;
 import js.npm.PkgCloud;
 import js.npm.RedisClient;
 import js.npm.PkgCloud.ClientOptionsAmazon;
 
-import promhx.Promise;
-
-import ccc.compute.server.Definitions;
 import ccc.compute.server.ConnectionToolsDocker;
 
 import yaml.Yaml;
-
-using StringTools;
-using Lambda;
 
 class InitConfigTools
 {

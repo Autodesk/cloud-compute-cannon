@@ -205,7 +205,7 @@ class TestsIntegration
 
 			//These require access to a local docker server
 			if (isDockerProvider) {
-				ccc.compute.workers.WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
+				WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
 				runner.add(new compute.TestScheduler());
 				runner.add(new compute.TestJobStates());
 				runner.add(new compute.TestInstancePool());

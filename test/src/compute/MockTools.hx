@@ -1,10 +1,6 @@
 package compute;
 
-import ccc.compute.workers.*;
-import ccc.compute.execution.*;
 import ccc.compute.server.Stack;
-
-import minject.Injector;
 
 class MockTools
 {

@@ -1,5 +1,7 @@
 package ccc.compute.server;
 
+import ccc.compute.shared.TypedDynamicObject;
+
 import haxe.DynamicAccess;
 import haxe.Json;
 import haxe.io.Bytes;
@@ -443,7 +445,7 @@ class ComputeQueue
 	static var SCRIPT_SHAS :Map<String, String>;
 	static var SCRIPT_SHAS_TOIDS :Map<String, String>;
 
-	inline static var PREFIX = 'compute_queue${Constants.SEP}';
+	inline static var PREFIX = 'compute_queue${SEP}';
 	inline static var REDIS_KEY_PENDING = '${PREFIX}pending'; //LIST <JobId>
 	inline static var REDIS_KEY_WORKING = '${PREFIX}working'; //SORTED SET <JobId>
 
