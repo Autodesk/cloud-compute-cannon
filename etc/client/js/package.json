@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon-client",
-  "version": "0.1.43",
+  "version": "0.1.47",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "main": "lib.js",
   "repository": {
@@ -13,10 +13,10 @@
   "dependencies": {
     "base64-stream": "^0.1.3",
     "bluebird": "^3.4.7",
-    "busboy": "^0.2.13",
+    "busboy": "^0.2.14",
     "dockerode": "^2.3.1",
     "fs-extended": "^0.2.1",
-    "request": "^2.75.0",
+    "request": "^2.79.0",
     "shortid": "^2.2.6",
     "source-map-support": "^0.2.10",
     "ssh2": "^0.5.4",
