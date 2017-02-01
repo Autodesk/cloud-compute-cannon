@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  compute:
+  ccc:
     command: ["haxe", "test/testsIntegration.hxml"]
     environment:
       AWS: "true"

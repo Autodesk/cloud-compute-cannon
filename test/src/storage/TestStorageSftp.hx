@@ -21,21 +21,12 @@ import promhx.StreamPromises;
 import promhx.DockerPromises;
 import promhx.deferred.DeferredPromise;
 
-import ccc.storage.ServiceStorage;
-import ccc.storage.StorageTools;
-import ccc.storage.StorageSourceType;
-import ccc.storage.ServiceStorageSftp;
-import ccc.compute.ConnectionToolsDocker;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.execution.DockerJobTools;
-import ccc.storage.ServiceStorageLocalFileSystem;
+import ccc.storage.*;
 
 import util.streams.StreamTools;
 import util.streams.StdStreams;
 import util.SshTools;
 
-using StringTools;
-using Lambda;
 using DateTools;
 using promhx.PromiseTools;
 

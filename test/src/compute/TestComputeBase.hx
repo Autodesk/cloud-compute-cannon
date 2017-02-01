@@ -1,20 +1,5 @@
 package compute;
 
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.deferred.DeferredPromise;
-
-import ccc.compute.InitConfigTools;
-import ccc.compute.execution.Jobs;
-import ccc.compute.ConnectionToolsRedis;
-import ccc.compute.workers.WorkerManager;
-import ccc.compute.workers.WorkerProviderBase;
-import ccc.storage.*;
-
-using Lambda;
-using promhx.PromiseTools;
-
 typedef Disposable = {
 	function dispose() :Promise<Bool>;
 }
@@ -25,7 +10,7 @@ class TestComputeBase extends TestBase
 	var _workerProvider :WorkerProviderBase;
 	var _workerManager :WorkerManager;
 	var _jobsManager :Jobs;
-	var _stack :ccc.compute.Stack;
+	var _stack :ccc.compute.server.Stack;
 	var _fs :ServiceStorage;
 	var _redis :RedisClient;
 
@@ -59,7 +44,7 @@ class TestComputeBase extends TestBase
 				_injector.map(ServiceStorage).toValue(storage);
 
 				if (_workerProvider != null) {
-					_injector.map(ccc.compute.workers.WorkerProvider).toValue(_workerProvider);
+					_injector.map(WorkerProvider).toValue(_workerProvider);
 				}
 				return true;
 			});

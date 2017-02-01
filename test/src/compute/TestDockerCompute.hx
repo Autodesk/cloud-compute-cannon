@@ -1,50 +1,6 @@
 package compute;
 
-import haxe.Json;
-
-import js.Node;
-import js.node.Http;
-import js.node.Path;
-import js.node.Fs;
-import js.node.stream.Readable;
-import js.npm.docker.Docker;
-import js.npm.fsextended.FsExtended;
-import js.npm.FsPromises;
-import js.npm.RedisClient;
-import js.npm.ssh2.Ssh;
-import js.npm.tarfs.TarFs;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.StreamPromises;
-import promhx.DockerPromises;
-import promhx.CallbackPromise;
-import promhx.RequestPromises;
-import promhx.deferred.DeferredPromise;
-
-import ccc.storage.ServiceStorage;
-import ccc.storage.ServiceStorageLocalFileSystem;
-import ccc.storage.StorageTools;
-import ccc.storage.StorageSourceType;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ServiceBatchCompute;
-import ccc.compute.ComputeTools;
-import ccc.compute.execution.BatchComputeDocker;
-import ccc.compute.execution.DockerJobTools;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-
-import util.RedisTools;
-import util.SshTools;
-import util.DockerTools;
-import utils.TestTools;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
-using ccc.compute.workers.WorkerTools;
-using ccc.compute.JobTools;
+using ccc.compute.server.workers.WorkerTools;
 
 class TestDockerCompute extends TestComputeBase
 {
@@ -278,7 +234,7 @@ class TestDockerCompute extends TestComputeBase
 			jobId: jobId,
 			computeJobId: computeJobId,
 			worker: worker,
-			image: {type:DockerImageSourceType.Context, value:sourceDockerContext, options:{t:computeJobId}},
+			image: {type:DockerImageSourceType.Context, value:sourceDockerContext, optionsBuild:{t:computeJobId}},
 			inputs: FsExtended.listFilesSync(inputDir),
 		};
 

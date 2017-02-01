@@ -15,6 +15,8 @@ import promhx.deferred.DeferredPromise;
 import util.DockerUrl;
 
 using promhx.PromiseTools;
+using StringTools;
+using Lambda;
 
 class DockerPromises
 {
@@ -208,7 +210,7 @@ class DockerPromises
 						Log.error('Cannot handle stream data=$data');
 					}
 				} catch(err :Dynamic) {
-					traceRed('Could not parse ${bufferString} type=${untyped __typeof__(bufferString)}');
+					trace('Could not parse ${bufferString} type=${untyped __typeof__(bufferString)}');
 				}
 			}
 

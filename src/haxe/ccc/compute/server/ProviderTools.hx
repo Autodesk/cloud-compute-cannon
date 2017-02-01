@@ -1,42 +1,23 @@
 package ccc.compute.server;
 
-import ccc.compute.client.ClientTools;
-import ccc.compute.InitConfigTools;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.workers.WorkerProviderVagrantTools;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-import ccc.compute.workers.WorkerProviderTools;
-import ccc.storage.ServiceStorage;
-import ccc.storage.ServiceStorageLocalFileSystem;
+import ccc.compute.client.util.ClientTools;
 
-import haxe.Json;
 import haxe.Resource;
 import haxe.Template;
 
-import js.Node;
 import js.node.Os;
-import js.node.Path;
 import js.npm.fsextended.FsExtended;
 import js.npm.docker.Docker;
 import js.npm.ssh2.Ssh;
-
-import promhx.Promise;
-import promhx.RequestPromises;
-import promhx.deferred.DeferredPromise;
-
-import t9.abstracts.net.*;
 
 import util.DockerTools;
 import util.Predicates;
 import util.SshTools;
 import util.streams.StreamTools;
 
-import yaml.Yaml;
-
-using Lambda;
-using StringTools;
-using promhx.PromiseTools;
 using t9.util.ColorTraces;
+
+import yaml.Yaml;
 
 typedef ProviderConfig=ServiceConfigurationWorkerProvider;
 
@@ -447,7 +428,7 @@ class ProviderTools
 
 	static function runDockerComposedServer(ssh :ConnectOptions) :Promise<Bool>
 	{
-		var dc ="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.prod.yml";
+		var dc ="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.npm-prod.yml";
 		var command = 'cd ${Constants.APP_NAME_COMPACT} && $dc stop && $dc rm -f && $dc build && $dc up -d';
 		return SshTools.execute(ssh, command, 10, 10, null, null, true)
 			.then(function(execResult) {
@@ -599,12 +580,12 @@ class ProviderTools
 				}
 				return PromiseTools.chainPipePromises(promises);
 			})
-			//Copy the docker-compose.prod.yml which is not quite a template
+			//Copy the docker-compose.npm-prod.yml which is not quite a template
 			.pipe(function(_) {
-				var dockerComposeProdString = Resource.getString('docker-compose.prod.yml');
+				var dockerComposeProdString = Resource.getString('docker-compose.npm-prod.yml');
 				var gitSha = Version.getGitCommitHash().substr(0,8);
 				dockerComposeProdString = dockerComposeProdString.replace("${VERSION}", gitSha);
-				return storage.writeFile('docker-compose.prod.yml', StreamTools.stringToStream(dockerComposeProdString));
+				return storage.writeFile('docker-compose.npm-prod.yml', StreamTools.stringToStream(dockerComposeProdString));
 			})
 			.then(function(_) {
 				return true;

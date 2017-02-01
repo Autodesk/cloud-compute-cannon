@@ -10,7 +10,7 @@ import promhx.PromiseTools;
 import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
-import ccc.compute.Definitions;
+import ccc.compute.shared.Definitions;
 import ccc.storage.ServiceStorageBase;
 import ccc.storage.StorageSourceType;
 import ccc.storage.StorageDefinition;

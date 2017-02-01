@@ -1,9 +1,5 @@
 package compute;
 
-import promhx.Promise;
-
-import ccc.compute.workers.WorkerProviderPkgCloud;
-
 class TestScalingAmazon extends TestScalingBase
 {
 	public function new() super();

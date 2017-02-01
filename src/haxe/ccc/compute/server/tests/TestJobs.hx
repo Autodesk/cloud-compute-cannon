@@ -816,7 +816,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 											return RequestPromises.getBuffer(outputUrl3)
 												.then(function(out) {
 													var md5 = js.node.Crypto.createHash('md5').update(out).digest('hex');
-													assertEquals(md5, 'ad07ee4cb98da073dda56ce7ceb88f5a');
+													assertTrue(md5 == 'ad07ee4cb98da073dda56ce7ceb88f5a' || md5 == '201e50d8dd7a30c0a918213686ca43b7');
 													return true;
 												});
 										});

@@ -2,10 +2,10 @@ version: '2'
 
 services:
 
-  compute:
+  ccc:
     extends:
       file: docker-compose.core.yml
-      service: compute
+      service: ccc
     image: "quay.io/bionano/cloud-compute-cannon:f5728c67"
     command: ["nodemon", "-w", "server", "-w", "/app/config/ccc.yml", "server/cloud-compute-cannon-server.js"]
     volumes:
@@ -13,7 +13,7 @@ services:
       - ./:/app/config
     environment:
       LOG_LEVEL: "${LOG_LEVEL}"
-      CONFIG_PATH: "/app/config"
+      CONFIG_PATH: "/app/config/ccc.yml"
     links:
       - redis
       - registry

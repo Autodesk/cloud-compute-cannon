@@ -1,21 +1,5 @@
 package compute;
 
-import haxe.Json;
-
-import js.npm.RedisClient;
-
-import promhx.Promise;
-
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
-
-import t9.abstracts.net.*;
-
-using promhx.PromiseTools;
-using ccc.compute.InstancePool;
-using Lambda;
-
 class TestComputeQueue extends TestComputeBase
 {
 	public static var POOL_ID1 = new MachinePoolId('testPoolId1');

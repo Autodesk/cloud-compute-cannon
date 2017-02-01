@@ -1,44 +1,5 @@
 package compute;
 
-import haxe.Json;
-
-import js.Node;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.fsextended.FsExtended;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-import promhx.PromiseTools;
-import promhx.RequestPromises;
-
-import util.RedisTools;
-
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
-import ccc.compute.InstancePool;
-import ccc.compute.JobTools;
-import ccc.compute.ServiceBatchCompute;
-import ccc.compute.execution.Jobs;
-import ccc.compute.workers.WorkerManager;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.client.ClientCompute;
-import ccc.compute.client.ClientTools;
-import ccc.storage.StorageTools;
-import ccc.storage.ServiceStorage;
-
-import t9.abstracts.net.*;
-
-import utils.TestTools;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
-
 class TestServiceBatchCompute extends TestComputeBase
 {
 	override public function setup() :Null<Promise<Bool>>
@@ -89,7 +50,7 @@ class TestServiceBatchCompute extends TestComputeBase
 					]
 				}
 
-				return ClientTools.postJob(HOST, jobParams)
+				return ClientJSTools.postJob(HOST, jobParams)
 					.thenWait(5000)
 					.pipe(function(result) {
 						var jobId = result.jobId;

@@ -1,16 +1,10 @@
 package ccc.compute.server;
 
 import haxe.remoting.JsonRpc;
+import haxe.DynamicAccess;
 
-import js.Error;
-import js.Node;
-import js.node.Fs;
-import js.node.Path;
 import js.node.Process;
 import js.node.http.*;
-import js.node.Http;
-import js.node.Url;
-import js.node.stream.Readable;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
 import js.npm.Express;
@@ -21,34 +15,12 @@ import js.npm.RedisClient;
 
 import minject.Injector;
 
-import ccc.compute.InitConfigTools;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ServiceBatchCompute;
-import ccc.compute.execution.Job;
-import ccc.compute.execution.Jobs;
-import ccc.compute.ConnectionToolsDocker;
-import ccc.compute.ConnectionToolsRedis;
-import ccc.compute.workers.WorkerProvider;
-import ccc.compute.workers.WorkerProviderBoot2Docker;
-import ccc.compute.workers.WorkerProviderVagrant;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-import ccc.compute.workers.WorkerProviderTools;
-import ccc.compute.workers.WorkerManager;
-import ccc.storage.StorageSourceType;
-import ccc.storage.StorageTools;
-import ccc.storage.StorageDefinition;
-import ccc.storage.ServiceStorage;
-import ccc.storage.StorageRestApi;
-import ccc.storage.ServiceStorageLocalFileSystem;
-
-import promhx.Stream;
+import ccc.storage.*;
 
 import util.RedisTools;
 import util.DockerTools;
 
-using Lambda;
-using ccc.compute.JobTools;
-using promhx.PromiseTools;
+using ccc.compute.server.JobTools;
 
 @:enum
 abstract ServerStatus(String) {
@@ -66,7 +38,7 @@ abstract ServerStatus(String) {
 class ServerCompute
 {
 	public static var StorageService :ServiceStorage;
-	public static var WorkerProvider :WorkerProvider;
+	public static var WorkerProviderInstance :WorkerProvider;
 	public static var StatusStream :Stream<JobStatusUpdate>;
 
 	static function main()
@@ -85,11 +57,25 @@ class ServerCompute
 		js.Node.process.stdout.setMaxListeners(100);
 		js.Node.process.stderr.setMaxListeners(100);
 
+		Constants.DOCKER_CONTAINER_ID = DockerTools.getContainerId();
+
 		//Load env vars from an .env file if present
 		Node.require('dotenv').config({path: '.env', silent: true});
 		Node.require('dotenv').config({path: 'config/.env', silent: true});
 
-		var env = Node.process.env;
+		var env :DynamicAccess<String> = Node.process.env;
+
+		if (env[ENV_VAR_DISABLE_LOGGING] == 'true') {
+			untyped __js__('console.log = function() {}');
+			Log.info('Disabled logging');
+			Logger.GLOBAL_LOG_LEVEL = 100;
+		} else {
+			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
+				var newLogLevel = Std.parseInt(env[ENV_LOG_LEVEL]);
+				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
+			}
+			Log.info('GLOBAL_LOG_LEVEL=${Logger.GLOBAL_LOG_LEVEL}');
+		}
 
 		Node.process.on(ProcessEvent.UncaughtException, function(err) {
 			var errObj = {
@@ -108,7 +94,7 @@ class ServerCompute
 			//Ensure crash is logged before exiting.
 			try {
 				if (Logger.IS_FLUENT) {
-					ccc.compute.FluentTools.logToFluent(Json.stringify(errObj), function() {
+					ccc.compute.server.FluentTools.logToFluent(Json.stringify(errObj), function() {
 						Node.process.exit(1);
 					});
 				} else {
@@ -120,7 +106,7 @@ class ServerCompute
 		});
 
 		//Sanity checks
-		if (ConnectionToolsDocker.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
+		if (util.DockerTools.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
 			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
 			js.Node.process.exit(-1);
 		}
@@ -141,21 +127,6 @@ class ServerCompute
 			}
 		}
 
-		if (Reflect.field(env, ENV_VAR_DISABLE_LOGGING) == 'true') {
-			untyped __js__('console.log = function() {}');
-			Log.warn('Disabled logging');
-			Logger.GLOBAL_LOG_LEVEL = 100;
-		} else {
-			Log.info('$ENV_LOG_LEVEL=${Reflect.field(env, ENV_LOG_LEVEL)}');
-			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
-				var newLogLevel = Std.int(Reflect.field(env, ENV_LOG_LEVEL));
-				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
-			}
-			trace({log_check:'haxe_trace'});
-			trace('trace_without_objectifying');
-			Log.trace('Log.trace');
-		}
-
 		Log.info({start:'CCC server start', version: ServerCommands.version()});
 
 		Log.trace({log_check:'trace'});
@@ -170,7 +141,7 @@ class ServerCompute
 		injector.map('ServiceConfiguration').toValue(config);
 
 		if (config.providers == null) {
-			throw 'config.workerProviders == null';
+			throw 'config.providers == null';
 		}
 
 		/* Storage*/
@@ -271,7 +242,7 @@ class ServerCompute
 		status = ServerStatus.ConnectingToRedis_2_5;
 		Log.info({server_status:status});
 
-		var workerProviders :Array<ccc.compute.workers.WorkerProvider> = [];
+		var workerProviders :Array<WorkerProvider> = [];
 
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
@@ -320,6 +291,13 @@ class ServerCompute
 
 		Promise.promise(true)
 			.pipe(function(_) {
+				return DockerTools.getThisContainerName()
+					.then(function(containerName) {
+						Constants.DOCKER_CONTAINER_NAME = containerName;
+						return true;
+					});
+			})
+			.pipe(function(_) {
 				return ConnectionToolsRedis.getRedisClient()
 					.pipe(function(redis) {
 						//Pipe specific logs from redis since while developing
@@ -350,8 +328,7 @@ class ServerCompute
 				function pollWorkers() {
 					return ccc.compute.server.ServerCommands.statusWorkers(redis)
 						.then(function(data) {
-							Log.info({message:'Workers', workers:data});
-							traceGreen(Json.stringify(data, null, '  '));
+							Log.debug({message:'Workers', workers:data});
 							return true;
 						})
 						.errorPipe(function(err) {
@@ -395,15 +372,17 @@ class ServerCompute
 				//Build and inject the app logic
 				//Create services
 				workerProviders = config.providers.map(WorkerProviderTools.getProvider);
-				WorkerProvider = workerProviders[0];
-				injector.map(ccc.compute.workers.WorkerProvider).toValue(WorkerProvider);
-				injector.injectInto(WorkerProvider);
-				return WorkerProvider.ready;
+				WorkerProviderInstance = workerProviders[0];
+				injector.map(WorkerProvider).toValue(WorkerProviderInstance);
+				injector.injectInto(WorkerProviderInstance);
+				return WorkerProviderInstance.ready;
 			})
 			.then(function(_) {
+				traceRed('HERE111111');
 				//The queue manager
-				var schedulingService = new ccc.compute.ServiceBatchCompute();
-				injector.map(ServiceBatchCompute).toValue(schedulingService);
+				var schedulingService = new ServiceBatchCompute();
+				traceRed('HERE22222');
+				injector.map(ccc.compute.server.ServiceBatchCompute).toValue(schedulingService);
 
 				//Monitor workers
 				var workerManager = new WorkerManager();
@@ -449,13 +428,12 @@ class ServerCompute
 				//Run internal tests
 				Log.debug('Running server functional tests');
 				var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "jobs=true"}')
+				promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "compute=true"}')
 					.then(function(out) {
 						try {
 							var results = Json.parse(out);
 							var result = results.result;
 							if (result.success) {
-								Log.info({TestResults:result});
 								traceGreen(Json.stringify(result));
 							} else {
 								Log.error({TestResults:result});
@@ -571,7 +549,6 @@ class ServerCompute
 				if (map.exists(status.jobId)) {
 					switch(status.JobStatus) {
 						case Pending, Working, Finalizing:
-							// trace('job=${status.jobId} status=${status.JobStatus}');
 						case Finished:
 							notifyJobFinished(status.jobId, status, status.job);
 					}

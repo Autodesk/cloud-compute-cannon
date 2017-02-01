@@ -1,14 +1,5 @@
 package compute;
 
-import ccc.compute.execution.Job;
-import ccc.compute.execution.BatchComputeDocker;
-
-import promhx.Promise;
-
-import t9.abstracts.time.*;
-
-using promhx.PromiseTools;
-
 class MockJob extends Job
 {
 	public var jobDuration :Milliseconds = 0;

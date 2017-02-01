@@ -4,7 +4,9 @@ package ccc.docker.dataxfer;
  * -D DockerDataToolsDebug for extra logging
  */
 import haxe.DynamicAccess;
+import haxe.Json;
 
+import js.Node;
 import js.node.stream.Duplex;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
@@ -21,8 +23,14 @@ import promhx.Stream;
 import promhx.StreamPromises;
 
 import promhx.DockerPromises;
+import promhx.PromiseTools;
 
 import util.streams.StreamTools;
+
+import t9.util.ColorTraces.*;
+
+using Lambda;
+using StringTools;
 
 enum DataTransferType {
 	S3;

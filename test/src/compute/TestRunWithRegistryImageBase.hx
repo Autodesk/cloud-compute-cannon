@@ -1,34 +1,5 @@
 package compute;
 
-import js.npm.RedisClient;
-import js.npm.fsextended.FsExtended;
-
-import promhx.Promise;
-import promhx.StreamPromises;
-
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeQueue;
-import ccc.compute.ComputeTools;
-import ccc.compute.ConnectionToolsRedis;
-import ccc.compute.execution.DockerJobTools;
-import ccc.compute.execution.Jobs;
-import ccc.compute.workers.WorkerManager;
-import ccc.storage.ServiceStorageLocalFileSystem;
-import ccc.storage.StorageSourceType;
-import ccc.storage.ServiceStorage;
-import ccc.storage.StorageDefinition;
-import ccc.storage.StorageTools;
-
-import utils.TestTools;
-
-using promhx.PromiseTools;
-using ccc.compute.InstancePool;
-using ccc.compute.JobTools;
-using ccc.compute.workers.WorkerProviderTools;
-using ccc.compute.JobTools;
-using StringTools;
-using Lambda;
-
 class TestRunWithRegistryImageBase extends TestComputeBase
 {
 

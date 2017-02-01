@@ -2,35 +2,15 @@ package ccc.compute.server;
 
 import haxe.Resource;
 
-import js.node.Fs;
-import js.node.Path;
-import js.node.stream.Readable;
-import js.node.stream.Writable;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
 import js.npm.redis.RedisLuaTools;
-
-import ccc.compute.ComputeQueue;
-import ccc.compute.InstancePool;
-import ccc.compute.JobTools;
-import ccc.compute.execution.DockerJobTools;
-import ccc.compute.workers.WorkerTools;
-import ccc.storage.ServiceStorage;
-
-import promhx.PromiseTools;
-import promhx.StreamPromises;
-import promhx.DockerPromises;
-import promhx.CallbackPromise;
-import promhx.StreamPromises;
-import promhx.RequestPromises;
 
 import util.DockerTools;
 import util.DockerUrl;
 import util.DockerRegistryTools;
 import util.DateFormatTools;
 
-using promhx.PromiseTools;
-using DateTools;
 
 /**
  * Server API methods
@@ -44,6 +24,28 @@ class ServerCommands
 			.then(function(statusBlob) {
 				traceMagenta(Json.stringify(statusBlob, null, "  "));
 				return true;
+			});
+	}
+
+	public static function deletingPending(redis :RedisClient, fs :ServiceStorage) :Promise<DynamicAccess<String>>
+	{
+		return pending(redis)
+			.pipe(function(jobIds) {
+				var result :DynamicAccess<String> = {};
+				return Promise.whenAll(jobIds.map(function(jobId) {
+					return removeJobComplete(redis, fs, jobId, true)
+						.then(function(removeJobResult) {
+							result.set(jobId, removeJobResult);
+							return true;
+						})
+						.errorPipe(function(err) {
+							result.set(jobId, 'Failed to remove jobId=$jobId err=$err');
+							return Promise.promise(false);
+						});
+				}))
+				.then(function(_) {
+					return result;
+				});
 			});
 	}
 
@@ -296,7 +298,7 @@ class ServerCommands
 					})
 					//Clean all workers
 					.pipe(function(_) {
-						return ccc.compute.InstancePool.getAllWorkers(redis)
+						return ccc.compute.server.InstancePool.getAllWorkers(redis)
 							.pipe(function(workerDefs) {
 								return Promise.whenAll(workerDefs.map(
 									function(instance) {
@@ -467,7 +469,7 @@ class ServerCommands
 							return ComputeQueue.removeJob(redis, jobId);
 						})
 						.then(function(_) {
-							return 'removed $jobId';
+							return '$jobId removed';
 						});
 				}
 			});

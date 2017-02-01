@@ -2,17 +2,19 @@ version: '2'
 
 services:
 
-  compute:
+  ccc:
     extends:
       file: docker-compose.core.yml
-      service: compute
+      service: ccc
     image: "quay.io/bionano/cloud-compute-cannon:f5728c67"
     command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
     volumes:
       - ./build/server:/app/server
       - ./ccc_local_storage:/app/ccc_local_storage
+      - ./.env:/app/.env
     environment:
       LOG_LEVEL: "${LOG_LEVEL}"
+      STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
     links:
       - redis
       - registry
@@ -26,9 +28,6 @@ services:
       service: redis
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
-    ports:
-      #Don't expose this port to the host, only linked containers.
-      - "6379:6379"
 
   registry:
     extends:

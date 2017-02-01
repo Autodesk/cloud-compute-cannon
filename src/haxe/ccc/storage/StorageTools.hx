@@ -2,7 +2,7 @@ package ccc.storage;
 
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
-import ccc.compute.Definitions;
+import ccc.compute.shared.Definitions;
 
 import js.npm.PkgCloud;
 import js.npm.PkgCloud.StorageClientP;

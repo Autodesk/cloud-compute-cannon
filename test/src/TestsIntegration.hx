@@ -3,8 +3,8 @@ import js.node.child_process.ChildProcess;
 
 import haxe.unit.async.PromiseTestRunner;
 
-import ccc.compute.ConnectionToolsDocker;
-import ccc.compute.InitConfigTools;
+import ccc.compute.server.ConnectionToolsDocker;
+import ccc.compute.server.InitConfigTools;
 
 using Lambda;
 using StringTools;
@@ -193,7 +193,7 @@ class TestsIntegration
 			runner.add(new storage.TestStorageRestAPI());
 			runner.add(new ccc.compute.server.tests.TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
 			runner.add(new compute.TestRedisMock());
-			if (isInternet && !ConnectionToolsDocker.isInsideContainer()) {
+			if (isInternet && !util.DockerTools.isInsideContainer()) {
 				runner.add(new storage.TestStorageSftp());
 			}
 		}
@@ -205,7 +205,7 @@ class TestsIntegration
 
 			//These require access to a local docker server
 			if (isDockerProvider) {
-				ccc.compute.workers.WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
+				WorkerProviderBoot2Docker.setHostWorkerDirectoryMount();
 				runner.add(new compute.TestScheduler());
 				runner.add(new compute.TestJobStates());
 				runner.add(new compute.TestInstancePool());

@@ -1,19 +1,5 @@
 package compute;
 
-import promhx.Promise;
-
-import ccc.compute.InstancePool;
-import ccc.compute.InitConfigTools;
-import ccc.compute.workers.WorkerProviderPkgCloud;
-import ccc.storage.StorageTools;
-import ccc.storage.ServiceStorage;
-
-using promhx.PromiseTools;
-using ccc.compute.InstancePool;
-using ccc.compute.workers.WorkerProviderTools;
-using StringTools;
-using Lambda;
-
 class TestCompleteJobSubmissionAmazon extends TestCompleteJobSubmissionBase
 {
 	private var _storageService :ServiceStorage;

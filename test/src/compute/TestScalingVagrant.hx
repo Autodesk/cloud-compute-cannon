@@ -1,37 +1,5 @@
 package compute;
 
-import haxe.Json;
-
-import js.Node;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.fsextended.FsExtended;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-import promhx.PromiseTools;
-import promhx.RedisPromises;
-
-import ccc.compute.ServiceBatchCompute;
-import ccc.compute.InstancePool;
-import ccc.compute.ComputeTools;
-import ccc.compute.workers.WorkerProvider;
-import ccc.compute.workers.WorkerProviderVagrant;
-import ccc.compute.workers.VagrantTools;
-import ccc.storage.ServiceStorage;
-import ccc.storage.ServiceStorageLocalFileSystem;
-
-import utils.TestTools;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
-using ccc.compute.InstancePool;
-
 class TestScalingVagrant extends TestScalingBase
 {
 	public function new() super();

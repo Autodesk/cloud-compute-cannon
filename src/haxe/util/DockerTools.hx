@@ -1,6 +1,10 @@
 package util;
 
+import ccc.compute.shared.AbstractLogger;
+import ccc.compute.shared.Logger;
+
 import haxe.Json;
+import haxe.DynamicAccess;
 
 import js.Node;
 import js.node.Fs;
@@ -13,6 +17,7 @@ import js.node.stream.Readable;
 import js.node.stream.Writable;
 
 import promhx.Promise;
+import promhx.Stream;
 import promhx.CallbackPromise;
 import promhx.DockerPromises;
 import promhx.RetryPromise;
@@ -382,7 +387,7 @@ class DockerTools
 	public static function addExposedPortsToContainerCreation(opts :CreateContainerOptions, ports :Map<Int,Int>)
 	{
 		//https://groups.google.com/forum/#!searchin/docker-user/port$20redirection/docker-user/aHbNFACcTfs/nLY-oUihEAIJ
-		var exposedPortsObj :TypedDynamicObject<String, {}>;
+		var exposedPortsObj :DynamicAccess<{}>;
 		if (ports != null) {
 			exposedPortsObj = {};
 			for (port in ports.keys()) {
@@ -628,6 +633,38 @@ class DockerTools
 		};
 	}
 
+	public static function createEventStream(docker :DockerConnectionOpts) :Stream<EventStreamItem>
+	{
+		if (docker.host == null) {
+			return null;
+		}
+
+		var now = Std.int(Date.now().getTime());
+
+		var dockerUrl = '${docker.protocol != null ? docker.protocol : "http"}://${docker.host}:${docker.port}/events?since=$now';
+
+		var eventStream = promhx.HttpStreams.createHttpGetStream(dockerUrl);
+
+		var stream = eventStream.then(function(s :String) {
+			try {
+				return Json.parse(s);
+			} catch (err :Dynamic) {
+				s = s.replace('\\"', '\\');
+				try {
+					return Json.parse(s);
+				} catch (err2 :Dynamic) {
+					throw new js.Error('Cannot JSON parse event string [[[$s]]] err=${Json.stringify(err)}');
+				}
+			}
+		});
+
+		stream.endThen(function(_) {
+			eventStream.end();
+		});
+
+		return stream;
+	}
+
 	public static function listImages(docker :Docker) :Promise<Array<ImageData>>
 	{
 		var promise = new CallbackPromise();
@@ -658,5 +695,88 @@ class DockerTools
 	public static function createLabelFilter(labelKey :String)
 	{
 		return Json.stringify({label:[labelKey]});
+	}
+
+	/**
+	 * Assuming this process is in a container, get the container id.
+	 */
+	public static function getContainerId() :String
+	{
+		if (isInsideContainer()) {
+			var stdout :String = js.node.ChildProcess.execSync("cat /proc/1/cgroup | grep 'docker/' | tail -1 | sed 's/^.*\\///'", {stdio:['ignore','pipe','ignore']}) + "";
+			return stdout.trim();
+		} else {
+			return null;
+		}
+	}
+
+	public static function getThisContainerName() :Promise<String>
+	{
+		var containerId = getContainerId();
+		if (containerId == null) {
+			return Promise.promise(null);
+		}
+		return getContainerName(new Docker({socketPath:'/var/run/docker.sock'}), containerId);
+	}
+
+	public static function getThisContainerNetwork() :Promise<String>
+	{
+		var containerId = getContainerId();
+		if (containerId == null) {
+			return Promise.promise(null);
+		}
+		return getContainerNetwork(new Docker({socketPath:'/var/run/docker.sock'}), containerId);
+	}
+
+	public static function getContainerData(docker :Docker, containerId :String) :Promise<ContainerData>
+	{
+		return DockerPromises.listContainers(docker, {})
+			.pipe(function(containerData) {
+				for (container in containerData) {
+					if (container.Id == containerId) {
+						return Promise.promise(container);
+					}
+				}
+				return Promise.promise(null);
+			});
+	}
+
+	public static function getContainerNetwork(docker :Docker, containerId :String) :Promise<String>
+	{
+		return DockerPromises.listContainers(docker, {})
+			.pipe(function(containerData) {
+				trace(containerData);
+				for (container in containerData) {
+					if (container.Id == containerId) {
+						return Promise.promise(container.HostConfig.NetworkMode);
+					}
+				}
+				return Promise.promise(null);
+			});
+	}
+
+	public static function getContainerName(docker :Docker, containerId :String) :Promise<String>
+	{
+		return DockerPromises.listContainers(docker, {})
+			.pipe(function(containerData) {
+				for (container in containerData) {
+					if (container.Id == containerId) {
+						return Promise.promise(container.Names[0]);
+					}
+				}
+				return Promise.promise(null);
+			});
+	}
+
+	public static function isInsideContainer() :Bool
+	{
+		//http://stackoverflow.com/questions/23513045/how-to-check-if-a-process-is-running-inside-docker-container
+		try {
+			var stdout :String = js.node.ChildProcess.execSync('cat /proc/1/cgroup', {stdio:['ignore','pipe','ignore']});
+			var output = Std.string(stdout);
+			return output.indexOf('/docker') > -1;
+		} catch (ignored :Dynamic) {
+			return false;
+		}
 	}
 }

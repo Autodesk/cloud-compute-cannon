@@ -2,7 +2,7 @@ version: '2'
 
 services:
 
-  compute:
+  ccc:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # #This volume is needed for running computes locally
@@ -34,6 +34,7 @@ services:
       CLEAR_DB_ON_START: "${CLEAR_DB_ON_START}"
 
   redis:
+    restart: always
     image: redis:3.2.0-alpine
     command: redis-server /usr/local/etc/redis/redis.conf
     ports:
@@ -49,6 +50,7 @@ services:
     #docker-compose doesn't like mixing "6379:6379" and "6379" type port entries
 
   registry:
+    restart: always
     image: registry:2.4.0
     environment:
       REGISTRY_HTTP_ADDR: 0.0.0.0:5001
@@ -56,18 +58,21 @@ services:
       - "5001:5001"
 
   fluentd:
+    restart: always
     command: ["fluentd", "-c", "/fluentd/etc/fluent.conf", "-p", "/fluentd/plugins"]
     ports:
       - "24225:24225"
       - "9881:9881"
 
   elasticsearch:
+    restart: always
     image: elasticsearch:2.3
     ports:
       - "9200:9200"
       - "9300:9300"
 
   kibana:
+    restart: always
     image: kibana:4.4.2
     ports:
       - "5601:5601"

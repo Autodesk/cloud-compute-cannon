@@ -1,26 +1,4 @@
- package compute;
-
-import haxe.Json;
-import haxe.unit.async.PromiseTest;
-
-import js.Node;
-import js.node.Path;
-import js.node.Fs;
-import js.npm.RedisClient;
-
-import promhx.Promise;
-import promhx.Deferred;
-import promhx.Stream;
-import promhx.deferred.DeferredPromise;
-import promhx.PromiseTools;
-
-import util.RedisTools;
-import ccc.compute.*;
-
-using StringTools;
-using Lambda;
-using DateTools;
-using promhx.PromiseTools;
+package compute;
 
 typedef TestType = {
 	var id :JobId;

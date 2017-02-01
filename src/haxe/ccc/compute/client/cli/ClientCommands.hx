@@ -1,19 +1,11 @@
 package ccc.compute.client.cli;
 
-import ccc.compute.client.ClientCompute;
-import ccc.compute.client.ClientTools;
-import ccc.compute.JobTools;
-import ccc.compute.InitConfigTools;
-import ccc.compute.ServiceBatchCompute;
-import ccc.compute.workers.WorkerProviderTools;
-import ccc.compute.server.ProviderTools;
-import ccc.compute.server.ProviderTools.*;
+import ccc.compute.client.js.ClientJSTools;
 import ccc.compute.client.cli.CliTools.*;
-import ccc.storage.ServiceStorageLocalFileSystem;
+import ccc.compute.client.util.ClientCompute;
 
 import haxe.Resource;
 
-import js.Node;
 import js.node.http.*;
 import js.node.ChildProcess;
 import js.node.Path;
@@ -22,20 +14,12 @@ import js.node.Fs;
 import js.npm.fsextended.FsExtended;
 import js.npm.request.Request;
 
-import promhx.Promise;
-import promhx.RequestPromises;
-import promhx.deferred.DeferredPromise;
-
 import yaml.Yaml;
 
 import util.SshTools;
 import util.streams.StreamTools;
 
-using ccc.compute.ComputeTools;
-using promhx.PromiseTools;
-using StringTools;
-using DateTools;
-using Lambda;
+using ccc.compute.server.ComputeTools;
 using t9.util.ColorTraces;
 
 enum ClientResult {
@@ -291,7 +275,7 @@ class ClientCommands
 		var address = getServerAddress();
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return ClientTools.postJob(address, jobParams, inputStreams);
+				return ClientJSTools.postJob(address, jobParams, inputStreams);
 			});
 	}
 

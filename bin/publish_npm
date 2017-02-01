@@ -7,6 +7,8 @@ then
   exit 1
 fi
 
+##Build the cli
+
 bin/build-cli
 
 cd build/publish
@@ -24,4 +26,3 @@ git push origin
 git push upstream
 
 npm install -g cloud-compute-cannon
-

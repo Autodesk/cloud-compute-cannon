@@ -16,10 +16,10 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.RequestPromises;
 
-import ccc.compute.JobTools;
+import ccc.compute.server.JobTools;
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageTools;
-import ccc.compute.ComputeQueue;
+import ccc.compute.server.ComputeQueue;
 
 using StringTools;
 using Lambda;
@@ -148,7 +148,7 @@ class TestTools
 			jobId: jobId,
 			computeJobId: computeJobId,
 			worker: null,
-			image: {type:DockerImageSourceType.Context, value:contextPath, options:{t:computeJobId}},
+			image: {type:DockerImageSourceType.Context, value:contextPath, optionsBuild:{t:computeJobId}},
 			inputs: FsExtended.listFilesSync(inputsPath),
 		};
 
