@@ -13,6 +13,8 @@ services:
       CLIENT_DEPLOYMENT: "true"
     logging:
       driver: json-file
+      options:
+        max-size: 50m
 
   redis:
     volumes:
