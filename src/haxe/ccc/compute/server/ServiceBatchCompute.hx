@@ -55,6 +55,26 @@ class ServiceBatchCompute
 	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:10 * 60000};//10 minutes
 
 	@rpc({
+		alias:'deleteAllJobs',
+		doc:'Deletes all jobs'
+	})
+	@:keep
+	public function deleteAllJobs()
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServerCommands.deletingPending(_redis, _fs)
+			.pipe(function(pendingDeleted) {
+				return doJobCommand(JobCLICommand.Remove, [])
+					.then(function(runningDeleted) {
+						return {pending:pendingDeleted, running:runningDeleted};
+					});
+			});
+#else
+		return Promise.promise(true);
+#end
+	}
+
+	@rpc({
 		alias:'jobs-pending-delete',
 		doc:'Deletes all pending jobs'
 	})
