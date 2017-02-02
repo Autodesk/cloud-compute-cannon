@@ -33,7 +33,15 @@ class FluentTools
 		createEmitter()(obj, cb);
 	}
 
-	static var FLUENT_PORT :Int = Reflect.hasField(env, 'FLUENT_PORT') ? Std.int(Reflect.field(env, 'FLUENT_PORT')) : FLUENTD_SOURCE_PORT;
+	private static function readFluentPort() :Int
+	{
+		var env = js.Node.process.env;
+		var fluentPort :Int = Reflect.hasField(env, 'FLUENT_PORT') ? Std.int(Reflect.field(env, 'FLUENT_PORT')) : FLUENTD_SOURCE_PORT;	
+
+		return fluentPort;
+	}
+
+	static var FLUENT_PORT = readFluentPort();
 
 	static var static_emitter =
 		FluentLogger.createFluentSender(null,
