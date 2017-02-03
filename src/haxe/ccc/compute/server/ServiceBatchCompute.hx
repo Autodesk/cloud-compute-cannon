@@ -69,11 +69,9 @@ class ServiceBatchCompute
 						var pendingDeletedCount = pendingDeleted != null ? Reflect.fields(pendingDeleted).length : 0;
 						var runningDeletedCount = runningDeleted != null ? Reflect.fields(runningDeleted).length : 0;
 						return {
-							deleted: {
-								total: pendingDeletedCount + runningDeletedCount,
-								pending: pendingDeletedCount,
-								running: runningDeletedCount
-							}
+							total: pendingDeletedCount + runningDeletedCount,
+							pending: pendingDeletedCount,
+							running: runningDeletedCount
 						};
 					});
 			});
