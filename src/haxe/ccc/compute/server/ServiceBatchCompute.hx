@@ -68,7 +68,13 @@ class ServiceBatchCompute
 					.then(function(runningDeleted) {
 						var pendingDeletedCount = pendingDeleted != null ? Reflect.fields(pendingDeleted).length : 0;
 						var runningDeletedCount = runningDeleted != null ? Reflect.fields(runningDeleted).length : 0;
-						return {pendingDeleted:pendingDeletedCount, runningDeleted:runningDeletedCount};
+						return {
+							deleted: {
+								total: pendingDeletedCount + runningDeletedCount,
+								pending: pendingDeletedCount,
+								running: runningDeletedCount
+							}
+						};
 					});
 			});
 #else
