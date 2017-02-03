@@ -362,7 +362,7 @@ class BatchComputeDocker
 									opts.HostConfig.NetworkMode = 'container:${Constants.DOCKER_CONTAINER_NAME}';
 								}
 
-								log.info({JobWorkingStatus:jobWorkingStatus, log:'Running container', opts:opts});
+								log.debug({JobWorkingStatus:jobWorkingStatus, log:'Running container', opts:opts});
 
 								return DockerJobTools.runDockerContainer(docker, opts, log)
 									.then(function(containerunResult) {

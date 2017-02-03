@@ -236,9 +236,7 @@ class DockerJobTools
 	public static function runDockerContainer(docker :Docker, opts :CreateContainerOptions, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
 	{
 		log = Logger.ensureLog(log, {image:opts.Image, computejobid:opts.Labels.computeJobId, dockerhost:docker.modem.host});
-		log.info({log:'run_docker_container', opts:opts});
 		var promise = new DeferredPromise();
-		log.debug({log:'run_docker_container', opts:opts});
 		docker.createContainer(opts, function(createContainerError, container) {
 			if (createContainerError != null) {
 				log.error({log:'error_creating_container', opts:opts, error:createContainerError});

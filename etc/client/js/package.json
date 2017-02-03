@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon-client",
-  "version": "0.1.49",
+  "version": "0.1.51",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "main": "lib.js",
   "repository": {

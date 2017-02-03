@@ -66,7 +66,9 @@ class ServiceBatchCompute
 			.pipe(function(pendingDeleted) {
 				return doJobCommand(JobCLICommand.Remove, [])
 					.then(function(runningDeleted) {
-						return {pending:pendingDeleted, running:runningDeleted};
+						var pendingDeletedCount = pendingDeleted != null ? Reflect.fields(pendingDeleted).length : 0;
+						var runningDeletedCount = runningDeleted != null ? Reflect.fields(runningDeleted).length : 0;
+						return {pendingDeleted:pendingDeletedCount, runningDeleted:runningDeletedCount};
 					});
 			});
 #else
