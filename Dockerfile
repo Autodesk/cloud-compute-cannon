@@ -47,7 +47,7 @@ EXPOSE $PORT
 EXPOSE 9001
 EXPOSE 9002
 
-#Do not watch the entire tree, just that file
-CMD forever --watchDirectory build build/server/cloud-compute-cannon-server.js
+#Do not watch the entire tree, just that file. Limit retries to 5
+CMD forever -m 5 --watchDirectory build build/cloud-compute-cannon-server.js
 
 

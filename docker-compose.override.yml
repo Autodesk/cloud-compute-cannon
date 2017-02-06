@@ -14,7 +14,9 @@ services:
       - fluentd
     logging:
       driver: json-file
-
+      options:
+        max-size: 50m
+        
   redis:
     #This config disables persistance to disk since we do not need it for development
     command: redis-server /usr/local/etc/redis/redis.conf
