@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
-docker-compose stop && docker-compose rm -f && docker-compose build && docker-compose up -d --remove-orphans
+dc="/opt/bin/docker-compose"
+$dc stop && $dc rm -f && $dc build && $dc up -d --remove-orphans
