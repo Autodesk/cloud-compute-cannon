@@ -13,6 +13,10 @@ class ClientJS
 	@:expose('connect')
 	public static function connect (host :String)
 	{
+		if (host == null) {
+			Log.warn('host argument is null, defaulting to "localhost:9000", the default local development server');
+			host = 'localhost:9000';
+		}
 		var rpcUrl = ClientJSTools.rpcUrl(host);
 		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient("ccc.compute.server.ServiceBatchCompute", false)
 			.setUrl(rpcUrl);

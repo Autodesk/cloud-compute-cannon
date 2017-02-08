@@ -39,6 +39,59 @@ This installs the `ccc` executable.
 
 ## Running
 
+### Environmental Variables
+
+
+#### DISABLE_STARTUP_TEST
+
+	DISABLE_STARTUP_TEST=1
+
+Default: `false` (tests will run by default)
+
+To disable tests on startup:
+
+	DISABLE_STARTUP_TEST=0 | DISABLE_STARTUP_TEST=false
+
+#### PORT
+
+	PORT=9000
+
+#### COMPUTE_CONFIG
+
+A string of the YAML config (below).
+
+#### CONFIG_PATH
+
+The path to the config file in the docker container. 
+
+Default: `/app/config/ccc.yml`
+
+#### REMOVE_JOBS_ON_STARTUP
+
+	REMOVE_JOBS_ON_STARTUP=1 || REMOVE_JOBS_ON_STARTUP=true
+
+Default: `false`
+
+Removes all pending and running jobs on startup. Usually this is only useful for debugging or local dev environments.
+
+#### LOG_LEVEL
+
+	LOG_LEVEL=20
+
+10=trace
+20=debug
+30=info
+40=warn
+50=error
+60=critical
+
+Default: `20`
+
+To disable all logging:
+
+	DISABLE_LOGGING=true or DISABLE_LOGGING=1
+
+
 ### 'Hello world' example
 
 --command=\'["python", "-c", "print(\\\"Hello World!\\\")"]
