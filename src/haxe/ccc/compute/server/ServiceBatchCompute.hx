@@ -311,25 +311,6 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
-		alias:'image-pull',
-		doc:'Pulls a docker image and tags it into the local registry for workers to consume.',
-		args:{
-			tag: {doc: 'Custom tag for the image', short:'t'},
-			opts: {doc: 'ADD ME', short:'o'}
-		}
-	})
-#if ((nodejs && !macro) && !excludeccc)
-	public function pullRemoteImageIntoRegistry(image :String, ?tag :String, ?opts: PullImageOptions) :Promise<DockerUrl>
-	{
-		return ServerCommands.pushImageIntoRegistry(image, tag, opts);
-#else
-	public function pullRemoteImageIntoRegistry(image :String, ?tag :String, ?opts: PullImageOptions) :Promise<Dynamic>
-	{
-		return Promise.promise(null);
-#end
-	}
-
-	@rpc({
 		alias:'submitjob',
 		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
 		args:{
@@ -598,56 +579,7 @@ class ServiceBatchCompute
 		router.post(SERVER_API_RPC_URL_FRAGMENT, Routes.generatePostRequestHandler(serverContext, timeout));
 		router.get(SERVER_API_RPC_URL_FRAGMENT + '*', Routes.generateGetRequestHandler(serverContext, SERVER_API_RPC_URL_FRAGMENT, timeout));
 
-		router.post('/build/*', buildDockerImageRouter);
 		return router;
-	}
-
-	function buildDockerImageRouter(req :IncomingMessage, res :ServerResponse, next :?Dynamic->Void) :Void
-	{
-		function returnError(err :String, ?statusCode :Int = 400) {
-			res.setHeader("content-type","application/json-rpc");
-			res.writeHead(statusCode);
-			res.end(Json.stringify({
-				error: err
-			}));
-		}
-
-		var repositoryString :String = untyped req.params[0];
-
-		if (repositoryString == null) {
-			returnError('You must supply a docker repository after ".../build/"', 400);
-			return;
-		}
-
-		var repository :DockerUrl = repositoryString;
-
-		try {
-			if (repository.name == null) {
-				returnError('You must supply a docker repository after ".../build/"', 400);
-				return;
-			}
-			if (repository.tag == null) {
-				returnError('All images must have a tag', 400);
-				return;
-			}
-		} catch (err :Dynamic) {
-			returnError(err, 500);
-			return;
-		}
-
-		res.on('error', function(err) {
-			Log.error({error:err});
-		});
-		ServerCommands.buildImageIntoRegistry(req, repository, res)
-			.then(function(imageUrl) {
-				js.Node.setTimeout(function() {
-					res.writeHead(200);
-					res.end(imageUrl);
-				}, 5000);
-			})
-			.catchError(function(err) {
-				returnError('Failed to build image err=$err', 500);
-			});
 	}
 
 	function runComputeJobRequest(job :BasicBatchProcessRequest) :Promise<JobResult>

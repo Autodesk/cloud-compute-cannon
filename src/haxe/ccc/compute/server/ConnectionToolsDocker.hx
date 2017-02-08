@@ -26,15 +26,6 @@ class ConnectionToolsDocker
 		}
 	}
 
-	public static function getLocalRegistryHost() :Host
-	{
-		if (isInsideContainer()) {
-			return 'registry:$REGISTRY_DEFAULT_PORT';
-		} else {
-			return new Host(getDockerHost(), new Port(REGISTRY_DEFAULT_PORT));
-		}
-	}
-
 	/**
 	 * Assuming this process is in a container, get the host IP address.
 	 * This might not be available, usually you have to pass in --net='host'

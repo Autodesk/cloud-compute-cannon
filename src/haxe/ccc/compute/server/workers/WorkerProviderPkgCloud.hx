@@ -78,7 +78,6 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 				return getPrivateHostName(cast _config)
 					.then(function(hostname) {
 						Constants.SERVER_HOSTNAME_PRIVATE = hostname;
-						Constants.REGISTRY = new Host(new HostName(Constants.SERVER_HOSTNAME_PRIVATE), new Port(REGISTRY_DEFAULT_PORT));
 						Log.debug('SERVER_HOSTNAME_PRIVATE=${Constants.SERVER_HOSTNAME_PRIVATE}');
 						return true;
 					});

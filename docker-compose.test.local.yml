@@ -18,11 +18,6 @@ services:
       driver: "none"
       options: {}
 
-  registry:
-    logging:
-      driver: "none"
-      options: {}
-
   fluentd:
     image: fluent/fluentd:v0.14.2
     volumes:

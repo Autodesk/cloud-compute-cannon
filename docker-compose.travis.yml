@@ -20,8 +20,6 @@ services:
       - fluentd
     environment:
       TRAVIS: "${TRAVIS}"
-    # volumes:
-    #   - ./build/server:/app/server
     logging:
       driver: "json-file"
       options: {}

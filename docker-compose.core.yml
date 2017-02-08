@@ -15,10 +15,6 @@ services:
       PORT: "9000"
       # OPTIONAL: Path to the mounted configuration file
       # CONFIG_PATH: "/app/ccc.yml"
-      #If the REGISTRY field is set, it will override REGISTRY_PORT
-      # REGISTRY_ADDRESS: "5001"
-      # OPTIONAL
-      # REGISTRY: "registry:5001"
       # OPTIONAL text flattened yaml of the server configuration.
       COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
       #This is used to get the correct host working directory to pass into the
@@ -48,14 +44,6 @@ services:
     #port outside the machine, whereas the development case exposes the port
     #because sometimes the dev server is run outside a container context
     #docker-compose doesn't like mixing "6379:6379" and "6379" type port entries
-
-  registry:
-    restart: always
-    image: registry:2.4.0
-    environment:
-      REGISTRY_HTTP_ADDR: 0.0.0.0:5001
-    ports:
-      - "5001:5001"
 
   fluentd:
     restart: always

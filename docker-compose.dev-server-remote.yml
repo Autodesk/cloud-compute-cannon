@@ -16,7 +16,6 @@ services:
       CONFIG_PATH: "/app/config/ccc.yml"
     links:
       - redis
-      - registry
       - fluentd
     logging:
       driver: json-file
@@ -30,16 +29,6 @@ services:
     ports:
       #Don't expose this port to the host, only linked containers.
       - "6379:6379"
-
-  registry:
-    extends:
-      file: docker-compose.core.yml
-      service: registry
-    environment:
-      SETTINGS_FLAVOR: local
-      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
-    logging:
-      driver: none
 
   fluentd:
     build: ./etc/log/
