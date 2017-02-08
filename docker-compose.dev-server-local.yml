@@ -17,7 +17,6 @@ services:
       STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
     links:
       - redis
-      - registry
       - fluentd
     logging:
       driver: json-file
@@ -28,16 +27,6 @@ services:
       service: redis
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
-
-  registry:
-    extends:
-      file: docker-compose.core.yml
-      service: registry
-    environment:
-      SETTINGS_FLAVOR: local
-      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
-    logging:
-      driver: none
 
   fluentd:
     build: ./etc/log/

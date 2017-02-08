@@ -269,8 +269,7 @@ class ProviderTools
 		//Ensure the other two containers (redis + registry)
 		return promhx.Promise.whenAll(
 			[
-				util.DockerTools.ensureContainer(docker, 'redis:3', 'name', SERVER_CONTAINER_TAG_REDIS),
-				util.DockerTools.ensureContainer(docker, 'registry:2', 'name', SERVER_CONTAINER_TAG_REGISTRY, null, [Constants.REGISTRY_DEFAULT_PORT=>REGISTRY_DEFAULT_PORT])
+				util.DockerTools.ensureContainer(docker, 'redis:3', 'name', SERVER_CONTAINER_TAG_REDIS)
 			])
 		.pipe(function(_) {
 			trace('Redis and registry containers running...');
@@ -292,8 +291,7 @@ class ProviderTools
 						],
 						HostConfig: {
 							Links: [
-								'$SERVER_CONTAINER_TAG_REDIS:redis',
-								'$SERVER_CONTAINER_TAG_REGISTRY:registry'
+								'$SERVER_CONTAINER_TAG_REDIS:redis'
 							]
 						}
 					}

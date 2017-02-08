@@ -16,11 +16,6 @@ services:
       driver: "json-file"
       options: {}
 
-  registry:
-    logging:
-      driver: "none"
-      options: {}
-
   elasticsearch:
     logging:
       driver: "none"

@@ -45,7 +45,6 @@ class Constants
 
 	/* Env vars */
 	inline public static var ENV_VAR_DISABLE_LOGGING = 'DISABLE_LOGGING';
-	inline public static var ENV_VAR_ADDRESS_REGISTRY = 'REGISTRY';
 	inline public static var ENV_VAR_AWS_PROVIDER_CONFIG = 'AWS_PROVIDER_CONFIG';
 	inline public static var ENV_VAR_COMPUTE_CONFIG = 'COMPUTE_CONFIG';
 	inline public static var ENV_VAR_COMPUTE_CONFIG_PATH = 'CONFIG_PATH';
@@ -64,7 +63,6 @@ class Constants
 	inline public static var ENV_REMOVE_JOBS_ON_STARTUP = 'REMOVE_JOBS_ON_STARTUP';
 
 	/* Server */
-	public static var REGISTRY :Host;
 	public static var DOCKER_CONTAINER_ID :String = null;
 	public static var DOCKER_CONTAINER_NAME :String = null;
 	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
@@ -73,7 +71,6 @@ class Constants
 	//This port will be open to linked containers via HTTP (not HTTPS)
 	inline public static var SERVER_HTTP_PORT = 9001;
 	inline public static var SERVER_RELOADER_PORT = 9002;
-	inline public static var REGISTRY_DEFAULT_PORT = 5001;
 	inline public static var REDIS_PORT = 6379;
 	inline public static var DOCKER_PORT = 2375;
 	inline public static var SERVER_PATH_CHECKS = '/checks';
@@ -86,11 +83,9 @@ class Constants
 	inline public static var SERVER_API_RPC_URL_FRAGMENT = '/rpc';
 	inline public static var SERVER_RPC_URL = '${SERVER_API_URL}${SERVER_API_RPC_URL_FRAGMENT}';
 	inline public static var SERVER_URL_API_DOCKER_IMAGE_BUILD = '$SERVER_API_URL/build';
-	inline public static var ADDRESS_REGISTRY_DEFAULT = 'localhost:$REGISTRY_DEFAULT_PORT';
 	inline public static var DOCKER_IMAGE_DEFAULT = 'docker.io/busybox:latest';
 	inline public static var SERVER_CONTAINER_TAG_SERVER = 'ccc_server';
 	inline public static var SERVER_CONTAINER_TAG_REDIS = 'ccc_redis';
-	inline public static var SERVER_CONTAINER_TAG_REGISTRY = 'ccc_registry';
 	inline public static var SERVER_INSTALL_COMPOSE_SCRIPT = 'etc/server/install_docker_compose.sh';
 	inline public static var SERVER_MOUNTED_CONFIG_FILE_NAME = 'ccc.yml';
 	inline public static var SERVER_MOUNTED_CONFIG_FILE_DEFAULT = 'config/$SERVER_MOUNTED_CONFIG_FILE_NAME';

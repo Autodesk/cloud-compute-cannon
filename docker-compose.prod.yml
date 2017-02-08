@@ -25,14 +25,3 @@ services:
       options:
         tag: "docker.ccc{{.ImageName}}/{{.ID}}"
         fluentd-address: "${BNR_INSTANCE_IP}:24226"
-
-  registry:
-    #TODO: use a more sophisticated cleanup mechanism, and use redis?
-    environment:
-      SETTINGS_FLAVOR: local
-      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
-    logging:
-      driver: "fluentd"
-      options:
-        tag: "docker.ccc{{.ImageName}}/{{.ID}}"
-        fluentd-address: "${BNR_INSTANCE_IP}:24226"

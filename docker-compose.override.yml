@@ -10,13 +10,12 @@ services:
       - ./:/config
     links:
       - redis
-      - registry
       - fluentd
     logging:
       driver: json-file
       options:
         max-size: 50m
-        
+
   redis:
     #This config disables persistance to disk since we do not need it for development
     command: redis-server /usr/local/etc/redis/redis.conf
@@ -27,15 +26,6 @@ services:
       - "6379:6379"
     links:
       - fluentd
-
-  registry:
-    environment:
-      SETTINGS_FLAVOR: local
-      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
-    links:
-      - fluentd
-    logging:
-      driver: none
 
   fluentd:
     build: ./etc/log/

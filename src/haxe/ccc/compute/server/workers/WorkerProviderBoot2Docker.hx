@@ -83,7 +83,6 @@ class WorkerProviderBoot2Docker extends WorkerProviderBase
 		}
 
 		var hostName = ConnectionToolsDocker.getDockerHost();
-		Constants.REGISTRY = new Host(hostName, new Port(REGISTRY_DEFAULT_PORT));
 		setHostWorkerDirectoryMount();
 		_localJobData = WORKER_JOB_DATA_DIRECTORY_WITHIN_CONTAINER;
 		if (!util.DockerTools.isInsideContainer()) {

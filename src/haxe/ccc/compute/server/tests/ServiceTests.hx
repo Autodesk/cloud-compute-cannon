@@ -28,14 +28,13 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?registry :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || registry || worker || storage || compute || dockervolumes || jobs)) {
+		if (!(core || all || worker || storage || compute || dockervolumes || jobs)) {
 			compute = true;
 		}
 		if (all) {
 			core = true;
-			registry = true;
 			worker = true;
 			storage = true;
 			compute = true;
@@ -45,7 +44,6 @@ class ServiceTests
 		var logString :haxe.DynamicAccess<Bool> = {
 			all: all,
 			core: core,
-			registry: registry,
 			worker: worker,
 			storage: storage,
 			compute: compute,
@@ -83,10 +81,6 @@ class ServiceTests
 		if (dockervolumes || core || storage) {
 			runner.add(new ccc.docker.dataxfer.TestDataTransfer());
 		}
-
-		// if (registry) {
-		// 	runner.add(new TestRegistry(targetHost));
-		// }
 
 		if (worker) {
 			var testWorkers = new TestWorkerMonitoring();
