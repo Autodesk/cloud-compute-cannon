@@ -1039,6 +1039,7 @@ class ServiceBatchCompute
 							request(input.value).pipe(readable);
 							promises.push(_fs.writeFile(inputFilePath, readable));
 						} else {
+							Log.warn({url:url});
 							promises.push(
 								_fs.readFile(url)
 									.pipe(function(stream) {
