@@ -31,7 +31,7 @@ class CliMain
 		untyped bunyanLogger.level(40);
 
 		//Embed various files
-		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
+		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*", "etc/client/.*", "etc/docker/.*"]);
 
 		var program :Commander = Node.require('commander');
 		//Is there a remote server config? If not, the commands will be limited.

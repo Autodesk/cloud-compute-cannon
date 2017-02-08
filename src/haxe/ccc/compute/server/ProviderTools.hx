@@ -26,91 +26,6 @@ typedef ProviderConfig=ServiceConfigurationWorkerProvider;
  */
 class ProviderTools
 {
-	// public static function loadLocalServerConnection() :Promise<ServerConnectionBlob>
-	// {
-	// 	return isServerConfigStoredLocally()
-	// 		.then(function(isLocalConfig) {
-	// 			if (isLocalConfig) {
-	// 				var serverDef :ServerConnectionBlob = Json.parse(FsExtended.readFileSync(SERVER_CONNECTION_FILE, {}));
-	// 				return serverDef;
-	// 			} else {
-	// 				return null;
-	// 			}
-	// 		});
-	// }
-
-
-// 	public static function serverCheck(host :Host) :Promise<Bool>
-// 	{
-// 		return RequestPromises.get('http://${host}${Constants.SERVER_PATH_CHECKS}')
-// 			.then(function(out) {
-// 				return out == Constants.SERVER_PATH_CHECKS_OK;
-// 			})
-// 			.errorPipe(function(err) {//Don't care about the specific error
-// #if tests
-// 				Log.error(err);
-// #end
-// 				return Promise.promise(false);
-// 			});
-// 	}
-
-
-	/**
-	 * Saves the server configuration in the cwd.
-	 * @param  blob :ServerConnectionBlob [description]
-	 * @return      [description]
-	 */
-	// public static function saveLocalServerConnection(blob :ServerConnectionBlob) :Promise<Bool>
-	// {
-	// 	var base = Path.dirname(SERVER_CONNECTION_FILE);
-	// 	FsExtended.ensureDirSync(base);
-	// 	FsExtended.writeFileSync(SERVER_CONNECTION_FILE, Json.stringify(blob, null, '\t'));
-	// 	return Promise.promise(true);
-	// }
-
-	/**
-	 * Instantiates a server instance.
-	 * @param  config :ProviderConfig [description]
-	 * @return        [description]
-	 */
-	// public static function buildRemoteServer(config :ProviderConfig) :Promise<InstanceDefinition>
-	// {
-	// 	trace('buildRemoteServer');
-	// 	return createServerInstance(config)
-	// 		.pipe(function(instanceDef :InstanceDefinition) {
-	// 			//Write the server config
-	// 			// trace('buildRemoteServer instanceDef=$instanceDef');
-	// 			// var serverBlob :ServerConnectionBlob = {
-	// 			// 	server: instanceDef,
-	// 			// 	provider: config
-	// 			// };
-	// 			// CliTools.writeServerConnection(serverBlob, Node.process.cwd());
-	// 			trace('buildRemoteServer installServer');
-	// 			return installServer({server:instanceDef, provider:config})
-	// 				.then(function(_) {
-	// 					return instanceDef;
-	// 				});
-	// 		});
-	// }
-
-	/**
-	 * Get the docker connection config to the CCC server.
-	 * @param  config :ProviderConfig [description]
-	 * @return        [description]
-	 */
-	// public static function getServerDocker(config :ProviderConfig) :Promise<Docker>
-	// {
-	// 	//Check for saved credentials on disk
-	// 	//If creds exist, grab the host out of them
-	// 	//Else boot up a server instance, and then
-	// 	//get creds.
-	// 	return ensureRemoteServer(config)
-	// 		.then(function(serverConnectionBlob) {
-	// 			return new Docker(serverConnectionBlob.server.docker);
-	// 		});
-	// 	// return Promise.promise(new Docker({socketPath:'/var/run/docker.sock'}));
-	// }
-
 	public static function createServerInstance(config :ProviderConfig) :Promise<InstanceDefinition>
 	{
 		var cloudConfig :CloudProvider = config;
@@ -428,8 +343,7 @@ class ProviderTools
 
 	static function runDockerComposedServer(ssh :ConnectOptions) :Promise<Bool>
 	{
-		var dc ="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.npm-prod.yml";
-		var command = 'cd ${Constants.APP_NAME_COMPACT} && $dc stop && $dc rm -f && $dc build && $dc up -d';
+		var command = 'cd ${Constants.APP_NAME_COMPACT} && chmod 755 start.sh && ./start.sh';
 		return SshTools.execute(ssh, command, 10, 10, null, null, true)
 			.then(function(execResult) {
 				if (execResult.code != 0) {
@@ -545,7 +459,6 @@ class ProviderTools
 
 	static function copyServerFiles(storage :ServiceStorage) :Promise<Bool>
 	{
-		// trace('...copying files to ${storage.toString()}...');
 		return Promise.promise(true)
 			//Copy non-template files first. Don't copy files that also have a template version
 			.pipe(function(_) {
@@ -582,10 +495,10 @@ class ProviderTools
 			})
 			//Copy the docker-compose.npm-prod.yml which is not quite a template
 			.pipe(function(_) {
-				var dockerComposeProdString = Resource.getString('docker-compose.npm-prod.yml');
+				var dockerComposeProdString = Resource.getString('docker-compose.yml');
 				var gitSha = Version.getGitCommitHash().substr(0,8);
 				dockerComposeProdString = dockerComposeProdString.replace("${VERSION}", gitSha);
-				return storage.writeFile('docker-compose.npm-prod.yml', StreamTools.stringToStream(dockerComposeProdString));
+				return storage.writeFile('docker-compose.yml', StreamTools.stringToStream(dockerComposeProdString));
 			})
 			.then(function(_) {
 				return true;
