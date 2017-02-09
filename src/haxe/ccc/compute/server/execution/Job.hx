@@ -350,9 +350,22 @@ class Job
 								if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
 									if (batchJobResult.exitCode == 137) {
 										log.warn('Job failed (exitCode == 137) which means there was a docker issue, requeuing');
-										ComputeQueue.requeueJob(_redis, _job.computeJobId);
-										dispose();
-										return Promise.promise(true);
+										return ComputeQueue.getJobStats(_redis, jobId)
+											.pipe(function(stats) {
+												if (stats.dequeueCount >= 3) {//Hard coded max retries
+													var finishedStatus = JobFinishedStatus.Failed;
+													return writeJobResults(_job, _fs, batchJobResult, finishedStatus)
+														.pipe(function(_) {
+															return finishJob(finishedStatus, 'Job failed (exitCode == 137) which means there was a docker issue')
+																.thenTrue();
+														});
+												} else {
+													log.warn({message:'Requeuing', dequeueCount:stats.dequeueCount, batchJobResult:batchJobResult});
+													ComputeQueue.requeueJob(_redis, _job.computeJobId);
+													dispose();
+													return Promise.promise(true);
+												}
+											});
 									} else {
 										var finishedStatus = batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success;
 										return writeJobResults(_job, _fs, batchJobResult, finishedStatus)
