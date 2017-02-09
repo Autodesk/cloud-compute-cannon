@@ -27,7 +27,8 @@ class Worker
 	var _id :MachineId;
 	var _computeStatus :MachineStatus;
 	var _stateChangeStream :Stream<MachineStatus>;
-	var log :AbstractLogger;
+	public var log(get, null) :AbstractLogger;
+	var _log :AbstractLogger;
 	var _monitor :MachineMonitor;
 	var _eventStream :Stream<EventStreamItem>;
 
@@ -37,7 +38,7 @@ class Worker
 	{
 		Assert.notNull(def);
 		Assert.notNull(def.id);
-		log = Logger.child({'instanceid':def.id, type:'worker'});
+		_log = Logger.child({'instanceid':def.id, type:'worker'});
 		Assert.that(log != null);
 		Assert.that(!ALL_WORKERS.exists(def.id));
 		ALL_WORKERS.set(def.id, this);
@@ -94,11 +95,11 @@ class Worker
 
 		//Output monitoring logs
 		_monitor.docker.then(function(status) {
-			Log.debug({id:_id, monitor:'docker', status:Type.enumConstructor(status)});
+			log.debug({id:_id, monitor:'docker', status:Type.enumConstructor(status)});
 		});
 
 		_monitor.disk.then(function(status) {
-			Log.debug({id:_id, monitor:'disk', status:Type.enumConstructor(status)});
+			log.debug({id:_id, monitor:'disk', status:Type.enumConstructor(status)});
 		});
 
 		//The action taken after a failure is detected
@@ -171,6 +172,11 @@ class Worker
 	{
 		_definition = def;
 		return this;
+	}
+
+	function get_log() :AbstractLogger
+	{
+		return _log != null ? _log : Log.log;
 	}
 
 	inline function get_id() :MachineId
