@@ -7,8 +7,8 @@ import js.node.Process;
 import js.node.http.*;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
-import js.npm.Express;
-import js.npm.express.BodyParser;
+import js.node.express.Express;
+import js.node.express.Application;
 import js.npm.JsonRpcExpressTools;
 import js.npm.Ws;
 import js.npm.RedisClient;
@@ -155,8 +155,8 @@ class ServerCompute
 
 		var ROOT = Path.dirname(Path.dirname(Path.dirname(Node.__dirname)));
 
-		var app = new Express();
-		injector.map(Express).toValue(app);
+		var app = Express.GetApplication();
+		injector.map(Application).toValue(app);
 
 		untyped __js__('app.use(require("cors")())');
 
@@ -403,6 +403,10 @@ class ServerCompute
 					Log.error(err);
 				});
 
+				//Serve metapages dashboards
+				app.use('/', Express.Static('./web'));
+				app.use('/node_modules', Express.Static('./node_modules'));
+
 				//Websocket server for getting job finished notifications
 				websocketServer(injector.getValue(RedisClient), server, storage);
 				websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
@@ -415,7 +419,7 @@ class ServerCompute
 					app.use('/', Node.require('serve-index')(config.storage.rootPath, {'icons': true}));
 				}
 				//Setup a static file server to serve job results
-				app.use('/', StorageRestApi.staticFileRouter(storage));
+				app.use('/', cast StorageRestApi.staticFileRouter(storage));
 
 				status = ServerStatus.Ready_5_5;
 				Log.debug({server_status:status});

@@ -9,3 +9,7 @@ etc/hxml/base-nodejs.hxml
 -main ccc.compute.server.ServerCompute
 
 -js build/server/cloud-compute-cannon-server.js
+
+# --next
+
+# -cmd cp src/web build/docker/

@@ -19,6 +19,7 @@ ENV PORT 9000
 EXPOSE $PORT
 
 ADD server $APP/server
+ADD web $APP/web
 COPY VERSION $APP/VERSION
 
 CMD forever server/cloud-compute-cannon-server.js

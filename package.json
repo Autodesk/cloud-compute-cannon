@@ -44,6 +44,7 @@
     "fs-extended": "^0.2.1",
     "http-proxy": "^1.16.2",
     "memwatch-next": "^0.3.0",
+    "metaframe": "0.0.2",
     "moment-timezone": "^0.5.11",
     "node-uuid": "^1.4.7",
     "node-vagrant": "^1.0.6",

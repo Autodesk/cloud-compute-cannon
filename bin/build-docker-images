@@ -25,6 +25,7 @@ REPO_NAME="cloud-compute-cannon:$GIT_TAG"
 BUILD_DIR=build/docker
 mkdir -p $BUILD_DIR
 cp -r build/server $BUILD_DIR/
+cp -r src/web $BUILD_DIR/
 cp etc/docker/Dockerfile $BUILD_DIR/
 cp package.json $BUILD_DIR/package.json
 echo $GIT_TAG > $BUILD_DIR/VERSION

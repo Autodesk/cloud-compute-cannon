@@ -1,0 +1,38 @@
+{
+	"version": "0.1-alpha",
+	"inputs": [
+		{
+			"name": "jsonrpc",
+			"type": "string",
+			"type": "json"
+		},
+		{
+			"name": "image",
+			"type": "string",
+			"value": "docker.io/busybox:latest"
+		},
+		{
+			"name": "command",
+			"type": "json",
+			"value": ["/bin/sh", "-c", "echo foo > /outputs/foo"]
+		}
+	],
+	"outputs": [
+		{
+			"name": "jsonrpc",
+			"type": "json"
+		},
+		{
+			"name": "error",
+			"type": "string"
+		},
+		{
+			"name": "stdout",
+			"type": "string"
+		},
+		{
+			"name": "stderr",
+			"type": "string"
+		}
+	]
+}
