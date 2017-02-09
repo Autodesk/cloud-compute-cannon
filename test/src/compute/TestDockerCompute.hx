@@ -30,7 +30,7 @@ class TestDockerCompute extends TestComputeBase
 			});
 	}
 
-	@timeout(500)
+	@timeout(3000)
 	public function testDockerConnectivity()
 	{
 		var workerDef = _worker;
