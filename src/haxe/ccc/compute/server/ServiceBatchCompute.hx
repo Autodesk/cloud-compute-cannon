@@ -699,8 +699,10 @@ class ServiceBatchCompute
 		var inputPath = null;
 		var inputFileNames :Array<String> = [];
 
+		var log = Log.log;
+
 		function returnError(err :haxe.extern.EitherType<String, js.Error>, ?statusCode :Int = 500) {
-			Log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
+			log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
 			if (returned) return;
 			res.writeHead(statusCode, {'content-type': 'application/json'});
 			res.end(Json.stringify({error: err}));
@@ -711,12 +713,12 @@ class ServiceBatchCompute
 					if (jsonrpc != null && jsonrpc.params != null && jsonrpc.params.inputsPath != null) {
 						_fs.deleteDir(jsonrpc.params.inputsPath)
 							.then(function(_) {
-								Log.info('Got error, deleted job ${jsonrpc.params.inputsPath}');
+								log.info('Got error, deleted job ${jsonrpc.params.inputsPath}');
 							});
 					} else {
 						_fs.deleteDir(jobId)
 							.then(function(_) {
-								Log.info('Deleted job dir err=$err');
+								log.info('Deleted job dir err=$err');
 							});
 					}
 				});
@@ -748,7 +750,7 @@ class ServiceBatchCompute
 					inputFilesObj.inputs.iter(inputFileNames.push);
 				}
 			} catch(err :Dynamic) {
-				Log.error(err);
+				log.error(err);
 				returnError('Failed to parse JSON, err=$err val=$val');
 			}
 		}
@@ -756,6 +758,8 @@ class ServiceBatchCompute
 		getNewJobId()
 			.then(function(newJobId) {
 				jobId = newJobId;
+				log = log.child({jobId:jobId});
+				log.debug({message: 'Starting busboy compute request'});
 				var tenGBInBytes = 10737418240;
 				var busboy = new Busboy({headers:req.headers, limits:{fieldNameSize:500, fieldSize:tenGBInBytes}});
 				var deferredFieldHandling = [];//If the fields come in out of order, we'll have to handle the non-JSON-RPC subsequently
@@ -779,24 +783,24 @@ class ServiceBatchCompute
 								return false;
 							}
 
-							Log.info('BusboyEvent.File writing input file $fieldName encoding=$encoding mimetype=$mimetype stream=${stream != null}');
+							log.info('BusboyEvent.File writing input file $fieldName encoding=$encoding mimetype=$mimetype stream=${stream != null}');
 							var inputFilePath = inputPath + fieldName;
 
 							stream.on(ReadableEvent.Error, function(err) {
-								Log.error('Error in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype error=$err');
+								log.error('Error in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype error=$err');
 							});
 							stream.on('limit', function() {
-								Log.error('Limit event in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype');
+								log.error('Limit event in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype');
 							});
 
 							var fileWritePromise = _fs.writeFile(inputFilePath, stream);
 							fileWritePromise
 								.then(function(_) {
-									Log.info('    finished writing input file $fieldName');
+									log.info('    finished writing input file $fieldName');
 									return true;
 								})
 								.errorThen(function(err) {
-									Log.info('    error writing input file $fieldName err=$err');
+									log.info('    error writing input file $fieldName err=$err');
 									throw err;
 									return true;
 								});
@@ -842,11 +846,11 @@ class ServiceBatchCompute
 						var fileWritePromise = _fs.writeFile(inputFilePath, Streamifier.createReadStream(val));
 						fileWritePromise
 							.then(function(_) {
-								Log.info('    finished writing input file $fieldName');
+								log.info('    finished writing input file $fieldName');
 								return true;
 							})
 							.errorThen(function(err) {
-								Log.info('    error writing input file $fieldName err=$err');
+								log.info('    error writing input file $fieldName err=$err');
 								throw err;
 								return true;
 							});
@@ -884,7 +888,7 @@ class ServiceBatchCompute
 								mountApiServer: jsonrpc.params.mountApiServer
 							};
 
-							Log.info({job_submission :dockerJob});
+							log.info({job_submission :dockerJob});
 
 							if (jsonrpc.params.cmd != null && untyped __typeof__(jsonrpc.params.cmd) == 'string') {
 								throw 'command field must be an array, not a string';
@@ -905,21 +909,21 @@ class ServiceBatchCompute
 							returnJobResult(res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
-							Log.error(err);
+							log.error(err);
 							returnError(err);
 						});
 				});
 				busboy.on(BusboyEvent.PartsLimit, function() {
-					Log.error('BusboyEvent ${BusboyEvent.PartsLimit}');
+					log.error('BusboyEvent ${BusboyEvent.PartsLimit}');
 				});
 				busboy.on(BusboyEvent.FilesLimit, function() {
-					Log.error('BusboyEvent ${BusboyEvent.FilesLimit}');
+					log.error('BusboyEvent ${BusboyEvent.FilesLimit}');
 				});
 				busboy.on(BusboyEvent.FieldsLimit, function() {
-					Log.error('BusboyEvent ${BusboyEvent.FieldsLimit}');
+					log.error('BusboyEvent ${BusboyEvent.FieldsLimit}');
 				});
 				busboy.on('error', function(err) {
-					Log.error('BusboyEvent error=' + Json.stringify(err));
+					log.error('BusboyEvent error=' + Json.stringify(err));
 					returnError(err);
 				});
 				req.pipe(busboy);
