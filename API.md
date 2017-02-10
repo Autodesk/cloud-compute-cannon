@@ -2,7 +2,7 @@
 
 All routes are prefixed by the `<domain>:<port>/api/rpc`
 
-## GET job-stats?jobId=<jobId>
+### GET `job-stats?jobId=<jobId>`
 
 Returns the job stats:
 
