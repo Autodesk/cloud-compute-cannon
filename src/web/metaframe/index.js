@@ -103,7 +103,7 @@ function collectInputsAndRun() {
 		} else if (key == 'image') {
 			job.image = metaframeInputs[key];
 		} else {
-			inputs.push({
+			job.inputs.push({
 				name: key,
 				type: 'inline',
 				value: metaframeInputs[key]
