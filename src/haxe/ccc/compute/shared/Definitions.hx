@@ -1,6 +1,7 @@
 package ccc.compute.shared;
 
 import ccc.compute.shared.Constants.*;
+import ccc.compute.server.stats.StatsDefinitions;
 
 import haxe.Json;
 import haxe.DynamicAccess;
@@ -364,7 +365,7 @@ typedef JobResult = {
 	@:optional var outputsBaseUrl :String;
 	@:optional var outputs :Array<String>;
 	@:optional var error :Dynamic;
-	@:optional var stats :Array<Float>;
+	@:optional var stats :PrettyStatsData;
 	@:optional var definition :DockerJobDefinition;
 }
 
