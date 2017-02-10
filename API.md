@@ -32,3 +32,8 @@ Returns the job stats:
 	  "jsonrpc": "2.0"
 	}
 ```
+
+### GET `/stats-minimal-job`
+
+Returns the job stats of a minimal job that copies a small input file to an output file.
+

@@ -21,7 +21,7 @@ import promhx.deferred.DeferredPromise;
 
 class TestCompute extends ServerAPITestBase
 {
-	static var TEST_BASE = 'tests';
+	public static var TEST_BASE = 'tests';
 
 	@timeout(240000)
 	public function testCompleteComputeJobDirect() :Promise<Bool>
