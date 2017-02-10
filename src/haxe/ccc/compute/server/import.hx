@@ -10,6 +10,7 @@ import ccc.compute.shared.Definitions;
 	import ccc.compute.shared.AbstractLogger;
 	import ccc.compute.shared.Logger;
 	import ccc.compute.shared.TypedDynamicObject;
+	import ccc.compute.server.stats.JobStats;
 
 	import js.Node;
 	import js.node.Buffer;

@@ -20,7 +20,7 @@ class DateFormatTools
 		} else if (dateBlob.minutes > 0) {
 			return '${dateBlob.minutes}m';
 		} else {
-			return '${dateBlob.seconds}s';
+			return '${dateBlob.seconds + (dateBlob.ms / 1000)}s';
 		}
 	}
 

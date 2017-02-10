@@ -54,6 +54,10 @@ class InitConfigTools
 			})
 			.pipe(function(_) {
 				return InstancePool.init(redis);
+			})
+			.pipe(function(_) {
+				var jobStats :JobStats = redis;
+				return jobStats.init();
 			});
 	}
 

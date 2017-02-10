@@ -47,6 +47,11 @@ class BatchComputeDocker
 		Assert.notNull(workerStorage);
 		Assert.notNull(job.computeJobId);
 
+		var jobId = job.id;
+
+		var jobStats :JobStats = redis;
+		jobStats.jobDequeued(jobId);
+
 		var parentLog = log;
 		log = parentLog.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
 		untyped log._level = parentLog._level;
@@ -202,6 +207,7 @@ class BatchComputeDocker
 							return true;
 						})
 						.pipe(function(_) {
+							jobStats.jobCopiedInputs(jobId);
 							return setStatus(JobWorkingStatus.CopyingImage);
 						});
 					} else {
@@ -245,6 +251,11 @@ class BatchComputeDocker
 												return setStatus(JobWorkingStatus.Failed);
 											});
 									}
+								})
+								.then(function(_) {
+									jobStats.jobCopiedImage(jobId);
+									jobStats.jobCopiedInputsAndImage(jobId);
+									return true;
 								});
 						case Context:
 							var path = job.item.image.value;
@@ -399,6 +410,7 @@ class BatchComputeDocker
 											log.error({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode, error:error});
 											throw error;
 										}
+										jobStats.jobContainerExited(jobId, exitCode, error);
 										return true;
 									})
 									.pipe(function(_) {
@@ -431,6 +443,10 @@ class BatchComputeDocker
 						})
 						.pipe(function(_) {
 							return setStatus(JobWorkingStatus.CopyingLogs);
+						})
+						.then(function(_) {
+							jobStats.jobCopiedOutputs(jobId);
+							return true;
 						});
 				} else {
 					return Promise.promise(true);
@@ -444,6 +460,10 @@ class BatchComputeDocker
 						.pipe(function(_) {
 							copiedLogs = true;
 							return setStatus(JobWorkingStatus.FinishedWorking);
+						})
+						.then(function(_) {
+							jobStats.jobCopiedLogs(jobId);
+							return true;
 						});
 				} else {
 					return Promise.promise(true);

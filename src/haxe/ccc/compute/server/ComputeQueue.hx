@@ -91,6 +91,9 @@ class ComputeQueue
 		Assert.notNull(job.parameters);
 		Assert.notNull(job.parameters.maxDuration);
 
+		var jobStats :JobStats = redis;
+		jobStats.jobEnqueued(job.id);
+
 		var stats = new Stats().setEnqueueTime();
 
 		var queueObj :QueueObject<T> = {

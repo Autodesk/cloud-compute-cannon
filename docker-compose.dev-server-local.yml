@@ -16,6 +16,7 @@ services:
     environment:
       LOG_LEVEL: "10"
       STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
+      REMOVE_JOBS_ON_STARTUP: "true"
     links:
       - redis
       - fluentd

@@ -26,124 +26,139 @@ using util.MapTools;
 
 class Job
 {
-	public static function writeJobResults(job :QueueJobDefinitionDocker, fs :ServiceStorage, batchJobResult :BatchJobResult, finishedStatus :JobFinishedStatus) :Promise<JobResult>
+	public static function writeJobResults(redis :RedisClient, job :QueueJobDefinitionDocker, fs :ServiceStorage, batchJobResult :BatchJobResult, finishedStatus :JobFinishedStatus) :Promise<{write:Void->Promise<JobResult>, jobResult:JobResult}>
 	{
-		var jobStorage = fs.clone();
-		/* The e.g. S3 URL. Otherwise empty */
-		var externalBaseUrl = fs.getExternalUrl();
+		var run = function() {
+			var jobStorage = fs.clone();
+			/* The e.g. S3 URL. Otherwise empty */
+			var externalBaseUrl = fs.getExternalUrl();
 
-		var appendStdOut = job.item.appendStdOut == true;
-		var appendStdErr = job.item.appendStdErr == true;
+			var jobStats :JobStats = redis;
 
-		var jobResult :JobResult = {
-			jobId: job.id,
-			status: finishedStatus,
-			exitCode: batchJobResult.exitCode,
-			stdout: fs.getExternalUrl(job.item.stdoutPath()),
-			stderr: fs.getExternalUrl(job.item.stderrPath()),
-			resultJson: externalBaseUrl + job.item.resultJsonPath(),
-			inputsBaseUrl: externalBaseUrl + job.item.inputDir(),
-			outputsBaseUrl: externalBaseUrl + job.item.outputDir(),
-			inputs: job.item.inputs,
-			outputs: batchJobResult.outputFiles,
-			error: batchJobResult.error,
-			definition: job.item,
-			stats: job.stats
-		};
+			var appendStdOut = job.item.appendStdOut == true;
+			var appendStdErr = job.item.appendStdErr == true;
 
-		Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
-		Log.trace(Json.stringify(jobResult, null, '  '));
-		var jobResultsStorage = jobStorage.appendToRootPath(job.item.resultDir());
-		return Promise.promise(true)
-			.pipe(function(_) {
-				if (batchJobResult.copiedLogs) {
+			Log.debug({jobid:job.id, exitCode:batchJobResult.exitCode});
+			var jobResultsStorage = jobStorage.appendToRootPath(job.item.resultDir());
+			var jobResult :JobResult = null;
 
-					return jobResultsStorage.exists(STDOUT_FILE)
-						.pipe(function(exists) {
-							if (!exists) {
-								jobResult.stdout = null;
-								return Promise.promise(true);
-							} else {
-								if (appendStdOut) {
-									return jobResultsStorage.readFile(STDOUT_FILE)
-										.pipe(function(stream) {
-											return StreamPromises.streamToString(stream)
-												.then(function(stdoutString) {
-													if (stdoutString != null) {
-														Reflect.setField(jobResult, 'stdout', stdoutString.split('\n'));
-													} else {
-														Reflect.setField(jobResult, 'stdout', null);
-													}
-													return true;
-												})
-												.errorPipe(function(err) {
-													Log.error(Json.stringify(err));
-													return Promise.promise(true);
-												});
-										});
-								} else {
+			return Promise.promise(true)
+				.pipe(function(_) {
+					return jobStats.getPretty(job.id);
+				})
+				.then(function(prettyJobStats) {
+					jobResult = {
+						jobId: job.id,
+						status: finishedStatus,
+						exitCode: batchJobResult.exitCode,
+						stdout: fs.getExternalUrl(job.item.stdoutPath()),
+						stderr: fs.getExternalUrl(job.item.stderrPath()),
+						resultJson: externalBaseUrl + job.item.resultJsonPath(),
+						inputsBaseUrl: externalBaseUrl + job.item.inputDir(),
+						outputsBaseUrl: externalBaseUrl + job.item.outputDir(),
+						inputs: job.item.inputs,
+						outputs: batchJobResult.outputFiles,
+						error: batchJobResult.error,
+						definition: job.item,
+						stats: prettyJobStats
+					};
+					Log.trace(Json.stringify(jobResult, null, '  '));
+					return jobResult;
+				})
+				.pipe(function(jobResult) {
+					if (batchJobResult.copiedLogs) {
+
+						return jobResultsStorage.exists(STDOUT_FILE)
+							.pipe(function(exists) {
+								if (!exists) {
+									jobResult.stdout = null;
 									return Promise.promise(true);
-								}
-							}
-
-							return jobResultsStorage.exists(STDERR_FILE);
-						})
-						.pipe(function(exists) {
-							if (!exists) {
-								jobResult.stderr = null;
-								return Promise.promise(true);
-							} else {
-								if (appendStdErr) {
-									return jobResultsStorage.readFile(STDERR_FILE)
-										.pipe(function(stream) {
-											return StreamPromises.streamToString(stream)
-												.then(function(stderrString) {
-													if (stderrString != null) {
-														Reflect.setField(jobResult, 'stderr', stderrString.split('\n'));
-													} else {
-														Reflect.setField(jobResult, 'stderr', null);
-													}
-													return true;
-												})
-												.errorPipe(function(err) {
-													Log.error(Json.stringify(err));
-													return Promise.promise(true);
-												});
-										});
 								} else {
-									return Promise.promise(true);
+									if (appendStdOut) {
+										return jobResultsStorage.readFile(STDOUT_FILE)
+											.pipe(function(stream) {
+												return StreamPromises.streamToString(stream)
+													.then(function(stdoutString) {
+														if (stdoutString != null) {
+															Reflect.setField(jobResult, 'stdout', stdoutString.split('\n'));
+														} else {
+															Reflect.setField(jobResult, 'stdout', null);
+														}
+														return true;
+													})
+													.errorPipe(function(err) {
+														Log.error(Json.stringify(err));
+														return Promise.promise(true);
+													});
+											});
+									} else {
+										return Promise.promise(true);
+									}
 								}
-							}
-						});
-				} else {
-					jobResult.stdout = null;
-					jobResult.stderr = null;
-					return Promise.promise(true);
-				}
-			})
-			.pipe(function(_) {
-				return jobResultsStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
-			})
-			.pipe(function(_) {
-				if (externalBaseUrl != '') {
-					return promhx.RetryPromise.pollRegular(function() {
-						return jobResultsStorage.readFile(RESULTS_JSON_FILE)
-							.pipe(function(readable) {
-								return StreamPromises.streamToString(readable);
+
+								return jobResultsStorage.exists(STDERR_FILE);
 							})
-							.then(function(s) {
+							.pipe(function(exists) {
+								if (!exists) {
+									jobResult.stderr = null;
+									return Promise.promise(true);
+								} else {
+									if (appendStdErr) {
+										return jobResultsStorage.readFile(STDERR_FILE)
+											.pipe(function(stream) {
+												return StreamPromises.streamToString(stream)
+													.then(function(stderrString) {
+														if (stderrString != null) {
+															Reflect.setField(jobResult, 'stderr', stderrString.split('\n'));
+														} else {
+															Reflect.setField(jobResult, 'stderr', null);
+														}
+														return true;
+													})
+													.errorPipe(function(err) {
+														Log.error(Json.stringify(err));
+														return Promise.promise(true);
+													});
+											});
+									} else {
+										return Promise.promise(true);
+									}
+								}
+							});
+					} else {
+						jobResult.stdout = null;
+						jobResult.stderr = null;
+						return Promise.promise(true);
+					}
+				})
+				.pipe(function(_) {
+					return jobResultsStorage.writeFile(RESULTS_JSON_FILE, StreamTools.stringToStream(Json.stringify(jobResult)));
+				})
+				.pipe(function(_) {
+					if (externalBaseUrl != '') {
+						return promhx.RetryPromise.pollRegular(function() {
+							return jobResultsStorage.readFile(RESULTS_JSON_FILE)
+								.pipe(function(readable) {
+									return StreamPromises.streamToString(readable);
+								})
+								.then(function(s) {
+									return null;
+								});
+							}, 10, 50, '${RESULTS_JSON_FILE} check', false)
+							.then(function(resultsjson) {
 								return null;
 							});
-						}, 10, 50, '${RESULTS_JSON_FILE} check', false)
-						.then(function(resultsjson) {
-							return null;
-						});
-				} else {
-					return Promise.promise(null);
-				}
-			})
-			.then(function(_) {
-				return jobResult;
+					} else {
+						return Promise.promise(null);
+					}
+				})
+				.then(function(_) {
+					return jobResult;
+				});
+		}
+		return run()
+			.then(function(jobResult) {
+				return {write:run, jobResult:jobResult};
 			});
 	}
 
@@ -319,9 +334,12 @@ class Job
 								var batchJobResult = {exitCode:-1, error:err, copiedLogs:false};
 								log.error({exitCode:-1, error:err, JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
 								if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
-									writeJobResults(_job, _fs, batchJobResult, JobFinishedStatus.Failed)
-										.then(function(_) {
-											return finishJob(JobFinishedStatus.Failed, Std.string(err));
+									writeJobResults(_redis, _job, _fs, batchJobResult, JobFinishedStatus.Failed)
+										.then(function(result) {
+											return finishJob(JobFinishedStatus.Failed, Std.string(err))
+												.pipe(function(_) {
+													return result.write();
+												});
 										});
 								}
 							}
@@ -354,9 +372,12 @@ class Job
 											.pipe(function(stats) {
 												if (stats.dequeueCount >= 3) {//Hard coded max retries
 													var finishedStatus = JobFinishedStatus.Failed;
-													return writeJobResults(_job, _fs, batchJobResult, finishedStatus)
-														.pipe(function(_) {
+													return writeJobResults(_redis, _job, _fs, batchJobResult, finishedStatus)
+														.pipe(function(resultBlob) {
 															return finishJob(finishedStatus, 'Job failed (exitCode == 137) which means there was a docker issue')
+																.pipe(function(_) {
+																	return resultBlob.write();
+																})
 																.thenTrue();
 														});
 												} else {
@@ -368,9 +389,12 @@ class Job
 											});
 									} else {
 										var finishedStatus = batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success;
-										return writeJobResults(_job, _fs, batchJobResult, finishedStatus)
-											.pipe(function(_) {
+										return writeJobResults(_redis, _job, _fs, batchJobResult, finishedStatus)
+											.pipe(function(resultBlob) {
 												return finishJob(finishedStatus, batchJobResult.error)
+													.pipe(function(_) {
+														return resultBlob.write();
+													})
 													.thenTrue();
 											});
 									}
@@ -386,9 +410,12 @@ class Job
 					log.error({exitCode:-1, error:err, state:_currentInternalState});
 					if (!_disposed && _currentInternalState.JobStatus == JobStatus.Working) {
 						var finishedStatus = batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success;
-						writeJobResults(_job, _fs, batchJobResult, finishedStatus)
-							.then(function(_) {
-								finishJob(finishedStatus, Std.string(err));
+						writeJobResults(_redis, _job, _fs, batchJobResult, finishedStatus)
+							.then(function(resultBlob) {
+								finishJob(finishedStatus, Std.string(err))
+									.pipe(function(_) {
+										return resultBlob.write();
+									});
 							})
 							.catchError(function(err) {
 								log.error({error:err, state:_currentInternalState, message:'Failed to write job results'});
@@ -409,7 +436,7 @@ class Job
 						}
 						//Making copiedLogs:true because check if they're there
 						var batchJobResult = {exitCode:-1, copiedLogs:true, error:_currentInternalState.JobFinishedStatus};
-						writeJobResults(_job, _fs, batchJobResult, _currentInternalState.JobFinishedStatus)
+						writeJobResults(_redis, _job, _fs, batchJobResult, _currentInternalState.JobFinishedStatus)
 							.thenTrue();
 					case None:
 						log.error({log:'case Finalizing JobFinishedStatus==None not handled', JobStatus:_currentInternalState.JobStatus, JobFinishedStatus:_currentInternalState.JobFinishedStatus});
@@ -531,6 +558,9 @@ class Job
 	function finishJob(finishedStatus :JobFinishedStatus, ?error :Dynamic) :Promise<QueueJobDefinitionDocker>
 	{
 		if (_redis != null) {
+			var jobStats :JobStats = _redis;
+			jobStats.jobCopiedLogs(jobId);
+			jobStats.jobFinished(jobId);
 			return ComputeQueue.finishComputeJob(_redis, computeJobId, finishedStatus, error);
 		} else {
 			return Promise.promise(null);

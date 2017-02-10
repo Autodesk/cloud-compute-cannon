@@ -81,6 +81,25 @@ class ServiceBatchCompute
 	}
 
 	@rpc({
+		alias:'job-stats',
+		doc:'Get job stats'
+	})
+	@:keep
+	public function jobStats(jobId :JobId, ?raw :Bool = false)
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		var jobStats :JobStats = _redis;
+		if (raw) {
+			return cast jobStats.get(jobId);
+		} else {
+			return jobStats.getPretty(jobId);
+		}
+#else
+		return Promise.promise(true);
+#end
+	}
+
+	@rpc({
 		alias:'jobs-pending-delete',
 		doc:'Deletes all pending jobs'
 	})
@@ -592,6 +611,8 @@ class ServiceBatchCompute
 
 		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
 
+		var jobStats :JobStats = _redis;
+
 		var error :Dynamic = null;
 		return Promise.promise(true)
 			.pipe(function(_) {
@@ -599,6 +620,7 @@ class ServiceBatchCompute
 			})
 			.pipe(function(id) {
 				jobId = id;
+				jobStats.requestRecieved(jobId);
 				var dateString = Date.now().format("%Y-%m-%d");
 				var inputs = null;
 				var inputPath = job.inputsPath != null ? (job.inputsPath.endsWith('/') ? job.inputsPath : job.inputsPath + '/') : jobId.defaultInputDir();
@@ -673,6 +695,7 @@ class ServiceBatchCompute
 			})
 			.pipe(function(_) {
 				if (error != null) {
+					jobStats.jobFinished(jobId, Json.stringify(error));
 					throw error;
 				}
 				if (job.wait == true) {
@@ -700,6 +723,8 @@ class ServiceBatchCompute
 		var inputFileNames :Array<String> = [];
 
 		var log = Log.log;
+
+		var jobStats :JobStats = _redis;
 
 		function returnError(err :haxe.extern.EitherType<String, js.Error>, ?statusCode :Int = 500) {
 			log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
@@ -758,6 +783,7 @@ class ServiceBatchCompute
 		getNewJobId()
 			.then(function(newJobId) {
 				jobId = newJobId;
+				jobStats.requestRecieved(jobId);
 				log = log.child({jobId:jobId});
 				log.debug({message: 'Starting busboy compute request'});
 				var tenGBInBytes = 10737418240;
@@ -868,6 +894,7 @@ class ServiceBatchCompute
 							return Promise.whenAll(promises);
 						})
 						.pipe(function(_) {
+							jobStats.requestUploaded(jobId);
 
 							var parameters :JobParams = jsonrpc.params.parameters == null ? DEFAULT_JOB_PARAMS : jsonrpc.params.parameters;
 							var dockerJob :DockerJobDefinition = {
@@ -909,6 +936,7 @@ class ServiceBatchCompute
 							returnJobResult(res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
+							jobStats.jobFinished(jobId, Json.stringify(err));
 							log.error(err);
 							returnError(err);
 						});
