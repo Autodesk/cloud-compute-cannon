@@ -24,7 +24,11 @@ abstract JobStats(RedisClient) from RedisClient
 	{
 		return JobStatsScripts.evaluateLuaScript(this, SCRIPT_GET, [jobId])
 			.then(function(dataString) {
-				return Json.parse(dataString);
+				if (dataString != null) {
+					return Json.parse(dataString);
+				} else {
+					return null;
+				}
 			});
 	}
 
@@ -32,29 +36,33 @@ abstract JobStats(RedisClient) from RedisClient
 	{
 		return get(jobId)
 			.then(function(stats :StatsData) {
-				var duration = DateFormatTools.getShortStringOfDateDiff(Date.fromTime(stats.requestReceived), Date.fromTime(stats.finished));
-				var pretty :PrettyStatsData = {
-					recieved: DateFormatTools.getFormattedDate(stats.requestReceived),
-					duration: duration,
-					uploaded: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(stats.requestReceived), Date.fromTime(stats.requestUploaded)),
-					finished: DateFormatTools.getFormattedDate(stats.finished),
-					error: stats.error,
-					attempts: stats.attempts.map(function(jobData) {
-						var jobDataPretty :PrettySingleJobExecution = {
-							enqueued: DateFormatTools.getFormattedDate(jobData.enqueued),
-							dequeued: DateFormatTools.getFormattedDate(jobData.dequeued),
-							inputs: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.dequeued), Date.fromTime(jobData.copiedInputs)),
-							image: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.copiedInputs), Date.fromTime(jobData.copiedImage)),
-							inputsAndImage: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.dequeued), Date.fromTime(jobData.copiedImage)),
-							container: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.copiedImage), Date.fromTime(jobData.containerExited)),
-							outputs: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.containerExited), Date.fromTime(jobData.copiedOutputs)),
-							exitCode: jobData.exitCode,
-							error: jobData.error
-						};
-						return jobDataPretty;
-					}).array()
-				};
-				return pretty;
+				if (stats != null) {
+					var duration = DateFormatTools.getShortStringOfDateDiff(Date.fromTime(stats.requestReceived), Date.fromTime(stats.finished));
+					var pretty :PrettyStatsData = {
+						recieved: DateFormatTools.getFormattedDate(stats.requestReceived),
+						duration: duration,
+						uploaded: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(stats.requestReceived), Date.fromTime(stats.requestUploaded)),
+						finished: DateFormatTools.getFormattedDate(stats.finished),
+						error: stats.error,
+						attempts: stats.attempts.map(function(jobData) {
+							var jobDataPretty :PrettySingleJobExecution = {
+								enqueued: DateFormatTools.getFormattedDate(jobData.enqueued),
+								dequeued: DateFormatTools.getFormattedDate(jobData.dequeued),
+								inputs: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.dequeued), Date.fromTime(jobData.copiedInputs)),
+								image: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.copiedInputs), Date.fromTime(jobData.copiedImage)),
+								inputsAndImage: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.dequeued), Date.fromTime(jobData.copiedImage)),
+								container: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.copiedImage), Date.fromTime(jobData.containerExited)),
+								outputs: DateFormatTools.getShortStringOfDateDiff(Date.fromTime(jobData.containerExited), Date.fromTime(jobData.copiedOutputs)),
+								exitCode: jobData.exitCode,
+								error: jobData.error
+							};
+							return jobDataPretty;
+						}).array()
+					};
+					return pretty;
+				} else {
+					return null;
+				}
 			});
 	}
 
@@ -183,7 +191,14 @@ redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATS}", jobId, cmsgpack.pack(jobstats)
 		'
 		local jobId = ARGV[1]
 		local time = tonumber(ARGV[2])
-		local jobstats = cmsgpack.unpack(redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATS}", jobId))
+		local jobStatsJsonString = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATS}", jobId)
+		local jobstats = nil
+		if jobStatsJsonString then
+			jobstats = cmsgpack.unpack(jobStatsJsonString)
+		else
+			--This can happen if the job is added without going through the request system
+			jobstats = {requestReceived=time, requestUploaded=time, finished=0}
+		end
 		local jobData = {enqueued=time,dequeued=0,copiedInputs=0,copiedImage=0,copiedInputsAndImage=0,containerExited=0,copiedOutputs=0}
 		if jobstats.attempts == nil then
 			jobstats.attempts = {}

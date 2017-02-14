@@ -229,6 +229,7 @@ class TestDockerCompute extends TestComputeBase
 		var workerStorage = _fs.appendToRootPath(jobFsPath);
 
 		var redis :RedisClient = _injector.getValue(js.npm.RedisClient);
+		var jobStats :JobStats = redis;
 
 		var dockerJob :DockerJobDefinition = {
 			jobId: jobId,
@@ -262,6 +263,9 @@ class TestDockerCompute extends TestComputeBase
 								return true;
 							});
 						});
+			})
+			.pipe(function(_) {
+				return jobStats.jobEnqueued(job.id);
 			})
 			.pipe(function(_) {
 				return BatchComputeDocker.executeJob(redis, job, fs, workerStorage, Log.log).promise;

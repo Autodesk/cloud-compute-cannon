@@ -39,6 +39,7 @@ import ccc.compute.shared.Definitions;
 	import ccc.compute.server.execution.BatchComputeDocker.*;
 	import ccc.compute.server.workers.*;
 	import ccc.compute.server.workflows.*;
+	import ccc.compute.server.stats.*;
 	import ccc.storage.*;
 #end
 
