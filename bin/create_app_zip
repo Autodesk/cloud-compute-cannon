@@ -40,7 +40,7 @@ for VERSION in $GIT_TAG $NPM_VERSION ; do
 	cp docker-compose.yml $ZIP_DIR/
 	cp docker-compose.prod.yml $ZIP_DIR/
 	cp docker-compose.npm-prod.yml $ZIP_DIR/
-	cp -r etc $ZIP_DIR/
+	rsync -av --exclude=*/node_modules etc/ $ZIP_DIR/
 
 	#configuration packed with the artifacts
 	cp $CONFIG_PATH $ZIP_DIR/ccc.yml
