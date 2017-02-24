@@ -61,6 +61,7 @@ class Constants
 	inline public static var ENV_CLEAR_DB_ON_START = 'CLEAR_DB_ON_START';
 	inline public static var ENV_DISABLE_STARTUP_TEST = 'DISABLE_STARTUP_TEST';
 	inline public static var ENV_REMOVE_JOBS_ON_STARTUP = 'REMOVE_JOBS_ON_STARTUP';
+	inline public static var ENV_ENABLE_FLUENT = 'ENABLE_FLUENT';
 
 	/* Server */
 	public static var DOCKER_CONTAINER_ID :String = null;

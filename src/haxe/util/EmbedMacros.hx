@@ -18,6 +18,13 @@ class EmbedMacros
 		var pos = Context.currentPos();
 		var files = getAllFiles(dir);
 
+		if (exclude == null) {
+			exclude = [];
+		}
+		exclude.push('.*node_modules.*');
+		exclude.push('.*\\.vagrant');
+		exclude.push('.*\\.haxelib');
+
 		var regexes = exclude.map(function(s) return new EReg(s, ''));
 
 		var pathFilter = function(filePath :String) :Bool {

@@ -91,6 +91,15 @@ To disable all logging:
 
 	DISABLE_LOGGING=true or DISABLE_LOGGING=1
 
+#### ENABLE_FLUENT
+
+  ENABLE_FLUENT=false
+
+
+Default: `true`
+
+Allow disabling fluentd logging (on by default, and expecting the fluent daemon to be accessible with the host `fluentd`).
+
 
 ### 'Hello world' example
 
