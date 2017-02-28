@@ -709,121 +709,121 @@ exit 0
 		return promise.boundPromise;
 	}
 
-	@timeout(120000)
-	public function testCompleteComputeJobProxy() :Promise<Bool>
-	{
-		var TESTNAME = 'testCompleteComputeJobProxy';
+// 	@timeout(120000)
+// 	public function testCompleteComputeJobProxy() :Promise<Bool>
+// 	{
+// 		var TESTNAME = 'testCompleteComputeJobProxy';
 
-		var inputValueInline = 'in${ShortId.generate()}';
-		var inputName2 = 'in${ShortId.generate()}';
-		var inputName3 = 'in${ShortId.generate()}';
+// 		var inputValueInline = 'in${ShortId.generate()}';
+// 		var inputName2 = 'in${ShortId.generate()}';
+// 		var inputName3 = 'in${ShortId.generate()}';
 
-		var outputName1 = 'out${ShortId.generate()}';
-		var outputName2 = 'out${ShortId.generate()}';
-		var outputName3 = 'out${ShortId.generate()}';
+// 		var outputName1 = 'out${ShortId.generate()}';
+// 		var outputName2 = 'out${ShortId.generate()}';
+// 		var outputName3 = 'out${ShortId.generate()}';
 
-		var outputValue1 = 'out${ShortId.generate()}';
+// 		var outputValue1 = 'out${ShortId.generate()}';
 
-		var inputInline :ComputeInputSource = {
-			type: InputSource.InputInline,
-			value: inputValueInline,
-			name: inputName2
-		}
+// 		var inputInline :ComputeInputSource = {
+// 			type: InputSource.InputInline,
+// 			value: inputValueInline,
+// 			name: inputName2
+// 		}
 
-		var inputUrl :ComputeInputSource = {
-			type: InputSource.InputUrl,
-			value: 'https://www.google.com/textinputassistant/tia.png',
-			name: inputName3
-		}
+// 		var inputUrl :ComputeInputSource = {
+// 			type: InputSource.InputUrl,
+// 			value: 'https://www.google.com/textinputassistant/tia.png',
+// 			name: inputName3
+// 		}
 
-		var random = ShortId.generate();
-		var customInputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_INPUTS';
-		var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_OUTPUTS';
-		var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
+// 		var random = ShortId.generate();
+// 		var customInputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_INPUTS';
+// 		var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_OUTPUTS';
+// 		var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
 
-		var outputValueStdout = 'out${ShortId.generate()}';
-		var outputValueStderr = 'out${ShortId.generate()}';
-		//Multiline stdout
-		var script =
-'#!/bin/sh
-echo "$outputValueStdout"
-echo "$outputValueStdout"
-echo foo
-echo "$outputValueStdout"
-echo "$outputValueStderr" >> /dev/stderr
-echo "$outputValue1" > /$DIRECTORY_OUTPUTS/$outputName1
-cat /$DIRECTORY_INPUTS/$inputName2 > /$DIRECTORY_OUTPUTS/$outputName2
-cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
-';
-		var targetStdout = '$outputValueStdout\n$outputValueStdout\nfoo\n$outputValueStdout'.trim();
-		var targetStderr = '$outputValueStderr';
-		var scriptName = 'script.sh';
-		var inputScript :ComputeInputSource = {
-			type: InputSource.InputInline,
-			value: script,
-			name: scriptName
-		}
+// 		var outputValueStdout = 'out${ShortId.generate()}';
+// 		var outputValueStderr = 'out${ShortId.generate()}';
+// 		//Multiline stdout
+// 		var script =
+// '#!/bin/sh
+// echo "$outputValueStdout"
+// echo "$outputValueStdout"
+// echo foo
+// echo "$outputValueStdout"
+// echo "$outputValueStderr" >> /dev/stderr
+// echo "$outputValue1" > /$DIRECTORY_OUTPUTS/$outputName1
+// cat /$DIRECTORY_INPUTS/$inputName2 > /$DIRECTORY_OUTPUTS/$outputName2
+// cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
+// ';
+// 		var targetStdout = '$outputValueStdout\n$outputValueStdout\nfoo\n$outputValueStdout'.trim();
+// 		var targetStderr = '$outputValueStderr';
+// 		var scriptName = 'script.sh';
+// 		var inputScript :ComputeInputSource = {
+// 			type: InputSource.InputInline,
+// 			value: script,
+// 			name: scriptName
+// 		}
 
-		var inputsArray = [inputInline, inputUrl, inputScript];
-		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
-		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], inputsArray, null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
-			.pipe(function(out) {
-				return ServerTestTools.getJobResult(out.jobId);
-			})
-			.pipe(function(jobResult :JobResultAbstract) {
-				if (jobResult == null) {
-					throw 'jobResult should not be null. Check the above section';
-				}
-				return Promise.promise(true)
-					.pipe(function(_) {
-							assertNotNull(jobResult.stderr);
-							var stderrUrl = jobResult.getStderrUrl();
-							assertNotNull(stderrUrl);
-							return RequestPromises.get(stderrUrl)
-								.then(function(stderr) {
-									stderr = stderr != null ? stderr.trim() : stderr;
-									assertEquals(stderr, targetStderr);
-									return true;
-								});
-						})
-						.pipe(function(_) {
-							assertNotNull(jobResult.stdout);
-							var stdoutUrl = jobResult.getStdoutUrl();
-							assertNotNull(stdoutUrl);
-							return RequestPromises.get(stdoutUrl)
-								.then(function(stdout) {
-									stdout = stdout != null ? stdout.trim() : stdout;
-									assertEquals(stdout, targetStdout);
-									return true;
-								});
-						})
-						.pipe(function(_) {
-							var outputs = jobResult.outputs != null ? jobResult.outputs : [];
-							assertTrue(outputs.length == inputsArray.length);
-							assertTrue(outputs.has(outputName1));
-							assertTrue(outputs.has(outputName2));
-							var outputUrl1 = jobResult.getOutputUrl(outputName1);
-							var outputUrl2 = jobResult.getOutputUrl(outputName2);
-							var outputUrl3 = jobResult.getOutputUrl(outputName3);
-							return RequestPromises.get(outputUrl1)
-								.pipe(function(out) {
-									out = out != null ? out.trim() : out;
-									assertEquals(out, outputValue1);
-									return RequestPromises.get(outputUrl2)
-										.pipe(function(out) {
-											out = out != null ? out.trim() : out;
-											assertEquals(out, inputValueInline);
-											return RequestPromises.getBuffer(outputUrl3)
-												.then(function(out) {
-													var md5 = js.node.Crypto.createHash('md5').update(out).digest('hex');
-													assertTrue(md5 == 'ad07ee4cb98da073dda56ce7ceb88f5a' || md5 == '201e50d8dd7a30c0a918213686ca43b7');
-													return true;
-												});
-										});
-								});
-						});
-			});
-	}
+// 		var inputsArray = [inputInline, inputUrl, inputScript];
+// 		var proxy = ServerTestTools.getProxy(_serverHostRPCAPI);
+// 		return proxy.submitJob(DOCKER_IMAGE_DEFAULT, ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'], inputsArray, null, 1, 600000, customResultsPath, customInputsPath, customOutputsPath)
+// 			.pipe(function(out) {
+// 				return ServerTestTools.getJobResult(out.jobId);
+// 			})
+// 			.pipe(function(jobResult :JobResultAbstract) {
+// 				if (jobResult == null) {
+// 					throw 'jobResult should not be null. Check the above section';
+// 				}
+// 				return Promise.promise(true)
+// 					.pipe(function(_) {
+// 							assertNotNull(jobResult.stderr);
+// 							var stderrUrl = jobResult.getStderrUrl();
+// 							assertNotNull(stderrUrl);
+// 							return RequestPromises.get(stderrUrl)
+// 								.then(function(stderr) {
+// 									stderr = stderr != null ? stderr.trim() : stderr;
+// 									assertEquals(stderr, targetStderr);
+// 									return true;
+// 								});
+// 						})
+// 						.pipe(function(_) {
+// 							assertNotNull(jobResult.stdout);
+// 							var stdoutUrl = jobResult.getStdoutUrl();
+// 							assertNotNull(stdoutUrl);
+// 							return RequestPromises.get(stdoutUrl)
+// 								.then(function(stdout) {
+// 									stdout = stdout != null ? stdout.trim() : stdout;
+// 									assertEquals(stdout, targetStdout);
+// 									return true;
+// 								});
+// 						})
+// 						.pipe(function(_) {
+// 							var outputs = jobResult.outputs != null ? jobResult.outputs : [];
+// 							assertTrue(outputs.length == inputsArray.length);
+// 							assertTrue(outputs.has(outputName1));
+// 							assertTrue(outputs.has(outputName2));
+// 							var outputUrl1 = jobResult.getOutputUrl(outputName1);
+// 							var outputUrl2 = jobResult.getOutputUrl(outputName2);
+// 							var outputUrl3 = jobResult.getOutputUrl(outputName3);
+// 							return RequestPromises.get(outputUrl1)
+// 								.pipe(function(out) {
+// 									out = out != null ? out.trim() : out;
+// 									assertEquals(out, outputValue1);
+// 									return RequestPromises.get(outputUrl2)
+// 										.pipe(function(out) {
+// 											out = out != null ? out.trim() : out;
+// 											assertEquals(out, inputValueInline);
+// 											return RequestPromises.getBuffer(outputUrl3)
+// 												.then(function(out) {
+// 													var md5 = js.node.Crypto.createHash('md5').update(out).digest('hex');
+// 													assertTrue(md5 == 'ad07ee4cb98da073dda56ce7ceb88f5a' || md5 == '201e50d8dd7a30c0a918213686ca43b7');
+// 													return true;
+// 												});
+// 										});
+// 								});
+// 						});
+// 			});
+// 	}
 
 	public function new(targetHost :Host)
 	{
