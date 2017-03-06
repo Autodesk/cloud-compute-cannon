@@ -2,53 +2,87 @@ version: '2'
 
 services:
 
-  ccc:
-    extends:
-      file: docker-compose.core.yml
-      service: ccc
-    image: "quay.io/bionano/cloud-compute-cannon:656918e3"
-    command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
-    volumes:
-      - ./build/server:/app/server
-      - ./src/web:/app/web
-      - ./ccc_local_storage:/app/ccc_local_storage
-      - ./.env:/app/.env
-    environment:
-      LOG_LEVEL: "10"
-      STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
-      REMOVE_JOBS_ON_STARTUP: "true"
-    links:
-      - redis
-      - fluentd
-    logging:
-      driver: json-file
+  # nginx:
+  #   image: "nginx:1.10-alpine"
+  #   ports: #"HOST:CONTAINER"
+  #     - "9000:80"
+  #   volumes:
+  #     - ./etc/nginx/nginx.conf.dev:/etc/nginx/conf.d/default.conf
+  #   links:
+  #     - ccc1
+  #     # - ccc2
+  #     # - ccc3
 
-  redis:
+  ccc1:
     extends:
-      file: docker-compose.core.yml
-      service: redis
+      file: "docker-compose.dev-server-local-base.yml"
+      service: "ccc"
+    ports:
+      - "9001:9000"
+    links:
+      - redis1
+      # - fluentd
+
+  ccc2:
+    extends:
+      file: "docker-compose.dev-server-local-base.yml"
+      service: "ccc"
+    ports:
+      - "9010:9000"
+    links:
+      - redis1
+
+  ccc3:
+    extends:
+      file: "docker-compose.dev-server-local-base.yml"
+      service: "ccc"
+    ports:
+      - "9020:9000"
+    links:
+      - redis1
+
+  bull-ui-server:
+    build:
+      context:
+        "etc/bull-ui-server/"
+    environment:
+      PORT: "9002"
+      REDIS_HOST: 'redis1'
+    ports: #"HOST:CONTAINER"
+      - "9002:9002"
+    links:
+      - redis1
+
+  redis1:
+    restart: always
+    image: redis:3.2.0-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    # logging:
+    #   driver: none
 
-  fluentd:
-    build: ./etc/log/
-    volumes:
-      - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
-    links:
-      - elasticsearch
-    logging:
-      driver: none
+  # fluentd:
+  #   build: ./etc/log/
+  #   volumes:
+  #     - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+  #   links:
+  #     - elasticsearch
+  #   logging:
+  #     driver: none
 
-  elasticsearch:
-    extends:
-      file: docker-compose.core.yml
-      service: elasticsearch
-    logging:
-      driver: none
+  # elasticsearch:
+  #   extends:
+  #     file: docker-compose.core.yml
+  #     service: elasticsearch
+  #   logging:
+  #     driver: none
 
-  kibana:
-    extends:
-      file: docker-compose.core.yml
-      service: kibana
-    links:
-      - elasticsearch
+  # kibana:
+  #   extends:
+  #     file: docker-compose.core.yml
+  #     service: kibana
+  #   links:
+  #     - elasticsearch

@@ -12,16 +12,16 @@ class ServerTestTools
 		}
 	}
 
-	public static function resetRemoteServer(host :Host) :Promise<Bool>
-	{
-		var serverHostRPCAPI = 'http://${host}${SERVER_RPC_URL}';
-		var proxy = getProxy(serverHostRPCAPI);
-		return proxy.serverReset();
-	}
+	// public static function resetRemoteServer(host :Host) :Promise<Bool>
+	// {
+	// 	var serverHostRPCAPI = 'http://${host}${SERVER_RPC_URL}';
+	// 	var proxy = getProxy(serverHostRPCAPI);
+	// 	return proxy.serverReset();
+	// }
 
 	public static function getProxy(rpcUrl :UrlString)
 	{
-		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.server.ServiceBatchCompute, true)
+		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.server.execution.routes.RpcRoutes, true)
 			.setConnection(new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(rpcUrl));
 		return proxy;
 	}
@@ -30,10 +30,7 @@ class ServerTestTools
 	{
 		var proxy = getProxy(SERVER_LOCAL_RPC_URL);
 		function getJobData() {
-			return proxy.doJobCommand(JobCLICommand.Result, [jobId], true)
-				.then(function(out) {
-					return out[jobId];
-				});
+			return cast proxy.doJobCommand(JobCLICommand.Result, jobId);
 		}
 		return JobWebSocket.getJobResult(SERVER_LOCAL_HOST, jobId, getJobData);
 	}

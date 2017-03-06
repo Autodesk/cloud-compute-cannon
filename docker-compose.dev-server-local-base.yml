@@ -1,0 +1,34 @@
+version: '2'
+
+services:
+
+  ccc:
+    environment:
+      PORT: "9000"
+      # OPTIONAL: Path to the mounted configuration file
+      # CONFIG_PATH: "/app/ccc.yml"
+      # OPTIONAL text flattened yaml of the server configuration.
+      # COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
+      #This is used to get the correct host working directory to pass into the
+      #worker containers to map the local file system to /inputs+/outputs within
+      #the container. Only used for local docker providers (not cloud)
+      HOST_PWD: "$PWD"
+      STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
+      REDIS_HOST: 'redis1'
+
+      CONFIG_PATH: "/app/config/ccc.yml"
+      CLIENT_DEPLOYMENT: "true"
+      SCALE_UP_CONTROL: "external"
+      SCALE_DOWN_CONTROL: "external"
+      ENABLE_FLUENT: "false"
+
+    image: "quay.io/bionano/cloud-compute-cannon:e0d23cc2"
+    command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build/server:/app/server
+      - ./src/web:/app/web
+      - ./ccc_local_storage:/app/ccc_local_storage
+      - ./:/app/config
+    logging:
+      driver: json-file

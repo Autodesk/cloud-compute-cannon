@@ -8,7 +8,7 @@ import js.npm.bunyan.Bunyan;
 class Logger
 {
 	public static var GLOBAL_LOG_LEVEL :Int = 20;
-	public static var IS_FLUENT = true;
+	public static var IS_FLUENT = false;
 
 	public static var log :AbstractLogger;
 
@@ -83,18 +83,16 @@ class Logger
 		if (!(Sys.environment().get('ENABLE_FLUENT') == '0' || Sys.environment().get('ENABLE_FLUENT') == 'false')) {
 #if (!clientjs)
 			if (util.DockerTools.isInsideContainer()) {
-				var fluentLogger = {write:ccc.compute.server.FluentTools.createEmitter()};
+				Logger.IS_FLUENT = true;
+				var fluentLogger = {write:ccc.compute.server.logs.FluentTools.createEmitter()};
 				streams.push({
 					level: Bunyan.TRACE,
 					type: 'raw',// use 'raw' to get raw log record objects
 					stream: fluentLogger
 				});
-			} else {
-				IS_FLUENT = false;
 			}
 #end
 		}
-
 
 		log = new AbstractLogger(
 		{

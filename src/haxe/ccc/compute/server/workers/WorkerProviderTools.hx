@@ -18,7 +18,6 @@ import util.TarTools;
 import util.streams.StdStreams;
 
 using util.RedisTools;
-using ccc.compute.server.ComputeTools;
 using ccc.compute.server.workers.WorkerProviderTools;
 using ccc.compute.server.workers.WorkerTools;
 using util.MapTools;

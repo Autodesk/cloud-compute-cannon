@@ -1,3 +1,5 @@
+version: 1
+
 #The default is going to use local storage because it is a lot easier to configure
 storage:
   type: "local"

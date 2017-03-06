@@ -2,7 +2,7 @@
 #Package up the required files for the internal build process
 #and push to S3
 
-set -ev
+set -e
 
 if [ -z "$1" ]; then
 	CONFIG_PATH="etc/config/serverconfig.template.yml"
@@ -36,22 +36,18 @@ for VERSION in $GIT_TAG $NPM_VERSION ; do
 	rm -rf $ZIP_FILE
 	mkdir -p $ZIP_DIR
 
-	cp docker-compose.core.yml $ZIP_DIR/
-	cp docker-compose.yml $ZIP_DIR/
-	cp docker-compose.prod.yml $ZIP_DIR/
-	cp docker-compose.npm-prod.yml $ZIP_DIR/
-	rsync -av --exclude=*/node_modules etc/ $ZIP_DIR/
+	cp etc/bionano/aws/docker/docker-compose-aws.yml $ZIP_DIR/
 
 	#configuration packed with the artifacts
 	cp $CONFIG_PATH $ZIP_DIR/ccc.yml
 
 	#Script to run the stack
-	cp bin/run-stack-prod $ZIP_DIR/
+	#cp bin/run-stack-prod $ZIP_DIR/
 
 	echo "$VERSION" > $ZIP_DIR/VERSION
 
 	#Bake in the version since the quay.io image has already been uploaded
-	sed -i -e "s/\${VERSION}/$VERSION/g" $ZIP_DIR/docker-compose.npm-prod.yml
+	sed -i -e "s/\${VERSION}/$VERSION/g" $ZIP_DIR/docker-compose-aws.yml
 
 	#Create the zip
 	cd $ZIP_DIR
@@ -62,4 +58,6 @@ for VERSION in $GIT_TAG $NPM_VERSION ; do
 		docker run --rm -it -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v $ZIP_FILE:/tmp/$ZIP_NAME docker.io/garland/aws-cli-docker aws s3 cp /tmp/$ZIP_NAME s3://ccc-public-storage/cloud-compute-cannon/versions/$ZIP_NAME
 	fi
 done
+
+export S3FILE=s3://ccc-public-storage/cloud-compute-cannon/versions/$ZIP_NAME
 

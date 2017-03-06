@@ -1,0 +1,12 @@
+{
+  "name": "bull-ui-server",
+  "version": "1.0.1",
+  "description": "",
+  "main": "bull-ui-server.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bull-ui": "^1.2.3",
+    "express": "^4.14.1"
+  }
+}

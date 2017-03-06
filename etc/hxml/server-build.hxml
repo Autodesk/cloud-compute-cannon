@@ -6,10 +6,6 @@ etc/hxml/base-nodejs.hxml
 
 -resource package.json@package.json
 
--main ccc.compute.server.ServerCompute
+-main ccc.compute.server.Server
 
 -js build/server/cloud-compute-cannon-server.js
-
-# --next
-
-# -cmd cp src/web build/docker/

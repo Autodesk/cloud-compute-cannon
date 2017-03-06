@@ -18,7 +18,6 @@ import ccc.compute.server.InstancePool;
 import ccc.compute.workers.VagrantTools;
 import ccc.compute.server.InitConfigTools;
 import ccc.compute.server.ConnectionToolsDocker;
-import ccc.compute.server.ServiceBatchCompute;
 
 import util.streams.StdStreams;
 

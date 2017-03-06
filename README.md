@@ -100,6 +100,22 @@ Default: `true`
 
 Allow disabling fluentd logging (on by default, and expecting the fluent daemon to be accessible with the host `fluentd`).
 
+#### SCALE_UP_CONTROL
+
+  SCALE_UP_CONTROL=internal | external
+
+Default: external
+
+If SCALE_UP_CONTROL==internal then the stack can create new workers if the queue becomes larger than capacity. External means scaling is controlled via another process, e.g. AWS autoscaling groups.
+
+
+#### SCALE_DOWN_CONTROL
+
+  SCALE_DOWN_CONTROL=internal | external
+
+Default: external
+
+If SCALE_DOWN_CONTROL==internal then when the local instance queue is empty the instance will terminate itself if it is cost effective to do so. E.g. AWS instances wait until just before a new billing interval (every hour). External means termination is controlled via another process, e.g. AWS autoscaling groups.
 
 ### 'Hello world' example
 

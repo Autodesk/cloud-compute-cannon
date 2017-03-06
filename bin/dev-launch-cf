@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+bin/build-docker-images && env $(cat .env | xargs)  bin/publish_quay && env $(cat .env | xargs)  bin/create_app_zip ccc.yml
+
+set -e
+
+GIT_TAG=`git rev-parse HEAD`
+if [ ! -z "$TRAVIS_COMMIT" ]; then
+	GIT_TAG=$TRAVIS_COMMIT
+fi
+GIT_TAG=${GIT_TAG:0:8}
+VERSION=$GIT_TAG
+ZIP_NAME=ccc_docker_compose-$VERSION.zip
+# S3FILE=s3://ccc-public-storage/cloud-compute-cannon/versions/$ZIP_NAME
+S3FILE=https://s3-us-west-1.amazonaws.com/ccc-public-storage/cloud-compute-cannon/versions/$ZIP_NAME
+
+REGION=us-west-2
+
+# ../devops/cloudformation-templates/Cf-Template-asg-docker.template
+
+SERVICE_NAME=TESTCCCSERVICE
+BUILD_NUMBER=2
+CFN_PARAM_COMPOSE_FILE=docker-compose-aws.yml
+STACKNAME="CCC-AutoscalingGroup"
+CFFILE=s3://ccc-public-storage/cloudformation/test/cf-$VERSION.template
+echo $CFFILE
+aws s3 cp /Users/dionamago/autodesk/devops/cloudformation-templates/Cf-Template-asg-docker.template $CFFILE
+# CFFILE=https://s3-us-west-1.amazonaws.com/ccc-public-storage/ccc-public-storage/cloudformation/test/cf-$VERSION.template
+CFFILE=https://ccc-public-storage.s3-us-west-1.amazonaws.com/cloudformation/test/cf-$VERSION.template
+# cp /Users/dionamago/autodesk/devops/cloudformation-templates/Cf-Template-asg-docker.template /tmp/cf.json
+
+
+isStack(){
+    COMMAND="aws --region $REGION cloudformation describe-stacks --stack-name $STACKNAME"
+	$COMMAND > /dev/null 2>&1
+}
+
+if isStack ; then
+	echo "Stack exists, updating..."
+	aws --region $REGION cloudformation update-stack --stack-name $STACKNAME  \
+		--capabilities CAPABILITY_IAM \
+		--template-url $CFFILE \
+		--parameters \
+		ParameterKey=EnvironmentType,ParameterValue=dev \
+		ParameterKey=HostInstanceType,ParameterValue=t2.medium \
+		ParameterKey=AutoscaleThreshold,ParameterValue=60 \
+		ParameterKey=LbPort,ParameterValue=9000 \
+		ParameterKey=UpdateStackAction,ParameterValue=DoAppUpdate \
+		ParameterKey=AppName,ParameterValue="${SERVICE_NAME}" \
+		ParameterKey=UpdateAppBuildNumber,ParameterValue="${BUILD_NUMBER}" \
+		ParameterKey=AppComposeFile,ParameterValue="${CFN_PARAM_COMPOSE_FILE}" \
+		ParameterKey=AppSourceURL,ParameterValue=$S3FILE
+else
+	echo "Stack does not exist, creating..."
+	aws --region $REGION cloudformation create-stack --stack-name $STACKNAME  \
+		--capabilities CAPABILITY_IAM \
+		--template-url $CFFILE \
+		--parameters \
+		ParameterKey=EnvironmentType,ParameterValue=dev \
+		ParameterKey=HostInstanceType,ParameterValue=t2.medium \
+		ParameterKey=AutoscaleThreshold,ParameterValue=60 \
+		ParameterKey=LbPort,ParameterValue=9000 \
+		ParameterKey=UpdateStackAction,ParameterValue=DoAppUpdate \
+		ParameterKey=AppName,ParameterValue="${SERVICE_NAME}" \
+		ParameterKey=UpdateAppBuildNumber,ParameterValue="${BUILD_NUMBER}" \
+		ParameterKey=AppComposeFile,ParameterValue="${CFN_PARAM_COMPOSE_FILE}" \
+		ParameterKey=AppSourceURL,ParameterValue=$S3FILE
+fi
+
+
+
+
+
+
+# ParameterKey=LBVpcName,ParameterValue=dev-vpc \
+# ParameterKey=LbUniqueName,ParameterValue=test-internal-alb \
+
+# set -ev
+# aws --region us-west-2 cloudformation create-stack --stack-name $STACKNAME  \
+# --capabilities CAPABILITY_IAM \
+# --template-url $CFFILE \
+# --parameters \
+# ParameterKey=EnvironmentType,ParameterValue=dev \
+# ParameterKey=HostInstanceType,ParameterValue=t2.medium \
+# ParameterKey=AutoscaleThreshold,ParameterValue=60 \
+# ParameterKey=LbPort,,ParameterValue=9000 \
+# ParameterKey=UpdateStackAction,ParameterValue=DoAppUpdate \
+# ParameterKey=AppName,ParameterValue="${SERVICE_NAME}" \
+# ParameterKey=UpdateAppBuildNumber,ParameterValue="${BUILD_NUMBER}" \
+# ParameterKey=AppComposeFile,ParameterValue="${CFN_PARAM_COMPOSE_FILE}" \
+# ParameterKey=AppSourceURL,ParameterValue=$S3FILE
+
+

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #Build docker image needed for compiling haxe source in Javascript
 echo "Building and tagging images"
-set -ev
+set -e
 BASEDIR=$PWD
 CCC_BUILD_IMAGE="cccbuild"
 BUILD_DIR="build/docker/compile_image"

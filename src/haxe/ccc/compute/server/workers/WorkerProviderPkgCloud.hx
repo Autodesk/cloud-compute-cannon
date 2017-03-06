@@ -354,6 +354,14 @@ class WorkerProviderPkgCloud extends WorkerProviderBase
 			});
 	}
 
+	static function getAWSInstanceId() :Promise<MachineId>
+	{
+		return RequestPromises.get('http://169.254.169.254/latest/meta-data/instance-id')
+			.then(function(s) {
+				return s.trim();
+			});
+	}
+
 	static function getAWSPublicHostName() :Promise<HostName>
 	{
 		return RequestPromises.get('http://169.254.169.254/latest/meta-data/public-hostname')

@@ -612,7 +612,9 @@ exit $exitCode
 			outputsPath: customOutputsPath,
 			inputsPath: customInputsPath,
 			resultsPath: customResultsPath,
-			wait: true
+			wait: true,
+			appendStdOut: true,
+			appendStdErr: true
 		};
 
 		var formData :DynamicAccess<Dynamic> = {};
@@ -702,7 +704,6 @@ exit 0
 					promise.boundPromise.reject(err);
 					return;
 				}
-				traceCyan('httpResponse.statusCode=${httpResponse.statusCode}');
 				promise.resolve(httpResponse.statusCode == 400);
 			});
 

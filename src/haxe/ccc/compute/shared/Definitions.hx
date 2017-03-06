@@ -1,7 +1,7 @@
 package ccc.compute.shared;
 
 import ccc.compute.shared.Constants.*;
-import ccc.compute.server.stats.StatsDefinitions;
+import ccc.compute.server.job.stats.StatsDefinitions;
 
 import haxe.Json;
 import haxe.DynamicAccess;
@@ -22,6 +22,24 @@ import t9.abstracts.net.*;
 #end
 
 using StringTools;
+
+@:enum
+abstract DistributedTaskType(String) from String to String {
+	var CheckAllWorkerHealth = 'CheckAllWorkerHealth';
+	var RunScaling = 'RunScaling';
+}
+
+typedef WorkerCount=Int;
+typedef WorkerPoolPriority=Int;
+typedef MachineStatus=String;
+
+@:enum
+abstract BullQueueNames(String) from String to String {
+	var JobQueue = 'job_queue';
+	/* Any worker can process this message */
+	var SingleMessageQueue = 'single_message_queue';
+}
+
 
 /**
  *********************************************
@@ -171,6 +189,7 @@ typedef DockerImageSource = {
  * representing the docker job.
  */
 typedef DockerBatchComputeJob = {
+	var jobId :JobId;
 	var image :DockerImageSource;
 	@:optional var inputs :Array<String>;
 	@:optional var command :Array<String>;
@@ -196,7 +215,6 @@ typedef DockerBatchComputeJob = {
 
 typedef DockerJobDefinition = {>DockerBatchComputeJob,
 	@:optional var computeJobId :ComputeJobId;
-	var jobId :JobId;
 	@:optional var worker :WorkerDefinition;
 }
 
@@ -255,11 +273,6 @@ abstract JobStatus(String) to String from String {
 	 */
 	var Working = 'working';
 	/**
-	 * The JobFinishedStatus gets set here. The Job object then handles
-	 * that status before marking the job as finished.
-	 */
-	var Finalizing = 'finalizing';
-	/**
 	 * When the Job object is finished finalizing the job, it marks
 	 * the job as finished.
 	 */
@@ -276,9 +289,11 @@ abstract JobWorkingStatus(String) from String to String {
 	var Cancelled = 'cancelled';
 	var CopyingInputs = 'copying_inputs';
 	var CopyingImage = 'copying_image';
+	var CopyingInputsAndImage = 'copying_inputs_and_image';
 	var ContainerRunning = 'container_running';
 	var CopyingOutputs = 'copying_outputs';
 	var CopyingLogs = 'copying_logs';
+	var CopyingOutputsAndLogs = 'copying_outputs_and_logs';
 	var FinishedWorking = 'finished_working';
 }
 
@@ -293,6 +308,7 @@ typedef JobStatusBlob = {
 typedef BatchJobResult = {
 	var exitCode :Int;
 	var copiedLogs :Bool;
+	// var JobFinishedStatus :JobFinishedStatus;
 	@:optional var JobWorkingStatus :JobWorkingStatus;
 	@:optional var outputFiles :Array<String>;
 	@:optional var error :Dynamic;
@@ -328,13 +344,11 @@ abstract JobFinishedStatus(String) from String to String {
 }
 
 typedef JobStatusUpdate = {
-	var JobStatus :JobStatus;
-	var JobWorkingStatus :JobWorkingStatus;
-	var JobFinishedStatus :JobFinishedStatus;
+	var status :JobStatus;
+	var statusWorking :JobWorkingStatus;
+	var statusFinished :JobFinishedStatus;
 	var jobId :JobId;
-	@:optional var computeJobId :ComputeJobId;
 	@:optional var error :Dynamic;
-	@:optional var job :DockerJobDefinition;
 }
 
 
@@ -366,7 +380,7 @@ typedef JobResult = {
 	@:optional var outputs :Array<String>;
 	@:optional var error :Dynamic;
 	@:optional var stats :PrettyStatsData;
-	@:optional var definition :DockerJobDefinition;
+	@:optional var definition :DockerBatchComputeJob;
 }
 
 typedef SystemStatus = {
@@ -457,7 +471,7 @@ typedef ClientVersionBlob = {
 
 @:enum
 abstract JobCLICommand(String) from String {
-	var Remove = 'remove';
+	// var Remove = 'remove';
 	var RemoveComplete = 'removeComplete';
 	var Status = 'status';
 	var ExitCode = 'exitcode';
@@ -546,7 +560,6 @@ typedef ENV = {
 @:enum
 abstract ServiceWorkerProviderType(MachinePoolId) from MachinePoolId to MachinePoolId {
   var boot2docker = new MachinePoolId("Boot2Docker");
-  var vagrant = new MachinePoolId("Vagrant");
   var pkgcloud = new MachinePoolId("PkgCloud");
   var mock = new MachinePoolId("Mock");
   var test1 = new MachinePoolId("test1");
@@ -604,7 +617,6 @@ abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigura
 	{
 		return switch(this.type) {
 			case boot2docker: 'local';
-			case vagrant: 'vagrant';
 			case pkgcloud:
 				var credentials :js.npm.PkgCloud.ClientOptionsAmazon = this.credentials;
 				credentials.provider + '';
@@ -639,6 +651,10 @@ typedef ServiceConfigurationWorkerProvider = {
 	var minWorkers :Int;
 	var priority :Int;
 	var billingIncrement :Minutes;
+	/* How often to check the queue, creating a worker if needed */
+	var scaleUpCheckInterval :String;
+	/* Waits this time interval in between adding a worker and checking the queue again */
+	var workerCreationDuration :String;
 	/* This is only optional if it has been previously set, and you are adjusting the above values only */
 	@:optional var type: ServiceWorkerProviderType;
 	/* Credentials to pass to third party libraries to access provider API */

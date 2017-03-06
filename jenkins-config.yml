@@ -1,11 +1,11 @@
-service-name: cloudcomputecannon
+service-name: cloudcomputecannonv2
 # NOTE override this value in the Jenkins job as it varies by environment
 environment: local
 
 # parameters used when calling cloudformation update-stack
 # NOTE set this value in the Jenkins job as it varies by environment
 cfn-stack-name: ""
-cfn-param-compose-file: docker-compose.yml -f docker-compose.prod.yml
+cfn-param-compose-file: docker-compose-aws.yml
 cfn-param-compose-start-params: ""
 # NOTE set this value in the Jenkins job as it varies by environment
 cfn-param-compose-cmd-prefix: ""

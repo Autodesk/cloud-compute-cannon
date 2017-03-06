@@ -1,11 +1,15 @@
+version: 1
+
 storage:
   type: "local"
   rootPath: "ccc_local_storage"
 
 providers:
   - type: "Boot2Docker"
-    maxWorkers: 1
+    maxWorkers: 3
     minWorkers: 1
     priority: 1
     #billingIncrement is measured in minutes
     billingIncrement: 0
+    scaleUpCheckInterval: "10s"
+    workerCreationDuration: "10s"

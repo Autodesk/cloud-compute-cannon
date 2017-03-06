@@ -19,7 +19,7 @@ import yaml.Yaml;
 import util.SshTools;
 import util.streams.StreamTools;
 
-using ccc.compute.server.ComputeTools;
+using ccc.compute.server.execution.ComputeTools;
 using t9.util.ColorTraces;
 
 enum ClientResult {
@@ -489,9 +489,9 @@ class ClientCommands
 			return clientProxy.removeAllJobsAndWorkers()
 				.pipe(function(_) {
 					traceGreen('    - OK');
-					var provider = WorkerProviderTools.getProvider(serverBlob.provider.providers[0]);
+					var provider = CloudTools.getCloudProviderFromConfig(serverBlob.provider.providers[0]);
 					traceYellow('  - Removing CCC server(s) ${serverBlob.server.id}');
-					return provider.destroyInstance(serverBlob.server.id)
+					return provider.terminate(serverBlob.server.id)
 						.then(function(_) {
 							traceGreen('    - OK');
 							traceYellow('  - Removing local files');

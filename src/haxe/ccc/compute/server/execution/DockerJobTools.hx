@@ -12,9 +12,6 @@ import ccc.storage.StorageSourceType;
 import util.DockerTools;
 import util.streams.StreamTools;
 
-using ccc.compute.server.JobTools;
-using ccc.compute.server.workers.WorkerTools;
-
 typedef WroteLogs = {
 	var stdout :Bool;
 	var stderr :Bool;
@@ -146,9 +143,9 @@ class DockerJobTools
 
 	public static function getContainerFromJob(job :QueueJobDefinitionDocker) :Promise<DockerContainer>
 	{
-		Assert.notNull(job.computeJobId, 'job.computeJobId is null');
-		var docker = job.worker.getInstance().docker();
-		return getContainer(docker, job.computeJobId);
+		Assert.notNull(job.id, 'job.id is null');
+		var docker = new Docker(job.worker.docker);//job.worker.getInstance().docker();
+		return getContainer(docker, job.id);
 	}
 
 	/**
@@ -158,9 +155,10 @@ class DockerJobTools
 	 */
 	public static function removeJobContainer(job :QueueJobDefinitionDocker) :Promise<String>
 	{
-		Assert.notNull(job.computeJobId, 'job.computeJobId is null');
-		var docker = job.worker.getInstance().docker();
-		return removeContainer(docker, job.computeJobId, false);
+		Assert.notNull(job.id, 'job.id is null');
+		// var docker = job.worker.getInstance().docker();
+		var docker = new Docker(job.worker.docker);
+		return removeContainer(docker, job.id, false);
 	}
 
 	/**
@@ -233,9 +231,9 @@ class DockerJobTools
 	//On end, copy output files into storage
 	//
 
-	public static function runDockerContainer(docker :Docker, opts :CreateContainerOptions, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
+	public static function runDockerContainer(docker :Docker, opts :CreateContainerOptions, kill :Promise<Bool>, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
 	{
-		log = Logger.ensureLog(log, {image:opts.Image, computejobid:opts.Labels.computeJobId, dockerhost:docker.modem.host});
+		log = Logger.ensureLog(log, {image:opts.Image, jobId:opts.Labels.jobId, dockerhost:docker.modem.host});
 		var promise = new DeferredPromise();
 		docker.createContainer(opts, function(createContainerError, container) {
 			if (createContainerError != null) {
@@ -244,14 +242,26 @@ class DockerJobTools
 				return;
 			}
 
+			var finished = false;
+			kill.then(function(ok) {
+				traceMagenta('about to kill finished=$finished');
+				if (!finished) {
+					container.kill(function(err, data) {
+						traceMagenta('killed err=$err data=$data');
+					});
+				}
+			});
+
 			container.start(function(containerStartError, data) {
 				if (containerStartError != null) {
 					var result = {container:container, error:containerStartError};
 					promise.resolve(result);
+					finished = true;
 					return;
 				}
 				container.wait(function(waitError, endResult) {
 					var result = {container:container, error:waitError};
+					finished = true;
 					promise.resolve(result);
 				});
 			});
@@ -283,13 +293,13 @@ class DockerJobTools
 		return deferredPromise.boundPromise;
 	}
 
-	public static function copyLogs(docker :Docker, computeJobId :ComputeJobId, fs :ServiceStorage, ?checkLogsReadable :Bool = true) :Promise<WroteLogs>
+	public static function copyLogs(docker :Docker, jobId :JobId, fs :ServiceStorage, ?checkLogsReadable :Bool = true) :Promise<WroteLogs>
 	{
 		var result :WroteLogs = {stdout:false, stderr:false};
-		return getContainerId(docker, computeJobId)
+		return getContainerId(docker, jobId)
 			.pipe(function(id) {
 				if (id == null) {
-					Log.error('Cannot find container with tag: "computeId=$computeJobId"');
+					Log.error('Cannot find container with tag: "jobId=$jobId"');
 					return Promise.promise(result);
 				} else {
 					var container = docker.getContainer(id);
@@ -371,54 +381,54 @@ class DockerJobTools
 			});
 	}
 
-	public static function getContainerId(docker :Docker, computeJobId :ComputeJobId) :Promise<String>
+	public static function getContainerId(docker :Docker, jobId :JobId) :Promise<String>
 	{
-		return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter('computeId=$computeJobId')})
+		return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter('jobId=$jobId')})
 			.then(function(containers) {
 				if (containers.length > 0) {
 					return containers[0].Id;
 				} else {
-					Log.error({log:'Missing container id', computejobid:computeJobId});
+					Log.error({log:'Missing container id', jobId:jobId});
 					DockerPromises.listContainers(docker, {all:true})
 						.then(function(containers) {
-							Log.error({log:'Missing container id', computejobid:computeJobId});
+							Log.error({log:'Missing container id', jobId:jobId});
 						})
 						.catchError(function(err) {/* This error is ignored */});
 					return null;
 				}
 			})
 			.errorPipe(function(err) {
-				Log.error('getContainerId DockerPromises.listContainers computejobid=$computeJobId error=${Json.stringify(err)}');
+				Log.error('getContainerId DockerPromises.listContainers jobId=$jobId error=${Json.stringify(err)}');
 				return Promise.promise(null);
 			});
 	}
 
-	public static function getContainer(docker :Docker, computeJobId :ComputeJobId) :Promise<DockerContainer>
+	public static function getContainer(docker :Docker, jobId :JobId) :Promise<DockerContainer>
 	{
-		return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter('computeId=$computeJobId')})
+		return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter('jobId=$jobId')})
 			.then(function(containers) {
 				if (containers.length > 0) {
 					return docker.getContainer(containers[0].Id);
 				} else {
-					Log.error({log:'Missing container id', computejobid:computeJobId, dockerhost:docker.modem.host});
+					Log.error({log:'Missing container id', jobId:jobId, dockerhost:docker.modem.host});
 					return null;
 				}
 			})
 			.errorPipe(function(err) {
-				Log.error({log:'getContainer', error:err, computejobid:computeJobId, dockerhost:docker.modem.host});
+				Log.error({log:'getContainer', error:err, jobId:jobId, dockerhost:docker.modem.host});
 				return Promise.promise(null);
 			});
 	}
 
-	public static function removeContainer(docker :Docker, computeJobId :ComputeJobId, ?suppressErrorIfContainerNotFound :Bool = false) :Promise<String>
+	public static function removeContainer(docker :Docker, jobId :JobId, ?suppressErrorIfContainerNotFound :Bool = false) :Promise<String>
 	{
-		return getContainerId(docker, computeJobId)
+		return getContainerId(docker, jobId)
 			.pipe(function(containerId) {
 				if (containerId == null) {
 					if (suppressErrorIfContainerNotFound) {
 						return Promise.promise(null);
 					} else {
-						throw 'No container found for computeJobId=$computeJobId';
+						throw 'No container found for jobId=$jobId';
 					}
 				} else {
 					return DockerTools.removeContainer(docker.getContainer(containerId), suppressErrorIfContainerNotFound)

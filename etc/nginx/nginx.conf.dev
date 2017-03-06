@@ -1,0 +1,47 @@
+# Define your "upstream" servers - the
+# servers request will be sent to
+upstream ccc_servers {
+    least_conn; # Use Least Connections strategy
+    server ccc1:9000 fail_timeout=10s max_fails=5;
+    server ccc2:9000 fail_timeout=10s max_fails=5;
+    server ccc3:9000 fail_timeout=10s max_fails=5;
+}
+
+# Define the Nginx server
+# This will proxy any non-static directory
+server {
+    listen 80;
+    server_name ccc.bionano.autodesk.com www.ccc.bionano.autodesk.com;
+
+    access_log /var/log/nginx/example.com-access.log;
+    error_log  /var/log/nginx/example.com-error.log error;
+
+    # Browser and robot always look for these
+    # Turn off logging for them
+    location = /favicon.ico { log_not_found off; access_log off; }
+    location = /robots.txt  { log_not_found off; access_log off; }
+
+    # Handle static files so they are not proxied to NodeJS
+    # You may want to also hand these requests to other upstream
+    # servers, as you can define more than one!
+    # location ~ ^/(images/|img/|javascript/|js/|css/|stylesheets/|flash/|media/|static/|robots.txt|humans.txt|favicon.ico) {
+    #   root /var/www;
+    # }
+
+    # pass the request to the node.js server
+    # with some correct headers for proxy-awareness
+    location / {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-NginX-Proxy true;
+
+        proxy_pass http://ccc_servers/;
+        proxy_redirect off;
+
+        # Handle Web Socket connections
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}

@@ -6,11 +6,11 @@ import haxe.DynamicAccess;
 import js.node.Buffer;
 import js.node.http.IncomingMessage;
 
-import ccc.compute.shared.*;
 import ccc.compute.shared.Constants.*;
 import ccc.compute.shared.Definitions;
 import ccc.compute.shared.TypedDynamicObject;
 import ccc.compute.server.*;
+import ccc.compute.server.job.*;
 
 import haxe.remoting.JsonRpc;
 
