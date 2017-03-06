@@ -28,14 +28,22 @@ class ServiceTests
 {
 	@inject
 	public var _injector :Injector;
+	@inject
+	public var _context :t9.remoting.jsonrpc.Context;
+
+	@post
+	public function postInject()
+	{
+		_context.registerService(this);
+	}
 
 	@rpc({
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || worker || storage || compute || dockervolumes || jobs)) {
+		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks)) {
 			compute = true;
 		}
 		if (all) {
@@ -45,6 +53,7 @@ class ServiceTests
 			compute = true;
 			dockervolumes = true;
 			jobs = true;
+			distributedtasks = true;
 		}
 		var logString :haxe.DynamicAccess<Bool> = {
 			all: all,
@@ -53,7 +62,8 @@ class ServiceTests
 			storage: storage,
 			compute: compute,
 			dockervolumes: dockervolumes,
-			jobs: jobs
+			jobs: jobs,
+			distributedtasks: distributedtasks
 		};
 		trace('Running tests: [' + logString.keys().map(function(k) return logString[k] ? k.green() : k.red()).array().join(' ') + ']');
 
@@ -66,6 +76,12 @@ class ServiceTests
 
 		if (core || jobs) {
 			runner.add(new TestJobs(targetHost));
+		}
+
+		if (distributedtasks) {
+			var distributedTasks = new ccc.compute.server.util.redis.TestRedisDistributedSetInterval();
+			_injector.injectInto(distributedTasks);
+			runner.add(distributedTasks);
 		}
 
 		if (core || storage) {
@@ -87,11 +103,11 @@ class ServiceTests
 			runner.add(new ccc.docker.dataxfer.TestDataTransfer());
 		}
 
-		if (worker) {
-			var testWorkers = new TestWorkerMonitoring();
-			_injector.injectInto(testWorkers);
-			runner.add(testWorkers);
-		}
+		// if (worker) {
+		// 	var testWorkers = new TestWorkerMonitoring();
+		// 	_injector.injectInto(testWorkers);
+		// 	runner.add(testWorkers);
+		// }
 
 		if (compute || core) {
 			runner.add(new TestCompute(targetHost));
@@ -108,6 +124,83 @@ class ServiceTests
 				});
 				return result;
 			});
+	}
+
+	@rpc({
+		alias:'create-test-jobs'
+	})
+	public function createTestJobs(count :Int, duration :Int) :Promise<Dynamic>
+	{
+		function createAndSubmitJob() {
+			var TESTNAME = 'createTestJobs';
+
+			var inputValueInline = 'in${ShortId.generate()}';
+			var inputName2 = 'in${ShortId.generate()}';
+
+			var outputName1 = 'out${ShortId.generate()}';
+			var outputName2 = 'out${ShortId.generate()}';
+
+			var outputValue1 = 'out${ShortId.generate()}';
+
+			var inputInline :ComputeInputSource = {
+				type: InputSource.InputInline,
+				value: inputValueInline,
+				name: inputName2
+			}
+
+			var random = ShortId.generate();
+			var customInputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_INPUTS';
+			var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_OUTPUTS';
+			var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
+
+			var outputValueStdout = 'out${ShortId.generate()}';
+			var outputValueStderr = 'out${ShortId.generate()}';
+			//Multiline stdout
+			var script =
+	'#!/bin/sh
+	sleep ${duration}s
+	echo "$outputValueStdout"
+	echo "$outputValueStdout"
+	echo foo
+	echo "$outputValueStdout"
+	echo "$outputValueStderr" >> /dev/stderr
+	echo "$outputValue1" > /$DIRECTORY_OUTPUTS/$outputName1
+	cat /$DIRECTORY_INPUTS/$inputName2 > /$DIRECTORY_OUTPUTS/$outputName2
+	';
+
+			var targetStdout = '$outputValueStdout\n$outputValueStdout\nfoo\n$outputValueStdout'.trim();
+			var targetStderr = '$outputValueStderr';
+			var scriptName = 'script.sh';
+			var inputScript :ComputeInputSource = {
+				type: InputSource.InputInline,
+				value: script,
+				name: scriptName
+			}
+
+			var random = ShortId.generate();
+			var customInputsPath = '$TEST_BASE/$TESTNAME/$random/inputs';
+			var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/outputs';
+			var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
+
+			var inputsArray = [inputInline, inputScript];
+
+			var request: BasicBatchProcessRequest = {
+				inputs: inputsArray,
+				image: DOCKER_IMAGE_DEFAULT,
+				cmd: ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'],
+				resultsPath: customResultsPath,
+				inputsPath: customInputsPath,
+				outputsPath: customOutputsPath,
+				wait: true
+			}
+
+			ccc.compute.client.js.ClientJSTools.postJob('http://localhost:9000${SERVER_RPC_URL}', request, {});
+		}
+		for (i in 0...count) {
+			createAndSubmitJob();
+		}
+
+		return Promise.promise(true);
 	}
 
 	@rpc({

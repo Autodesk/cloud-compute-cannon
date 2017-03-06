@@ -92,7 +92,7 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			resultsPath: customResultsPath,
 			inputsPath: customInputsPath,
 			outputsPath: customOutputsPath,
-			wait: true
+			wait: true,
 		}
 
 		var forms :DynamicAccess<Dynamic> = {};

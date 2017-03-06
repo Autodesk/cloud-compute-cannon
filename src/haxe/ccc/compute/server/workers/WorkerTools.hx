@@ -11,9 +11,6 @@ import promhx.Stream;
 import promhx.deferred.DeferredPromise;
 import promhx.deferred.DeferredStream;
 
-import ccc.compute.server.InstancePool;
-import ccc.storage.ServiceStorage;
-
 import util.DockerTools;
 import util.SshTools;
 
@@ -47,12 +44,12 @@ class WorkerTools
 		});
 	}
 
-	public static function filterWorkerByStatus(status :MachineStatus) :Worker->Bool
-	{
-		return function(worker :Worker) {
-			return worker.computeStatus == status;
-		}
-	}
+	// public static function filterWorkerByStatus(status :MachineStatus) :Worker->Bool
+	// {
+	// 	return function(worker :Worker) {
+	// 		return worker.computeStatus == status;
+	// 	}
+	// }
 
 	public static function getWorker(redis :RedisClient, fs :ServiceStorage, id :MachineId) :Promise<Worker>
 	{

@@ -28,6 +28,9 @@ class EmbedMacros
 		var regexes = exclude.map(function(s) return new EReg(s, ''));
 
 		var pathFilter = function(filePath :String) :Bool {
+			if (filePath.indexOf('node_modules') > -1) {
+				return false;
+			}
 			if (regexes.length == 0) {
 				return true;
 			} else {

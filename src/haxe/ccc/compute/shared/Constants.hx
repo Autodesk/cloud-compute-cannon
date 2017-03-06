@@ -27,7 +27,11 @@ class Constants
 
 	/* Redis */
 	inline public static var SEP = '::';
+	inline public static var CCC_PREFIX = 'ccc${SEP}';
 	inline public static var JOB_ID_ATTEMPT_SEP = '_';
+	inline public static var CONFIG_HASH = 'ccc_config';
+	inline public static var CONFIG_HASH_WORKERS_MAX = 'workers_max';
+	inline public static var CONFIG_HASH_WORKERS_MIN = 'workers_min';
 
 	/* Job constants */
 	public static inline var RESULTS_JSON_FILE = 'result.json';
@@ -62,6 +66,14 @@ class Constants
 	inline public static var ENV_DISABLE_STARTUP_TEST = 'DISABLE_STARTUP_TEST';
 	inline public static var ENV_REMOVE_JOBS_ON_STARTUP = 'REMOVE_JOBS_ON_STARTUP';
 	inline public static var ENV_ENABLE_FLUENT = 'ENABLE_FLUENT';
+	/* Injector env vars */
+	inline public static var ENV_REDIS_HOST = 'REDIS_HOST';
+	inline public static var ENV_REDIS_PORT = 'REDIS_PORT';
+	/* Scaling control: values [internal/external] defaults to external */
+	inline public static var ENV_SCALE_UP_CONTROL = 'SCALE_UP_CONTROL';
+	/* external | internal */
+	inline public static var ENV_SCALE_DOWN_CONTROL = 'SCALE_DOWN_CONTROL';
+
 
 	/* Server */
 	public static var DOCKER_CONTAINER_ID :String = null;
@@ -74,6 +86,8 @@ class Constants
 	inline public static var SERVER_RELOADER_PORT = 9002;
 	inline public static var REDIS_PORT = 6379;
 	inline public static var DOCKER_PORT = 2375;
+	inline public static var DEFAULT_REDIS_PORT = 6379;
+	public static var DOCKER_CONNECT_OPTS_LOCAL = {socketPath:'/var/run/docker.sock'};
 	inline public static var SERVER_PATH_CHECKS = '/checks';
 	inline public static var SERVER_PATH_CHECKS_OK = 'OK';
 	inline public static var SERVER_PATH_RELOAD = '/reload';

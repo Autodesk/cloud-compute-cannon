@@ -6,8 +6,6 @@ import js.Node;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
 
-import ccc.compute.server.InstancePool;
-
 import promhx.Promise;
 import promhx.Promise;
 import promhx.Stream;
@@ -45,8 +43,8 @@ class WorkerProviderBase
 	@inject public var _redis :RedisClient;
 	#if debug public #end
 	var _config :ServiceConfigurationWorkerProvider;
-	var _streamMachineCount :Stream<TargetMachineCount>;
-	var _streamMachineStatus :Stream<Array<InstanceStatusResult>>;
+	// var _streamMachineCount :Stream<TargetMachineCount>;
+	// var _streamMachineStatus :Stream<Array<InstanceStatusResult>>;
 	var _ready :Promise<Bool> = Promise.promise(true);
 	var _targetWorkerCount :WorkerCount = 0;
 	var _actualWorkerCount :WorkerCount = 0;
@@ -444,56 +442,56 @@ class WorkerProviderBase
 	}
 
 	var _instanceStatusCache = new Map<MachineId,MachineStatus>();
-	function onWorkerStatusUpdate(statuses :Array<InstanceStatusResult>)
-	{
-		log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
-		for (status in statuses) {
-			var instanceId = status.id;
-			if (_instanceStatusCache.get(instanceId) == status.status) {
-				continue;
-			} else {
-				_instanceStatusCache.set(instanceId, status.status);
-			}
+	// function onWorkerStatusUpdate(statuses :Array<InstanceStatusResult>)
+	// {
+	// 	log.debug({statuses:statuses, f:'onWorkerStatusUpdate'});
+	// 	for (status in statuses) {
+	// 		var instanceId = status.id;
+	// 		if (_instanceStatusCache.get(instanceId) == status.status) {
+	// 			continue;
+	// 		} else {
+	// 			_instanceStatusCache.set(instanceId, status.status);
+	// 		}
 
-			switch(status.status) {
-				case Removing:
-					log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker'});
-					removeWorker(status.id)
-						.errorPipe(function(err) {
-							log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker, but it threw an error, but this should be ok', err: err});
-							return Promise.promise(true);
-						})
-						.pipe(function(_) {
-							return InstancePool.removeInstance(_redis, instanceId)
-								.pipe(function(_) {
-									_instanceStatusCache.remove(instanceId);
-									_actualWorkerCount--;
-									return InstancePool.getTargetWorkerCount(redis, id)
-										.pipe(function(targetCount) {
-											log.debug({log:'worker removed, setting targetcount=$targetCount _actualWorkerCount=$_actualWorkerCount'});
-											return setWorkerCount(targetCount);
-										});
-								});
-						});
-				case Deferred:
-					log.info({worker:instanceId, worker_status: status.status, action: 'add to deferred list with a timeout'});
-					log.debug('instance=$instanceId deferred');
-					getShutdownDelay(instanceId)
-						.pipe(function(delay) {
-							log.debug('instance=$instanceId TimeStamp.now()=${TimeStamp.now()} delay=${delay} delay.toSeconds()=${delay.toSeconds()}');
-							var removalTimeStamp :TimeStamp = TimeStamp.now().addSeconds(delay.toSeconds());
-							log.debug('instance=$instanceId deferred removalTimeStamp=$removalTimeStamp');
-							return InstancePool.setWorkerTimeout(redis, instanceId, removalTimeStamp)
-								.then(function(_) {
-									addWorkerToDeferred(instanceId, removalTimeStamp);
-									return true;
-								});
-						});
-				case Available,Failed,Initializing,Terminated,WaitingForRemoval:
-					log.info({worker:instanceId, worker_status: status.status, action: 'nothing'});
-			}
-		}
-	}
+	// 		switch(status.status) {
+	// 			case Removing:
+	// 				log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker'});
+	// 				removeWorker(status.id)
+	// 					.errorPipe(function(err) {
+	// 						log.info({worker:instanceId, worker_status: status.status, action: 'removeWorker, but it threw an error, but this should be ok', err: err});
+	// 						return Promise.promise(true);
+	// 					})
+	// 					.pipe(function(_) {
+	// 						return InstancePool.removeInstance(_redis, instanceId)
+	// 							.pipe(function(_) {
+	// 								_instanceStatusCache.remove(instanceId);
+	// 								_actualWorkerCount--;
+	// 								return InstancePool.getTargetWorkerCount(redis, id)
+	// 									.pipe(function(targetCount) {
+	// 										log.debug({log:'worker removed, setting targetcount=$targetCount _actualWorkerCount=$_actualWorkerCount'});
+	// 										return setWorkerCount(targetCount);
+	// 									});
+	// 							});
+	// 					});
+	// 			case Deferred:
+	// 				log.info({worker:instanceId, worker_status: status.status, action: 'add to deferred list with a timeout'});
+	// 				log.debug('instance=$instanceId deferred');
+	// 				getShutdownDelay(instanceId)
+	// 					.pipe(function(delay) {
+	// 						log.debug('instance=$instanceId TimeStamp.now()=${TimeStamp.now()} delay=${delay} delay.toSeconds()=${delay.toSeconds()}');
+	// 						var removalTimeStamp :TimeStamp = TimeStamp.now().addSeconds(delay.toSeconds());
+	// 						log.debug('instance=$instanceId deferred removalTimeStamp=$removalTimeStamp');
+	// 						return InstancePool.setWorkerTimeout(redis, instanceId, removalTimeStamp)
+	// 							.then(function(_) {
+	// 								addWorkerToDeferred(instanceId, removalTimeStamp);
+	// 								return true;
+	// 							});
+	// 					});
+	// 			case Available,Failed,Initializing,Terminated,WaitingForRemoval:
+	// 				log.info({worker:instanceId, worker_status: status.status, action: 'nothing'});
+	// 		}
+	// 	}
+	// }
 
 	function addRunningPromiseToQueue(promise :Promise<Dynamic>)
 	{

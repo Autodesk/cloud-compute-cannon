@@ -1,6 +1,6 @@
 package ccc.docker.dataxfer;
 
-import ccc.compute.server.ConnectionToolsDocker;
+import ccc.compute.server.util.ConnectionToolsDocker;
 import ccc.docker.dataxfer.DockerDataTools;
 import ccc.storage.ServiceStorageS3;
 import ccc.storage.StorageSourceType;

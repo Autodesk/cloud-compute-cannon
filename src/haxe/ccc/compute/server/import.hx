@@ -10,7 +10,18 @@ import ccc.compute.shared.Definitions;
 	import ccc.compute.shared.AbstractLogger;
 	import ccc.compute.shared.Logger;
 	import ccc.compute.shared.TypedDynamicObject;
-	import ccc.compute.server.stats.JobStats;
+	import ccc.compute.shared.*;
+	import ccc.compute.server.job.stats.*;
+	import ccc.compute.server.job.state.*;
+	import ccc.compute.server.job.*;
+	import ccc.compute.server.execution.*;
+	import ccc.compute.server.scaling.*;
+	import ccc.compute.server.execution.BatchComputeDocker.*;
+	import ccc.compute.server.execution.singleworker.*;
+	import ccc.compute.server.logs.*;
+	import ccc.compute.server.tests.*;
+	import ccc.compute.server.util.*;
+	import ccc.compute.server.util.redis.RedisDistributedSetInterval;
 
 	import js.Node;
 	import js.node.Buffer;
@@ -32,16 +43,14 @@ import ccc.compute.shared.Definitions;
 	import ccc.compute.client.*;
 	import ccc.compute.server.*;
 
-	import ccc.compute.shared.*;
-	import ccc.compute.server.Stack.*;
-	import ccc.compute.server.ComputeQueue;
-	import ccc.compute.server.InstancePool;
-	import ccc.compute.server.execution.*;
-	import ccc.compute.server.execution.BatchComputeDocker.*;
-	import ccc.compute.server.workers.*;
-	import ccc.compute.server.workers.WorkerProviderBoot2Docker;
-	import ccc.compute.server.workers.WorkerProviderPkgCloud;
-	import ccc.compute.server.workflows.*;
+	
+	// import ccc.compute.server.execution.singleserver.ComputeQueue;
+	// import ccc.compute.server.execution.singleserver.InstancePool;
+	
+	// import ccc.compute.server.workers.*;
+	// import ccc.compute.server.workers.WorkerProviderBoot2Docker;
+	// import ccc.compute.server.workers.WorkerProviderPkgCloud;
+	// import ccc.compute.server.workflows.*;
 	import ccc.storage.*;
 
 	import minject.Injector;
@@ -62,8 +71,9 @@ import ccc.compute.shared.Definitions;
 	using StringTools;
 	using util.StringUtil;
 	using promhx.PromiseTools;
-	using ccc.compute.server.workers.WorkerProviderTools;
-	using ccc.compute.server.InstancePool;
-	using ccc.compute.server.JobTools;
-	using ccc.compute.server.ComputeTools;
+	// using ccc.compute.server.workers.WorkerProviderTools;
+	using ccc.compute.server.execution.JobTools;
+	using ccc.compute.server.execution.ComputeTools;
+	// using ccc.compute.server.workers.WorkerProviderTools;
+	// using ccc.compute.server.workers.WorkerTools;
 #end

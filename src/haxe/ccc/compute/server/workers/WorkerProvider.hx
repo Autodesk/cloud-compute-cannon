@@ -4,9 +4,6 @@ package ccc.compute.server.workers;
  * bit more about it.
  */
 
-import ccc.compute.shared.AbstractLogger;
-import ccc.compute.server.InstancePool;
-
 import js.npm.RedisClient;
 
 import promhx.Promise;
@@ -23,9 +20,9 @@ interface WorkerProvider
 	function updateConfig(config :ServiceConfigurationWorkerProvider) :Promise<Bool>;
 
 	function setPriority(val :Int) :Promise<Bool>;
-	function setMaxWorkerCount(val :WorkerCount) :Promise<Bool>;
-	function setMinWorkerCount(val :WorkerCount) :Promise<Bool>;
-	function setWorkerCount(val :WorkerCount) :Promise<Bool>;
+	// function setMaxWorkerCount(val :WorkerCount) :Promise<Bool>;
+	// function setMinWorkerCount(val :WorkerCount) :Promise<Bool>;
+	// function setWorkerCount(val :WorkerCount) :Promise<Bool>;
 
 	function removeWorker(id :MachineId) :Promise<Bool>;
 	function createWorker() :Promise<WorkerDefinition>;

@@ -1,0 +1,20 @@
+version: '2'
+
+services:
+
+  bull-ui-server:
+    build:
+      context:
+        "."
+    command: ["nodemon", "bull-ui-server.js"]
+    environment:
+      PORT: "9002"
+      REDIS_HOST: 'redis'
+    volumes:
+      - ./:/app
+    extra_hosts:
+      - "redis:172.17.0.1"
+    ports: #"HOST:CONTAINER"
+      - "9002:9002"
+    # links:
+    #   - redis

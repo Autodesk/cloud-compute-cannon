@@ -6,24 +6,24 @@
 
 etc/hxml/server-build.hxml
 
---next
+# --next
 
--cmd echo "Building all server tests"
+# -cmd echo "Building all server tests"
 
---next
+# --next
 
-test/testsCompile.hxml
+# test/testsCompile.hxml
 
--cmd echo "Building CLI tool"
+# -cmd echo "Building CLI tool"
 
---next
+# --next
 
-etc/hxml/cli-build.hxml
+# etc/hxml/cli-build.hxml
 
---next
+# --next
 
--cmd echo "Building js npm client"
+# -cmd echo "Building js npm client"
 
---next
+# --next
 
-etc/hxml/client-js-build.hxml
+# etc/hxml/client-js-build.hxml

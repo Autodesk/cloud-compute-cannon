@@ -14,7 +14,7 @@ import promhx.deferred.DeferredPromise;
 import t9.abstracts.net.*;
 
 using StringTools;
-using ccc.compute.server.ComputeTools;
+using ccc.compute.server.execution.ComputeTools;
 
 /**
  * Exposes the API of the server is a more convenient way,
@@ -23,7 +23,6 @@ using ccc.compute.server.ComputeTools;
 @:expose('ClientCompute')
 class ClientCompute
 {
-
 	public static function getJobResultData(host :Host, jobId :JobId) :Promise<JobResult>
 	{
 		if (jobId == null) {

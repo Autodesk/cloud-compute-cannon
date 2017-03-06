@@ -12,9 +12,6 @@ import ccc.storage.*;
 import util.DockerUrl;
 import util.DockerTools;
 
-using ccc.compute.server.JobTools;
-using ccc.compute.server.workers.WorkerTools;
-
 typedef ExecuteJobResult = {
 	var cancel :Void->Void;
 	var promise :Promise<BatchJobResult>;
@@ -36,58 +33,64 @@ class BatchComputeDocker
 {
 	/**
 	 * This is the main method call when notified of a new job to be run.
-	 * @param  computeId :ComputeJobId  [description]
 	 * @param  streams   :LogStreams    [description]
 	 * @return           [description]
 	 */
-	public static function executeJob(redis :RedisClient, job :QueueJobDefinitionDocker, fs :ServiceStorage, workerStorage :ServiceStorage, log :AbstractLogger) :ExecuteJobResult
+	public static function executeJob(redis :RedisClient, job :DockerBatchComputeJob, dockerOpts:DockerConnectionOpts, fs :ServiceStorage, killContainer :Promise<Bool>, log :AbstractLogger) :ExecuteJobResult
 	{
+		Assert.notNull(redis);
 		Assert.notNull(job);
 		Assert.notNull(fs);
-		Assert.notNull(workerStorage);
-		Assert.notNull(job.computeJobId);
 
-		var jobId = job.id;
+		var jobId = job.jobId;
 
 		var jobStats :JobStats = redis;
+		var jobStateTools :JobStateTools = redis;
+
 		jobStats.jobDequeued(jobId);
 
+		var docker = new Docker(dockerOpts);
+
 		var parentLog = log;
-		log = parentLog.child({jobId:job.id, computejobid:job.computeJobId, step:'executing_job'});
+		log = parentLog.child({jobId:jobId, step:'executing_job'});
 		untyped log._level = parentLog._level;
 		var containerId = null;
 
-		// log.info({log:'executeJob', fs:fs, workerStorage:workerStorage, job:LogTools.removePrivateKeys(job)});
-		log.info({log:'executeJob', job:LogTools.removePrivateKeys(job)});
+		log.info({});
+		log.debug({log:'executeJob', job:LogTools.removePrivateKeys(job)});
 
-		var computeJobId = job.computeJobId;
-		var docker = job.worker.getInstance().docker();
-
-		if (job.item.inputs == null) {
-			job.item.inputs = [];
+		if (job.inputs == null) {
+			job.inputs = [];
 		}
 
-		var containerInputsPath = job.item.containerInputsMountPath == null ? '/${DIRECTORY_INPUTS}' : job.item.containerInputsMountPath;
-		var containerOutputsPath = job.item.containerOutputsMountPath == null ? '/${DIRECTORY_OUTPUTS}' : job.item.containerOutputsMountPath;
+		var containerInputsPath = job.containerInputsMountPath == null ? '/${DIRECTORY_INPUTS}' : job.containerInputsMountPath;
+		var containerOutputsPath = job.containerOutputsMountPath == null ? '/${DIRECTORY_OUTPUTS}' : job.containerOutputsMountPath;
 
 		//Create the various remote/local/worker storage services.
-		// var inputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerInputDir());
-		// var outputStorageWorker = workerStorage.appendToRootPath(job.computeJobId.workerOutputDir());
-		var inputStorageRemote = fs.clone().appendToRootPath(job.item.inputDir());
-		var outputStorageRemote = fs.clone().appendToRootPath(job.item.outputDir());
-		var resultsStorageRemote = fs.clone().appendToRootPath(job.item.resultDir());
+		var inputStorageRemote = fs.clone().appendToRootPath(job.inputDir());
+		var outputStorageRemote = fs.clone().appendToRootPath(job.outputDir());
+		var resultsStorageRemote = fs.clone().appendToRootPath(job.resultDir());
 
 
-		var inputVolumeName = job.item.inputs.length > 0 ? JobTools.getWorkerVolumeNameInputs(job.computeJobId) : null;
-		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(job.computeJobId);
+		var inputVolumeName = job.inputs.length > 0 ? JobTools.getWorkerVolumeNameInputs(jobId) : null;
+		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(jobId);
 		var outputsVolume :MountedDockerVolumeDef = {
-			dockerOpts: job.worker.docker,
+			dockerOpts: dockerOpts,
 			name: outputVolumeName,
 		};
 
+		// var killedPromise = new DeferredPromise();
+
+		var copyInputs = copyInputsInternal.bind(job, dockerOpts, fs, redis, log);
+		var copyOrCreateImage = copyOrCreateImageInternal.bind(job, docker, redis, log);
+		var createOutputVolume = function() return DockerDataTools.createVolume(outputsVolume).thenTrue();
+		var runContainer = runContainerInternal.bind(job, docker, redis, killContainer, log);
+		var copyOutputs = copyOutputsInternal.bind(job, dockerOpts, fs, redis, log);
+		var copyLogs = copyLogsInternal.bind(jobId, docker, resultsStorageRemote, redis, log);
+
 		var killed = false;
 		var eventStream :Stream<EventStreamItem> = null;
-		eventStream = DockerTools.createEventStream(job.worker.docker);
+		eventStream = DockerTools.createEventStream(dockerOpts);
 		//It is null if using the local docker daemon
 		if (eventStream != null) {
 			eventStream = eventStream
@@ -95,6 +98,7 @@ class BatchComputeDocker
 					if (event != null && containerId != null && event.id != null && event.id == containerId) {
 						if (event.status == EventStreamItemStatus.kill) {
 							log.warn('Container killed, perhaps the docker daemon was rebooted or crashed');
+							// killedPromise.resolve(true);
 							killed = true;
 						}
 					}
@@ -147,22 +151,39 @@ class BatchComputeDocker
 				//Already failed
 				return Promise.promise(true);
 			}
+
 			jobWorkingStatus = status;
-			var promise = ComputeQueue.setComputeJobWorkingStatus(redis, computeJobId, jobWorkingStatus)
-				.thenTrue();
-			//Is anyone listening to this?
-			promise.then(function(_) {
-				redis.publish(job.id, Json.stringify({jobId:job.id, JobWorkingStatus:status}));
-			});
-			return promise;
+			return jobStateTools.setWorkingStatus(jobId, status);
 		}
+
+		// var killCommand = false;
+		// killContainer.then(function(_) {
+		// 	killCommand = true;
+		// 	traceMagenta('killContainer promise $containerId');
+		// 	// setStatus(JobWorkingStatus.Cancelled);
+		// 	// if (containerId != null) {
+		// 	// 	log.info({log:'Killing container'});
+		// 	// 	traceMagenta("docker.getContainer(containerId).kill");
+		// 	// 	docker.getContainer(containerId).kill(function(err, data) {
+		// 	// 		//Ignored
+		// 	// 	});
+		// 	// }
+		// });
+
+		// var timeout = job.parameters.maxDuration;
+		// if (timeout == null) {
+		// 	timeout = new Minutes(2).toMilliseconds().toFloat();
+		// }
+		// var timeoutId = Node.setTimeout(function() {
+		// 	setStatus(JobWorkingStatus.)
+		// }, timeout);
 
 		var p = Promise.promise(true)
 			.pipe(function(_) {
-				return ComputeQueue.getComputeJobWorkingStatus(redis, computeJobId)
+				return jobStateTools.getWorkingStatus(jobId)
 					.pipe(function(status) {
-						if (status == null) {
-							return setStatus(JobWorkingStatus.CopyingInputs);
+						if (status == null || status == JobWorkingStatus.None) {
+							return setStatus(JobWorkingStatus.CopyingInputsAndImage);
 						} else {
 							jobWorkingStatus = status;
 							return Promise.promise(true);
@@ -173,306 +194,64 @@ class BatchComputeDocker
 			//Pipe logs to file streams
 			//Copy the files to the remote worker
 			.pipe(function(_) {
-				if (jobWorkingStatus == JobWorkingStatus.CopyingInputs) {
-					log.info({JobWorkingStatus:jobWorkingStatus});
-					if (job.item.inputsPath != null) {
-						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Reading from custom inputs path=' + job.item.inputsPath});
-					}
-
-					log.debug({JobWorkingStatus:jobWorkingStatus, log:'beginning input file processing'});
-					return Promise.promise(true)
-						.pipe(function(_) {
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'Creating output volume'});
-							return DockerDataTools.createVolume(outputsVolume);
-						})
-						.pipe(function(_) {
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'copying ${job.item.inputs.length} inputs '});
-							if (job.item.inputs.length == 0) {
-								return Promise.promise(null);
-							} else {
-								var inputsVolume :MountedDockerVolumeDef = {
-									dockerOpts: job.worker.docker,
-									name: inputVolumeName,
-								};
-								log.debug({JobWorkingStatus:jobWorkingStatus, log:'Creating volume=$inputVolumeName'});
-								return DockerDataTools.createVolume(inputsVolume)
-									.pipe(function(_) {
-										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Copying inputs to volume=$inputVolumeName'});
-										return DockerJobTools.copyToVolume(inputStorageRemote, null, inputsVolume).end;
-									});
-							}
-						})
-						.then(function(_) {
-							log.debug({JobWorkingStatus:jobWorkingStatus, log:'finished copying inputs=' + job.item.inputs});
-							return true;
-						})
-						.pipe(function(_) {
-							jobStats.jobCopiedInputs(jobId);
-							return setStatus(JobWorkingStatus.CopyingImage);
-						});
-					} else {
-						return Promise.promise(true);
-					}
-			})
-			.pipe(function(_) {
-				if (jobWorkingStatus == JobWorkingStatus.CopyingImage) {
-					log.debug({JobWorkingStatus:jobWorkingStatus});
-					//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
-					switch(job.item.image.type) {
-						case Image:
-							var docker = job.worker.getInstance().docker();
-							var dockerImage = job.item.image.value;
-							return DockerPromises.hasImage(docker, dockerImage)
-								.pipe(function(imageExists) {
-									if (imageExists) {
-										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Image exists=${dockerImage}'});
-										return setStatus(JobWorkingStatus.ContainerRunning);
-									} else {
-										var pull_options = job.item.image.pull_options != null ? job.item.image.pull_options : {};
-										pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : dockerImage;
-										log.debug({JobWorkingStatus:jobWorkingStatus, log:'Pulling docker image=${dockerImage}', pull_options:pull_options});
-										return DockerTools.pullImage(docker, dockerImage, pull_options, log.child({'level':30}))
-											.pipe(function(output) {
-												//Ignoring output for now.
-												return setStatus(JobWorkingStatus.ContainerRunning);
-											})
-											.errorPipe(function(err) {
-												//Convert this error
-												var jsonRpcError :ResponseError = {
-													code: JsonRpcErrorCode.InvalidParams,
-													message: JobSubmissionError.Docker_Image_Unknown,
-													data: {
-														docker_image_name: dockerImage,
-														error: err
-													}
-												}
-												log.error({error:jsonRpcError});
-												error = jsonRpcError;
-												return setStatus(JobWorkingStatus.Failed);
-											});
+				if (jobWorkingStatus == JobWorkingStatus.CopyingInputsAndImage) {
+					return Promise.whenAll([
+							copyInputs().thenTrue(),
+							copyOrCreateImage()
+								.pipe(function(errorBlob) {
+									if (errorBlob.error != null) {
+										error = errorBlob.error;
+										throw error;
 									}
-								})
-								.then(function(_) {
-									jobStats.jobCopiedImage(jobId);
-									jobStats.jobCopiedInputsAndImage(jobId);
-									return true;
-								});
-						case Context:
-							var path = job.item.image.value;
-							Assert.notNull(path, 'Context to build docker image is missing the local path');
-							var localStorage = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:path});
-							var docker = job.worker.getInstance().docker();
-							var tag = job.id.dockerTag();
-							return localStorage.readDir()
-								.pipe(function(stream) {
-									return DockerTools.buildDockerImage(docker, tag, stream, null, log.child({'level':30}));
-								})
-								.pipe(function(imageId) {
-									log.debug({JobWorkingStatus:jobWorkingStatus, log:'Built image'});
-									localStorage.close();//Not strictly necessary since it's local, but just always remember to do it
-									return setStatus(JobWorkingStatus.ContainerRunning);
-								});
-					}
+									return Promise.promise(true);
+								}),
+							createOutputVolume().thenTrue()
+						])
+						.pipe(function(_) {
+							return setStatus(JobWorkingStatus.ContainerRunning);
+						});
 				} else {
 					return Promise.promise(true);
 				}
 			})
 			.pipe(function(_) {
 				if (jobWorkingStatus == JobWorkingStatus.ContainerRunning) {
-					log.debug({JobWorkingStatus:jobWorkingStatus});
-					/*
-						First check if there is an existing container
-						running, in case we crashed and resumed
-					 */
-					return getContainer(docker, computeJobId)
-						.pipe(function(container) {
-							if (container != null) {
-								/* Container exists. Is it finished? */
-								containerId = container.Id;
-								log = log.child({container:containerId});
-								log.info({JobWorkingStatus:jobWorkingStatus, log:'Waiting on already running container=${containerId}'});
-								var container = docker.getContainer(container.Id);
-								return Promise.promise(container);
-							} else {
-
-
-								/*
-									There is no existing container, so create one
-									and run it
-								 */
-								var outputVolume = {
-									Source: outputVolumeName,
-									Destination: containerOutputsPath,
-									Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
-									RW: true
-								};
-								var mounts :Array<Mount> = [outputVolume];
-
-								var inputVolume = null;
-								if (inputVolumeName != null) {
-									inputVolume = {
-										Source: inputVolumeName,
-										Destination: containerInputsPath,
-										Mode: 'r',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
-										RW: true
-									};
-									mounts.push(inputVolume);
-								}
-
-								var imageId = switch(job.item.image.type) {
-									case Image:
-										job.item.image.value;
-									case Context:
-										job.id;
-								}
-
-								var opts :CreateContainerOptions = job.item.image.optionsCreate;
-								if (opts == null) {
-									opts = {
-										Image: null,//Set below
-										AttachStdout: false,
-										AttachStderr: false,
-										Tty: false,
-									}
-								}
-
-								opts.Cmd = opts.Cmd != null ? opts.Cmd : job.item.command;
-								opts.WorkingDir = opts.WorkingDir != null ? opts.WorkingDir : job.item.workingDir;
-								opts.HostConfig = opts.HostConfig != null ? opts.HostConfig : {};
-								opts.HostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
-								opts.HostConfig.Binds = opts.HostConfig.Binds != null ? opts.HostConfig.Binds : [];
-								for (mount in mounts) {
-									opts.HostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
-								}
-
-								opts.Image = opts.Image != null ? opts.Image : imageId.toLowerCase();
-								opts.Env = js.npm.redis.RedisLuaTools.isArrayObjectEmpty(opts.Env) ? [] : opts.Env;
-								for (env in [
-									'INPUTS=$containerInputsPath',
-									'OUTPUTS=$containerOutputsPath',
-									'OUTPUTS_HOST_MOUNT=$outputVolumeName'
-									]) {
-									opts.Env.push(env);
-								}
-								if (inputVolumeName != null) {
-									opts.Env.push('INPUTS_HOST_MOUNT=$inputVolumeName');
-								}
-
-								opts.Labels = opts.Labels != null ? opts.Labels : {};
-								Reflect.setField(opts.Labels, 'jobId', job.id);
-								Reflect.setField(opts.Labels, 'computeId', job.computeJobId);
-
-								Assert.notNull(docker);
-
-								/**
-								 * Can we mount the ccc server locally? This allows jobs to call the API.
-								 * This can be a pretty big security hole, since it will essentially allow
-								 * jobs to create unlimited jobs. Use at your own risk.
-								 */
-								if (job.item.mountApiServer == true) {
-									opts.HostConfig.NetworkMode = 'container:${Constants.DOCKER_CONTAINER_NAME}';
-								}
-
-								log.debug({JobWorkingStatus:jobWorkingStatus, log:'Running container', opts:opts});
-
-								return DockerJobTools.runDockerContainer(docker, opts, log)
-									.then(function(containerunResult) {
-										error = containerunResult.error;
-										containerId = containerunResult != null && containerunResult.container != null ? containerunResult.container.id : null;
-										log = log.child({container:containerId});
-										return containerunResult != null ? containerunResult.container : null;
-									});
-							}
-						})
-						.pipe(function(container) {
-							log.info('container=$containerId');
-							if (container == null) {
-								jobWorkingStatus = JobWorkingStatus.Failed;
-								return Promise.promise(true);
-							} else {
-								//Wait for the container to finish, but also monitor
-								//the state of the job. If it becomes 'stopped'
-
-								return DockerPromises.wait(container)
-									.then(function(status :{StatusCode:Int}) {
-										exitCode = status.StatusCode;
-										//This is caused by a job failure
-										if (exitCode == 137) {
-											error = "Job exitCode==137 this is caused by docker killing the container, likely on a restart. Requeuing this job";
-										}
-										if (killed) {
-											exitCode == 137;
-											error = "Job killed, this is caused by docker killing the container, likely on a restart. Requeuing this job";
-										}
-
-										log.info({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode});
-										if (error != null) {
-											log.error({JobWorkingStatus:jobWorkingStatus, exitcode:exitCode, error:error});
-											throw error;
-										}
-										jobStats.jobContainerExited(jobId, exitCode, error);
-										return true;
-									})
-									.pipe(function(_) {
-										return setStatus(JobWorkingStatus.CopyingOutputs);
-									});
-							}
+					return runContainer()
+						.pipe(function(resultsBlob) {
+							exitCode = resultsBlob.exitCode;
+							error = resultsBlob.error;
+							containerId = resultsBlob.containerId;
+							return setStatus(JobWorkingStatus.CopyingOutputsAndLogs);
 						});
 				} else {
 					return Promise.promise(true);
 				}
 			})
-			// This part will have to be broken up so compute job watching can be resumed
-			.pipe(function(_) {
-				if (jobWorkingStatus == JobWorkingStatus.CopyingOutputs) {
-					log.info({JobWorkingStatus:jobWorkingStatus});
-					// var outputStorage = fs.clone().appendToRootPath(job.item.outputDir());
-					if (job.item.outputsPath != null) {
-						log.debug({JobWorkingStatus:jobWorkingStatus, log:'Writing to custom outputs path=' + job.item.outputsPath});
-					}
 
-					return DockerDataTools.lsVolume(outputsVolume)
-						.pipe(function(files) {
-							outputFiles = files;
-							if (outputFiles.length == 0) {
-								return Promise.promise(true);
-							} else {
-								return DockerJobTools.copyFromVolume(outputStorageRemote, null, outputsVolume).end
-									.thenTrue();
-							}
-						})
-						.pipe(function(_) {
-							return setStatus(JobWorkingStatus.CopyingLogs);
-						})
-						.then(function(_) {
-							jobStats.jobCopiedOutputs(jobId);
-							return true;
-						});
-				} else {
-					return Promise.promise(true);
-				}
-			})
 			.pipe(function(_) {
-				if (jobWorkingStatus == JobWorkingStatus.CopyingLogs) {
-					log.info({JobWorkingStatus:jobWorkingStatus});
-					log.info('Copying logs from to $resultsStorageRemote');
-					return DockerJobTools.copyLogs(docker, job.computeJobId, resultsStorageRemote)
+				if (jobWorkingStatus == JobWorkingStatus.CopyingOutputsAndLogs) {
+					return Promise.whenAll([
+							copyOutputs()
+								.then(function(outputFilesResult) {
+									outputFiles = outputFilesResult;
+									return true;
+								}),
+							copyLogs()
+								.then(function(_) {
+									copiedLogs = true;
+									return true;
+								})
+						])
 						.pipe(function(_) {
-							copiedLogs = true;
 							return setStatus(JobWorkingStatus.FinishedWorking);
-						})
-						.then(function(_) {
-							jobStats.jobCopiedLogs(jobId);
-							return true;
 						});
 				} else {
 					return Promise.promise(true);
 				}
 			})
 			.errorPipe(function(pipedError) {
-				traceYellow("CAUGHT THROWN ERROR " + pipedError);
-				error = pipedError;
 				log.error(pipedError);
+				error = error != null ? error : pipedError;
 				return setStatus(JobWorkingStatus.Failed)
 					.then(function(_) {
 						return true;
@@ -484,7 +263,7 @@ class BatchComputeDocker
 			})
 			.then(function(_) {
 				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
-				log.info({message: 'job is complete, removing container out of band', jobResult:jobResult});
+				log.debug({message: 'job is complete, removing container out of band', jobResult:jobResult});
 				//The job is now finished. Clean up the temp worker storage,
 				// out of the promise chain (for speed)
 
@@ -493,10 +272,10 @@ class BatchComputeDocker
 					eventStream.end();
 				}
 
-				getContainer(docker, computeJobId)
+				getContainer(docker, jobId)
 					.pipe(function(containerData) {
 						if (containerData != null) {
-							return DockerPromises.removeContainer(docker.getContainer(containerData.Id), null, 'removeContainer computeJobId=$computeJobId')
+							return DockerPromises.removeContainer(docker.getContainer(containerData.Id), null, 'removeContainer jobId=$jobId')
 								.then(function(_) {
 									log.debug({CleanupStep: CleanupStep.CleanupStep_01_Remove_Container, success:true});
 									return true;
@@ -556,9 +335,9 @@ class BatchComputeDocker
 		return {promise:p, cancel:cancel};
 	}
 
-	static function getContainer(docker :Docker, computeJobId :ComputeJobId) :Promise<ContainerData>
+	static function getContainer(docker :Docker, jobId :JobId) :Promise<ContainerData>
 	{
-		return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter('computeId=$computeJobId')})
+		return DockerPromises.listContainers(docker, {all:true, filters:DockerTools.createLabelFilter('jobId=$jobId')})
 			.then(function(containers) {
 				if (containers.length > 0) {
 					return containers[0];
@@ -567,8 +346,318 @@ class BatchComputeDocker
 				}
 			})
 			.errorPipe(function(err) {
-				Log.error('getContainer computeJobId=$computeJobId err=$err');
+				Log.error('getContainer jobId=$jobId err=$err');
 				return Promise.promise(null);
+			});
+	}
+
+	static function copyInputsInternal(job :DockerBatchComputeJob, dockerOpts :DockerConnectionOpts, fs :ServiceStorage, redis :RedisClient, log :AbstractLogger) :Promise<Bool>
+	{
+		log = log.child({JobWorkingStatus:CopyingInputs});
+		var jobId = job.jobId;
+		var jobStats :JobStats = redis;
+		if (job.inputsPath != null) {
+			log.debug({log:'Reading from custom inputs path=' + job.inputsPath});
+		}
+
+		var inputStorageRemote = fs.clone().appendToRootPath(job.inputDir());
+		var inputVolumeName = job.inputs.length > 0 ? JobTools.getWorkerVolumeNameInputs(jobId) : null;
+
+		log.debug({log:'beginning input file processing'});
+		return Promise.promise(true)
+			// .pipe(function(_) {
+			// 	log.debug({JobWorkingStatus:jobWorkingStatus, log:'Creating output volume'});
+			// 	return DockerDataTools.createVolume(outputsVolume);
+			// })
+			.pipe(function(_) {
+				log.debug({log:'copying ${job.inputs.length} inputs '});
+				if (job.inputs.length == 0) {
+					return Promise.promise(null);
+				} else {
+					var inputsVolume :MountedDockerVolumeDef = {
+						dockerOpts: dockerOpts,
+						name: inputVolumeName,
+					};
+					log.debug({log:'Creating volume=$inputVolumeName'});
+					return DockerDataTools.createVolume(inputsVolume)
+						.pipe(function(_) {
+							log.debug({log:'Copying inputs to volume=$inputVolumeName'});
+							return DockerJobTools.copyToVolume(inputStorageRemote, null, inputsVolume).end;
+						});
+				}
+			})
+			.then(function(_) {
+				log.debug({log:'finished copying inputs=' + job.inputs});
+				jobStats.jobCopiedInputs(jobId);
+				return true;
+			});
+	}
+
+	static function copyOrCreateImageInternal(job :DockerBatchComputeJob, docker :Docker, redis :RedisClient, log :AbstractLogger) :Promise<{error:Dynamic}>
+	{
+		log = log.child({JobWorkingStatus:CopyingImage});
+		var jobId = job.jobId;
+		log.debug('copyOfCreateImage ${jobId}');
+		var jobStats :JobStats = redis;
+		var error :Dynamic = null;
+		//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
+		switch(job.image.type) {
+			case Image:
+				var dockerImage = job.image.value;
+				return DockerPromises.hasImage(docker, dockerImage)
+					.pipe(function(imageExists) {
+						if (imageExists) {
+							log.debug({log:'Image exists=${dockerImage}'});
+							return Promise.promise(true);
+						} else {
+							var pull_options = job.image.pull_options != null ? job.image.pull_options : {};
+							pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : dockerImage;
+							log.debug({log:'Pulling docker image=${dockerImage}', pull_options:pull_options});
+							return DockerTools.pullImage(docker, dockerImage, pull_options, log.child({'level':30}))
+								.pipe(function(output) {
+									//Ignoring output for now.
+									log.debug({log:'Pulled docker image=${dockerImage}'});
+									return Promise.promise(true);
+								})
+								.errorPipe(function(err) {
+									//Convert this error
+									var jsonRpcError :ResponseError = {
+										code: JsonRpcErrorCode.InvalidParams,
+										message: JobSubmissionError.Docker_Image_Unknown,
+										data: {
+											docker_image_name: dockerImage,
+											error: err
+										}
+									}
+									log.error({error:jsonRpcError});
+									error = jsonRpcError;
+									return Promise.promise(true);
+								});
+						}
+					})
+					.then(function(_) {
+						jobStats.jobCopiedImage(jobId);
+						return {error:error};
+					});
+			case Context:
+				var path = job.image.value;
+				Assert.notNull(path, 'Context to build docker image is missing the local path');
+				var localStorage = StorageTools.getStorage({type:StorageSourceType.Local, rootPath:path});
+				var tag = jobId.dockerTag();
+				return localStorage.readDir()
+					.pipe(function(stream) {
+						return DockerTools.buildDockerImage(docker, tag, stream, null, log.child({'level':30}));
+					})
+					.then(function(imageId) {
+						log.debug({log:'Built image'});
+						jobStats.jobCopiedImage(jobId);
+						localStorage.close();//Not strictly necessary since it's local, but just always remember to do it
+						return {error:error};
+					});
+		}
+	}
+
+	static function runContainerInternal(job :DockerBatchComputeJob, docker :Docker, redis :RedisClient, kill :Promise<Bool>, log :AbstractLogger) :Promise<{containerId:String,exitCode:Int,error:Dynamic}>
+	{
+		var jobId = job.jobId;
+		log = log.child({JobWorkingStatus:JobWorkingStatus.ContainerRunning});
+		log.debug('runContainerInternal ${jobId}');
+		var jobStats :JobStats = redis;
+
+		// var killed = false;
+		// killedPromise.then(function(isKilled) {
+		// 	killed = isKilled;
+		// });
+
+		var containerId :String = null;
+		var exitCode :Int = -1;
+		var error :Dynamic = null;
+		/*
+			First check if there is an existing container
+			running, in case we crashed and resumed
+		 */
+		return getContainer(docker, jobId)
+			.pipe(function(container) {
+				if (container != null) {
+					/* Container exists. Is it finished? */
+					containerId = container.Id;
+					log = log.child({container:containerId});
+					log.debug({log:'Waiting on already running container=${containerId}'});
+					var container = docker.getContainer(container.Id);
+					return Promise.promise(container);
+				} else {
+					/*
+						There is no existing container, so create one
+						and run it
+					 */
+					var inputVolumeName = job.inputs.length > 0 ? JobTools.getWorkerVolumeNameInputs(jobId) : null;
+					var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(jobId);
+					var containerInputsPath = job.containerInputsMountPath == null ? '/${DIRECTORY_INPUTS}' : job.containerInputsMountPath;
+					var containerOutputsPath = job.containerOutputsMountPath == null ? '/${DIRECTORY_OUTPUTS}' : job.containerOutputsMountPath;
+
+					var outputVolume = {
+						Source: outputVolumeName,
+						Destination: containerOutputsPath,
+						Mode: 'rw',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
+						RW: true
+					};
+					var mounts :Array<Mount> = [outputVolume];
+
+					var inputVolume = null;
+					if (inputVolumeName != null) {
+						inputVolume = {
+							Source: inputVolumeName,
+							Destination: containerInputsPath,
+							Mode: 'r',//https://docs.docker.com/engine/userguide/dockervolumes/#volume-labels
+							RW: true
+						};
+						mounts.push(inputVolume);
+					}
+
+					var imageId = switch(job.image.type) {
+						case Image:
+							job.image.value;
+						case Context:
+							jobId;
+					}
+
+					var opts :CreateContainerOptions = job.image.optionsCreate;
+					if (opts == null) {
+						opts = {
+							Image: null,//Set below
+							AttachStdout: false,
+							AttachStderr: false,
+							Tty: false,
+						}
+					}
+
+					opts.Cmd = opts.Cmd != null ? opts.Cmd : job.command;
+					opts.WorkingDir = opts.WorkingDir != null ? opts.WorkingDir : job.workingDir;
+					opts.HostConfig = opts.HostConfig != null ? opts.HostConfig : {};
+					opts.HostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
+					opts.HostConfig.Binds = opts.HostConfig.Binds != null ? opts.HostConfig.Binds : [];
+					for (mount in mounts) {
+						opts.HostConfig.Binds.push(mount.Source + ':' + mount.Destination + ':rw');
+					}
+
+					opts.Image = opts.Image != null ? opts.Image : imageId.toLowerCase();
+					opts.Env = js.npm.redis.RedisLuaTools.isArrayObjectEmpty(opts.Env) ? [] : opts.Env;
+					for (env in [
+						'INPUTS=$containerInputsPath',
+						'OUTPUTS=$containerOutputsPath',
+						'OUTPUTS_HOST_MOUNT=$outputVolumeName'
+						]) {
+						opts.Env.push(env);
+					}
+					if (inputVolumeName != null) {
+						opts.Env.push('INPUTS_HOST_MOUNT=$inputVolumeName');
+					}
+
+					opts.Labels = opts.Labels != null ? opts.Labels : {};
+					Reflect.setField(opts.Labels, 'jobId', jobId);
+
+					Assert.notNull(docker);
+
+					/**
+					 * Can we mount the ccc server locally? This allows jobs to call the API.
+					 * This can be a pretty big security hole, since it will essentially allow
+					 * jobs to create unlimited jobs. Use at your own risk.
+					 */
+					if (job.mountApiServer == true) {
+						opts.HostConfig.NetworkMode = 'container:${Constants.DOCKER_CONTAINER_NAME}';
+					}
+
+					log.debug({opts:opts});
+
+					return DockerJobTools.runDockerContainer(docker, opts, kill, log)
+						.then(function(containerunResult) {
+							error = containerunResult.error;
+							containerId = containerunResult != null && containerunResult.container != null ? containerunResult.container.id : null;
+							log = log.child({container:containerId});
+							return containerunResult != null ? containerunResult.container : null;
+						});
+				}
+			})
+			.pipe(function(container) {
+				log.debug('container=$containerId');
+				if (container == null) {
+					throw 'Missing container when attempting to run';
+					return Promise.promise(true);
+				} else {
+					//Wait for the container to finish, but also monitor
+					//the state of the job. If it becomes 'stopped'
+
+					return DockerPromises.wait(container)
+						.then(function(status :{StatusCode:Int}) {
+							exitCode = status.StatusCode;
+							//This is caused by a job failure
+							if (exitCode == 137) {
+								error = "Job exitCode==137 this is caused by docker killing the container, likely on a restart.";
+							}
+							// if (killed) {
+							// 	exitCode == 137;
+							// 	error = "Job killed, this is caused by docker killing the container, likely on a restart. Requeuing this job";
+							// }
+
+							log.debug({exitcode:exitCode, error:error});
+							if (error != null) {
+								log.warn({exitcode:exitCode, error:error});
+								// throw error;
+							}
+							jobStats.jobContainerExited(jobId, exitCode, error);
+							return true;
+						});
+				}
+			})
+			.then(function(_) {
+				return {containerId:containerId,exitCode:exitCode, error:error};
+			});
+	}
+
+	static function copyOutputsInternal(job :DockerBatchComputeJob, dockerOpts :DockerConnectionOpts, fs :ServiceStorage, redis :RedisClient, log :AbstractLogger) :Promise<Array<String>>
+	{
+		var jobId = job.jobId;
+		var jobStats :JobStats = redis;
+		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(jobId);
+		log = log.child({JobWorkingStatus:CopyingOutputs, outputVolumeName:outputVolumeName});
+		log.debug({});
+		// var outputStorage = fs.clone().appendToRootPath(job.outputDir());
+		if (job.outputsPath != null) {
+			log.debug({log:'Writing to custom outputs path=' + job.outputsPath});
+		}
+
+		var outputStorageRemote = fs.clone().appendToRootPath(job.outputDir());
+
+		var outputsVolume :MountedDockerVolumeDef = {
+			dockerOpts: dockerOpts,
+			name: outputVolumeName,
+		};
+
+		var outputFiles = [];
+
+		return DockerDataTools.lsVolume(outputsVolume)
+			.pipe(function(files) {
+				outputFiles = files;
+				if (outputFiles.length == 0) {
+					return Promise.promise(true);
+				} else {
+					return DockerJobTools.copyFromVolume(outputStorageRemote, null, outputsVolume).end
+						.thenTrue();
+				}
+			})
+			.then(function(_) {
+				jobStats.jobCopiedOutputs(jobId);
+				return outputFiles;
+			});
+	}
+
+	static function copyLogsInternal(jobId :JobId, docker :Docker, resultsStorageRemote :ServiceStorage, redis :RedisClient, log :AbstractLogger) :Promise<Bool>
+	{
+		var jobStats :JobStats = redis;
+		return DockerJobTools.copyLogs(docker, jobId, resultsStorageRemote)
+			.then(function(_) {
+				jobStats.jobCopiedLogs(jobId);
+				return true;
 			});
 	}
 }

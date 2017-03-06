@@ -16,8 +16,7 @@ services:
       CONFIG_PATH: "/app/config/ccc.yml"
       CLIENT_DEPLOYMENT: "true"
       HOST_PWD: "$PWD"
-      CLIENT_DEPLOYMENT: "true"
-      CLEAR_DB_ON_START: "${CLEAR_DB_ON_START}"
+      REDIS_HOST: "redis.dev.bionano.bio"
     logging:
       driver: json-file
       options:
@@ -26,26 +25,26 @@ services:
       - "9000:9000"
     links:
       - fluentd
-      - redis
+      # - redis
 
-  redis:
-    restart: always
-    image: redis:3.2.0-alpine
-    command: redis-server /usr/local/etc/redis/redis.conf
-    ports:
-      #Don't expose this port to the host, only linked containers.
-      - "6379"
-    volumes:
-      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
-      # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
-      - redis-data:/data
-    logging:
-      driver: "fluentd"
-      options:
-        tag: "docker.ccc{{.ImageName}}/{{.ID}}"
-        fluentd-address: "127.0.0.11:24225"
-    depends_on:
-      - fluentd
+  # redis:
+  #   restart: always
+  #   image: redis:3.2.0-alpine
+  #   command: redis-server /usr/local/etc/redis/redis.conf
+  #   ports:
+  #     #Don't expose this port to the host, only linked containers.
+  #     - "6379"
+  #   volumes:
+  #     - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+  #     # This is the where the db will be writting. It is defined in ./etc/redis/redis-prod.conf
+  #     - redis-data:/data
+  #   logging:
+  #     driver: "fluentd"
+  #     options:
+  #       tag: "docker.ccc{{.ImageName}}/{{.ID}}"
+  #       fluentd-address: "127.0.0.11:24225"
+  #   depends_on:
+  #     - fluentd
 
   fluentd:
     build: ./etc/log/
@@ -89,8 +88,8 @@ services:
 
 volumes:
 
-  redis-data:
-    driver: local
+  # redis-data:
+  #   driver: local
 
   ccc-local-storage:
     driver: local

@@ -1,10 +1,7 @@
 package ccc.compute.client.cli;
 
-import ccc.compute.server.ProviderTools;
-import ccc.compute.server.ProviderTools.*;
-import ccc.compute.server.InitConfigTools.*;
+import ccc.compute.server.util.InitConfigTools.*;
 import ccc.compute.client.util.ProxyTools;
-
 
 import js.Node;
 import js.node.Fs;
@@ -43,13 +40,18 @@ class CliTools
 				//This must be a local deployment
 				return connection.host;
 			} else {
-				ProviderTools.getServerHost(new HostName(connection.server.hostPublic));
+				getServerHost(new HostName(connection.server.hostPublic));
 			}
 		} else {
 			null;
 		}
 		return host;
 	}
+
+	// inline public static function getServerHost(host :HostName) :Host
+	// {
+	// 	return new Host(host, new Port(SERVER_DEFAULT_PORT));
+	// }
 
 	/**
 	 * Returns the path of the directory containing a .cloudcomputecannon

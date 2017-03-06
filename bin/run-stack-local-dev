@@ -3,4 +3,4 @@
 DOCKERBLOB="docker-compose -f docker-compose.dev-server-local.yml"
 $DOCKERBLOB rm -fv
 $DOCKERBLOB build
-LOG_LEVEL="30" $DOCKERBLOB up
+$DOCKERBLOB up

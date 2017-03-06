@@ -11,7 +11,6 @@ import util.SshTools;
 import t9.abstracts.net.*;
 
 using util.RedisTools;
-using ccc.compute.server.ComputeTools;
 
 /**
  * This doesn't actually do any 'workers', it just provides

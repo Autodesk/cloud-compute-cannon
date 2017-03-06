@@ -124,6 +124,13 @@ class RedisPromises
 			});
 	}
 
+	public static function srem(redis :RedisClient, key :String, member :String) :Promise<Dynamic>
+	{
+		var promise = new promhx.CallbackPromise();
+		redis.srem(key, member, promise.cb2);
+		return promise;
+	}
+
 	public static function srandmember(redis :RedisClient, key :String) :Promise<Dynamic>
 	{
 		var promise = new promhx.CallbackPromise();
@@ -174,5 +181,24 @@ class RedisPromises
 		var promise = new promhx.CallbackPromise();
 		redis.hmset(key, fieldVals, promise.cb2);
 		return promise;
+	}
+
+	public static function deleteAllKeys(client :RedisClient) :Promise<Bool>
+	{
+		var promise = new promhx.deferred.DeferredPromise();
+		client.keys('*', function(err, keys) {
+			var commands :Array<Array<String>> = [];
+			for (key in keys) {
+				commands.push(['del', key]);
+			}
+			client.multi(commands).exec(function(err, result) {
+				if (err != null) {
+					promise.boundPromise.reject(err);
+					return;
+				}
+				promise.resolve(true);
+			});
+		});
+		return promise.boundPromise;
 	}
 }

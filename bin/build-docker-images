@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #Build and tag the docker images locally
 echo "Building and tagging images"
-set -ev
+set -e
 git submodule update --init --recursive
 
 ./bin/compile

@@ -39,6 +39,9 @@ class RequestPromises
 					Log.error({error:err, stack:(err.stack != null ? err.stack : null)});
 				}
 			});
+			res.connection.on('error', function(err) {
+				Log.error('response socket error for $url err=$err');
+			});
 
 			res.on(ReadableEvent.Data, function(chunk :Buffer) {
 				if (responseBuffer == null) {
@@ -69,7 +72,9 @@ class RequestPromises
 				} else {
 					Log.error(err);
 				}
+				request.abort();
 			});
+
 			if (timeout > 0) {
 				request.setTimeout(timeout, function() {
 					var err = {url:url, error:'timeout', timeout:timeout};
@@ -79,6 +84,7 @@ class RequestPromises
 					} else {
 						Log.error(err);
 					}
+					request.abort();
 				});
 			}
 		} catch(err :Dynamic) {

@@ -1,0 +1,33 @@
+version: '2'
+
+services:
+
+  ccc:
+    restart: "always"
+    image: "quay.io/bionano/cloud-compute-cannon:${VERSION}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/app/config/
+    ports:
+      - "9000:9000"
+    environment:
+      PORT: "9000"
+      REDIS_HOST: "redis.${BNR_ENV_TAG}.bionano.bio"
+      CONFIG_PATH: "/app/config/ccc.yml"
+      CLIENT_DEPLOYMENT: "true"
+      FLUENT_PORT: "24226"
+      SCALE_UP_CONTROL: "external"
+      SCALE_DOWN_CONTROL: "external"
+      ENABLE_FLUENT: "true"
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+
+  bull-ui-server:
+    image: "docker.io/dionjwa/bull-ui-server:1.0.1"
+    environment:
+      PORT: "9002"
+      REDIS_HOST: "redis.${BNR_ENV_TAG}.bionano.bio"
+    ports:
+      - "9002:9002"
