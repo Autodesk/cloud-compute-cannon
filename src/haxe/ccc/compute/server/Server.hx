@@ -765,6 +765,9 @@ class Server
 	{
 		var env :DynamicAccess<String> = Node.process.env;
 		var redisHost = env[ENV_REDIS_HOST];
+		if (redisHost == null || redisHost == '') {
+			redisHost = 'redis';
+		}
 		redisHost = redisHost.replace(':', '');
 		var redisPort = env[ENV_REDIS_PORT] != null && env[ENV_REDIS_PORT] != '' ? Std.parseInt(env[ENV_REDIS_PORT]) : REDIS_PORT;
 		injector.map(String, ENV_REDIS_HOST).toValue(redisHost);
