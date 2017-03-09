@@ -26,6 +26,7 @@ import promhx.DockerPromises;
 import promhx.PromiseTools;
 
 import util.streams.StreamTools;
+import util.DockerTools;
 
 import t9.util.ColorTraces.*;
 
@@ -37,19 +38,6 @@ enum DataTransferType {
 	Rsync;
 	Sftp;
 	Local;
-}
-
-typedef DockerVolumeDef = {
-	@:optional var dockerOpts :DockerConnectionOpts;
-	@:optional var docker :Docker;
-	var name :DockerVolumeName;
-}
-
-typedef MountedDockerVolumeDef = {>DockerVolumeDef,
-	/* Container mount point */
-	@:optional var mount :String;
-	/* This path refers to a sub path inside a docker container */
-	@:optional var path :String;
 }
 
 typedef DataTransferOp = {
@@ -75,14 +63,6 @@ typedef S3Credentials = {
 	@:optional var region :String;
 	@:optional var path :String;
 	@:optional var extraS3SyncParameters :Array<Array<String>>;
-}
-
-
-typedef DockerRunResult = {
-	var StatusCode :Int;
-	@:optional var stdout :String;
-	@:optional var stderr :String;
-	@:optional var error :Dynamic;
 }
 
 class DockerDataTools
@@ -305,7 +285,7 @@ class DockerDataTools
 		var sourceUri = 's3://${credentials.bucket}/${path}';
 
 		var command = ['aws', 's3', 'ls', sourceUri, '--recursive'];
-		return runDockerCommand(docker, AWS_CLI_IMAGE, command, env)
+		return DockerTools.runDockerCommand(docker, AWS_CLI_IMAGE, command, env)
 			.then(function(result) {
 				if (result.stdout != null) {
 					var lines = result.stdout.split('\n').filter(function(s) return s.indexOf(path) > -1).map(function(s) return s.substr(s.indexOf(path)).trim()).array();
@@ -329,119 +309,7 @@ class DockerDataTools
 			AWS_DEFAULT_REGION: credentials.region != null ? credentials.region : 'us-west-1',
 		};
 
-		return runDockerCommand(docker, AWS_CLI_IMAGE, command, env, volumes, outStream, errStream);
-	}
-
-	public static function runDockerCommand(docker :Docker, image :String, command :Array<String>, ?env :haxe.DynamicAccess<String>, ?volumes :Array<MountedDockerVolumeDef>, ?outStream :IWritable, ?errStream :IWritable) :Promise<DockerRunResult>
-	{
-		var result :DockerRunResult = {
-			StatusCode: null,
-			stdout: null,
-			stderr: null,
-			error: null
-		}
-		var promise = new DeferredPromise();
-#if DockerDataToolsDebug
-		outStream = outStream == null ? Node.process.stdout : outStream;
-		errStream = errStream == null ? Node.process.stderr : errStream;
-#else
-		outStream = outStream == null ? Node.require('dev-null')() : outStream;
-		errStream = errStream == null ? Node.require('dev-null')() : errStream;
-#end
-		var createOptions :CreateContainerOptions = {
-			Image: image,
-			HostConfig: {},
-			Env: env != null ? env.keys().map(function(key) return '${key}=${env[key]}') : null,
-			Tty: true//needed for splitting stdout/err
-		}
-
-		if (volumes != null) {
-			createOptions.HostConfig.Binds = [];
-			for (volume in volumes) {
-				Assert.notNull(volume.name);
-				Assert.notNull(volume.mount);
-				createOptions.HostConfig.Binds.push('${volume.name}:${volume.mount}');
-			}
-		}
-
-		var startOptions :StartContainerOptions = {};
-
-
-		var outBuffer = new StringBuf();
-		var grabberOutStream = StreamTools.createTransformStream(function(s) {
-			outBuffer.add(s);
-			return s;
-		});
-		grabberOutStream.pipe(outStream);
-
-		var errBuffer = new StringBuf();
-		var grabberErrStream = StreamTools.createTransformStream(function(s) {
-			errBuffer.add(s);
-			return s;
-		});
-		grabberErrStream.pipe(errStream);
-
-		return DockerPromises.ensureImage(docker, createOptions.Image)
-			.pipe(function(_) {
-
-				var promise = new DeferredPromise();
-
-#if DockerDataToolsDebug
-				traceMagenta('command=${op.command.command} createOptions=${createOptions} startOptions=${startOptions}');
-#end
-				docker.run(image, command, [grabberOutStream, grabberErrStream], createOptions, startOptions, function(err, dataRun, container) {
-#if DockerDataToolsDebug
-					traceMagenta('docker run result err=$err data=$dataRun');
-					traceCyan('volumeOperation created container=${container.id}');
-#end
-
-					result.StatusCode = dataRun != null ? dataRun.StatusCode : null;
-					result.stdout = outBuffer.toString() != "" ? outBuffer.toString() : null;
-					result.stderr = errBuffer.toString() != "" ? errBuffer.toString() : null;
-					if (err != null) {
-						traceRed('Error in docker run err=${Json.stringify(err)}');
-						result.error = err;
-						promise.boundPromise.reject(result);
-						return;
-					}
-					if (container != null) {
-						container.remove(function(errRemove, dataRemove) {
-	#if DockerDataToolsDebug
-							traceCyan('volumeOperation removed container=${container.id} errRemove=$errRemove data=$dataRemove');
-	#end
-							if (promise != null) {
-								if (err != null) {
-	#if DockerDataToolsDebug
-									traceRed(err);
-	#end
-									result.error = err;
-									promise.boundPromise.reject(result);
-								} else if (dataRun.StatusCode != 0) {
-	#if DockerDataToolsDebug
-									traceRed('Non-zero StatusCode data:$dataRun');
-	#end
-									result.error = 'Non-zero StatusCode data:$dataRun';
-									promise.boundPromise.reject(result);
-								} else {
-									promise.resolve(result);
-								}
-								promise = null;
-							}
-						});
-					} else {
-						result.error = 'No container';
-						promise.boundPromise.reject(result);
-					}
-				})
-				.on('container', function (container) {
-				})
-				.on('stream', function (stream) {
-				})
-				.on('data', function (data) {
-				});
-
-				return promise.boundPromise;
-			});
+		return DockerTools.runDockerCommand(docker, AWS_CLI_IMAGE, command, env, volumes, outStream, errStream);
 	}
 
 	public static function volumeOperation(op :DataTransferOp, volumes :Array<MountedDockerVolumeDef>, ?outStream :IWritable, ?errStream :IWritable) :CopyDataResult
@@ -459,7 +327,7 @@ class DockerDataTools
 		var docker = volumes[0].docker != null ? volumes[0].docker : new Docker(volumes[0].dockerOpts);
 
 
-		return {end:runDockerCommand(docker, op.command.image, op.command.command, op.command.env, volumes, outStream, errStream)};
+		return {end:DockerTools.runDockerCommand(docker, op.command.image, op.command.command, op.command.env, volumes, outStream, errStream)};
 	}
 
 	public static function ensureEmptyDockerImage(docker :Docker) :Promise<Bool>

@@ -244,7 +244,6 @@ class DockerJobTools
 
 			var finished = false;
 			kill.then(function(ok) {
-				traceMagenta('about to kill finished=$finished');
 				if (!finished) {
 					container.kill(function(err, data) {
 						traceMagenta('killed err=$err data=$data');
@@ -259,11 +258,14 @@ class DockerJobTools
 					finished = true;
 					return;
 				}
-				container.wait(function(waitError, endResult) {
-					var result = {container:container, error:waitError};
-					finished = true;
-					promise.resolve(result);
-				});
+				var result = {container:container, error:null};
+				finished = true;
+				promise.resolve(result);
+				// container.wait(function(waitError, endResult) {
+				// 	var result = {container:container, error:waitError};
+				// 	finished = true;
+				// 	promise.resolve(result);
+				// });
 			});
 		});
 		return promise.boundPromise;

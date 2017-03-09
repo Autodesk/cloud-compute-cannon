@@ -45,6 +45,19 @@ class RpcRoutes
 	}
 
 	@rpc({
+		alias:'info',
+		doc:'Get the running status of this worker only'
+	})
+	public function info() :Promise<SystemStatus>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServerCommands.status();
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
 		alias:'serverversion',
 		doc:'Get the server version info'
 	})
@@ -257,7 +270,7 @@ class RpcRoutes
 		?inputs :Array<ComputeInputSource>,
 		?workingDir :String,
 		?cpus :Int = 1,
-		?maxDuration :Int = 600000,
+		?maxDuration :Int = 600,
 		?resultsPath :String,
 		?inputsPath :String,
 		?outputsPath :String,

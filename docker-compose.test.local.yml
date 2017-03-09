@@ -2,6 +2,9 @@ version: '2'
 
 services:
   ccc:
+    extends:
+      file: "docker-compose.yml"
+      service: "ccc"
     image: "cloud-compute-cannon:latest"
     command: ["${EXECUTABLE}", "build/test/compute_tests.js"]
     volumes:
@@ -12,15 +15,15 @@ services:
       AWS: "false"
       DOCKER: "true"
       VAGRANT: "false"
+      REDIS_HOST: "redis1"
+      SCALE_UP_CONTROL: "external"
+      SCALE_DOWN_CONTROL: "external"
+      ENABLE_FLUENT: "false"
 
-  redis:
+  redis1:
+    extends:
+      file: "docker-compose.dev-server-local-base.yml"
+      service: "ccc"
     logging:
       driver: "none"
       options: {}
-
-  fluentd:
-    image: fluent/fluentd:v0.14.2
-    volumes:
-      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
-    logging:
-      driver: none

@@ -16,11 +16,12 @@ services:
       STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
       REDIS_HOST: 'redis1'
 
-      CONFIG_PATH: "/app/config/ccc.yml"
-      CLIENT_DEPLOYMENT: "true"
+      # CONFIG_PATH: "/app/config/ccc.yml"
+      CLIENT_DEPLOYMENT: "false"
       SCALE_UP_CONTROL: "external"
       SCALE_DOWN_CONTROL: "external"
       ENABLE_FLUENT: "false"
+      LOCAL: "true"
 
     image: "quay.io/bionano/cloud-compute-cannon:e0d23cc2"
     command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
@@ -29,6 +30,6 @@ services:
       - ./build/server:/app/server
       - ./src/web:/app/web
       - ./ccc_local_storage:/app/ccc_local_storage
-      - ./:/app/config
+      # - ./:/app/config
     logging:
       driver: json-file

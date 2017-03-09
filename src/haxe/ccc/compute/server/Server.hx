@@ -162,7 +162,6 @@ class Server
 		Log.debug({config:LogTools.removePrivateKeys(config)});
 
 		var env :DynamicAccess<String> = Node.process.env;
-		Log.debug({env:Json.stringify(env, null, '  ')});
 
 		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
 
@@ -191,6 +190,17 @@ class Server
 				Assert.notNull(injector.getValue(v[0]), 'Missing injector.getValue(${v[0]})');
 			}
 		}
+
+		injector.map(Docker).toValue(new Docker({socketPath:'/var/run/docker.sock'}));
+
+		var workerInternalState :WorkerStateInternal = {
+			ncpus: 0,
+			timeLastHealthCheck: null,
+			jobs: [],
+			id: null,
+			health: null
+		};
+		injector.map('ccc.compute.shared.WorkerStateInternal').toValue(workerInternalState);
 	}
 
 	static function initAppPaths(injector :Injector)
@@ -205,6 +215,28 @@ class Server
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.VERSION);
+		});
+
+		function test(req, res) {
+			var serviceTests :ccc.compute.server.tests.ServiceTests = injector.getValue(ccc.compute.server.tests.ServiceTests);
+			if (serviceTests == null) {
+				res.status(500).json({status:status, success:false});
+			} else {
+				serviceTests.testSingleJob()
+					.then(function(ok) {
+						res.json({success:ok});
+					}).catchError(function(err) {
+						res.status(500).json(cast {error:err, success:false});
+					});
+			}
+		}
+
+		app.get('/healthcheck', function(req, res) {
+			test(req, res);
+		});
+
+		app.get('/test', function(req, res) {
+			test(req, res);
 		});
 
 		app.get('/version_extra', function(req, res) {
@@ -298,14 +330,20 @@ class Server
 		});
 
 		//Quick summary of worker jobs counts for scaling control.
-		app.get('/worker-job-counts', function(req, res :ExpressResponse) {
+		app.get('/worker-jobs', function(req, res :ExpressResponse) {
 			if (injector.hasMapping(RedisClient)) {
 				var redis :RedisClient = injector.getValue(RedisClient);
 				var jobs :Jobs = redis;
+				var jobStatusTools :JobStateTools = redis;
 				jobs.getAllWorkerJobs()
-					.then(function(result) {
-						Log.warn(result);
-						res.json(cast result);
+					.pipe(function(result) {
+						return jobStatusTools.getJobsWithStatus(JobStatus.Pending)
+							.then(function(jobIds) {
+								res.json({
+									waiting:jobIds,
+									workers:result
+								});
+							});
 					})
 					.catchError(function(err) {
 						res.status(500).json(cast {error:err});
@@ -553,11 +591,15 @@ class Server
 			})
 			.then(function(_) {
 				updateStatus(ServerStartupState.Ready);
+				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
+					Node.process.send(Constants.IPC_MESSAGE_READY);
+				}
 				return true;
 			})
 			.then(function(_) {
 				runFunctionalTests(injector);
-			});
+			})
+			;
 	}
 
 	static function postInitSetup(injector :Injector) :Promise<Bool>
@@ -578,7 +620,7 @@ class Server
 
 	static function runFunctionalTests(injector :Injector)
 	{
-		return false;
+		// return false;
 		var env :DynamicAccess<String> = Node.process.env;
 		//Run internal tests
 		var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
@@ -586,7 +628,7 @@ class Server
 		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
 		if (!disableStartTest) {
 			Log.debug('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "distributedtasks=true"}')
+			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "failures=true"}')
 				.then(function(out) {
 					try {
 						var results = Json.parse(out);
@@ -639,11 +681,6 @@ class Server
 		}
 		//Setup a static file server to serve job results
 		app.use('/', cast StorageRestApi.staticFileRouter(storage));
-
-		Log.debug({server_status:status});
-		if (Node.process.send != null) {//If spawned via a parent process, send will be defined
-			Node.process.send(Constants.IPC_MESSAGE_READY);
-		}
 	}
 
 	static function initWebsocketServer(injector :Injector)

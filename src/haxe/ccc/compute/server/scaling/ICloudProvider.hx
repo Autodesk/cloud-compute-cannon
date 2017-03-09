@@ -8,6 +8,8 @@ interface ICloudProvider
 
 	public function getHostPrivate() :Promise<String>;
 
+	public function getDiskUsage() :Promise<Float>;
+
 	/**
 	 * Given that e.g. AWS instances are billed per hour,
 	 * return the time where shutting down is most cost

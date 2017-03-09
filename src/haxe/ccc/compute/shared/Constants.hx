@@ -32,6 +32,9 @@ class Constants
 	inline public static var CONFIG_HASH = 'ccc_config';
 	inline public static var CONFIG_HASH_WORKERS_MAX = 'workers_max';
 	inline public static var CONFIG_HASH_WORKERS_MIN = 'workers_min';
+	inline public static var WORKER_STATUS_KEY_TTL_SECONDS = 20;
+	inline public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS = 10;
+	inline public static var GLOBAL_WORKER_HEALTH_CHECK_SECONDS = 20;
 
 	/* Job constants */
 	public static inline var RESULTS_JSON_FILE = 'result.json';
@@ -46,6 +49,7 @@ class Constants
 	// public static var SERVER_DATA_ROOT = '/$DIRECTORY_NAME_WORKER_OUTPUT/';
 	public static inline var STDOUT_FILE = 'stdout';
 	public static inline var STDERR_FILE = 'stderr';
+	public static inline var DEFAULT_MAX_JOB_TIME_MS = 30 * 1000;//30secs
 
 	/* Env vars */
 	inline public static var ENV_VAR_DISABLE_LOGGING = 'DISABLE_LOGGING';
@@ -69,6 +73,10 @@ class Constants
 	/* Injector env vars */
 	inline public static var ENV_REDIS_HOST = 'REDIS_HOST';
 	inline public static var ENV_REDIS_PORT = 'REDIS_PORT';
+	// inline public static var WORKER_ID = 'WORKER_ID';
+	// inline public static var NCPUS = 'NCPUS';
+	// inline public static var WORKING_JOBS = 'WORKING_JOBS';
+	// inline public static var TIME_LAST_HEALTH_CHECK = 'TIME_LAST_HEALTH_CHECK';
 	/* Scaling control: values [internal/external] defaults to external */
 	inline public static var ENV_SCALE_UP_CONTROL = 'SCALE_UP_CONTROL';
 	/* external | internal */

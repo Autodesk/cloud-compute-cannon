@@ -1,6 +1,7 @@
 etc/hxml/base-nodejs.hxml
 
 -D nodejs
+# -D PromhxExposeErrors
 
 -debug
 

@@ -43,14 +43,6 @@ import ccc.compute.shared.Definitions;
 	import ccc.compute.client.*;
 	import ccc.compute.server.*;
 
-	
-	// import ccc.compute.server.execution.singleserver.ComputeQueue;
-	// import ccc.compute.server.execution.singleserver.InstancePool;
-	
-	// import ccc.compute.server.workers.*;
-	// import ccc.compute.server.workers.WorkerProviderBoot2Docker;
-	// import ccc.compute.server.workers.WorkerProviderPkgCloud;
-	// import ccc.compute.server.workflows.*;
 	import ccc.storage.*;
 
 	import minject.Injector;
@@ -71,9 +63,6 @@ import ccc.compute.shared.Definitions;
 	using StringTools;
 	using util.StringUtil;
 	using promhx.PromiseTools;
-	// using ccc.compute.server.workers.WorkerProviderTools;
 	using ccc.compute.server.execution.JobTools;
 	using ccc.compute.server.execution.ComputeTools;
-	// using ccc.compute.server.workers.WorkerProviderTools;
-	// using ccc.compute.server.workers.WorkerTools;
 #end

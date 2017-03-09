@@ -1,6 +1,7 @@
 package ccc.compute.server.providers;
 
 import ccc.compute.client.util.ClientTools;
+import ccc.compute.server.workers.*;
 
 import haxe.Resource;
 import haxe.Template;
@@ -34,22 +35,6 @@ class ProviderTools
 		return switch(config.type) {
 			case boot2docker:
 				return Promise.promise(WorkerProviderBoot2Docker.getLocalDockerWorker());
-			case vagrant:
-				throw "Vagrant install is currently broken";
-				//TODO: this should be easy
-				var path = Constants.SERVER_VAGRANT_DIR;//Path.join()
-				// var id :MachineId = ComputeTools.createUniqueId();
-				var address :IP = '192.168.' + Math.max(1, Math.floor(Math.random() * 254)) + '.' + Math.max(1, Math.floor(Math.random() * 254));
-				// var vagrantPath = VagrantPath.from(Path.join(id), address);
-				FsExtended.ensureDirSync(path);
-				var streams :util.streams.StdStreams = {out:js.Node.process.stdout, err:js.Node.process.stderr};
-				return WorkerProviderVagrantTools.ensureWorkerBox(path, address, null, streams)
-					.pipe(function(vagrant) {
-						return WorkerProviderVagrantTools.getWorkerDefinition(path);
-						trace('vagrant=${vagrant}');
-						return null;
-					});
-				return Promise.promise(null);
 			case pkgcloud:
 				var provider = WorkerProviderTools.getProvider(cast config);
 				return provider.createServer();

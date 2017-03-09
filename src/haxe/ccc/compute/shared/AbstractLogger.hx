@@ -25,7 +25,7 @@ abstract AbstractLogger(js.npm.bunyan.Bunyan.BunyanLogger) to js.npm.bunyan.Buny
 			case 'object': cast Reflect.copy(logThing);
 			default: cast {message:Std.string(logThing)};
 		}
-		obj['src'] = {file:pos.fileName, line:pos.lineNumber};
+		obj['src'] = {file:pos.fileName, line:pos.lineNumber, func:'${pos.className.split(".").pop()}.${pos.methodName}'};
 		//Ensure errors are strings, not objects, for eventual consumption by Elasticsearch
 		if (obj.exists('error') && obj['error'] != null) {
 			switch(untyped __typeof__(obj['error'])) {

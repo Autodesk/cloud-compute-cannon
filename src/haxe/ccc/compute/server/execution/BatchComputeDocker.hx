@@ -89,6 +89,15 @@ class BatchComputeDocker
 		var copyLogs = copyLogsInternal.bind(jobId, docker, resultsStorageRemote, redis, log);
 
 		var killed = false;
+
+		if (killContainer != null) {
+			killContainer.then(function(isKilled) {
+				if (isKilled) {
+					killed = true;
+				}
+			}).catchError(function(err) {});
+		}
+
 		var eventStream :Stream<EventStreamItem> = null;
 		eventStream = DockerTools.createEventStream(dockerOpts);
 		//It is null if using the local docker daemon
@@ -119,6 +128,7 @@ class BatchComputeDocker
 		var outputFiles = [];
 		var error :Dynamic;
 		var copiedLogs = false;
+		var timedOut = false;
 
 		function cancel() {
 			if (jobWorkingStatus == JobWorkingStatus.Cancelled) {
@@ -155,28 +165,6 @@ class BatchComputeDocker
 			jobWorkingStatus = status;
 			return jobStateTools.setWorkingStatus(jobId, status);
 		}
-
-		// var killCommand = false;
-		// killContainer.then(function(_) {
-		// 	killCommand = true;
-		// 	traceMagenta('killContainer promise $containerId');
-		// 	// setStatus(JobWorkingStatus.Cancelled);
-		// 	// if (containerId != null) {
-		// 	// 	log.info({log:'Killing container'});
-		// 	// 	traceMagenta("docker.getContainer(containerId).kill");
-		// 	// 	docker.getContainer(containerId).kill(function(err, data) {
-		// 	// 		//Ignored
-		// 	// 	});
-		// 	// }
-		// });
-
-		// var timeout = job.parameters.maxDuration;
-		// if (timeout == null) {
-		// 	timeout = new Minutes(2).toMilliseconds().toFloat();
-		// }
-		// var timeoutId = Node.setTimeout(function() {
-		// 	setStatus(JobWorkingStatus.)
-		// }, timeout);
 
 		var p = Promise.promise(true)
 			.pipe(function(_) {
@@ -221,6 +209,7 @@ class BatchComputeDocker
 							exitCode = resultsBlob.exitCode;
 							error = resultsBlob.error;
 							containerId = resultsBlob.containerId;
+							timedOut = resultsBlob.timedOut;
 							return setStatus(JobWorkingStatus.CopyingOutputsAndLogs);
 						});
 				} else {
@@ -250,7 +239,9 @@ class BatchComputeDocker
 				}
 			})
 			.errorPipe(function(pipedError) {
-				log.error(pipedError);
+				if (!killed) {
+					log.error(pipedError);
+				}
 				error = error != null ? error : pipedError;
 				return setStatus(JobWorkingStatus.Failed)
 					.then(function(_) {
@@ -262,8 +253,10 @@ class BatchComputeDocker
 					});
 			})
 			.then(function(_) {
-				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error};
-				log.debug({message: 'job is complete, removing container out of band', jobResult:jobResult});
+				var jobResult :BatchJobResult = {exitCode:exitCode, outputFiles:outputFiles, copiedLogs:copiedLogs, JobWorkingStatus:jobWorkingStatus, error:error, timeout:timedOut};
+				if (!killed) {
+					log.debug({message: 'job is complete, removing container out of band', jobResult:jobResult});
+				}
 				//The job is now finished. Clean up the temp worker storage,
 				// out of the promise chain (for speed)
 
@@ -457,7 +450,7 @@ class BatchComputeDocker
 		}
 	}
 
-	static function runContainerInternal(job :DockerBatchComputeJob, docker :Docker, redis :RedisClient, kill :Promise<Bool>, log :AbstractLogger) :Promise<{containerId:String,exitCode:Int,error:Dynamic}>
+	static function runContainerInternal(job :DockerBatchComputeJob, docker :Docker, redis :RedisClient, kill :Promise<Bool>, log :AbstractLogger) :Promise<{containerId:String,exitCode:Int,error:Dynamic, timedOut:Bool}>
 	{
 		var jobId = job.jobId;
 		log = log.child({JobWorkingStatus:JobWorkingStatus.ContainerRunning});
@@ -472,6 +465,7 @@ class BatchComputeDocker
 		var containerId :String = null;
 		var exitCode :Int = -1;
 		var error :Dynamic = null;
+		var isTimedOut = false;
 		/*
 			First check if there is an existing container
 			running, in case we crashed and resumed
@@ -579,7 +573,7 @@ class BatchComputeDocker
 				}
 			})
 			.pipe(function(container) {
-				log.debug('container=$containerId');
+				// log.debug('container=$containerId');
 				if (container == null) {
 					throw 'Missing container when attempting to run';
 					return Promise.promise(true);
@@ -587,17 +581,41 @@ class BatchComputeDocker
 					//Wait for the container to finish, but also monitor
 					//the state of the job. If it becomes 'stopped'
 
-					return DockerPromises.wait(container)
+					var promise = new DeferredPromise();
+
+
+					var timeout :Int = job.parameters.maxDuration;
+					if (timeout == null) {
+						timeout = DEFAULT_MAX_JOB_TIME_MS;
+					}
+					var timeoutId = Node.setTimeout(function() {
+						log.warn({message:'Timed out'});
+						isTimedOut = true;
+						if (promise != null) {
+							promise.resolve(true);
+							promise = null;
+							container.kill(function(err,_) {});
+						}
+					}, timeout * 1000);
+
+					promise.boundPromise
+						.errorPipe(function(err) {
+							return Promise.promise(true);
+						})
+						.then(function(_) {
+							Node.clearTimeout(timeoutId);
+						});
+
+					DockerPromises.wait(container)
 						.then(function(status :{StatusCode:Int}) {
+							if (promise == null) {
+								return;
+							}
 							exitCode = status.StatusCode;
 							//This is caused by a job failure
 							if (exitCode == 137) {
 								error = "Job exitCode==137 this is caused by docker killing the container, likely on a restart.";
 							}
-							// if (killed) {
-							// 	exitCode == 137;
-							// 	error = "Job killed, this is caused by docker killing the container, likely on a restart. Requeuing this job";
-							// }
 
 							log.debug({exitcode:exitCode, error:error});
 							if (error != null) {
@@ -605,12 +623,23 @@ class BatchComputeDocker
 								// throw error;
 							}
 							jobStats.jobContainerExited(jobId, exitCode, error);
-							return true;
+							promise.resolve(true);
+							promise = null;
+						})
+						.catchError(function(err) {
+							if (promise != null) {
+								promise.boundPromise.reject(err);
+							} else {
+								log.error({error:err, message:'Caught error but container execution already resolved'});
+							}
+							promise = null;
 						});
+
+					return promise.boundPromise;
 				}
 			})
 			.then(function(_) {
-				return {containerId:containerId,exitCode:exitCode, error:error};
+				return {containerId:containerId,exitCode:exitCode, error:error, timedOut:isTimedOut};
 			});
 	}
 
@@ -621,7 +650,6 @@ class BatchComputeDocker
 		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(jobId);
 		log = log.child({JobWorkingStatus:CopyingOutputs, outputVolumeName:outputVolumeName});
 		log.debug({});
-		// var outputStorage = fs.clone().appendToRootPath(job.outputDir());
 		if (job.outputsPath != null) {
 			log.debug({log:'Writing to custom outputs path=' + job.outputsPath});
 		}

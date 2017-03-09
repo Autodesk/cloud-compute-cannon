@@ -70,7 +70,6 @@ class RedisDistributedSetInterval
 
 	function shouldRun() :Promise<Bool>
 	{
-		traceMagenta('shouldRun $_taskId');
 		return evaluateLuaScript(_redis, SCRIPT_CHECK_TASK, [_taskId, _interval, time()]);
 	}
 

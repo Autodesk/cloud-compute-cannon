@@ -51,14 +51,19 @@ class ProcessQueue
 	@inject('REDIS_HOST') public var redisHost :String;
 	@inject('REDIS_PORT') public var redisPort :Int;
 	@inject public var _redis :RedisClient;
+	@inject public var _docker :Docker;
 	@inject public var _remoteStorage :ServiceStorage;
 	@inject public var _injector :Injector;
 	@inject public var _workerController :WorkerController;
 	@inject public var log :AbstractLogger;
-	@inject("StatusStream") public var statusStream :Stream<JobStatusUpdate>;
+	@inject('StatusStream') public var statusStream :Stream<JobStatusUpdate>;
+	@inject public var internalState :WorkerStateInternal;
 
 	var queueProcess (default, null) :js.npm.bull.Bull.Queue<QueueJob,JobResult>;
 	var queueAdd (default, null) :js.npm.bull.Bull.Queue<QueueJob,JobResult>;
+
+	var queueProcessPriority (default, null) :js.npm.bull.Bull.Queue<QueueJob,JobResult>;
+	var queueAddPriority (default, null) :js.npm.bull.Bull.Queue<QueueJob,JobResult>;
 
 	public var cpus (get, null):Int;
 	var _cpus :Int = 1;
@@ -103,8 +108,11 @@ class ProcessQueue
 				]);
 			})
 			.then(function(_) {
-				//attempts:5,, backoff:{delay:10000, type:'exponential'}
-				queueAdd.add({jobId:job.id}, {removeOnComplete:true});
+				if (job.priority == true) {
+					queueAddPriority.add({jobId:job.id}, {removeOnComplete:true});
+				} else {
+					queueAdd.add({jobId:job.id}, {removeOnComplete:true});
+				}
 				return true;
 			});
 	}
@@ -121,6 +129,7 @@ class ProcessQueue
 	public function stopQueue() :Promise<Bool>
 	{
 		queueProcess.close();
+		queueProcessPriority.close();
 		if (_jobs == 0) {
 			return Promise.promise(true);
 		} else {
@@ -154,6 +163,12 @@ class ProcessQueue
 
 		var jobId = queueJob.data.jobId;
 
+		var internalState :WorkerStateInternal = _injector.getValue('ccc.compute.shared.WorkerStateInternal');
+		var workingJobs : Array<JobId> = internalState.jobs;
+		if (!workingJobs.has(jobId)) {
+			workingJobs.push(jobId);
+		}
+
 		Jobs.setJobWorker(jobId, _workerController.id)
 			.pipe(function(_) {
 				return jobProcessObject.finished;
@@ -181,6 +196,7 @@ class ProcessQueue
 			})
 			.then(function(_) {
 				jobProcessObject.dispose();
+				workingJobs.remove(jobId);
 				if (_localJobProcess.get(jobProcessObject.jobId) == jobProcessObject) {
 					_localJobProcess.remove(jobProcessObject.jobId);
 				}
@@ -204,82 +220,105 @@ class ProcessQueue
 		});
 
 		_cpus = 1;
-		var args :ProcessArguments = {
-			redis : {
-				host: redisHost,
-				port: redisPort
-			},
-			cpus : _cpus,
-			remoteStorage: _remoteStorage,
-			log: log
-		};
 
-		queueProcess = createProcessorQueue(args, jobProcesser);
-		queueAdd = createAddingQueue(args);
+		DockerPromises.info(_docker)
+			.then(function(dockerInfo) {
+				_cpus = dockerInfo.NCPU;
+				internalState.ncpus = dockerInfo.NCPU;
 
-		queueProcess.once(QueueEvent.Ready, function() {
-			log.debug({e:QueueEvent.Ready});
-			_ready.resolve(true);
-		});
+				var args :ProcessArguments = {
+					redis : {
+						host: redisHost,
+						port: redisPort
+					},
+					cpus : _cpus,
+					remoteStorage: _remoteStorage,
+					log: log
+				};
 
-		queueProcess.on(QueueEvent.Error, function(err) {
-			log.error({e:QueueEvent.Error, error:Json.stringify(err)});
-		});
+				queueProcess = createProcessorQueue(args, jobProcesser);
+				queueAdd = createAddingQueue(args);
 
-		queueProcess.on(QueueEvent.Active, function(job, promise) {
-			try {
-				log.debug({e:QueueEvent.Active, job:job.data});
-			} catch(err :Dynamic) {trace(err);}
-		});
+				queueProcessPriority = createProcessorQueue(args, jobProcesser, true);
+				queueAddPriority = createAddingQueue(args, true);
 
-		queueProcess.on(QueueEvent.Stalled, function(job) {
-			log.warn({e:QueueEvent.Stalled, job:job.data});
-		});
+				var queues = [queueProcess, queueProcessPriority];
+				var readyEvents = [];
 
-		queueProcess.on(QueueEvent.Progress, function(job, progress) {
-			log.debug({e:QueueEvent.Progress, job:job.data, progress:progress});
-		});
+				for (q in queues) {
+					q.once(QueueEvent.Ready, function() {
+						log.debug({e:QueueEvent.Ready});
+						readyEvents.push(true);
+						if (readyEvents.length >= queues.length) {
+							_ready.resolve(true);
+						}
+					});
 
-		queueProcess.on(QueueEvent.Completed, function(job, result) {
-			log.debug({e:QueueEvent.Completed, job:job.data, result:result});
-		});
+					q.on(QueueEvent.Error, function(err) {
+						log.error({e:QueueEvent.Error, error:Json.stringify(err)});
+					});
 
-		queueProcess.on(QueueEvent.Failed, function(job, error) {
-			log.error({e:QueueEvent.Failed, job:job.data, error:error});
-		});
+					q.on(QueueEvent.Active, function(job, promise) {
+						try {
+							log.debug({e:QueueEvent.Active, job:job.data});
+						} catch(err :Dynamic) {trace(err);}
+					});
 
-		queueProcess.on(QueueEvent.Paused, function() {
-			log.info({e:QueueEvent.Paused});
-		});
+					q.on(QueueEvent.Stalled, function(job) {
+						log.warn({e:QueueEvent.Stalled, job:job.data});
+					});
 
-		queueProcess.on(QueueEvent.Resumed, function(job) {
-			log.info({e:QueueEvent.Resumed, job:job.data});
-		});
+					q.on(QueueEvent.Progress, function(job, progress) {
+						log.debug({e:QueueEvent.Progress, job:job.data, progress:progress});
+					});
 
-		queueProcess.on(QueueEvent.Cleaned, function(jobs) {
-			log.debug({e:QueueEvent.Cleaned, jobs:jobs.map(function(j) return j.data).array()});
-			return null;
-		});
+					q.on(QueueEvent.Completed, function(job, result) {
+						log.debug({e:QueueEvent.Completed, job:job.data, result:result});
+					});
+
+					q.on(QueueEvent.Failed, function(job, error :js.Error) {
+						log.error({e:QueueEvent.Failed, job:job.data, error:error});
+						if (error.message != null && error.message.indexOf('job stalled more than allowable limit') > -1) {
+							job.retry();
+						}
+					});
+
+					q.on(QueueEvent.Paused, function() {
+						log.info({e:QueueEvent.Paused});
+					});
+
+					q.on(QueueEvent.Resumed, function(job) {
+						log.info({e:QueueEvent.Resumed, job:job.data});
+					});
+
+					q.on(QueueEvent.Cleaned, function(jobs) {
+						log.debug({e:QueueEvent.Cleaned, jobs:jobs.map(function(j) return j.data).array()});
+						return null;
+					});
+				}
+			});
 	}
 
-	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob>->Done2<JobResult>->Void)
+	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob>->Done2<JobResult>->Void, ?priority :Bool = false)
 	{
 		var redisHost :String = args.redis.host;
 		var redisPort :Int = args.redis.port != null ? args.redis.port : DEFAULT_REDIS_PORT;
 		var cpus :Int = args.cpus != null ? args.cpus : 1;
-		var queue = new Queue(BullQueueNames.JobQueue, redisPort, redisHost);
+		var queueName :String = priority ? BullQueueNames.JobQueuePriority : BullQueueNames.JobQueue;
+		var queue = new Queue(queueName, redisPort, redisHost);
 		function processor(job, done) {
 			jobProcessor(job, done);
 		}
-		queue.process(processor);
+		queue.process(cpus, processor);
 		return queue;
 	}
 
-	static function createAddingQueue(args :ProcessArguments)
+	static function createAddingQueue(args :ProcessArguments, ?priority :Bool = false)
 	{
 		var redisHost :String = args.redis.host;
 		var redisPort :Int = args.redis.port != null ? args.redis.port : DEFAULT_REDIS_PORT;
-		var queue = new Queue(BullQueueNames.JobQueue, redisPort, redisHost);
+		var queueName :String = priority ? BullQueueNames.JobQueuePriority : BullQueueNames.JobQueue;
+		var queue = new Queue(queueName, redisPort, redisHost);
 		return queue;
 	}
 }
@@ -295,6 +334,7 @@ class JobProcessObject
 	@inject public var _remoteStorage :ServiceStorage;
 	@inject public var _workerController :WorkerController;
 	@inject public var log :AbstractLogger;
+	@inject public var _workerState :WorkerStateInternal;
 
 	public var jobId (default, null) :JobId;
 	var _cancelled :Bool = false;
@@ -331,6 +371,7 @@ class JobProcessObject
 	public function postInject()
 	{
 		log = log.child({jobId:jobId});
+		Assert.notNull(_workerState.id);
 		jobProcesser();
 	}
 
@@ -340,7 +381,6 @@ class JobProcessObject
 	 */
 	public function cancel()
 	{
-		traceMagenta('cancel');
 		_cancelled = true;
 		finish(ProcessFinishReason.Cancelled);
 	}
@@ -365,14 +405,13 @@ class JobProcessObject
 		_isFinished = true;
 		log.info({log:'removing from queue', reason:reason.getName()});
 		var Jobs :Jobs = _redis;
-		Jobs.removeJobWorker(jobId)
+		Jobs.removeJobWorker(jobId, _workerState.id)
 			.then(function(_) {
 				switch(reason) {
 					case Cancelled:
 						_cancelled = true;
 						_done(null, null);
 						_deferred.resolve(reason);
-						traceMagenta("_killedDeferred.resolve(true);");
 						_killedDeferred.resolve(true);
 					case Success(jobResult):
 						_done(null, jobResult);
@@ -440,6 +479,18 @@ class JobProcessObject
 								if (batchJobResult.exitCode == 137) {
 									finish(ProcessFinishReason.DockerContainerKilled);
 									return Promise.promise(true);
+								} else if (batchJobResult.timeout) {
+									return writeJobResults(_redis, job, _remoteStorage, batchJobResult, JobFinishedStatus.TimeOut)
+										.pipe(function(jobResultBlob) {
+											return jobStateTools.setStatus(jobId, JobStatus.Finished, JobFinishedStatus.TimeOut)
+												.then(function(_) {
+													return jobResultBlob;
+												});
+										})
+										.then(function(jobResultBlob) {
+											finish(ProcessFinishReason.Timeout);
+											return true;
+										});
 								} else {
 									return writeJobResults(_redis, job, _remoteStorage, batchJobResult, JobFinishedStatus.Success)
 										.pipe(function(jobResultBlob) {
@@ -461,7 +512,7 @@ class JobProcessObject
 							//Write job as a failure
 							//This should actually never happen, or the failure
 							//should be handled
-							var batchJobResult :BatchJobResult = {exitCode:-1, error:err, copiedLogs:false};
+							var batchJobResult :BatchJobResult = {exitCode:-1, error:err, copiedLogs:false, timeout:false};
 							// log.error({exitCode:-1, error:err, JobStatus:null, JobFinishedStatus:null});
 							if (_isFinished) {
 								return Promise.promise(true);

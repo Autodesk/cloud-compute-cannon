@@ -29,6 +29,9 @@ class InitConfigTools
 		} else {
 			config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
 		}
+		if (config == null) {
+			config = getDefaultConfig();
+		}
 		return config;
 	}
 

@@ -41,11 +41,20 @@ class CloudProviderDocker
 					var network1 :{IPAddress:String} = Reflect.field(Networks, Reflect.fields(Networks).pop());
 					var gateway = network1.IPAddress;//network1.Gateway;
 					_hostPrivate = gateway;
-					// traceGreen(Json.stringify(data, null, '  '));
-					traceMagenta('gateway=$gateway');
 					return gateway;
 				});
 		}
+	}
+
+	/**
+	 * The local provider cannot actually check the local disk,
+	 * it is unknown where it should be mounted.
+	 * @param  ?threshold :Float        [description]
+	 * @return            [description]
+	 */
+	public function getDiskUsage() :Promise<Float>
+	{
+		return Promise.promise(0.1);
 	}
 
 	/**
