@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-set -ev
-trap 'kill $(jobs -p)' EXIT
+set -e
+trap '[[ -z "$(jobs -p)" ]] || kill $(jobs -p)' EXIT
 REMOTE_CCC_PATH="cloudcomputecannon"
 if [ $# -eq 0 ]
 	then
@@ -23,5 +23,5 @@ SYNC_COMMAND="rsync --copy-links $SERVER_CONFIG_PATH $SERVER_HOST:$REMOTE_CCC_PA
 chokidar 'build/server/*.js' "$SERVER_CONFIG_PATH" -c "$SYNC_COMMAND" &
 eval $SYNC_COMMAND
 DOCKER_COMPOSE="/opt/bin/docker-compose -f docker-compose.yml -f docker-compose.dev-server-remote.yml"
-COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f compute && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` $DOCKER_COMPOSE up"
+COMMAND="$DOCKER_COMPOSE stop && $DOCKER_COMPOSE rm -f ccc && $DOCKER_COMPOSE build && HOST_PWD=\`pwd\` $DOCKER_COMPOSE up"
 ssh $SERVER_HOST "cd $REMOTE_CCC_PATH && $COMMAND"

@@ -26,13 +26,6 @@ class TestJobs extends ServerAPITestBase
 	}
 
 	@timeout(120000)
-	public function testServerProcessKilledJobsRescheduled() :Promise<Bool>
-	{
-		traceYellow('testServerProcessKilledJobsRescheduled not yet implemented');
-		return Promise.promise(true);
-	}
-
-	@timeout(120000)
 	public function testExitCodeZero() :Promise<Bool>
 	{
 		var script =

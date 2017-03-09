@@ -14,7 +14,7 @@
       "MinLength": "3",
       "MaxLength": "132",
       "AllowedPattern": "[A-Za-z0-9.=+-/]+",
-      "ConstraintDescription": "Must contain only letters, digits or _.=+- with no spaces",
+      "ConstraintDescription": "Must contain only letters, digits or _.=+- with no spaces"
     },
     "BionanoEnvironment": {
       "Description": "dev | qa | prod",
@@ -107,10 +107,10 @@
 
     "RuleTimerScaleDown": {
       "Type" : "AWS::Events::Rule",
-      "DependsOn" : "LambdaCCCBionanoScaleUp",
+      "DependsOn" : "LambdaCCCBionanoScaleDown",
       "Properties" : {
         "Description" : "Fire this event every 5 minutes",
-        "ScheduleExpression" : "rate(5 minutes)",
+        "ScheduleExpression" : "rate(1 minute)",
         "Targets" : [
           {
             "Arn" : { "Fn::GetAtt" : [ "LambdaCCCBionanoScaleDown", "Arn" ] },
@@ -200,10 +200,8 @@
             {
               "Effect": "Allow",
               "Action": [
-                "ec2:Describe*",
-                "ec2:CreateTags",
-                "ec2:ModifySnapshotAttribute",
-                "ec2:ResetSnapshotAttribute",
+                "ec2:DescribeInstances",
+                "ec2:TerminateInstances",
                 "ec2:DescribeNetworkInterfaces",
                 "ec2:CreateNetworkInterface",
                 "ec2:DeleteNetworkInterface",

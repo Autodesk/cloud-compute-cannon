@@ -322,7 +322,7 @@ redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATS}", jobId, cmsgpack.pack(jobstats)
 	/* When we call a Lua script, use the SHA of the already uploaded script for performance */
 	static var SCRIPT_SHAS :Map<String, String>;
 	static var SCRIPT_SHAS_TOIDS :Map<String, String>;
-	inline static var PREFIX = 'job_stats${SEP}';
+	inline static var PREFIX = '${CCC_PREFIX}job_stats${SEP}';
 
 	public static function evaluateLuaScript<T>(redis :RedisClient, scriptKey :String, ?args :Array<Dynamic>) :Promise<T>
 	{

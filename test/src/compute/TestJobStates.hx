@@ -112,82 +112,82 @@ class TestJobStates extends TestComputeBase
 			.thenTrue();
 	}
 
-	@timeout(5000)
-	public function testJobFailedInBatchComputeSetup()
-	{
-#if PromhxExposeErrors
-		#error 'Cannot have -D PromhxExposeErrors because the throw error will be exposed rather than handled by the internal system';
-#end
-		var maxDuration = 10;
+// 	@timeout(5000)
+// 	public function testJobFailedInBatchComputeSetup()
+// 	{
+// #if PromhxExposeErrors
+// 		#error 'Cannot have -D PromhxExposeErrors because the throw error will be exposed rather than handled by the internal system';
+// #end
+// 		var maxDuration = 10;
 
-		var jobCount = 10;
-		var jobs = [];
-		for (i in 0...jobCount) {
-			var jobId :JobId = 'job' + i;
-			var job :QueueJob<DockerJobDefinition> = {
-				id :jobId,
-				parameters: {cpus:1, maxDuration:maxDuration},
-				item: {
-					jobId: jobId,
-					image: null
-				}
-			};
-			jobs.push(job);
-		};
+// 		var jobCount = 10;
+// 		var jobs = [];
+// 		for (i in 0...jobCount) {
+// 			var jobId :JobId = 'job' + i;
+// 			var job :QueueJob<DockerJobDefinition> = {
+// 				id :jobId,
+// 				parameters: {cpus:1, maxDuration:maxDuration},
+// 				item: {
+// 					jobId: jobId,
+// 					image: null
+// 				}
+// 			};
+// 			jobs.push(job);
+// 		};
 
-		var jobManager :MockJobs = cast _jobsManager;
-		jobManager.jobDuration = 10000;
-		jobManager.jobError = 'Fake error! Ignore me in the logs, it is too hard to silence just this error message but also not miss actual errors. Move along.';
+// 		var jobManager :MockJobs = cast _jobsManager;
+// 		jobManager.jobDuration = 10000;
+// 		jobManager.jobError = 'Fake error! Ignore me in the logs, it is too hard to silence just this error message but also not miss actual errors. Move along.';
 
-		var redis = _injector.getValue(js.npm.RedisClient);
-		var logLevel = Log.log.level();
-		return Promise.promise(true)
-			//Submit jobs
-			.pipe(function(_) {
-				Log.log.level(100);
-				return ComputeQueue.enqueue(redis, jobs[0])
-					.pipe(function(_) {
-						return ComputeQueue.processPending(redis);
-					});
-			})
-			.pipe(function(_) {
-				return TestTools.whenQueueisEmpty(_redis);
-			})
-			.pipe(function(_) {
-				Log.log.level(logLevel);
-				return ComputeQueue.toJson(redis)
-					// .traceJson()
-					.then(function(out :QueueJson) {
-						assertEquals(out.pending.length, 0);
-						assertEquals(out.working.length, 0);
-						assertEquals(jobManager.getComputeJobIds().length, 0);
-						return out;
-					});
-			})
-			.pipe(function(_) {
-				return ComputeQueue.getStatus(redis, jobs[0].id)
-					.then(function(jobStatusBlob :JobStatusUpdate) {
-						assertEquals(jobStatusBlob.jobId, jobs[0].id);
-						assertEquals(jobStatusBlob.JobStatus, JobStatus.Finished);
-						//Quotes are added. Don't know why, but hacking around it.
-						if (jobStatusBlob.error.startsWith('"')) {
-							jobStatusBlob.error = jobStatusBlob.error.substr(1, jobStatusBlob.error.length - 2);
-						}
-						var err1 = Std.string(jobStatusBlob.error);
-						var err2 = Std.string(jobManager.jobError);
-						var errs = [err1, err2];
-						for (i in 0...errs.length) {
-							if (errs[i].startsWith('"')) {
-								errs[i] = errs[i].substr(1);
-							}
-						}
-						assertEquals(errs[0].substr(0, 15), errs[1].substr(0, 15));
-						assertEquals(jobStatusBlob.JobFinishedStatus, JobFinishedStatus.Failed);
-						return true;
-					});
-			})
-			.thenTrue();
-	}
+// 		var redis = _injector.getValue(js.npm.RedisClient);
+// 		var logLevel = Log.log.level();
+// 		return Promise.promise(true)
+// 			//Submit jobs
+// 			.pipe(function(_) {
+// 				Log.log.level(100);
+// 				return ComputeQueue.enqueue(redis, jobs[0])
+// 					.pipe(function(_) {
+// 						return ComputeQueue.processPending(redis);
+// 					});
+// 			})
+// 			.pipe(function(_) {
+// 				return TestTools.whenQueueisEmpty(_redis);
+// 			})
+// 			.pipe(function(_) {
+// 				Log.log.level(logLevel);
+// 				return ComputeQueue.toJson(redis)
+// 					// .traceJson()
+// 					.then(function(out :QueueJson) {
+// 						assertEquals(out.pending.length, 0);
+// 						assertEquals(out.working.length, 0);
+// 						assertEquals(jobManager.getComputeJobIds().length, 0);
+// 						return out;
+// 					});
+// 			})
+// 			.pipe(function(_) {
+// 				return ComputeQueue.getStatus(redis, jobs[0].id)
+// 					.then(function(jobStatusBlob :JobStatusUpdate) {
+// 						assertEquals(jobStatusBlob.jobId, jobs[0].id);
+// 						assertEquals(jobStatusBlob.JobStatus, JobStatus.Finished);
+// 						//Quotes are added. Don't know why, but hacking around it.
+// 						if (jobStatusBlob.error.startsWith('"')) {
+// 							jobStatusBlob.error = jobStatusBlob.error.substr(1, jobStatusBlob.error.length - 2);
+// 						}
+// 						var err1 = Std.string(jobStatusBlob.error);
+// 						var err2 = Std.string(jobManager.jobError);
+// 						var errs = [err1, err2];
+// 						for (i in 0...errs.length) {
+// 							if (errs[i].startsWith('"')) {
+// 								errs[i] = errs[i].substr(1);
+// 							}
+// 						}
+// 						assertEquals(errs[0].substr(0, 15), errs[1].substr(0, 15));
+// 						assertEquals(jobStatusBlob.JobFinishedStatus, JobFinishedStatus.Failed);
+// 						return true;
+// 					});
+// 			})
+// 			.thenTrue();
+// 	}
 
 	public function new() {}
 }

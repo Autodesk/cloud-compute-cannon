@@ -6,14 +6,21 @@ services:
     extends:
       file: docker-compose.core.yml
       service: ccc
-    image: "quay.io/bionano/cloud-compute-cannon:f5728c67"
+    image: "quay.io/bionano/cloud-compute-cannon:e0d23cc2"
     command: ["nodemon", "-w", "server", "-w", "/app/config/ccc.yml", "server/cloud-compute-cannon-server.js"]
     volumes:
       - ./build/server:/app/server
+      - ./src/web:/app/web
       - ./:/app/config
     environment:
-      LOG_LEVEL: "${LOG_LEVEL}"
+      LOG_LEVEL: "10"
       CONFIG_PATH: "/app/config/ccc.yml"
+      PORT: "9000"
+      REDIS_HOST: 'redis'
+      CLIENT_DEPLOYMENT: "true"
+      SCALE_UP_CONTROL: "external"
+      SCALE_DOWN_CONTROL: "external"
+      ENABLE_FLUENT: "true"
     links:
       - redis
       - fluentd

@@ -38,13 +38,13 @@ class ShutdownController
 			beginShutdownMonitor();
 		}
 
-		_monitorWorkersTask = new RedisDistributedSetInterval(
-			DistributedTaskType.CheckAllWorkerHealth,
-			10000,
-			// 5000,
-			checkOtherMachines);
+		// _monitorWorkersTask = new RedisDistributedSetInterval(
+		// 	DistributedTaskType.CheckAllWorkerHealth,
+		// 	10000,
+		// 	// 5000,
+		// 	checkOtherMachines);
 
-		_injector.injectInto(_monitorWorkersTask);
+		// _injector.injectInto(_monitorWorkersTask);
 	}
 
 	function beginShutdownMonitor() :Void
@@ -144,16 +144,12 @@ class ShutdownController
 
 	function removeWorker(workerId :MachineId)
 	{
-		traceRed('REMOVE WORKER $workerId');
 		var Workers :WorkerCache = _redis;
 		var Jobs :Jobs = _redis;
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return Workers.unregister(workerId);
 			})
-			// .pipe(function(_) {
-			// 	return Workers.removeJobWorker(workerId);
-			// })
 			.pipe(function(_) {
 				return _cloudProvider.terminate(workerId)
 					.errorPipe(function(err) {
@@ -165,7 +161,7 @@ class ShutdownController
 				return Jobs.getJobsOnWorker(workerId)
 					.pipe(function(jobsOnWorker) {
 						var promises = jobsOnWorker.map(function(jobId) {
-							return Jobs.removeJobWorker(jobId);
+							return Jobs.removeJobWorker(jobId, workerId);
 						});
 						return Promise.whenAll(promises).thenTrue();
 					});

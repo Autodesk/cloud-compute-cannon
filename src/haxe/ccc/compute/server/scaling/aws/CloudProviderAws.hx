@@ -28,6 +28,7 @@ class CloudProviderAws
 {
 	@inject public var _injector :Injector;
 	@inject public var log :AbstractLogger;
+	@inject public var _docker :Docker;
 	var _instanceId :MachineId;
 	var _hostPublic :String;
 	var _hostPrivate :String;
@@ -61,7 +62,6 @@ class CloudProviderAws
 				.then(function(instanceId) {
 					_instanceId = instanceId.trim();
 					log = log.child({instanceId:_instanceId});
-					// _injector.map(String, SERVER_ID).toValue(_instanceId);
 					return _instanceId;
 				})
 				.errorPipe(function(err) {
@@ -128,6 +128,11 @@ class CloudProviderAws
 		return Promise.promise(true);
 	}
 
+	public function getDiskUsage() :Promise<Float>
+	{
+		return awsDockerDiskUsage(_docker);
+	}
+
 	static function getAWSPrivateNetworkIp() :Promise<IP>
 	{
 		return RequestPromises.get('http://169.254.169.254/latest/meta-data/local-ipv4')
@@ -185,6 +190,28 @@ class CloudProviderAws
 								return workerDef;
 							});
 					});
+			});
+	}
+
+	static function awsDockerDiskUsage(docker :Docker) :Promise<Float>
+	{
+		var volumes :Array<MountedDockerVolumeDef> = [
+			{
+				mount: '/var/lib/docker',
+				name: '/var/lib/docker'
+			}
+		];
+		return DockerTools.runDockerCommand(docker, DOCKER_IMAGE_DEFAULT, ["df", "-h", "/var/lib/docker/"], null, volumes)
+			.then(function(runResult) {
+				var diskUse = ~/.*Mounted on\r\n.+\s+.+\s+.+\s+([0-9]+)%.*/igm;
+				if (runResult.StatusCode == 0 && diskUse.match(runResult.stdout)) {
+					var diskUsage = Std.parseFloat(diskUse.matched(1)) / 100.0;
+					Log.debug({disk:diskUsage});
+					return diskUsage;
+				} else {
+					Log.warn('awsDockerDiskHealthCheck: Non-zero exit code or did not match regex: ${runResult}');
+					return 1.0;
+				}
 			});
 	}
 

@@ -13,31 +13,36 @@ services:
     extends:
       file: docker-compose.core.yml
       service: ccc
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      #This volume is needed for running computes locally
+      - ccc-local-storage:/app/ccc_local_storage
     image: "cloud-compute-cannon:${VERSION}"
     command: ["node", "server/cloud-compute-cannon-server.js"]
     links:
-      - redis
-      - fluentd
+      - redis1
     environment:
       TRAVIS: "${TRAVIS}"
-    logging:
-      driver: "json-file"
-      options: {}
+      PORT: "9000"
+      # OPTIONAL: Path to the mounted configuration file
+      # CONFIG_PATH: "/app/ccc.yml"
+      # OPTIONAL text flattened yaml of the server configuration.
+      # COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
+      #This is used to get the correct host working directory to pass into the
+      #worker containers to map the local file system to /inputs+/outputs within
+      #the container. Only used for local docker providers (not cloud)
+      HOST_PWD: "$PWD"
+      STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
+      REDIS_HOST: 'redis1'
+      CLIENT_DEPLOYMENT: "true"
+      SCALE_UP_CONTROL: "external"
+      SCALE_DOWN_CONTROL: "external"
+      ENABLE_FLUENT: "false"
 
-  redis:
+  redis1:
     extends:
       file: docker-compose.core.yml
       service: redis
     logging:
       driver: "json-file"
       options: {}
-
-  fluentd:
-    extends:
-      file: docker-compose.core.yml
-      service: fluentd
-    image: fluent/fluentd:v0.14.2
-    volumes:
-      - ./etc/log/fluent.prod.conf:/fluentd/etc/fluent.conf
-    logging:
-      driver: none

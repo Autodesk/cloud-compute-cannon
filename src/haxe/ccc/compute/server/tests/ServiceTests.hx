@@ -31,6 +31,8 @@ class ServiceTests
 	@inject
 	public var _context :t9.remoting.jsonrpc.Context;
 
+	var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
+
 	@post
 	public function postInject()
 	{
@@ -41,9 +43,9 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false, ?failures :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks)) {
+		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks || failures)) {
 			compute = true;
 		}
 		if (all) {
@@ -54,6 +56,7 @@ class ServiceTests
 			dockervolumes = true;
 			jobs = true;
 			distributedtasks = true;
+			failures = true;
 		}
 		var logString :haxe.DynamicAccess<Bool> = {
 			all: all,
@@ -63,11 +66,11 @@ class ServiceTests
 			compute: compute,
 			dockervolumes: dockervolumes,
 			jobs: jobs,
-			distributedtasks: distributedtasks
+			distributedtasks: distributedtasks,
+			failures: failures
 		};
 		trace('Running tests: [' + logString.keys().map(function(k) return logString[k] ? k.green() : k.red()).array().join(' ') + ']');
 
-		var targetHost :Host = 'localhost:$SERVER_DEFAULT_PORT';
 		var runner = new PromiseTestRunner();
 
 		if (core) {
@@ -110,7 +113,15 @@ class ServiceTests
 		// }
 
 		if (compute || core) {
-			runner.add(new TestCompute(targetHost));
+			var testCompute = new TestCompute(targetHost);
+			_injector.injectInto(testCompute);
+			runner.add(testCompute);
+		}
+
+		if (failures) {
+			var testFailures = new TestFailureConditions(targetHost);
+			_injector.injectInto(testFailures);
+			runner.add(testFailures);
 		}
 
 		var exitOnFinish = false;
@@ -127,77 +138,29 @@ class ServiceTests
 	}
 
 	@rpc({
+		alias:'test-single-job'
+	})
+	public function testSingleJob() :Promise<Bool>
+	{
+		var test = new TestCompute(targetHost);
+		_injector.injectInto(test);
+		return test.testCompleteComputeJobDirect();
+	}
+
+	@rpc({
 		alias:'create-test-jobs'
 	})
 	public function createTestJobs(count :Int, duration :Int) :Promise<Dynamic>
 	{
 		function createAndSubmitJob() {
-			var TESTNAME = 'createTestJobs';
-
-			var inputValueInline = 'in${ShortId.generate()}';
-			var inputName2 = 'in${ShortId.generate()}';
-
-			var outputName1 = 'out${ShortId.generate()}';
-			var outputName2 = 'out${ShortId.generate()}';
-
-			var outputValue1 = 'out${ShortId.generate()}';
-
-			var inputInline :ComputeInputSource = {
-				type: InputSource.InputInline,
-				value: inputValueInline,
-				name: inputName2
-			}
-
-			var random = ShortId.generate();
-			var customInputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_INPUTS';
-			var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_OUTPUTS';
-			var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
-
-			var outputValueStdout = 'out${ShortId.generate()}';
-			var outputValueStderr = 'out${ShortId.generate()}';
-			//Multiline stdout
-			var script =
-	'#!/bin/sh
-	sleep ${duration}s
-	echo "$outputValueStdout"
-	echo "$outputValueStdout"
-	echo foo
-	echo "$outputValueStdout"
-	echo "$outputValueStderr" >> /dev/stderr
-	echo "$outputValue1" > /$DIRECTORY_OUTPUTS/$outputName1
-	cat /$DIRECTORY_INPUTS/$inputName2 > /$DIRECTORY_OUTPUTS/$outputName2
-	';
-
-			var targetStdout = '$outputValueStdout\n$outputValueStdout\nfoo\n$outputValueStdout'.trim();
-			var targetStderr = '$outputValueStderr';
-			var scriptName = 'script.sh';
-			var inputScript :ComputeInputSource = {
-				type: InputSource.InputInline,
-				value: script,
-				name: scriptName
-			}
-
-			var random = ShortId.generate();
-			var customInputsPath = '$TEST_BASE/$TESTNAME/$random/inputs';
-			var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/outputs';
-			var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
-
-			var inputsArray = [inputInline, inputScript];
-
-			var request: BasicBatchProcessRequest = {
-				inputs: inputsArray,
-				image: DOCKER_IMAGE_DEFAULT,
-				cmd: ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'],
-				resultsPath: customResultsPath,
-				inputsPath: customInputsPath,
-				outputsPath: customOutputsPath,
-				wait: true
-			}
-
-			ccc.compute.client.js.ClientJSTools.postJob('http://localhost:9000${SERVER_RPC_URL}', request, {});
+			var jobRequest = ServerTestTools.createTestJobAndExpectedResults('createTestJobs', duration);
+			return ccc.compute.client.js.ClientJSTools.postJob('http://localhost:9000${SERVER_RPC_URL}', jobRequest.request, {});
 		}
 		for (i in 0...count) {
-			createAndSubmitJob();
+			createAndSubmitJob()
+				.catchError(function(err) {
+					Log.error({error:err, message: 'Error in createTestJobs'});
+				});
 		}
 
 		return Promise.promise(true);

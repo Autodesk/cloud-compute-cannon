@@ -14,10 +14,24 @@ typedef RedisClient = Dynamic;
 
 class RedisPromises
 {
+	inline public static function keys(redis :RedisClient, keyString :String) :Promise<Array<String>>
+	{
+		var promise = new promhx.CallbackPromise();
+		redis.keys(keyString, promise.cb2);
+		return cast promise;
+	}
+
 	inline public static function set(redis :RedisClient, key :String, val :String) :Promise<Bool>
 	{
 		var promise = new promhx.CallbackPromise();
 		redis.set(key, val, promise.cb2);
+		return promise;
+	}
+
+	inline public static function setex(redis :RedisClient, key :String, time :Int, val :String) :Promise<String>
+	{
+		var promise = new promhx.CallbackPromise();
+		redis.setex(key, time, val, promise.cb2);
 		return promise;
 	}
 
@@ -166,6 +180,13 @@ class RedisPromises
 	{
 		var promise = new promhx.CallbackPromise();
 		redis.lpush(key, value, promise.cb2);
+		return promise;
+	}
+
+	public static function lrange(redis :RedisClient, key :String, start :Int, end :Int) :Promise<Array<Dynamic>>
+	{
+		var promise = new promhx.CallbackPromise();
+		redis.lrange(key, start, end, promise.cb2);
 		return promise;
 	}
 

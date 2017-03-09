@@ -23,23 +23,23 @@ services:
       - redis1
       # - fluentd
 
-  ccc2:
-    extends:
-      file: "docker-compose.dev-server-local-base.yml"
-      service: "ccc"
-    ports:
-      - "9010:9000"
-    links:
-      - redis1
+  # ccc2:
+  #   extends:
+  #     file: "docker-compose.dev-server-local-base.yml"
+  #     service: "ccc"
+  #   ports:
+  #     - "9010:9000"
+  #   links:
+  #     - redis1
 
-  ccc3:
-    extends:
-      file: "docker-compose.dev-server-local-base.yml"
-      service: "ccc"
-    ports:
-      - "9020:9000"
-    links:
-      - redis1
+  # ccc3:
+  #   extends:
+  #     file: "docker-compose.dev-server-local-base.yml"
+  #     service: "ccc"
+  #   ports:
+  #     - "9020:9000"
+  #   links:
+  #     - redis1
 
   bull-ui-server:
     build:

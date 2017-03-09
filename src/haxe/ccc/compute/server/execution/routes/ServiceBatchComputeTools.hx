@@ -32,7 +32,7 @@ import util.streams.StdStreams;
 
 class ServiceBatchComputeTools
 {
-	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:10 * 60000};//10 minutes
+	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:600};//10 minutes
 
 	public static function runComputeJobRequest(injector :Injector, job :BasicBatchProcessRequest) :Promise<JobResult>
 	{
@@ -111,6 +111,7 @@ class ServiceBatchComputeTools
 							id: jobId,
 							item: dockerJob,
 							parameters: parameters,
+							priority: job.priority
 						}
 						processQueue.add(job);
 						// return ComputeQueue.enqueue(_redis, job);
@@ -363,7 +364,8 @@ class ServiceBatchComputeTools
 							var job :QueueJobDefinitionDocker = {
 								id: jobId,
 								item: dockerJob,
-								parameters: parameters
+								parameters: parameters,
+								priority: jsonrpc.params.priority == true
 							}
 							return Promise.promise(true)
 								.pipe(function(_) {

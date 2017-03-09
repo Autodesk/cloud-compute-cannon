@@ -22,6 +22,7 @@ import promhx.deferred.DeferredPromise;
 import promhx.StreamPromises;
 
 import util.streams.StreamTools;
+import util.DockerTools;
 
 import t9.util.ColorTraces.*;
 

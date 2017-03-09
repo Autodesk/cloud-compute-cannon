@@ -2,3 +2,7 @@
 
 etc/hxml/server-build.hxml
 
+--next
+
+etc/hxml/cli-client-only-build.hxml
+

@@ -19,6 +19,9 @@ services:
       SCALE_UP_CONTROL: "external"
       SCALE_DOWN_CONTROL: "external"
       ENABLE_FLUENT: "true"
+    extra_hosts:
+      # in aws remove 'fluentd' container and add the same name into host file with ip of host, which is running fluent server (td-agent)
+      - "fluentd:${BNR_INSTANCE_IP}"
     logging:
       driver: json-file
       options:

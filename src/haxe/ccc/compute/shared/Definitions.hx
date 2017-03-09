@@ -23,10 +23,27 @@ import t9.abstracts.net.*;
 
 using StringTools;
 
+typedef WorkerStateInternal = {
+	var ncpus :Int;
+	var health :WorkerHealthStatus;
+	var timeLastHealthCheck :Date;
+	var jobs :Array<JobId>;
+	var id :MachineId;
+}
+
 @:enum
 abstract DistributedTaskType(String) from String to String {
 	var CheckAllWorkerHealth = 'CheckAllWorkerHealth';
 	var RunScaling = 'RunScaling';
+}
+
+@:enum
+abstract WorkerHealthStatus(String) from String to String {
+	var OK = 'OK';
+	var BAD_DiskFull = 'BAD_DiskFull';
+	var BAD_DockerDaemonUnreachable = 'BAD_DockerDaemonUnreachable';
+	var BAD_Unknown = 'BAD_Unknown';
+	var NULL = 'NULL';
 }
 
 typedef WorkerCount=Int;
@@ -36,6 +53,7 @@ typedef MachineStatus=String;
 @:enum
 abstract BullQueueNames(String) from String to String {
 	var JobQueue = 'job_queue';
+	var JobQueuePriority = 'job_queue_priority';
 	/* Any worker can process this message */
 	var SingleMessageQueue = 'single_message_queue';
 }
@@ -85,7 +103,7 @@ abstract JobPathType(String) {
  * storage constraints
  */
 typedef JobParams = {
-	var maxDuration :Float;//Milliseconds
+	var maxDuration :Int;//Seconds
 	var cpus :Int;
 }
 
@@ -147,6 +165,7 @@ typedef BasicBatchProcessRequest = {
 	@:optional var appendStdOut :Bool;
 	@:optional var appendStdErr :Bool;
 	@:optional var mountApiServer :Bool;
+	@:optional var priority :Bool;
 }
 
 /**
@@ -308,10 +327,10 @@ typedef JobStatusBlob = {
 typedef BatchJobResult = {
 	var exitCode :Int;
 	var copiedLogs :Bool;
-	// var JobFinishedStatus :JobFinishedStatus;
 	@:optional var JobWorkingStatus :JobWorkingStatus;
 	@:optional var outputFiles :Array<String>;
 	@:optional var error :Dynamic;
+	var timeout :Bool;
 }
 
 @:enum
@@ -391,6 +410,24 @@ typedef SystemStatus = {
 	var finishedCount :Int;
 }
 
+typedef WorkerStatusJob = {
+	var id :JobId;
+	var enqueued :String;
+	var started :String;
+	var duration :String;
+	var state :JobWorkingStatus;
+	var attempts :Int;
+	var image :String;
+}
+
+typedef WorkerStatus = {
+	var jobs :Array<StatsData>;
+	var cpus :Int;
+	@:optional var id :MachineId;
+	var healthStatus :WorkerHealthStatus;
+	var timeLastHealthCheck :String;
+}
+
 /**
  *********************************************
  * CORE DEFINITIONS
@@ -412,6 +449,8 @@ typedef QueueJobDefinition<T> = {
 	var id :JobId;
 	var item :T;
 	var parameters :JobParams;
+	// @:optional
+	var priority :Bool;
 	@:optional var computeJobId :ComputeJobId;
 	@:optional var worker :WorkerDefinition;
 	@:optional var stats :Array<Float>;

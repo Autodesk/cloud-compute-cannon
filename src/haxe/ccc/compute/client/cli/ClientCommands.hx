@@ -1184,7 +1184,7 @@ class ClientCommands
 	{
 		var host = getHost();
 		var clientProxy = getProxy(host.rpcUrl());
-		return clientProxy.doJobCommand(command, [job])
+		return clientProxy.doJobCommand(command, job)
 			.then(function(out) {
 				var result :TypedDynamicObject<JobId, T> = cast out;
 				var jobResult :T = result[job];
