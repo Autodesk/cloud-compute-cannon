@@ -23,6 +23,7 @@ class TestCompute extends ServerAPITestBase
 {
 	public static var TEST_BASE = 'tests';
 	@inject public var _fs :ServiceStorage;
+	@inject public var routes :ccc.compute.server.execution.routes.RpcRoutes;
 
 	@timeout(240000)
 	public function testCompleteComputeJobDirect() :Promise<Bool>
@@ -110,11 +111,14 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 				var forms :DynamicAccess<Dynamic> = {};
 				forms[inputUrl.name] = js.npm.request.Request.get(inputUrl.value);
 
+				var jobId :JobId = null;
+
 				return ClientJSTools.postJob(_serverHost, request, forms)
 					.pipe(function(jobResult :JobResultAbstract) {
 						if (jobResult == null) {
 							throw 'jobResult should not be null. Check the above section';
 						}
+						jobId = jobResult.jobId;
 						return Promise.promise(true)
 							.pipe(function(_) {
 									assertNotNull(jobResult.stderr);
@@ -163,6 +167,14 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 											assertEquals(out, inputValue3);
 											return true;
 										});
+								})
+								.then(function(result) {
+									routes.doJobCommand(JobCLICommand.RemoveComplete, jobId)
+										.then(function(_) {})
+										.catchError(function(err) {
+											Log.error({error:err, message:'Failed to remove job $jobId after testCompleteComputeJobDirect'});
+										});
+									return result;
 								});
 					});
 			});
