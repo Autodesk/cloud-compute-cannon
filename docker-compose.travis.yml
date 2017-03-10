@@ -16,7 +16,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       #This volume is needed for running computes locally
-      - ccc-local-storage:/app/ccc_local_storage
+      - ccc-local-storage:/app/ccc-local-storage
     image: "cloud-compute-cannon:${VERSION}"
     command: ["node", "server/cloud-compute-cannon-server.js"]
     links:
@@ -34,7 +34,7 @@ services:
       HOST_PWD: "$PWD"
       STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
       REDIS_HOST: 'redis1'
-      CLIENT_DEPLOYMENT: "true"
+      CLIENT_DEPLOYMENT: "false"
       SCALE_UP_CONTROL: "external"
       SCALE_DOWN_CONTROL: "external"
       ENABLE_FLUENT: "false"

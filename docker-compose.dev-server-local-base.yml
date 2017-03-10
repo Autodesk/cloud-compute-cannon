@@ -29,7 +29,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build/server:/app/server
       - ./src/web:/app/web
-      - ./ccc_local_storage:/app/ccc_local_storage
+      - ./ccc-local-storage:/app/ccc-local-storage
       # - ./:/app/config
     logging:
       driver: json-file

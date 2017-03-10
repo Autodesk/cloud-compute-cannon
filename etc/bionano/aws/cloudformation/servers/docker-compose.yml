@@ -11,7 +11,7 @@ services:
     image: 'quay.io/bionano/cloud-compute-cannon:507d8cd6'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ccc-local-storage:/app/ccc_local_storage
+      - ccc-local-storage:/app/ccc-local-storage
     environment:
       LOG_LEVEL: '10'
       ENABLE_FLUENT: 'false'

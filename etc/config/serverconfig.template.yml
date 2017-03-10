@@ -2,7 +2,7 @@ version: 1
 
 storage:
   type: "local"
-  rootPath: "ccc_local_storage"
+  rootPath: "ccc-local-storage"
 
 providers:
   - type: "Boot2Docker"

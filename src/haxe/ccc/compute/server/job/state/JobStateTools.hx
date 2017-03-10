@@ -113,18 +113,22 @@ class JobStateScripts
 	'
 		local jobId = ARGV[1]
 		local status = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATUS}", jobId)
-		local stateWorking
-		local stateFinished
-		if status == "${JobStatus.Pending}" or status == "${JobStatus.Working}" then
-			stateWorking = "${JobWorkingStatus.Cancelled}"
-			stateFinished = "${JobFinishedStatus.Killed}"
-		elseif status == "${JobStatus.Finished}" then
-			stateWorking = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATUS_WORKING}", jobId)
-			stateFinished = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATUS_FINISHED}", jobId)
+		if status then
+			local stateWorking
+			local stateFinished
+			if status == "${JobStatus.Pending}" or status == "${JobStatus.Working}" then
+				stateWorking = "${JobWorkingStatus.Cancelled}"
+				stateFinished = "${JobFinishedStatus.Killed}"
+			elseif status == "${JobStatus.Finished}" then
+				stateWorking = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATUS_WORKING}", jobId)
+				stateFinished = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATUS_FINISHED}", jobId)
+			end
+			redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATUS}", jobId, status)
+			redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATUS_WORKING}", jobId, stateWorking)
+			redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATUS_FINISHED}", jobId, stateFinished)
+		else
+			print("Job already removed " .. jobId)
 		end
-		redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATUS}", jobId, status)
-		redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATUS_WORKING}", jobId, stateWorking)
-		redis.call("HSET", "${REDIS_KEY_HASH_JOB_STATUS_FINISHED}", jobId, stateFinished)
 	',
 	SCRIPT_REMOVE_JOB =>
 	'

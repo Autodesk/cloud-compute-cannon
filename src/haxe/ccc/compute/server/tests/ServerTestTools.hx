@@ -36,10 +36,9 @@ class ServerTestTools
 		return JobWebSocket.getJobResult(SERVER_LOCAL_HOST, jobId, getJobData);
 	}
 
-	public static function createTestJobAndExpectedResults(testName :String, duration :Int) :{request:BasicBatchProcessRequest, expects:ExpectedResult}
+	public static function createTestJobAndExpectedResults(testName :String, duration :Int, ?useCustomPaths :Bool = true) :{request:BasicBatchProcessRequest, expects:ExpectedResult}
 	{
 		var TEST_BASE = 'tests';
-		var testName = 'createTestJobs';
 
 		var inputValueInline = 'in${ShortId.generate()}';
 		var inputName1 = 'in${ShortId.generate()}';
@@ -59,6 +58,12 @@ class ServerTestTools
 		var customInputsPath = '$TEST_BASE/$testName/$random/$DIRECTORY_INPUTS';
 		var customOutputsPath = '$TEST_BASE/$testName/$random/$DIRECTORY_OUTPUTS';
 		var customResultsPath = '$TEST_BASE/$testName/$random/results';
+
+		if (!useCustomPaths) {
+			customInputsPath = null;
+			customOutputsPath = null;
+			customResultsPath = null;
+		}
 
 		var outputValueStdout = 'out${ShortId.generate()}';
 		var outputValueStderr = 'out${ShortId.generate()}';
@@ -83,11 +88,6 @@ cat /$DIRECTORY_INPUTS/$inputName1 > /$DIRECTORY_OUTPUTS/$outputName2
 			value: script,
 			name: scriptName
 		}
-
-		var random = ShortId.generate();
-		var customInputsPath = '$TEST_BASE/$testName/$random/inputs';
-		var customOutputsPath = '$TEST_BASE/$testName/$random/outputs';
-		var customResultsPath = '$TEST_BASE/$testName/$random/results';
 
 		var inputsArray = [inputInline, inputScript];
 

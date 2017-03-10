@@ -24,7 +24,7 @@ using StringTools;
 class ServiceStorageLocalFileSystem
 	extends ServiceStorageBase
 {
-	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'ccc_local_storage/';
+	inline public static var STORAGE_LOCAL_DEFAULT_PATH = 'ccc-local-storage/';
 
 	public static function getService(?path :String) :ServiceStorageLocalFileSystem
 	{
