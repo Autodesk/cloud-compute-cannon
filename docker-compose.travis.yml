@@ -34,7 +34,7 @@ services:
       HOST_PWD: "$PWD"
       STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
       REDIS_HOST: 'redis1'
-      CLIENT_DEPLOYMENT: "true"
+      CLIENT_DEPLOYMENT: "false"
       SCALE_UP_CONTROL: "external"
       SCALE_DOWN_CONTROL: "external"
       ENABLE_FLUENT: "false"

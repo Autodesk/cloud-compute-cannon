@@ -13,7 +13,6 @@ services:
       service: ccc
     links:
       - redis
-      - fluentd
 
   redis:
     extends:
@@ -23,10 +22,3 @@ services:
     volumes:
       - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
       - redis-data:/data
-    links:
-      - fluentd
-
-  fluentd:
-    extends:
-      file: docker-compose.core.yml
-      service: fluentd

@@ -624,11 +624,10 @@ class Server
 		var env :DynamicAccess<String> = Node.process.env;
 		//Run internal tests
 		var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-		isTravisBuild = false;
 		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
 		if (!disableStartTest) {
 			Log.debug('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "failures=true"}')
+			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "compute=true"}')
 				.then(function(out) {
 					try {
 						var results = Json.parse(out);
