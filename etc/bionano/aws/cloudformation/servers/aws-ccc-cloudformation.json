@@ -766,7 +766,7 @@
                   "ignoreErrors" : "false"
               },
               "04_install_and_start_ccc" : {
-                  "command" : "docker run --restart always --detach --env REDIS_HOST=`cat /tmp/redis_host` --env LOG_LEVEL=10 --env ENABLE_FLUENT=false --env HOST_PWD=$PWD --env PORT=9000 -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock -v $PWD/ccc-local-storage:/app/ccc_local_storage quay.io/bionano/cloud-compute-cannon:507d8cd6",
+                  "command" : "docker run --restart always --detach --env REDIS_HOST=`cat /tmp/redis_host` --env LOG_LEVEL=10 --env ENABLE_FLUENT=false --env HOST_PWD=$PWD --env PORT=9000 -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock -v $PWD/ccc-local-storage:/app/ccc-local-storage quay.io/bionano/cloud-compute-cannon:507d8cd6",
                   "ignoreErrors" : "false"
               }
             },

@@ -115,7 +115,12 @@ class JobTools
 
 	public static function resultJsonPath(job :DockerBatchComputeJob) :String
 	{
-		return resultDir(job) + RESULTS_JSON_FILE;
+		return '${resultDir(job)}${RESULTS_JSON_FILE}';
+	}
+
+	public static function resultJsonPathFromJobId(jobId :JobId) :String
+	{
+		return '${jobId}/${RESULTS_JSON_FILE}';
 	}
 
 	public static function stdoutPath(job :DockerBatchComputeJob) :String

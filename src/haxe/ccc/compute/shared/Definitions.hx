@@ -510,7 +510,8 @@ typedef ClientVersionBlob = {
 
 @:enum
 abstract JobCLICommand(String) from String {
-	// var Remove = 'remove';
+	/* Does not remove the job results in the storage service */
+	var Remove = 'remove';
 	var RemoveComplete = 'removeComplete';
 	var Status = 'status';
 	var ExitCode = 'exitcode';

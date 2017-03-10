@@ -78,7 +78,9 @@ class ServiceTests
 		}
 
 		if (core || jobs) {
-			runner.add(new TestJobs(targetHost));
+			var testJobs = new TestJobs(targetHost);
+			_injector.injectInto(testJobs);
+			runner.add(testJobs);
 		}
 
 		if (distributedtasks) {

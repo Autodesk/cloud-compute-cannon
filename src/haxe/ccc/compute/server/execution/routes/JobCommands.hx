@@ -44,6 +44,38 @@ class JobCommands
 			.thenTrue();
 	}
 
+	public static function deleteJobFiles(injector :Injector, jobId :JobId) :Promise<Bool>
+	{
+		var fs :ServiceStorage = injector.getValue(ServiceStorage);
+		var redis :RedisClient = injector.getValue(RedisClient);
+		var jobs :Jobs = redis;
+		return jobs.isJob(jobId)
+			.pipe(function(jobExists) {
+				if (jobExists) {
+					return getJobDefinition(injector, jobId)
+						.pipe(function(jobdef) {
+							var promises = [JobTools.inputDir(jobdef), JobTools.outputDir(jobdef), JobTools.resultDir(jobdef)]
+								.map(function(path) {
+									return fs.deleteDir(path)
+										.errorPipe(function(err) {
+											Log.error({error:err, jobid:jobId, log:'Failed to remove ${path}'});
+											return Promise.promise(true);
+										});
+								});
+							return Promise.whenAll(promises)
+								.thenTrue();
+						});
+				} else {
+					var path = '${jobId}/';
+					return fs.deleteDir(path)
+						.errorPipe(function(err) {
+							Log.error({error:err, jobid:jobId, log:'Failed to remove ${path}'});
+							return Promise.promise(true);
+						});
+				}
+			});
+	}
+
 	public static function killJob(injector :Injector, jobId :JobId) :Promise<Bool>
 	{
 		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
@@ -62,16 +94,7 @@ class JobCommands
 				return removeJob(injector, jobId);
 			})
 			.pipe(function(_) {
-				var fs :ServiceStorage = injector.getValue(ServiceStorage);
-				var promises = [JobTools.inputDir(jobdef), JobTools.outputDir(jobdef), JobTools.resultDir(jobdef)]
-					.map(function(path) {
-						return fs.deleteDir(path)
-							.errorPipe(function(err) {
-								Log.error({error:err, jobid:jobId, log:'Failed to remove ${path}'});
-								return Promise.promise(true);
-							});
-					});
-				return Promise.whenAll(promises);
+				return deleteJobFiles(injector, jobId);
 			})
 			.thenTrue();
 	}
@@ -116,16 +139,32 @@ class JobCommands
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
 		var jobs :Jobs = redis;
 		return jobs.getJob(jobId)
-			.then(function(jobdef) {
+			.pipe(function(jobdef) {
 				if (jobdef == null) {
-					return null;
+					return getJobResults(injector, jobId)
+						.then(function(jobResults) {
+							if (jobResults != null) {
+								return jobResults.definition;
+							} else {
+								return null;
+							}
+						})
+						.errorPipe(function(err) {
+							return Promise.promise(null);
+						});
 				} else {
+					return Promise.promise(jobdef);
+				}
+			})
+			.then(function(jobdef) {
+				if (jobdef != null) {
 					var jobDefCopy = Reflect.copy(jobdef);
 					jobDefCopy.inputsPath = externalUrl ? fs.getExternalUrl(JobTools.inputDir(jobdef)) : JobTools.inputDir(jobdef);
 					jobDefCopy.outputsPath = externalUrl ? fs.getExternalUrl(JobTools.outputDir(jobdef)) : JobTools.outputDir(jobdef);
 					jobDefCopy.resultsPath = externalUrl ? fs.getExternalUrl(JobTools.resultDir(jobdef)) : JobTools.resultDir(jobdef);
-					return jobDefCopy;
+					jobdef = jobDefCopy;
 				}
+				return jobdef;
 			});
 	}
 
@@ -163,33 +202,39 @@ class JobCommands
 	 */
 	public static function getJobResults(injector :Injector, jobId :JobId) :Promise<JobResult>
 	{
-		return getJobDefinition(injector, jobId, false)
-			.pipe(function(jobdef) {
+		traceCyan('getJobResults');
+		var redis :RedisClient = injector.getValue(RedisClient);
+		var jobs :Jobs = redis;
+		return jobs.getJob(jobId)
+			.then(function(jobdef) {
+				traceCyan('getJobResults jobdef=$jobdef');
 				if (jobdef == null) {
-					Log.error('jobId=$jobId no job definition, cannot get results path');
-					return Promise.promise(null);
+					return JobTools.resultJsonPathFromJobId(jobId);
 				} else {
-					var resultsJsonPath = JobTools.resultJsonPath(jobdef);
-					var fs :ServiceStorage = injector.getValue(ServiceStorage);
-					return fs.exists(resultsJsonPath)
-						.pipe(function(exists) {
-							if (exists) {
-								return fs.readFile(resultsJsonPath)
-									.pipe(function(stream) {
-										if (stream != null) {
-											return StreamPromises.streamToString(stream)
-												.then(function(resultJsonString) {
-													return Json.parse(resultJsonString);
-												});
-										} else {
-											return Promise.promise(null);
-										}
-									});
-							} else {
-								return Promise.promise(null);
-							}
-						});
+					return JobTools.resultJsonPath(jobdef);
 				}
+			})
+			.pipe(function(resultsJsonPath) {
+				traceCyan('resultsJsonPath=${resultsJsonPath}');
+				var fs :ServiceStorage = injector.getValue(ServiceStorage);
+				return fs.exists(resultsJsonPath)
+					.pipe(function(exists) {
+						if (exists) {
+							return fs.readFile(resultsJsonPath)
+								.pipe(function(stream) {
+									if (stream != null) {
+										return StreamPromises.streamToString(stream)
+											.then(function(resultJsonString) {
+												return Json.parse(resultJsonString);
+											});
+									} else {
+										return Promise.promise(null);
+									}
+								});
+						} else {
+							return Promise.promise(null);
+						}
+					});
 			});
 	}
 
@@ -293,7 +338,7 @@ class JobCommands
 		}
 
 		switch(command) {
-			case RemoveComplete,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
+			case Remove,RemoveComplete,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
 			default:
 				return Promise.promise(cast {error:'Unrecognized job subcommand=\'$command\' [remove | kill | result | status | exitcode | stats | definition | time]'});
 		}
@@ -301,55 +346,51 @@ class JobCommands
 		var redis :RedisClient = injector.getValue(RedisClient);
 		var jobs :Jobs = redis;
 
-		return jobs.isJob(jobId)
-			.pipe(function(ok) {
-				if (!ok) {
-					throw 'Not a valid jobId "$jobId"';
-				} else {
-					return switch(command) {
-						// case Remove:
-						// 	traceRed("TODO remove job");
-						// 	Promise.promise(null);
-							// ComputeQueue.removeJob(redis, job);
-						case RemoveComplete,Kill:
-							killJob(injector, jobId)
-								.then(function(r) return cast r);
-						case Status:
-							getStatus(injector, jobId)
-								.then(function(r) return cast r);
-						case Result:
-							getJobResults(injector, jobId)
-								.then(function(r) return cast r);
-						case ExitCode:
-							getExitCode(injector, jobId)
-								.then(function(r) return cast r);
-						case JobStats:
-							getJobStats(injector, jobId)
-								.then(function(stats) {
+
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return switch(command) {
+					case Remove:
+						removeJob(injector, jobId)
+							.then(function(r) return cast r);
+					case RemoveComplete,Kill:
+						killJob(injector, jobId)
+							.then(function(r) return cast r);
+					case Status:
+						getStatus(injector, jobId)
+							.then(function(r) return cast r);
+					case Result:
+						getJobResults(injector, jobId)
+							.then(function(r) return cast r);
+					case ExitCode:
+						getExitCode(injector, jobId)
+							.then(function(r) return cast r);
+					case JobStats:
+						getJobStats(injector, jobId)
+							// .then(function(stats) {
+							// 	return stats != null ? stats.toJson() : null;
+							// })
+							.then(function(r) return cast r);
+					case Time:
+						getJobStats(injector, jobId)
+							.then(function(stats) {
+								if (stats != null) {
 									return stats != null ? stats.toJson() : null;
-								})
-								.then(function(r) return cast r);
-						case Time:
-							getJobStats(injector, jobId)
-								.then(function(stats) {
-									if (stats != null) {
-										return stats != null ? stats.toJson() : null;
-										var enqueueTime = stats.enqueueTime;
-										var finishTime = stats.finishTime;
-										var result = {
-											start: stats.enqueueTime,
-											duration: stats.isFinished() ? stats.finishTime - stats.enqueueTime : null
-										}
-										return result;
-									} else {
-										return null;
+									var enqueueTime = stats.enqueueTime;
+									var finishTime = stats.finishTime;
+									var result = {
+										start: stats.enqueueTime,
+										duration: stats.isFinished() ? stats.finishTime - stats.enqueueTime : null
 									}
-								})
-								.then(function(r) return cast r);
-						case Definition:
-							getJobDefinition(injector, jobId)
-								.then(function(r) return cast r);
-					}
+									return result;
+								} else {
+									return null;
+								}
+							})
+							.then(function(r) return cast r);
+					case Definition:
+						getJobDefinition(injector, jobId)
+							.then(function(r) return cast r);
 				}
 			})
 			.then(function(result :Dynamic) {
