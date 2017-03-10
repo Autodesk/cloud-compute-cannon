@@ -4,7 +4,7 @@ var Promise = require('bluebird');
 
 var BNR_ENV_TAG = process.env['BNR_ENV_TAG'];
 var redisUrl = 'redis.' + BNR_ENV_TAG + '.bionano.bio';
-var StackTagValue = BNR_ENV_TAG + '-ccc-v1';
+var StackTagValue = BNR_ENV_TAG + '-ccc';
 
 var autoscaling = new AWS.AutoScaling();
 var ec2 = new AWS.EC2();
@@ -49,7 +49,7 @@ function getAutoscalingGroup(disableCache) {
 					if (tags) {
 						for (var j = 0; j < tags.length; j++) {
 							var tag = tags[j];
-							if (tag['Key'] == 'stack' && tag['Value'] == StackTagValue) {
+							if (tag['Key'] == 'stack' && tag['Value'].startsWith(StackTagValue)) {
 								cccAutoscalingGroup = asg;
 								AutoscalingGroupName = asg.AutoscalingGroupName;
 								break;
@@ -57,6 +57,7 @@ function getAutoscalingGroup(disableCache) {
 						}
 					}
 				}
+				console.log('cccAutoscalingGroup', cccAutoscalingGroup);
 				if (cccAutoscalingGroup) {
 					AutoscalingGroup = cccAutoscalingGroup;
 				}
@@ -79,27 +80,6 @@ function getQueueSize() {
 	});
 }
 
-// function setCapacity(capacity) {
-// 	return getAutoscalingGroupName()
-// 		.then(function(scalingGroupName) {
-// 			return new Promise(function(resolve, reject) {
-// 				var params = {
-// 					AutoScalingGroupName: scalingGroupName,
-// 					DesiredCapacity: capacity,
-// 					HonorCooldown: true
-// 				};
-// 				console.log(params);
-// 				autoscaling.setDesiredCapacity(params, function(err, data) {
-// 					if (err) {
-// 						reject(err);
-// 					} else {
-// 						resolve(data);
-// 					}
-// 				});
-// 			});
-// 		})
-// }
-
 var instanceInfos = {}
 function getInstanceInfo(instanceId, disableCache) {
 	if (!disableCache && instanceInfos[instanceId]) {
@@ -113,7 +93,7 @@ function getInstanceInfo(instanceId, disableCache) {
 				if (err) {
 					reject(err);
 				} else {
-					var instanceData = data.Reservations[0].Instances[0];
+					var instanceData = data && data.Reservations && data.Reservations[0] &&  && data.Reservations[0].Instances && data.Reservations[0].Instances[0];
 					instanceInfos[instanceId] = instanceData;
 					resolve(instanceData);
 				}
@@ -125,15 +105,18 @@ function getInstanceInfo(instanceId, disableCache) {
 function getInstanceMinutesBillingCycleRemaining(instanceId) {
 	return getInstanceInfo(instanceId)
 		.then(function(info) {
-			var launchDate = new Date(info.LaunchTime);
-			var instanceTime = launchDate.getTime();
-			var now = Date.now();
-			var diff = now - instanceTime;
-			var seconds = diff / 1000;
-			var minutes = seconds / 60;
-			var hours = minutes / 60;
-			var minutesBillingCycle = minutes % 60;
-			var remainingMinutes = 60 - minutesBillingCycle;
+			var remainingMinutes = null;
+			if (info) {
+				var launchDate = new Date(info.LaunchTime);
+				var instanceTime = launchDate.getTime();
+				var now = Date.now();
+				var diff = now - instanceTime;
+				var seconds = diff / 1000;
+				var minutes = seconds / 60;
+				var hours = minutes / 60;
+				var minutesBillingCycle = minutes % 60;
+				remainingMinutes = 60 - minutesBillingCycle;
+			}
 			return remainingMinutes;
 		});
 }

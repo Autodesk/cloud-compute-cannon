@@ -3,7 +3,7 @@ set -e
 
 if [ $# -eq 0 ]; then
 	echo ""
-    echo "    Package and deploy the CCC autoscaling lambdas to AWS"
+    echo "    Package and deploy the CCC redis cluster AWS"
     echo ""
     echo "    -k/--key         AWS Access Key Id"
     echo "    -s/--secret      AWS Access Key Secret"
@@ -65,23 +65,7 @@ esac
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-LAMBDA_ZIP_FOLDER="$DIR/../../../../../build/lambdas"
-
-echo "Building lambda package..."
-$DIR/../../../../../bin/package-aws-lambda.sh --src $DIR/src --destination $LAMBDA_ZIP_FOLDER
-
-NAME=`cat $DIR/src/package.json | jq -r ".name"`
-VERSION=`cat $DIR/src/package.json | jq -r ".version"`
-ZIP_NAME="lambda-${NAME}-${VERSION}.zip"
-ZIP_FILE="$LAMBDA_ZIP_FOLDER/$ZIP_NAME"
-S3BUCKET="bionano-devops-build-artifacts-$REGION"
-S3KEY="lambdas/ccc/$ZIP_NAME"
-S3PATH="s3://${S3BUCKET}/${S3KEY}"
-STACKNAME="${BNR_ENV_TAG}-CCC-Lambda-Scaling"
-
-echo "Uploading lambda package to S3..."
-#Now copy to S3 and get the package name
-docker run --rm -it -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v $ZIP_FILE:/tmp/$ZIP_NAME docker.io/garland/aws-cli-docker aws s3 cp /tmp/$ZIP_NAME $S3PATH
+STACKNAME="${BNR_ENV_TAG}-CCC-Redis-Cache"
 
 isStack(){
     COMMAND="aws --region $REGION cloudformation describe-stacks --stack-name $STACKNAME"
@@ -93,17 +77,15 @@ if isStack ; then
 	aws --region $REGION cloudformation update-stack \
 		--stack-name $STACKNAME \
 		--capabilities CAPABILITY_IAM \
-		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
-		    ParameterKey=S3Key,ParameterValue=$S3KEY \
+		--parameters \
 		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
-		--template-body file://$DIR/cf-ccc-scaling.json
+		--template-body file://$DIR/cf-ccc-redis.json
 else
 	echo "Stack does not exist, creating..."
 	aws --region $REGION cloudformation create-stack \
 		--stack-name $STACKNAME \
 		--capabilities CAPABILITY_IAM \
-		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
-		    ParameterKey=S3Key,ParameterValue=$S3KEY \
+		--parameters \
 		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
-		--template-body file://$DIR/cf-ccc-scaling.json
+		--template-body file://$DIR/cf-ccc-redis.json
 fi

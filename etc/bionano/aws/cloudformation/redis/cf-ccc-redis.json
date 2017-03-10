@@ -1,0 +1,79 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description": "CCC redis cluster. Custom to bionano infrastructure",
+
+  "Parameters": {
+    "BionanoEnvironment": {
+      "Description": "dev | qa | prod",
+      "Type": "String",
+      "Default": "dev",
+      "AllowedValues" : ["dev", "qa", "prod"]
+    },
+    "ClusterNodeType" : {
+      "Default" : "cache.m1.small",
+      "Description" : "The compute and memory capacity of the nodes in the Redis Cluster",
+      "Type" : "String",
+      "AllowedValues" : [ "cache.t1.micro", "cache.m1.small", "cache.m1.medium", "cache.m1.large", "cache.m1.xlarge", "cache.m2.xlarge", "cache.m2.2xlarge", "cache.m2.4xlarge", "cache.m3.xlarge", "cache.m3.2xlarge", "cache.c1.xlarge" ],
+      "ConstraintDescription" : "must select a valid Cache Node type."
+    }
+  },
+
+ "Mappings" : {
+    "Settings": {
+      "SubnetIds" : {
+        "dev" : ["subnet-a415dbd2", "subnet-522f9a36"],
+        "qa" : ["subnet-698bab1f", "subnet-fca680c1"],
+        "prod" : ["subnet-feae88c3", "subnet-6b98b81d"]
+      },
+      "SecurityGroupIds" : {
+        "dev" : ["sg-ab9292cc"],
+        "qa" : ["sg-fd5efb86"],
+        "prod" : ["sg-87389dfc"]
+      },
+      "HostedZone" : {
+        "Value" : "bionano.bio."
+      }
+    }
+  },
+
+  "Resources": {
+
+    "RedisSubnetGroup" : {
+      "Type" : "AWS::ElastiCache::SubnetGroup",
+      "Properties" : {
+        "Description" : "Subnet group for the redis cluster",
+        "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "SubnetIds", { "Ref" : "BionanoEnvironment" } ] }
+      }
+    },
+
+    "RedisCluster" : {
+      "Type" : "AWS::ElastiCache::ReplicationGroup",
+      "Properties" : {
+        "ReplicationGroupId"          : {"Fn::Join" : [ "", [ { "Ref" : "BionanoEnvironment" }, "-CCC-redis-cache"] ]},
+        "AutomaticFailoverEnabled"    : true,
+        "AutoMinorVersionUpgrade"     : true,
+        "CacheNodeType"               : { "Ref" : "ClusterNodeType" },
+        "CacheSubnetGroupName"        : { "Ref" : "RedisSubnetGroup" },
+        "Engine"                      : "redis",
+        "EngineVersion"               : "3.2.4",
+        "NumCacheClusters"            : 2,
+        "Port"                        : 6379,
+        "ReplicationGroupDescription" : {"Fn::Join" : [ "", [ { "Ref" : "BionanoEnvironment" }, " CCC redis cluster"] ]},
+        "SecurityGroupIds"            : {"Fn::FindInMap" : [ "Settings", "SecurityGroupIds", { "Ref" : "BionanoEnvironment" } ] }
+      }
+    },
+
+    "RedisHostRecord" : {
+      "Type" : "AWS::Route53::RecordSet",
+      "DependsOn": "RedisCluster",
+      "Properties" : {
+        "HostedZoneName" : {"Fn::FindInMap" : [ "Settings", "HostedZone", "Value" ] },
+        "Comment" : "DNS entry for CCC redis cache",
+        "Name" : { "Fn::Join" : [ ".", ["redis", { "Ref" : "BionanoEnvironment" }, "bionano.bio."]]},
+        "Type" : "CNAME",
+        "TTL" : "30",
+        "ResourceRecords" : [ { "Fn::GetAtt" : [ "RedisCluster", "PrimaryEndPoint.Address" ] } ]
+      }
+    }
+  }
+}

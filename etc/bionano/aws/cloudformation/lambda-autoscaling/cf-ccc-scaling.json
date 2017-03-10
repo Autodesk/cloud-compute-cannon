@@ -26,14 +26,15 @@
 
  "Mappings" : {
     "Settings": {
-      "Redis" : {
-        "dev" : "redis.dev.bionano.bio",
-        "qa" : "redis.qa.bionano.bio",
-        "prod" : "redis.prod.bionano.bio"
+      "SubnetIds" : {
+        "dev"  : ["subnet-a415dbd2", "subnet-522f9a36"],
+        "qa"   : ["subnet-698bab1f", "subnet-fca680c1"],
+        "prod" : ["subnet-feae88c3", "subnet-6b98b81d"]
       },
-      "VpcConfig" : {
-        "SecurityGroupIds" : ["sg-ab9292cc"],
-        "SubnetIds" : ["subnet-a415dbd2", "subnet-522f9a36"]
+      "SecurityGroupIds" : {
+        "dev"  : ["sg-ab9292cc"],
+        "qa"   : ["sg-fd5efb86"],
+        "prod" : ["sg-87389dfc"]
       }
     }
   },
@@ -59,8 +60,8 @@
         "Runtime" : "nodejs4.3",
         "Timeout" : 30,
         "VpcConfig" : {
-          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", "VpcConfig", "SecurityGroupIds" ] },
-          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "VpcConfig", "SubnetIds" ] }
+          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", "SecurityGroupIds", { "Ref" : "BionanoEnvironment" } ] },
+          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "SubnetIds", { "Ref" : "BionanoEnvironment" } ] }
         }
       }
     },
@@ -84,8 +85,8 @@
         "Runtime" : "nodejs4.3",
         "Timeout" : 30,
         "VpcConfig" : {
-          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", "VpcConfig", "SecurityGroupIds" ] },
-          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "VpcConfig", "SubnetIds" ] }
+          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", "SecurityGroupIds", { "Ref" : "BionanoEnvironment" } ] },
+          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "SubnetIds", { "Ref" : "BionanoEnvironment" } ] }
         }
       }
     },
