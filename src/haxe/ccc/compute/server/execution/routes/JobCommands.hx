@@ -202,12 +202,10 @@ class JobCommands
 	 */
 	public static function getJobResults(injector :Injector, jobId :JobId) :Promise<JobResult>
 	{
-		traceCyan('getJobResults');
 		var redis :RedisClient = injector.getValue(RedisClient);
 		var jobs :Jobs = redis;
 		return jobs.getJob(jobId)
 			.then(function(jobdef) {
-				traceCyan('getJobResults jobdef=$jobdef');
 				if (jobdef == null) {
 					return JobTools.resultJsonPathFromJobId(jobId);
 				} else {
@@ -215,7 +213,6 @@ class JobCommands
 				}
 			})
 			.pipe(function(resultsJsonPath) {
-				traceCyan('resultsJsonPath=${resultsJsonPath}');
 				var fs :ServiceStorage = injector.getValue(ServiceStorage);
 				return fs.exists(resultsJsonPath)
 					.pipe(function(exists) {
@@ -466,12 +463,27 @@ class JobCommands
 	public static function getJobStats(injector :Injector, jobId :JobId, ?raw :Bool = false) :Promise<Dynamic>
 	{
 		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobStats :JobStats = redis;
-		if (raw) {
-			return cast jobStats.get(jobId);
-		} else {
-			return jobStats.getPretty(jobId);
-		}
+		var jobs :Jobs = redis;
+		return jobs.isJob(jobId)
+			.pipe(function(jobExists) {
+				if (jobExists) {
+					var jobStats :JobStats = redis;
+					if (raw) {
+						return cast jobStats.get(jobId);
+					} else {
+						return jobStats.getPretty(jobId);
+					}
+				} else {
+					return getJobResults(injector, jobId)
+						.then(function(jobResults) {
+							if (jobResults != null) {
+								return jobResults.stats;
+							} else {
+								return null;
+							}
+						});
+				}
+			});
 	}
 
 	public static function deletingPending(injector :Injector) :Promise<DynamicAccess<String>>
