@@ -21,12 +21,12 @@ import promhx.deferred.*;
 import promhx.Promise;
 import promhx.Stream;
 import promhx.StreamPromises;
-
 import promhx.DockerPromises;
 import promhx.PromiseTools;
 
 import util.streams.StreamTools;
 import util.DockerTools;
+import util.TarTools;
 
 import t9.util.ColorTraces.*;
 
@@ -102,6 +102,15 @@ class DockerDataTools
 			});
 	}
 
+	public static function transferVolumeToFiles(volume :MountedDockerVolumeDef) :Promise<DynamicAccess<String>>
+	{
+		Assert.notNull(volume);
+		return getDataFiles(volume)
+			.then(function(blob) {
+				return blob.files;
+			});
+	}
+
 	public static function transferDiskToVolume(path :String, volume :MountedDockerVolumeDef) :Promise<DockerRunResult>
 	{
 		Assert.notNull(path);
@@ -119,6 +128,15 @@ class DockerDataTools
 				var result :DockerRunResult = {StatusCode:0};
 				return result;
 			});
+	}
+
+	public static function transferFilesToVolume(files :DynamicAccess<String>, volume :MountedDockerVolumeDef) :Promise<Bool>
+	{
+		Assert.notNull(volume);
+		Assert.notNull(files);
+		var readableTarStream = TarTools.createTarStreamFromStrings(files);
+		return addData(volume, readableTarStream, volume.path)
+			.then(function(_) return true);
 	}
 
 	/* these functions are dumb and misleading, since it is confusing what
@@ -516,6 +534,121 @@ class DockerDataTools
 				});
 				return promise.boundPromise;
 			});
+	}
+
+	/**
+	 * Pull files from the data container linked to the data volume into
+	 * an object
+	 * @param  volume        :DockerVolumeDef [description]
+	 * @param  ?subDirectory :String          [description]
+	 * @return               [description]
+	 */
+	public static function getDataFiles(volume :DockerVolumeDef, ?subDirectory :String) :Promise<{files:DynamicAccess<String>, disposed:Promise<Bool>}>
+	{
+		return getData(volume, subDirectory)
+			.pipe(function(streamAndDisposed) {
+				var promise = new DeferredPromise();
+				var tarStream = streamAndDisposed.stream;
+				var extract = TarStream.extract();
+				var files :DynamicAccess<String> = {};
+				extract.on(TarExtractEvent.Entry, function(header, stream, next) {
+					// header is the tar header
+					// stream is the content body (might be an empty stream)
+					// call next when you are done with this entry
+					StreamPromises.streamToString(stream)
+						.then(function(s) {
+							var name = header.name;
+							name = name.startsWith('./') ? name.substr(2) : name;
+							name = name.trim();
+							if (name.length > 0) {
+								files.set(name, s);
+							}
+							next(); // ready for next entry
+						})
+						.catchError(function(err) {
+							promise.boundPromise.reject(err);
+						});
+				});
+
+				extract.on(TarExtractEvent.Finish, function() {
+					promise.resolve({files:files, disposed:streamAndDisposed.disposed});
+				});
+
+				tarStream.pipe(extract);
+
+				return promise.boundPromise;
+			});
+	}
+
+	public static function getDataFilesFromContainer(container :DockerContainer, path :String) :Promise<DynamicAccess<String>>
+	{
+		var promise = new DeferredPromise();
+
+		var getDataOpts = {
+			path: path,
+		}
+
+		container.getArchive(getDataOpts, function(err, data) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+			} else {
+				var extract = TarStream.extract();
+				var files :DynamicAccess<String> = {};
+				extract.on(TarExtractEvent.Entry, function(header, stream, next) {
+					// header is the tar header
+					// stream is the content body (might be an empty stream)
+					// call next when you are done with this entry
+					StreamPromises.streamToString(stream)
+						.then(function(s) {
+							var name = header.name;
+							name = name.startsWith(path.substr(1)) ? name.substr(path.length) : name;
+							name = name.startsWith('./') ? name.substr(2) : name;
+							name = name.trim();
+							if (name.length > 0) {
+								files.set(name, s);
+							}
+							next(); // ready for next entry
+						})
+						.catchError(function(err) {
+							promise.boundPromise.reject(err);
+						});
+				});
+
+				extract.on(TarExtractEvent.Finish, function() {
+					promise.resolve(files);
+				});
+
+				data.pipe(extract);
+			}
+		});
+
+		return promise.boundPromise;
+	}
+
+	public static function putDataFilesInContainer(container :DockerContainer, path :String, files :DynamicAccess<String>) :Promise<Bool>
+	{
+		var promise = new DeferredPromise();
+
+		var putDataOpts = {
+			path: path,
+			noOverwriteDirNonDir: 'true'
+		}
+
+		var tarStream = TarStream.pack();
+		for (fileName in files.keys()) {
+			tarStream.entry({name: fileName}, files.get(fileName));
+		}
+		tarStream.finalize();
+
+		container.putArchive(tarStream, putDataOpts, function(err, data) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+			} else {
+				promise.resolve(true);
+			}
+		});
+
+		return promise.boundPromise;
 	}
 
 	public static function runImageGetStdOut(docker :Docker, image :String, command :Array<String>, volumes :Array<MountedDockerVolumeDef>) :Promise<String>

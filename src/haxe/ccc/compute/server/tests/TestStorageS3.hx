@@ -11,11 +11,6 @@ import util.streams.StreamTools;
 
 class TestStorageS3 extends TestStorageBase
 {
-	public function new(?storage :ServiceStorageS3)
-	{
-		super(storage);
-	}
-
 	override public function setup() :Promise<Bool>
 	{
 		return super.setup()
@@ -335,4 +330,6 @@ class TestStorageS3 extends TestStorageBase
 	// 			return true;
 	// 		});
 	// }
+
+	public function new() { super(); }
 }

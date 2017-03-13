@@ -397,36 +397,22 @@ class BatchComputeDocker
 		switch(job.image.type) {
 			case Image:
 				var dockerImage = job.image.value;
-				return DockerPromises.hasImage(docker, dockerImage)
-					.pipe(function(imageExists) {
-						if (imageExists) {
-							log.debug({log:'Image exists=${dockerImage}'});
-							return Promise.promise(true);
-						} else {
-							var pull_options = job.image.pull_options != null ? job.image.pull_options : {};
-							pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : dockerImage;
-							log.debug({log:'Pulling docker image=${dockerImage}', pull_options:pull_options});
-							return DockerTools.pullImage(docker, dockerImage, pull_options, log.child({'level':30}))
-								.pipe(function(output) {
-									//Ignoring output for now.
-									log.debug({log:'Pulled docker image=${dockerImage}'});
-									return Promise.promise(true);
-								})
-								.errorPipe(function(err) {
-									//Convert this error
-									var jsonRpcError :ResponseError = {
-										code: JsonRpcErrorCode.InvalidParams,
-										message: JobSubmissionError.Docker_Image_Unknown,
-										data: {
-											docker_image_name: dockerImage,
-											error: err
-										}
-									}
-									log.error({error:jsonRpcError});
-									error = jsonRpcError;
-									return Promise.promise(true);
-								});
+				var pull_options = job.image.pull_options != null ? job.image.pull_options : {};
+
+				return ensureDockerImage(docker, dockerImage, log, pull_options)
+					.errorPipe(function(err) {
+						//Convert this error
+						var jsonRpcError :ResponseError = {
+							code: JsonRpcErrorCode.InvalidParams,
+							message: JobSubmissionError.Docker_Image_Unknown,
+							data: {
+								docker_image_name: dockerImage,
+								error: err
+							}
 						}
+						log.error({error:jsonRpcError});
+						error = jsonRpcError;
+						return Promise.promise(true);
 					})
 					.then(function(_) {
 						jobStats.jobCopiedImage(jobId);
@@ -450,17 +436,44 @@ class BatchComputeDocker
 		}
 	}
 
+	/**
+	 * Workers never remove images, so once its here, it stays here.
+	 * Plus calls to check images are costly when the aim is speed.
+	 */
+	static var CACHED_DOCKER_IMAGES = new Map<String, Bool>();
+	public static function ensureDockerImage(docker :Docker, image :String, log :AbstractLogger, ?pull_options :Dynamic) :Promise<Bool>
+	{
+		if (CACHED_DOCKER_IMAGES.exists(image)) {
+			return Promise.promise(true);
+		} else {
+			return DockerPromises.hasImage(docker, image)
+				.pipe(function(imageExists) {
+					if (imageExists) {
+						log.debug({log:'Image exists=${image}'});
+						CACHED_DOCKER_IMAGES.set(image, true);
+						return Promise.promise(true);
+					} else {
+						pull_options = pull_options != null ? pull_options : {};
+						pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : image;
+						log.debug({log:'Pulling docker image=${image}', pull_options:pull_options});
+						return DockerTools.pullImage(docker, image, pull_options, log.child({'level':30}))
+							.pipe(function(output) {
+								//Ignoring output for now.
+								log.debug({log:'Pulled docker image=${image}'});
+								CACHED_DOCKER_IMAGES.set(image, true);
+								return Promise.promise(true);
+							});
+					}
+				});
+		}
+	}
+
 	static function runContainerInternal(job :DockerBatchComputeJob, docker :Docker, redis :RedisClient, kill :Promise<Bool>, log :AbstractLogger) :Promise<{containerId:String,exitCode:Int,error:Dynamic, timedOut:Bool}>
 	{
 		var jobId = job.jobId;
 		log = log.child({JobWorkingStatus:JobWorkingStatus.ContainerRunning});
 		log.debug('runContainerInternal ${jobId}');
 		var jobStats :JobStats = redis;
-
-		// var killed = false;
-		// killedPromise.then(function(isKilled) {
-		// 	killed = isKilled;
-		// });
 
 		var containerId :String = null;
 		var exitCode :Int = -1;
@@ -539,13 +552,13 @@ class BatchComputeDocker
 					for (env in [
 						'INPUTS=$containerInputsPath',
 						'OUTPUTS=$containerOutputsPath',
-						'OUTPUTS_HOST_MOUNT=$outputVolumeName'
+						// 'OUTPUTS_HOST_MOUNT=$outputVolumeName'
 						]) {
 						opts.Env.push(env);
 					}
-					if (inputVolumeName != null) {
-						opts.Env.push('INPUTS_HOST_MOUNT=$inputVolumeName');
-					}
+					// if (inputVolumeName != null) {
+					// 	opts.Env.push('INPUTS_HOST_MOUNT=$inputVolumeName');
+					// }
 
 					opts.Labels = opts.Labels != null ? opts.Labels : {};
 					Reflect.setField(opts.Labels, 'jobId', jobId);
@@ -563,7 +576,7 @@ class BatchComputeDocker
 
 					log.debug({opts:opts});
 
-					return DockerJobTools.runDockerContainer(docker, opts, kill, log)
+					return DockerJobTools.runDockerContainer(docker, opts, null, null, kill, log)
 						.then(function(containerunResult) {
 							error = containerunResult.error;
 							containerId = containerunResult != null && containerunResult.container != null ? containerunResult.container.id : null;

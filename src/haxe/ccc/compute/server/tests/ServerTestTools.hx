@@ -20,8 +20,9 @@ class ServerTestTools
 		}
 	}
 
-	public static function getProxy(rpcUrl :UrlString)
+	public static function getProxy(?rpcUrl :UrlString)
 	{
+		rpcUrl = rpcUrl != null ? rpcUrl : SERVER_LOCAL_RPC_URL;
 		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient(ccc.compute.server.execution.routes.RpcRoutes, true)
 			.setConnection(new t9.remoting.jsonrpc.JsonRpcConnectionHttpPost(rpcUrl));
 		return proxy;

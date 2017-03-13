@@ -787,8 +787,5 @@ exit 0
 		return promise.boundPromise;
 	}
 
-	public function new(targetHost :Host)
-	{
-		super(targetHost != null ? targetHost : new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT)));
-	}
+	public function new() { super(); }
 }

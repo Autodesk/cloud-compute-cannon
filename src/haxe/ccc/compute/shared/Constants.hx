@@ -50,6 +50,7 @@ class Constants
 	public static inline var STDOUT_FILE = 'stdout';
 	public static inline var STDERR_FILE = 'stderr';
 	public static inline var DEFAULT_MAX_JOB_TIME_MS = 30 * 1000;//30secs
+	public static inline var TURBO_JOB_MAX_TIME_SECONDS_DEFAULT :Int = 30;
 
 	/* Env vars */
 	inline public static var ENV_VAR_DISABLE_LOGGING = 'DISABLE_LOGGING';

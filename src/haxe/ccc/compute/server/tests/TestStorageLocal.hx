@@ -2,11 +2,6 @@ package ccc.compute.server.tests;
 
 class TestStorageLocal extends TestStorageBase
 {
-	public function new(?storage :ccc.storage.ServiceStorageLocalFileSystem)
-	{
-		super(storage);
-	}
-
 	@timeout(1000)
 	public function testPathsLocal() :Promise<Bool>
 	{
@@ -18,4 +13,6 @@ class TestStorageLocal extends TestStorageBase
 	{
 		return doStorageTest(_storage);
 	}
+
+	public function new() { super(); }
 }

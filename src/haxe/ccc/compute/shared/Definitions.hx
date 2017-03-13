@@ -166,6 +166,46 @@ typedef BasicBatchProcessRequest = {
 	@:optional var appendStdErr :Bool;
 	@:optional var mountApiServer :Bool;
 	@:optional var priority :Bool;
+	/* No job persistance, no durability, no redis, just speed */
+	@:optional var turbo :Bool;
+}
+
+typedef BatchProcessRequestTurbo = {
+	@:optional var id :JobId;
+	@:optional var inputs :DynamicAccess<String>;
+	@:optional var image :String;
+#if clientjs
+	@:optional var imagePullOptions :Dynamic;
+#else
+	@:optional var imagePullOptions :PullImageOptions;
+#end
+	@:optional var command :Array<String>;
+	@:optional var workingDir :String;
+	@:optional var parameters :JobParams;
+	@:optional var inputsPath :String;
+	@:optional var outputsPath :String;
+	@:optional var meta :Dynamic<String>;
+	/* We can save time if outputs are ignored */
+	@:optional var ignoreOutputs :Bool;
+}
+
+typedef JobResultsTurboStats = {
+	var ensureImage :String;
+	var copyInputs :String;
+	var containerCreation :String;
+	var containerExecution :String;
+	var copyLogs :String;
+	var copyOutputs :String;
+	var total :String;
+}
+
+typedef JobResultsTurbo = {
+	var stdout :Array<String>;
+	var stderr :Array<String>;
+	var exitCode :Int;
+	var outputs :DynamicAccess<String>;
+	@:optional var error :Dynamic;
+	@:optional var stats :JobResultsTurboStats;
 }
 
 /**

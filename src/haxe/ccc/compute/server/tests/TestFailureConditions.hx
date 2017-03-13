@@ -93,8 +93,5 @@ class TestFailureConditions extends ServerAPITestBase
 			});
 	}
 
-	public function new(targetHost :Host)
-	{
-		super(targetHost);
-	}
+	public function new() { super(); }
 }

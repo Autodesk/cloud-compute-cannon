@@ -180,8 +180,8 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			});
 	}
 
-	public function new(targetHost :Host)
+	public function new()
 	{
-		super(targetHost);
+		super();
 	}
 }

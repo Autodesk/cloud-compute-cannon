@@ -36,6 +36,13 @@ class TestStorageLocal extends TestStorageBase
 
 	public function new() {super();}
 
+	@post
+	public function postInject()
+	{
+		_storage = ccc.storage.ServiceStorageLocalFileSystem.getService();
+		super.postInject();
+	}
+
 	override public function setup() :Null<Promise<Bool>>
 	{
 		_testPath = '/tmp/storageTest' + Math.floor(Math.random() * 1000000);

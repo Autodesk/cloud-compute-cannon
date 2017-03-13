@@ -9,6 +9,7 @@ import ccc.storage.StorageTools;
 import ccc.storage.StorageDefinition;
 import ccc.storage.StorageSourceType;
 
+import util.DateFormatTools;
 import util.DockerTools;
 import util.streams.StreamTools;
 
@@ -16,6 +17,15 @@ typedef WroteLogs = {
 	var stdout :Bool;
 	var stderr :Bool;
 }
+
+typedef RunDockerContainerResult = {
+	var container :DockerContainer;
+	var error :Dynamic;
+	var copyInputsTime :String;
+	var containerCreateTime :String;
+	var containerExecutionStart :Date;
+}
+
 /**
  * This class manages the lifecycle of a single
  * batch compute running in a docker container
@@ -231,44 +241,79 @@ class DockerJobTools
 	//On end, copy output files into storage
 	//
 
-	public static function runDockerContainer(docker :Docker, opts :CreateContainerOptions, kill :Promise<Bool>, log :AbstractLogger) :Promise<{container:DockerContainer,error:Dynamic}>
+	public static function runDockerContainer(docker :Docker, opts :CreateContainerOptions, inputs :IReadable, inputsOpts :Dynamic, kill :Promise<Bool>, log :AbstractLogger) :Promise<RunDockerContainerResult>
 	{
 		log = Logger.ensureLog(log, {image:opts.Image, jobId:opts.Labels.jobId, dockerhost:docker.modem.host});
-		var promise = new DeferredPromise();
-		docker.createContainer(opts, function(createContainerError, container) {
-			if (createContainerError != null) {
-				log.error({log:'error_creating_container', opts:opts, error:createContainerError});
-				promise.boundPromise.reject({dockerCreateContainerOpts:opts, error:createContainerError});
-				return;
-			}
+		var result :RunDockerContainerResult = {
+			container: null,
+			error: null,
+			copyInputsTime: null,
+			containerCreateTime: null,
+			containerExecutionStart: null
+		};
 
-			var finished = false;
-			kill.then(function(ok) {
-				if (!finished) {
-					container.kill(function(err, data) {
-						traceMagenta('killed err=$err data=$data');
+		var startTime = Date.now();
+
+		return Promise.promise(true)
+			.pipe(function(_) {
+				var promise = new DeferredPromise();
+				docker.createContainer(opts, function(createContainerError, container) {
+					if (createContainerError != null) {
+						log.error({log:'error_creating_container', opts:opts, error:createContainerError});
+						promise.boundPromise.reject({dockerCreateContainerOpts:opts, error:createContainerError});
+						return;
+					}
+					result.container = container;
+					result.containerCreateTime = DateFormatTools.getShortStringOfDateDiff(startTime, Date.now());
+
+					var finished = false;
+					if (kill != null) {
+						kill.then(function(ok) {
+							if (!finished) {
+								container.kill(function(err, data) {
+									traceMagenta('killed err=$err data=$data');
+								});
+							}
+						});
+					}
+					promise.resolve(true);
+				});
+				return promise.boundPromise;
+			})
+			.pipe(function(_) {
+				if (result.container == null || inputs == null) {
+					result.copyInputsTime = '0';
+					return Promise.promise(true);
+				} else {
+					var startInputCopyTime = Date.now();
+					return DockerPromises.copyIn(result.container, inputs, inputsOpts)
+						.then(function(_) {
+							result.copyInputsTime = DateFormatTools.getShortStringOfDateDiff(startInputCopyTime, Date.now());
+							return true;
+						});
+				}
+			})
+			.pipe(function(_) {
+				if (result.container == null) {
+					return Promise.promise(null);
+				} else {
+					var promise = new DeferredPromise();
+					result.containerExecutionStart = Date.now();
+					result.container.start(function(containerStartError, data) {
+						if (containerStartError != null) {
+							result.error = containerStartError;
+							promise.resolve(result);
+						} else {
+							promise.resolve(result);
+						}
 					});
+					return promise.boundPromise;
 				}
+			})
+			.errorPipe(function(err :js.Error) {
+				result.error = err;
+				return Promise.promise(result);
 			});
-
-			container.start(function(containerStartError, data) {
-				if (containerStartError != null) {
-					var result = {container:container, error:containerStartError};
-					promise.resolve(result);
-					finished = true;
-					return;
-				}
-				var result = {container:container, error:null};
-				finished = true;
-				promise.resolve(result);
-				// container.wait(function(waitError, endResult) {
-				// 	var result = {container:container, error:waitError};
-				// 	finished = true;
-				// 	promise.resolve(result);
-				// });
-			});
-		});
-		return promise.boundPromise;
 	}
 
 	public static function getDockerResultStream(stream :js.node.stream.IReadable) :Promise<Array<String>>

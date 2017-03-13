@@ -34,6 +34,28 @@ class ServiceBatchComputeTools
 {
 	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:600};//10 minutes
 
+	public static function runTurboJobRequest(injector :Injector, job :BatchProcessRequestTurbo) :Promise<JobResultsTurbo>
+	{
+		if (job == null) {
+			throw 'Null job argument in ServiceBatchCompute.run(...)';
+		}
+		var log :AbstractLogger = injector.getValue(AbstractLogger);
+
+		var redis :RedisClient = injector.getValue(RedisClient);
+		var docker :Docker = injector.getValue(Docker);
+		var turboJobs :TurboJobs = redis;
+		var jobId = js.npm.shortid.ShortId.generate();
+
+		job.id = jobId;
+		log = log.child({jobId:job.id, message:'TurboJob'});
+		log.debug({});
+		var now = Date.now();
+		turboJobs.startJob(jobId, TURBO_JOB_MAX_TIME_SECONDS_DEFAULT);
+		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
+
+		return BatchComputeDockerTurbo.executeTurboJob(redis, job, docker, log);
+	}
+
 	public static function runComputeJobRequest(injector :Injector, job :BasicBatchProcessRequest) :Promise<JobResult>
 	{
 		if (job == null) {

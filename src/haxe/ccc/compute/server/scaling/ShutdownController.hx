@@ -31,7 +31,6 @@ class ShutdownController
 	@post
 	public function postInject()
 	{
-		traceMagenta('SHutdownController postInject');
 		log = log.child({c:Type.getClassName(Type.getClass(this)).split('.').pop()});
 
 		if (Sys.environment().get(ENV_SCALE_DOWN_CONTROL) == 'internal') {

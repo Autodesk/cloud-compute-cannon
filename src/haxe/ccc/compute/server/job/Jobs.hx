@@ -105,7 +105,6 @@ abstract Jobs(RedisClient) from RedisClient
 	{
 		return JobScripts.evaluateLuaScript(this, JobScripts.SCRIPT_WORKERS_FAILED, [Json.stringify(workerIds)])
 			.then(function(dataString) {
-				traceMagenta('dataString=$dataString');
 				return true;
 			});
 	}
