@@ -114,4 +114,28 @@ class StreamPromises
 		});
 		return promise.boundPromise;
 	}
+
+	public static function streamToStringArray(stream :IReadable) :Promise<Array<String>>
+	{
+		var promise = new DeferredPromise();
+		var strings :Array<String> = [];
+		stream.on(ReadableEvent.Error, function(err) {
+			if (promise != null) {
+				promise.boundPromise.reject(err);
+				promise = null;
+			} else {
+				Log.error(err);
+			}
+		});
+		stream.once(ReadableEvent.End, function() {
+			if (promise != null) {
+				promise.resolve(strings);
+				promise = null;
+			}
+		});
+		stream.on(ReadableEvent.Data, function(chunk :Buffer) {
+			strings.push(chunk.toString());
+		});
+		return promise.boundPromise;
+	}
 }

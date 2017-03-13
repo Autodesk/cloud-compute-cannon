@@ -25,12 +25,14 @@ using promhx.PromiseTools;
 
 class TestStorageBase extends haxe.unit.async.PromiseTest
 {
-	public var _storage :ServiceStorage;
+	@inject public var _storage :ServiceStorage;
 
-	public function new(?storage :ServiceStorage)
+	public function new() {}
+
+	@post
+	public function postInject()
 	{
-		if (storage != null) {
-			_storage = storage;
+		if (_storage != null) {
 			var date = DateTools.format(Date.now(), '%Y%m%d-%H%M%S');
 			_storage = _storage.appendToRootPath('tests/storage/$date');
 		}

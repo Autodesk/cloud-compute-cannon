@@ -201,6 +201,11 @@ class Server
 			health: null
 		};
 		injector.map('ccc.compute.shared.WorkerStateInternal').toValue(workerInternalState);
+
+		var localhost :Host = 'localhost:$SERVER_DEFAULT_PORT';
+		injector.map(Host, 'serverhost').toValue(localhost);
+		var serverHostRPCAPI : UrlString = 'http://${localhost}${SERVER_RPC_URL}';
+		injector.map(UrlString, 'localRPCApi').toValue(serverHostRPCAPI);
 	}
 
 	static function initAppPaths(injector :Injector)
@@ -626,7 +631,7 @@ class Server
 		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
 		if (!disableStartTest) {
 			Log.debug('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true" : "compute=true"}')
+			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true&turbojobs=true" : "turbojobs=true"}')
 				.then(function(out) {
 					try {
 						var results = Json.parse(out);

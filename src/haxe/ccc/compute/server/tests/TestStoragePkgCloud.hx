@@ -7,11 +7,6 @@ import util.streams.StreamTools;
 
 class TestStoragePkgCloud extends TestStorageBase
 {
-	public function new(?storage :ccc.storage.ServiceStoragePkgCloud)
-	{
-		super(storage);
-	}
-
 	@timeout(1000)
 	public function testPathsS3() :Promise<Bool>
 	{
@@ -328,4 +323,6 @@ class TestStoragePkgCloud extends TestStorageBase
 	// 			return true;
 	// 		});
 	// }
+
+	public function new() { super(); }
 }

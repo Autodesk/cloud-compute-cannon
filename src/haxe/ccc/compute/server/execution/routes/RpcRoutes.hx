@@ -242,6 +242,72 @@ class RpcRoutes
 	}
 
 	@rpc({
+		alias:'runturbo',
+		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
+		args:{
+			'command': {'doc':'Command to run in the docker container. E.g. --command=\'["echo", "foo"]\''},
+			'image': {'doc': 'Docker image name [busybox].'},
+			'imagePullOptions': {'doc': 'Docker image pull options, e.g. auth credentials'},
+			'inputs': {'doc': 'Object hash of inputs.'},
+			'workingDir': {'doc': 'The current working directory for the process in the docker container.'},
+			'cpus': {'doc': 'Minimum number of CPUs required for this process.'},
+			'maxDuration': {'doc': 'Maximum time (in seconds) this job will be allowed to run before being terminated.'},
+			'meta': {'doc': 'Metadata logged and saved with the job description and results.json'}
+		}
+	})
+	public function submitTurboJob(
+		?image :String,
+#if ((nodejs && !macro) && !excludeccc)
+		?imagePullOptions :PullImageOptions,
+#else
+		?imagePullOptions :Dynamic,
+#end
+		?command :Array<String>,
+		?inputs :Dynamic<String>,
+		?workingDir :String,
+		?cpus :Int = 1,
+		?maxDuration :Int = 600,
+		?inputsPath :String,
+		?outputsPath :String,
+		?meta :Dynamic
+		) :Promise<JobResultsTurbo>
+	{
+		var request :BatchProcessRequestTurbo = {
+			image: image,
+			imagePullOptions: imagePullOptions,
+			command: command,
+			inputs: inputs,
+			workingDir: workingDir,
+			parameters: {cpus: cpus, maxDuration:maxDuration},
+			inputsPath: inputsPath,
+			outputsPath: outputsPath,
+			meta: meta
+		}
+
+#if ((nodejs && !macro) && !excludeccc)
+		return ServiceBatchComputeTools.runTurboJobRequest(_injector, request);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
+		alias:'runturbojson',
+		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
+		args:{
+			'job': {'doc':'BatchProcessRequestTurbo'}
+		}
+	})
+	public function submitTurboJobJson(job :BatchProcessRequestTurbo) :Promise<JobResultsTurbo>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServiceBatchComputeTools.runTurboJobRequest(_injector, job);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
 		alias:'submitjob',
 		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
 		args:{

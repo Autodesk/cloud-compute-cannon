@@ -243,4 +243,11 @@ class DockerPromises
 		volume.remove(promise.cb1);
 		return promise;
 	}
+
+	public static function copyIn(container :DockerContainer, input :IReadable, opts :{path:String, ?noOverwriteDirNonDir:String}) :Promise<Dynamic>
+	{
+		var promise = new promhx.CallbackPromise();
+		container.putArchive(input, opts, promise.cb2);
+		return promise;
+	}
 }

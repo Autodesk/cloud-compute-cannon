@@ -43,9 +43,9 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false, ?failures :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false, ?failures :Bool = false, ?turbojobs :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks || failures)) {
+		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks || failures || turbojobs)) {
 			compute = true;
 		}
 		if (all) {
@@ -57,6 +57,7 @@ class ServiceTests
 			jobs = true;
 			distributedtasks = true;
 			failures = true;
+			turbojobs = true;
 		}
 		var logString :haxe.DynamicAccess<Bool> = {
 			all: all,
@@ -67,45 +68,50 @@ class ServiceTests
 			dockervolumes: dockervolumes,
 			jobs: jobs,
 			distributedtasks: distributedtasks,
-			failures: failures
+			failures: failures,
+			turbojobs: turbojobs
 		};
 		trace('Running tests: [' + logString.keys().map(function(k) return logString[k] ? k.green() : k.red()).array().join(' ') + ']');
 
 		var runner = new PromiseTestRunner();
 
+		function addTestClass (cls :Class<Dynamic>) {
+			var testCollection :haxe.unit.async.PromiseTest = Type.createInstance(cls, []);
+			_injector.injectInto(testCollection);
+			runner.add(testCollection);
+		}
+
 		if (core) {
-			runner.add(new TestUnit());
+			addTestClass(TestUnit);
 		}
 
 		if (core || jobs) {
-			var testJobs = new TestJobs(targetHost);
-			_injector.injectInto(testJobs);
-			runner.add(testJobs);
+			addTestClass(TestJobs);
+		}
+
+		if (core || turbojobs) {
+			addTestClass(TestTurboJobs);
 		}
 
 		if (distributedtasks) {
-			var distributedTasks = new ccc.compute.server.util.redis.TestRedisDistributedSetInterval();
-			_injector.injectInto(distributedTasks);
-			runner.add(distributedTasks);
+			addTestClass(ccc.compute.server.util.redis.TestRedisDistributedSetInterval);
 		}
 
 		if (core || storage) {
-			runner.add(new TestStorageLocal(ccc.storage.ServiceStorageLocalFileSystem.getService()));
+			addTestClass(TestStorageLocal);
 			var injectedStorage :ccc.storage.ServiceStorage = _injector.getValue(ccc.storage.ServiceStorage);
 			switch(injectedStorage.type) {
 				case Sftp: Log.warn('No Test for SFTP storage');
 				case Local: //Already running local storage
 				case PkgCloud:
-					var test :PromiseTest = new TestStoragePkgCloud(cast injectedStorage);
-					runner.add(test);
+					addTestClass(TestStoragePkgCloud);
 				case S3:
-					var test :PromiseTest = new TestStorageS3(cast  injectedStorage);
-					runner.add(test);
+					addTestClass(TestStorageS3);
 			}
 		}
 
 		if (dockervolumes || core || storage) {
-			runner.add(new ccc.docker.dataxfer.TestDataTransfer());
+			addTestClass(ccc.docker.dataxfer.TestDataTransfer);
 		}
 
 		// if (worker) {
@@ -115,15 +121,11 @@ class ServiceTests
 		// }
 
 		if (compute || core) {
-			var testCompute = new TestCompute(targetHost);
-			_injector.injectInto(testCompute);
-			runner.add(testCompute);
+			addTestClass(TestCompute);
 		}
 
 		if (failures) {
-			var testFailures = new TestFailureConditions(targetHost);
-			_injector.injectInto(testFailures);
-			runner.add(testFailures);
+			addTestClass(TestFailureConditions);
 		}
 
 		var exitOnFinish = false;
@@ -144,7 +146,7 @@ class ServiceTests
 	})
 	public function testSingleJob() :Promise<Bool>
 	{
-		var test = new TestCompute(targetHost);
+		var test = new TestCompute();
 		_injector.injectInto(test);
 		return test.testCompleteComputeJobDirect();
 	}

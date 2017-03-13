@@ -145,7 +145,7 @@ class PromiseTools
 	public static function traceThen<T>(promise :Promise<T>, s :String) :Promise<T>
 	{
 		return promise.then(function(val) {
-			trace(s);
+			t9.util.ColorTraces.traceCyan(s);
 			return val;
 		});
 	}

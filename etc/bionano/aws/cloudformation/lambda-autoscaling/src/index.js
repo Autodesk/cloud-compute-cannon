@@ -80,6 +80,20 @@ function getQueueSize() {
 	});
 }
 
+function getTurboJobQueueSize() {
+	return new Promise(function(resolve, reject) {
+		var queueName = 'job_queue';
+		var keyPrefix = 'ccc::turbojob::*';
+		redis.keys(keyPrefix, function(err, keys){
+		    if (err) {
+				reject(err);
+			} else {
+				resolve(keys.length);
+			}
+		});
+	});
+}
+
 var instanceInfos = {}
 function getInstanceInfo(instanceId, disableCache) {
 	if (!disableCache && instanceInfos[instanceId]) {
@@ -303,10 +317,13 @@ exports.handlerScaleUp = function(event, context, callback) {
 		console.error(err, err.stack);
 		callback(err);
 	});
-	getQueueSize()
-		.then(function(queueLength) {
+	Promise.all([getQueueSize(), getTurboJobQueueSize()])
+		.then(function(queues) {
+			var queueLength = queues[0];
+			var queueLengthTurbo = queues[1];
 			console.log("queueLength=" + queueLength);
-			if (queueLength > 0) {
+			console.log("queueLengthTurbo=" + queueLengthTurbo);
+			if (queueLength > 0 || queueLengthTurbo > 50) {
 				return getAutoscalingGroup()
 					.then(function(asg) {
 						console.log('asg', asg != null);
@@ -372,10 +389,13 @@ exports.handlerScaleDown = function(event, context, callback) {
 		console.error(err, err.stack);
 		callback(err);
 	});
-	getQueueSize()
-		.then(function(queueLength) {
+	Promise.all([getQueueSize(), getTurboJobQueueSize()])
+		.then(function(queues) {
+			var queueLength = queues[0];
+			var queueLengthTurbo = queues[1];
 			console.log("queueLength=" + queueLength);
-			if (queueLength == 0) {
+			console.log("queueLengthTurbo=" + queueLengthTurbo);
+			if (queueLength == 0 && queueLengthTurbo <= 10) {
 				return getAutoscalingGroup()
 					.then(function(asg) {
 						console.log('asg', asg != null);

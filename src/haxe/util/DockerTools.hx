@@ -21,6 +21,7 @@ import promhx.Stream;
 import promhx.CallbackPromise;
 import promhx.DockerPromises;
 import promhx.RetryPromise;
+import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
 import t9.abstracts.net.*;
@@ -289,7 +290,7 @@ class DockerTools
 		return promhx.RetryPromise.pollDecayingInterval(__buildDockerImage.bind(docker, id, image, resultStream, log), 3, 100, 'DockerTools.buildDockerImage($id)');
 	}
 
-	public static function buildImageFromFiles(docker :Docker, imageId :String, fileData :Map<String,String>, resultStream :IWritable, ?log :AbstractLogger) :Promise<ImageId>
+	public static function buildImageFromFiles(docker :Docker, imageId :String, fileData :DynamicAccess<String>, resultStream :IWritable, ?log :AbstractLogger) :Promise<ImageId>
 	{
 		var tarStream = TarTools.createTarStreamFromStrings(fileData);
 		return buildDockerImage(docker, imageId, tarStream, resultStream, log);
@@ -654,6 +655,48 @@ class DockerTools
 				}, 0);
 			});
 			promise.resolve({stdout:cast passThroughStdout, stderr: cast passThroughStderr});
+		});
+
+		return promise.boundPromise;
+	}
+
+	public static function getContainerLogs2(container :DockerContainer) :Promise<{stdout:Array<String>,stderr:Array<String>}>
+	{
+		var promise = new DeferredPromise();
+
+		container.logs({stdout:true, stderr:true}, function(err, stream) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+				return;
+			}
+			stream.once(ReadableEvent.Error, function(err) {
+				Log.error(err);
+				promise.boundPromise.reject(err);
+			});
+
+			var passThroughStdout :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+			var passThroughStderr :js.node.stream.Duplex<Dynamic> = untyped __js__('new require("stream").PassThrough()');
+
+			var modem :Modem = untyped __js__('container.modem');
+			modem.demuxStream(stream, passThroughStdout, passThroughStderr);
+
+			var stdoutPromise = StreamPromises.streamToStringArray(passThroughStdout);
+			var stderrPromise = StreamPromises.streamToStringArray(passThroughStderr);
+
+			stream.once(ReadableEvent.End, function() {
+				Node.setTimeout(function() {
+					passThroughStdout.end();
+					passThroughStderr.end();
+				}, 0);
+			});
+
+			Promise.whenAll([stdoutPromise, stderrPromise])
+				.then(function(stringArray) {
+					promise.resolve({'stdout':stringArray[0], 'stderr':stringArray[1]});
+				})
+				.catchError(function(err) {
+					promise.boundPromise.reject(err);
+				});
 		});
 
 		return promise.boundPromise;
