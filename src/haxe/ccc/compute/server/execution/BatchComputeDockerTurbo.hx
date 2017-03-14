@@ -81,15 +81,27 @@ class BatchComputeDockerTurbo
 						stats.copyInputs = results.copyInputsTime;
 						resultBlob = results;
 						error = resultBlob.error;
+
+						function removeContainer() {
+							if (results.container != null) {
+								DockerPromises.removeContainer(results.container, {force:true, v:true})
+									.catchError(function(err) {
+										log.warn({error:err, message:'Failed to remove container'});
+									});
+							}
+						}
+
 						if (resultBlob != null && error == null && job.ignoreOutputs != true) {
 							var startTimeOutputs = Date.now();
 							return getOutputs(results.container)
 								.then(function(files) {
 									stats.copyOutputs = DateFormatTools.getShortStringOfDateDiff(startTimeOutputs, Date.now());
 									outputFiles = files;
+									removeContainer();
 									return true;
 								});
 						} else {
+							removeContainer();
 							stats.copyOutputs = '0';
 							return Promise.promise(true);
 						}
