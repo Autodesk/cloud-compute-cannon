@@ -2,9 +2,9 @@ var Redis = require("redis");
 var AWS = require('aws-sdk');
 var Promise = require('bluebird');
 
-var BNR_ENV_TAG = process.env['BNR_ENV_TAG'];
-var redisUrl = 'redis.' + BNR_ENV_TAG + '.bionano.bio';
-var StackTagValue = BNR_ENV_TAG + '-ccc';
+var BNR_ENVIRONMENT = process.env['BNR_ENVIRONMENT'];
+var redisUrl = 'redis.' + BNR_ENVIRONMENT + '.bionano.bio';
+var StackTagValue = BNR_ENVIRONMENT + '-ccc';
 
 var autoscaling = new AWS.AutoScaling();
 var ec2 = new AWS.EC2();

@@ -19,7 +19,7 @@ fi
 # as in the --default example).
 # note: if this is set to -gt 0 the /etc/hosts part is not recognized ( may be a bug )
 
-BNR_ENV_TAG="dev"
+BNR_ENVIRONMENT="dev"
 
 while [[ $# -gt 1 ]]
 do
@@ -39,7 +39,7 @@ case $key in
     shift # past argument
     ;;
     -t|--tag)
-    BNR_ENV_TAG="$2"
+    BNR_ENVIRONMENT="$2"
     shift # past argument
     ;;
     *)
@@ -51,7 +51,7 @@ done
 
 REGION="us-west-2"
 
-case "$BNR_ENV_TAG" in
+case "$BNR_ENVIRONMENT" in
         dev)
             REGION="us-west-2"
             ;;
@@ -77,7 +77,7 @@ ZIP_FILE="$LAMBDA_ZIP_FOLDER/$ZIP_NAME"
 S3BUCKET="bionano-devops-build-artifacts-$REGION"
 S3KEY="lambdas/ccc/$ZIP_NAME"
 S3PATH="s3://${S3BUCKET}/${S3KEY}"
-STACKNAME="${BNR_ENV_TAG}-CCC-Lambda-Scaling"
+STACKNAME="${BNR_ENVIRONMENT}-CCC-Lambda-Scaling"
 
 echo "Uploading lambda package to S3..."
 #Now copy to S3 and get the package name
@@ -95,7 +95,7 @@ if isStack ; then
 		--capabilities CAPABILITY_IAM \
 		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
 		    ParameterKey=S3Key,ParameterValue=$S3KEY \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
+		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
 		--template-body file://$DIR/cf-ccc-scaling.json
 else
 	echo "Stack does not exist, creating..."
@@ -104,6 +104,6 @@ else
 		--capabilities CAPABILITY_IAM \
 		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
 		    ParameterKey=S3Key,ParameterValue=$S3KEY \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
+		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
 		--template-body file://$DIR/cf-ccc-scaling.json
 fi

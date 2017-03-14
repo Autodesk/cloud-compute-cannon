@@ -19,7 +19,7 @@ fi
 # as in the --default example).
 # note: if this is set to -gt 0 the /etc/hosts part is not recognized ( may be a bug )
 
-BNR_ENV_TAG="dev"
+BNR_ENVIRONMENT="dev"
 
 while [[ $# -gt 1 ]]
 do
@@ -39,7 +39,7 @@ case $key in
     shift # past argument
     ;;
     -t|--tag)
-    BNR_ENV_TAG="$2"
+    BNR_ENVIRONMENT="$2"
     shift # past argument
     ;;
     *)
@@ -51,7 +51,7 @@ done
 
 REGION="us-west-2"
 
-case "$BNR_ENV_TAG" in
+case "$BNR_ENVIRONMENT" in
         dev)
             REGION="us-west-2"
             ;;
@@ -65,7 +65,7 @@ esac
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-STACKNAME="${BNR_ENV_TAG}-CCC-Redis-Cache"
+STACKNAME="${BNR_ENVIRONMENT}-CCC-Redis-Cache"
 
 isStack(){
     COMMAND="aws --region $REGION cloudformation describe-stacks --stack-name $STACKNAME"
@@ -78,7 +78,7 @@ if isStack ; then
 		--stack-name $STACKNAME \
 		--capabilities CAPABILITY_IAM \
 		--parameters \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
+		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
 		--template-body file://$DIR/cf-ccc-redis.json
 else
 	echo "Stack does not exist, creating..."
@@ -86,6 +86,6 @@ else
 		--stack-name $STACKNAME \
 		--capabilities CAPABILITY_IAM \
 		--parameters \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
+		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
 		--template-body file://$DIR/cf-ccc-redis.json
 fi
