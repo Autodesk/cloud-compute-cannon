@@ -33,11 +33,23 @@ typedef RunContainerResultTurbo = {
  */
 class BatchComputeDockerTurbo
 {
-	public static function executeTurboJob(redis :RedisClient, job :BatchProcessRequestTurbo, docker :Docker, log :AbstractLogger) :Promise<JobResultsTurbo>
+	public static function executeTurboJob(redis :RedisClient, job :BatchProcessRequestTurbo, docker :Docker, machineId :MachineId, log :AbstractLogger) :Promise<JobResultsTurbo>
 	{
 		Assert.notNull(job);
 		var containerId = null;
+		if (job.id == null) {
+			job.id = js.npm.shortid.ShortId.generate();
+		}
 		var jobId = job.id;
+		log = log.child({jobId:jobId, message:'TurboJob'});
+		log.debug({});
+
+		var turboJobs :TurboJobs = redis;
+		var startTime = Date.now();
+		var maxJobDurationSeconds = job.parameters != null && job.parameters.maxDuration != null ? job.parameters.maxDuration : TURBO_JOB_MAX_TIME_SECONDS_DEFAULT;
+		turboJobs.jobStart(jobId, maxJobDurationSeconds, machineId);
+
+		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
 
 		var containerInputsPath = job.inputsPath == null ? '/${DIRECTORY_INPUTS}' : job.inputsPath;
 		var containerOutputsPath = job.outputsPath == null ? '/${DIRECTORY_OUTPUTS}' : job.outputsPath;
@@ -59,7 +71,7 @@ class BatchComputeDockerTurbo
 			copyLogs: null,
 			total: null
 		}
-		var startTime = Date.now();
+
 		return Promise.promise(true)
 			//Start doing the job stuff
 			//Pipe logs to file streams
@@ -80,6 +92,9 @@ class BatchComputeDockerTurbo
 						stats.copyLogs = results.copyLogsTime;
 						stats.copyInputs = results.copyInputsTime;
 						resultBlob = results;
+						if (resultBlob.error != null) {
+							log.warn({error:resultBlob.error, message: 'Error running container'});
+						}
 						error = resultBlob.error;
 
 						function removeContainer() {
@@ -109,6 +124,7 @@ class BatchComputeDockerTurbo
 			})
 			.then(function(_) {
 				var jobResultsFinal :JobResultsTurbo = {
+					id: jobId,
 					outputs: outputFiles,
 					error: error,
 					stdout: resultBlob != null ? resultBlob.stdout : [],
@@ -117,6 +133,7 @@ class BatchComputeDockerTurbo
 					stats: stats
 				};
 				stats.total = DateFormatTools.getShortStringOfDateDiff(startTime, Date.now());
+				turboJobs.jobEnd(jobId);
 				return jobResultsFinal;
 			});
 	}
@@ -221,15 +238,6 @@ class BatchComputeDockerTurbo
 				} else {
 					//Wait for the container to finish, but also monitor
 					//the state of the job. If it becomes 'stopped'
-					var getLogsStartTime = Date.now();
-					var logsPromise = DockerTools.getContainerLogs2(container)
-						.then(function(stdOutErr) {
-							result.copyLogsTime = DateFormatTools.getShortStringOfDateDiff(getLogsStartTime, Date.now());
-							result.stdout = stdOutErr.stdout != null ? stdOutErr.stdout : result.stdout;
-							result.stderr = stdOutErr.stderr != null ? stdOutErr.stderr : result.stderr;
-							return true;
-						});
-
 
 					var promise = new DeferredPromise();
 
@@ -250,6 +258,7 @@ class BatchComputeDockerTurbo
 
 					promise.boundPromise
 						.errorPipe(function(err) {
+							log.error({error:err, message:'Error on wait'});
 							return Promise.promise(true);
 						})
 						.then(function(_) {
@@ -268,12 +277,12 @@ class BatchComputeDockerTurbo
 							}
 
 							result.containerExecutionTime = DateFormatTools.getShortStringOfDateDiff(result.containerExecutionStart, Date.now());
-							// result.copyInputsTime = DateFormatTools.getShortStringOfDateDiff(startInputCopyTime, Date.now());
 
-							log.debug({exitcode:result.exitCode, error:error});
-							if (error != null) {
-								log.warn({exitcode:result.exitCode, error:error});
+							log.debug({exitcode:result.exitCode});
+							if (result.error != null) {
+								log.warn({exitcode:result.exitCode, error:result.error});
 							}
+
 							promise.resolve(true);
 							promise = null;
 						})
@@ -286,8 +295,25 @@ class BatchComputeDockerTurbo
 							promise = null;
 						});
 
-					return Promise.whenAll([promise.boundPromise, logsPromise])
-						.thenTrue();
+					return promise.boundPromise;
+				}
+			})
+			.pipe(function(_) {
+				var getLogsStartTime = Date.now();
+				if (result.container != null) {
+					return DockerTools.getContainerLogs2(result.container)
+						.then(function(stdOutErr) {
+							result.copyLogsTime = DateFormatTools.getShortStringOfDateDiff(getLogsStartTime, Date.now());
+							result.stdout = stdOutErr.stdout != null ? stdOutErr.stdout : result.stdout;
+							result.stderr = stdOutErr.stderr != null ? stdOutErr.stderr : result.stderr;
+							return true;
+						})
+						.errorPipe(function(err) {
+							log.warn({error:err, mesage: 'Failed to get logs'});
+							return Promise.promise(true);
+						});
+				} else {
+					return Promise.promise(true);
 				}
 			})
 			.then(function(_) {

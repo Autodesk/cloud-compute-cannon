@@ -45,5 +45,3 @@ Curl:
 The result is a 200 response if the check succeeds.
 
 The health check runs a small job on a priority queue, so should return pretty fast, and can be run quite often (every minute or couple of minutes).
-
-
