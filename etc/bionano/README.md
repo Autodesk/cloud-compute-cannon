@@ -22,11 +22,11 @@ This will package up the lambdas and deploy them in the region:
 
 To get the autoscaling group the lambda searches for a tag (that starts with):
 
-	stack=<BNR_ENV_TAG>-ccc*
+	stack=<BNR_ENVIRONMENT>-ccc*
 
 The lambda also assumes that a redis cluster can be found at:
 
-	redis.<BNR_ENV_TAG>.bionano.bio
+	redis.<BNR_ENVIRONMENT>.bionano.bio
 
 ### CCC worker stack
 

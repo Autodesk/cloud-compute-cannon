@@ -19,7 +19,7 @@ fi
 # as in the --default example).
 # note: if this is set to -gt 0 the /etc/hosts part is not recognized ( may be a bug )
 
-BNR_ENV_TAG="dev"
+BNR_ENVIRONMENT="dev"
 
 while [[ $# -gt 1 ]]
 do
@@ -39,7 +39,7 @@ case $key in
     shift # past argument
     ;;
     -t|--tag)
-    BNR_ENV_TAG="$2"
+    BNR_ENVIRONMENT="$2"
     shift # past argument
     ;;
     *)
@@ -51,7 +51,7 @@ done
 
 REGION="us-west-2"
 
-case "$BNR_ENV_TAG" in
+case "$BNR_ENVIRONMENT" in
         dev)
             REGION="us-west-2"
             ;;
@@ -79,7 +79,7 @@ if isStack ; then
 		--capabilities CAPABILITY_IAM \
 		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
 		    ParameterKey=S3Key,ParameterValue=$S3KEY \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
+		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
 		--template-body file://$DIR/aws-ccc-cloudformation.json
 else
 	echo "Stack does not exist, creating..."
@@ -88,6 +88,6 @@ else
 		--capabilities CAPABILITY_IAM \
 		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
 		    ParameterKey=S3Key,ParameterValue=$S3KEY \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENV_TAG \
+		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
 		--template-body file://$DIR/aws-ccc-cloudformation.json
 fi
