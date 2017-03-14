@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description": "CCC scaling. Custom to bionano infrastructure",
+  "Description": "(v1.0.1) CCC scaling. Custom to bionano infrastructure",
 
   "Parameters": {
     "S3Bucket": {
@@ -26,16 +26,20 @@
 
  "Mappings" : {
     "Settings": {
-      "SubnetIds" : {
-        "dev"  : ["subnet-a415dbd2", "subnet-522f9a36"],
-        "qa"   : ["subnet-698bab1f", "subnet-fca680c1"],
-        "prod" : ["subnet-feae88c3", "subnet-6b98b81d"]
-      },
-      "SecurityGroupIds" : {
-        "dev"  : ["sg-ab9292cc"],
-        "qa"   : ["sg-fd5efb86"],
-        "prod" : ["sg-87389dfc"]
-      }
+      "dev" : {
+                "SubnetIds"        : ["subnet-a415dbd2", "subnet-522f9a36"], 
+                "SecurityGroupIds" : ["sg-ab9292cc"]
+              },
+
+      "qa" : {
+                "SubnetIds"        : ["subnet-698bab1f", "subnet-fca680c1"],
+                "SecurityGroupIds" : ["sg-fd5efb86"]
+              },
+
+      "prod" : {
+                "SubnetIds"        : ["subnet-feae88c3", "subnet-6b98b81d"], 
+                "SecurityGroupIds" : ["sg-87389dfc"]
+              }
     }
   },
 
@@ -60,8 +64,8 @@
         "Runtime" : "nodejs4.3",
         "Timeout" : 30,
         "VpcConfig" : {
-          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", "SecurityGroupIds", { "Ref" : "BionanoEnvironment" } ] },
-          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "SubnetIds", { "Ref" : "BionanoEnvironment" } ] }
+          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", { "Ref" : "BionanoEnvironment" }, "SecurityGroupIds" ] },
+          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", { "Ref" : "BionanoEnvironment" }, "SubnetIds" ] }
         }
       }
     },
@@ -85,8 +89,8 @@
         "Runtime" : "nodejs4.3",
         "Timeout" : 30,
         "VpcConfig" : {
-          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", "SecurityGroupIds", { "Ref" : "BionanoEnvironment" } ] },
-          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "SubnetIds", { "Ref" : "BionanoEnvironment" } ] }
+          "SecurityGroupIds" : {"Fn::FindInMap" : [ "Settings", { "Ref" : "BionanoEnvironment" }, "SecurityGroupIds" ] },
+          "SubnetIds" : {"Fn::FindInMap" : [ "Settings", { "Ref" : "BionanoEnvironment" }, "SubnetIds" ] }
         }
       }
     },

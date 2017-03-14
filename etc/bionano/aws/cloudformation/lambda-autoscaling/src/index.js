@@ -3,8 +3,8 @@ var AWS = require('aws-sdk');
 var Promise = require('bluebird');
 
 var BNR_ENVIRONMENT = process.env['BNR_ENVIRONMENT'];
-var redisUrl = 'redis.' + BNR_ENVIRONMENT + '.bionano.bio';
-var StackTagValue = BNR_ENVIRONMENT + '-ccc';
+var redisUrl = 'redis-ccc.' + BNR_ENVIRONMENT + '.bionano.bio';
+var AppTagValue = 'ccc';
 
 var autoscaling = new AWS.AutoScaling();
 var ec2 = new AWS.EC2();
@@ -49,7 +49,8 @@ function getAutoscalingGroup(disableCache) {
 					if (tags) {
 						for (var j = 0; j < tags.length; j++) {
 							var tag = tags[j];
-							if (tag['Key'] == 'stack' && tag['Value'].startsWith(StackTagValue)) {
+							// allowing both app=(ccc | ccc-v1) and environment=(dev | dev-v2). iterating app tag first as there should be fewer hits for that
+							if (tag['Key'] == 'app' && tag['Value'].startsWith(AppTagValue) && tag['Key'] == 'environment' && tag['Value'].startsWith(BNR_ENVIRONMENT) ) {
 								cccAutoscalingGroup = asg;
 								AutoscalingGroupName = asg.AutoscalingGroupName;
 								break;
