@@ -12,7 +12,7 @@ services:
       - "9000:9000"
     environment:
       PORT: "9000"
-      REDIS_HOST: "redis.${BNR_ENVIRONMENT}.bionano.bio"
+      REDIS_HOST: "redis-ccc.${BNR_ENVIRONMENT}.bionano.bio"
       CONFIG_PATH: "/app/config/ccc.yml"
       CLIENT_DEPLOYMENT: "true"
       FLUENT_PORT: "24226"
@@ -31,6 +31,6 @@ services:
     image: "docker.io/dionjwa/bull-ui-server:1.0.1"
     environment:
       PORT: "9002"
-      REDIS_HOST: "redis.${BNR_ENVIRONMENT}.bionano.bio"
+      REDIS_HOST: "redis-ccc.${BNR_ENVIRONMENT}.bionano.bio"
     ports:
       - "9002:9002"

@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description": "CCC redis cluster. Custom to bionano infrastructure",
+  "Description": "(v1.0.2) CCC redis cluster. Custom to bionano infrastructure",
 
   "Parameters": {
     "BionanoEnvironment": {
@@ -15,21 +15,20 @@
       "Type" : "String",
       "AllowedValues" : [ "cache.t1.micro", "cache.m1.small", "cache.m1.medium", "cache.m1.large", "cache.m1.xlarge", "cache.m2.xlarge", "cache.m2.2xlarge", "cache.m2.4xlarge", "cache.m3.xlarge", "cache.m3.2xlarge", "cache.c1.xlarge" ],
       "ConstraintDescription" : "must select a valid Cache Node type."
+    },
+    "SubNetIds": {
+      "Description": "Subnetworks for servers to be scalled into. Seperate multiple entries by commas ','.",
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "SecGroupIds": {
+      "Description": "Subnetworks for servers to be scalled into. Seperate multiple entries by commas ','.",
+      "Type": "List<AWS::EC2::SecurityGroup::Id>"
     }
+
   },
 
  "Mappings" : {
     "Settings": {
-      "SubnetIds" : {
-        "dev" : ["subnet-a415dbd2", "subnet-522f9a36"],
-        "qa" : ["subnet-698bab1f", "subnet-fca680c1"],
-        "prod" : ["subnet-feae88c3", "subnet-6b98b81d"]
-      },
-      "SecurityGroupIds" : {
-        "dev" : ["sg-ab9292cc"],
-        "qa" : ["sg-fd5efb86"],
-        "prod" : ["sg-87389dfc"]
-      },
       "HostedZone" : {
         "Value" : "bionano.bio."
       }
@@ -42,7 +41,7 @@
       "Type" : "AWS::ElastiCache::SubnetGroup",
       "Properties" : {
         "Description" : "Subnet group for the redis cluster",
-        "SubnetIds" : {"Fn::FindInMap" : [ "Settings", "SubnetIds", { "Ref" : "BionanoEnvironment" } ] }
+        "SubnetIds" : {"Ref" : "SubNetIds"}
       }
     },
 
@@ -59,7 +58,7 @@
         "NumCacheClusters"            : 2,
         "Port"                        : 6379,
         "ReplicationGroupDescription" : {"Fn::Join" : [ "", [ { "Ref" : "BionanoEnvironment" }, " CCC redis cluster"] ]},
-        "SecurityGroupIds"            : {"Fn::FindInMap" : [ "Settings", "SecurityGroupIds", { "Ref" : "BionanoEnvironment" } ] }
+        "SecurityGroupIds"            : {"Ref" : "SecGroupIds"}
       }
     },
 
@@ -69,7 +68,7 @@
       "Properties" : {
         "HostedZoneName" : {"Fn::FindInMap" : [ "Settings", "HostedZone", "Value" ] },
         "Comment" : "DNS entry for CCC redis cache",
-        "Name" : { "Fn::Join" : [ ".", ["redis", { "Ref" : "BionanoEnvironment" }, "bionano.bio."]]},
+        "Name" : { "Fn::Join" : [ ".", ["redis-ccc", { "Ref" : "BionanoEnvironment" }, "bionano.bio."]]},
         "Type" : "CNAME",
         "TTL" : "30",
         "ResourceRecords" : [ { "Fn::GetAtt" : [ "RedisCluster", "PrimaryEndPoint.Address" ] } ]

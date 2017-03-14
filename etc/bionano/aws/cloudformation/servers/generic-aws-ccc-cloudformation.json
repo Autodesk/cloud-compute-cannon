@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Create a Cloud-Compute-Cannon stack with AWS CloudFormation ",
+  "Description": "(v1.0.0) Create a Cloud-Compute-Cannon stack with AWS CloudFormation ",
   "Parameters": {
     "KeyName": {
       "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
