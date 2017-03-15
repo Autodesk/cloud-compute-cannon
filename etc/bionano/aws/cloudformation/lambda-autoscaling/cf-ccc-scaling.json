@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description": "(v1.0.2) CCC scaling. Custom to bionano infrastructure",
+  "Description": "(v1.0.3) CCC scaling. Custom to bionano infrastructure",
 
   "Parameters": {
     "S3Bucket": {
@@ -208,5 +208,20 @@
         }
       }
     }
+  },
+
+  "Outputs": {
+    "Environment"           : { "Value": { "Ref": "BionanoEnvironment"    } },
+
+    "LambdaScaleUp"         : { "Value": { "Ref" : "LambdaCCCBionanoScaleUp" } },
+    "LambdaScaleUpARN"      : { "Value": { "Fn::GetAtt": [ "LambdaCCCBionanoScaleUp", "Arn" ] }},
+    "LambdaScaleDown"       : { "Value": { "Ref" : "LambdaCCCBionanoScaleUp" } },
+    "LambdaScaleDownARN"    : { "Value": { "Fn::GetAtt": [ "LambdaCCCBionanoScaleDown", "Arn" ] }},
+
+    "StackName"             : { "Value": { "Ref": "AWS::StackName"  } },
+    "StackId"               : { "Value": { "Ref": "AWS::StackId"    } },
+    "Region"                : { "Value": { "Ref": "AWS::Region"     } }
+
   }
+
 }
