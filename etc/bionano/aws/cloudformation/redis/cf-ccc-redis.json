@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description": "(v1.0.2) CCC redis cluster. Custom to bionano infrastructure",
+  "Description": "(v1.0.3) CCC redis cluster. Custom to bionano infrastructure",
 
   "Parameters": {
     "BionanoEnvironment": {
@@ -74,5 +74,22 @@
         "ResourceRecords" : [ { "Fn::GetAtt" : [ "RedisCluster", "PrimaryEndPoint.Address" ] } ]
       }
     }
+  },
+
+  "Outputs": {
+    "Environment"           : { "Value": { "Ref": "BionanoEnvironment"    } },
+    "RedisCluster"          : { "Value": { "Ref" : "RedisCluster" }},
+    "RedisPrimaryURL"       : { "Value": { "Fn::GetAtt": [ "RedisCluster", "PrimaryEndPoint.Address" ] }},
+    "RedisPrimaryPort"      : { "Value": { "Fn::GetAtt": [ "RedisCluster", "PrimaryEndPoint.Port" ] }},
+    "RedisReplicas"         : { "Value": { "Fn::GetAtt": [ "RedisCluster", "ReadEndPoint.Addresses" ] }},
+    "RedisReplicaPorts"     : { "Value": { "Fn::GetAtt": [ "RedisCluster", "ReadEndPoint.Ports" ] }},
+
+    "Route53Record"         : { "Value": { "Ref": "RedisHostRecord"  } },
+  
+    "StackName"             : { "Value": { "Ref": "AWS::StackName"  } },
+    "StackId"               : { "Value": { "Ref": "AWS::StackId"    } },
+    "Region"                : { "Value": { "Ref": "AWS::Region"     } }
+
   }
+
 }
