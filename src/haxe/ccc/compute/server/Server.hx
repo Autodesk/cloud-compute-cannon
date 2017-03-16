@@ -636,13 +636,14 @@ class Server
 					try {
 						var results = Json.parse(out);
 						var result = results.result;
+						traceCyan('Logger.GLOBAL_LOG_LEVEL=${Logger.GLOBAL_LOG_LEVEL}');
 						if (result.success) {
-							if (Logger.GLOBAL_LOG_LEVEL >= 30) {
+							if (Logger.GLOBAL_LOG_LEVEL <= 30) {
 								traceGreen(Json.stringify(result));
 							}
 						} else {
 							Log.error({TestResults:result});
-							if (Logger.GLOBAL_LOG_LEVEL >= 40) {
+							if (Logger.GLOBAL_LOG_LEVEL <= 40) {
 								traceRed(Json.stringify(result));
 							}
 						}

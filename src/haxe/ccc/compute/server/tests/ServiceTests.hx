@@ -71,7 +71,7 @@ class ServiceTests
 			failures: failures,
 			turbojobs: turbojobs
 		};
-		if (Logger.GLOBAL_LOG_LEVEL >= 30) {
+		if (Logger.GLOBAL_LOG_LEVEL <= 30) {
 			trace('Running tests: [' + logString.keys().map(function(k) return logString[k] ? k.green() : k.red()).array().join(' ') + ']');
 		}
 
