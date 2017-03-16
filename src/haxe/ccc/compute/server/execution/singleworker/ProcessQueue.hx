@@ -421,14 +421,19 @@ class JobProcessObject
 						_killedDeferred.resolve(true);
 						_deferred.resolve(reason);
 					case Error(err):
-						log.warn({jobId: jobId, error:err, log:'Got error, retrying job'});
-						var jobStateTools :JobStateTools = _redis;
-						jobStateTools.setStatus(jobId, JobStatus.Pending)
-							.then(function(_) {
-								// _done(err, null);
-								_deferred.resolve(reason);
-								_queueJob.retry();
-							});
+						if (err.message != null && err.message == JobSubmissionError.Docker_Image_Unknown) {
+							_done(null, null);
+							_deferred.resolve(reason);
+						} else {
+							log.warn({jobId: jobId, error:err, log:'Got error, retrying job'});
+							var jobStateTools :JobStateTools = _redis;
+							jobStateTools.setStatus(jobId, JobStatus.Pending)
+								.then(function(_) {
+									// _done(err, null);
+									_deferred.resolve(reason);
+									_queueJob.retry();
+								});
+						}
 					case Timeout:
 						_done(null, null);
 						_deferred.resolve(reason);
@@ -492,7 +497,7 @@ class JobProcessObject
 											return true;
 										});
 								} else {
-									return writeJobResults(_redis, job, _remoteStorage, batchJobResult, JobFinishedStatus.Success)
+									return writeJobResults(_redis, job, _remoteStorage, batchJobResult, batchJobResult.error != null ? JobFinishedStatus.Failed : JobFinishedStatus.Success)
 										.pipe(function(jobResultBlob) {
 											return jobStateTools.setStatus(jobId, JobStatus.Finished)
 												.then(function(_) {
@@ -500,8 +505,11 @@ class JobProcessObject
 												});
 										})
 										.then(function(jobResultBlob) {
-											finish(ProcessFinishReason.Success(jobResultBlob.jobResult));
-											// finish(null, jobResultBlob.jobResult);//Success
+											if (batchJobResult.error == null) {
+												finish(ProcessFinishReason.Success(jobResultBlob.jobResult));
+											} else {
+												finish(ProcessFinishReason.Error(batchJobResult.error));
+											}
 											return true;
 										});
 								}
