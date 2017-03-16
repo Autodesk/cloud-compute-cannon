@@ -637,10 +637,14 @@ class Server
 						var results = Json.parse(out);
 						var result = results.result;
 						if (result.success) {
-							traceGreen(Json.stringify(result));
+							if (Logger.GLOBAL_LOG_LEVEL >= 30) {
+								traceGreen(Json.stringify(result));
+							}
 						} else {
 							Log.error({TestResults:result});
-							traceRed(Json.stringify(result));
+							if (Logger.GLOBAL_LOG_LEVEL >= 40) {
+								traceRed(Json.stringify(result));
+							}
 						}
 						if (isTravisBuild) {
 							Node.process.exit(result.success ? 0 : 1);

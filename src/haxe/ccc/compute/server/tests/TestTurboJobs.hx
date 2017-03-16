@@ -76,7 +76,6 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 		var proxy = ServerTestTools.getProxy();
 		return proxy.submitTurboJobJson(request)
 			.then(function(jobResult :JobResultsTurbo) {
-				traceMagenta('jobResult=$jobResult');
 				if (jobResult == null) {
 					throw 'jobResult should not be null. Check the above section';
 				}
