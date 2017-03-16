@@ -39,14 +39,18 @@ class DockerPromises
 
 	public static function hasImage(docker :Docker, imageUrl :DockerUrl) :Promise<Bool>
 	{
-		return listImages(docker)
-			.then(function(images) {
-				return images.exists(function(e) {
-					return e.RepoTags != null && e.RepoTags.exists(function(tag :DockerUrl) {
-						return DockerUrlTools.matches(imageUrl, tag);
+		if (imageUrl == null) {
+			return PromiseTools.error(new js.Error('DockerPromises.hasImage imageUrl==null'));
+		} else {
+			return listImages(docker)
+				.then(function(images) {
+					return images.exists(function(e) {
+						return e.RepoTags != null && e.RepoTags.exists(function(tag :DockerUrl) {
+							return tag != null && DockerUrlTools.matches(imageUrl, tag);
+						});
 					});
 				});
-			});
+		}
 	}
 
 	public static function push(image :DockerImage, ?opts :{?tag :String}, ?auth :Dynamic) :Promise<Bool>
