@@ -90,7 +90,9 @@ class ServiceStorageLocalFileSystem
 		try {
 			var stat = Fs.statSync(path);
 			if (!stat.isFile()) {
-				throw 'readFile but file missing $path';
+				var promise = new Promise();
+				promise.reject('readFile but file missing $path');
+				return promise;
 			}
 		} catch(err :js.support.Error) {
 			var localPath = path;

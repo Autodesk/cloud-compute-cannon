@@ -56,7 +56,7 @@ class TestStorageLocal extends TestStorageBase
 		return Promise.promise(true);
 	}
 
-	@timeout(100)
+	@timeout(1000)
 	public function testStorageLocal()
 	{
 		var storage = new ServiceStorageLocalFileSystem().setRootPath(_testPath);
