@@ -80,9 +80,10 @@ class ServiceBatchComputeTools
 				var parameters :JobParams = job.parameters == null ? ServiceBatchComputeTools.DEFAULT_JOB_PARAMS : job.parameters;
 				var inputFilesObj = writeInputFiles(fs, job.inputs, inputPath);
 				deleteInputs = inputFilesObj.cancel;
+				var dockerImage :String = job.image == null ? DOCKER_IMAGE_DEFAULT : job.image;
 				var dockerJob :DockerJobDefinition = {
 					jobId: jobId,
-					image: {type:DockerImageSourceType.Image, value:job.image, pull_options:job.pull_options, optionsCreate:job.createOptions},
+					image: {type:DockerImageSourceType.Image, value:dockerImage, pull_options:job.pull_options, optionsCreate:job.createOptions},
 					command: job.cmd,
 					inputs: inputFilesObj.inputs,
 					workingDir: job.workingDir,
@@ -351,9 +352,10 @@ class ServiceBatchComputeTools
 							jobStats.requestUploaded(jobId);
 
 							var parameters :JobParams = jsonrpc.params.parameters == null ? DEFAULT_JOB_PARAMS : jsonrpc.params.parameters;
+							var dockerImage :String = jsonrpc.params.image == null ? DOCKER_IMAGE_DEFAULT : jsonrpc.params.image;
 							var dockerJob :DockerJobDefinition = {
 								jobId: jobId,
-								image: {type:DockerImageSourceType.Image, value:jsonrpc.params.image, pull_options:jsonrpc.params.pull_options, optionsCreate:jsonrpc.params.createOptions},
+								image: {type:DockerImageSourceType.Image, value:dockerImage, pull_options:jsonrpc.params.pull_options, optionsCreate:jsonrpc.params.createOptions},
 								command: jsonrpc.params.cmd,
 								inputs: inputFileNames,
 								workingDir: jsonrpc.params.workingDir,
