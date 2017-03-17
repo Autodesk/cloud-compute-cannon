@@ -55,8 +55,6 @@ class Server
 
 	static function main()
 	{
-		updateStatus(ServerStartupState.Booting);
-
 		//Required for source mapping
 		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
@@ -68,9 +66,10 @@ class Server
 		injector.map(Injector).toValue(injector); //Map itself
 		injector.map('Array<Dynamic>', 'Injectees').toValue([]);
 
+		initLogging(injector);
+		updateStatus(ServerStartupState.Booting);
 		initProcess();
 		initGlobalErrorHandler();
-		initLogging(injector);
 		initAppConfig(injector);
 		initStorage(injector);
 		initAppPaths(injector);
