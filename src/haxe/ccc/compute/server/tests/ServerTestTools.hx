@@ -16,7 +16,7 @@ class ServerTestTools
 		if (env.exists(ENV_VAR_CCC_ADDRESS)) {
 			return env.get(ENV_VAR_CCC_ADDRESS);
 		} else {
-			return new Host(new HostName('localhost'), new Port(SERVER_HTTP_PORT));
+			return new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT));
 		}
 	}
 

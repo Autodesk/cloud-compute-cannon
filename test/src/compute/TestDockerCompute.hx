@@ -271,6 +271,8 @@ class TestDockerCompute extends TestComputeBase
 				return BatchComputeDocker.executeJob(redis, job, fs, Log.log).promise;
 			})
 			.then(function(batchResults) {
+				traceYellow(Json.stringify(job, null, "  "));
+				traceYellow(Json.stringify(batchResults, null, "  "));
 				assertEquals(0, batchResults.exitCode);
 				assertEquals(null, batchResults.error);
 				return true;

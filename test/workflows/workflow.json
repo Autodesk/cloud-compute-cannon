@@ -1,0 +1,37 @@
+{
+	"transforms": {
+		"do_something": {
+			"image": "docker.io/busybox:latest",
+			"command": ["/bin/sh", "-c", "cat ${INPUTS}/some_input1 > some_output"],
+			"env": {
+				"foo": "bar"
+			}
+
+		},
+		"do_something_else": {
+			"image": "docker.io/busybox:latest",
+			"command": ["/bin/sh", "-c", "cat ${INPUTS}/some_input > some_output && echo 'bbbb' >> some_output"]
+		}
+	},
+	"pipes": [
+		{
+			"source": {
+				"file": "input.txt"
+			},
+			"target": {
+				"transform": "do_something",
+				"input": "some_input1"
+			}
+		},
+		{
+			"source": {
+				"transform": "do_something",
+				"output": "some_output"
+			},
+			"target": {
+				"transform": "do_something_else",
+				"input": "some_input"
+			}
+		}
+	]
+}

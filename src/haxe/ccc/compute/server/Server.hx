@@ -533,7 +533,7 @@ class Server
 			.pipe(function(_) {
 				return DockerTools.getThisContainerName()
 					.then(function(containerName) {
-						Constants.DOCKER_CONTAINER_NAME = containerName;
+						Constants.DOCKER_CONTAINER_NAME = containerName.startsWith('/') ? containerName.substr(1) : containerName;
 						return true;
 					});
 			})
@@ -630,7 +630,7 @@ class Server
 		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
 		if (!disableStartTest) {
 			Log.debug('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true&turbojobs=true" : "compute=true&turbojobs=true"}')
+			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true&turbojobs=true" : "workflows=true"}')//compute=true&turbojobs=true
 				.then(function(out) {
 					try {
 						var results = Json.parse(out);

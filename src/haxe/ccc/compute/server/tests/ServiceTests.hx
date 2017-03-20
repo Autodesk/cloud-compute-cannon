@@ -43,9 +43,9 @@ class ServiceTests
 		alias:'server-tests',
 		doc:'Run all server functional tests'
 	})
-	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false, ?failures :Bool = false, ?turbojobs :Bool = false) :Promise<CompleteTestResult>
+	public function runServerTests(?core :Bool = false, ?all :Bool = false, ?jobs :Bool = false, ?worker :Bool = false, ?storage :Bool = false, ?compute :Bool = false, ?dockervolumes :Bool = false, ?distributedtasks :Bool = false, ?failures :Bool = false, ?turbojobs :Bool = false, ?workflows :Bool = false) :Promise<CompleteTestResult>
 	{
-		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks || failures || turbojobs)) {
+		if (!(core || all || worker || storage || compute || dockervolumes || jobs || distributedtasks || failures || turbojobs || workflows)) {
 			compute = true;
 		}
 		if (all) {
@@ -58,6 +58,7 @@ class ServiceTests
 			distributedtasks = true;
 			failures = true;
 			turbojobs = true;
+			workflows = true;
 		}
 		var logString :haxe.DynamicAccess<Bool> = {
 			all: all,
@@ -69,7 +70,8 @@ class ServiceTests
 			jobs: jobs,
 			distributedtasks: distributedtasks,
 			failures: failures,
-			turbojobs: turbojobs
+			turbojobs: turbojobs,
+			workflows: workflows
 		};
 		if (Logger.GLOBAL_LOG_LEVEL <= 30) {
 			trace('Running tests: [' + logString.keys().map(function(k) return logString[k] ? k.green() : k.red()).array().join(' ') + ']');
@@ -128,6 +130,10 @@ class ServiceTests
 
 		if (failures) {
 			addTestClass(TestFailureConditions);
+		}
+
+		if (workflows) {
+			addTestClass(ccc.compute.server.cwl.TestCWLApi);
 		}
 
 		var exitOnFinish = false;

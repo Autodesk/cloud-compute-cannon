@@ -552,13 +552,10 @@ class BatchComputeDocker
 					for (env in [
 						'INPUTS=$containerInputsPath',
 						'OUTPUTS=$containerOutputsPath',
-						// 'OUTPUTS_HOST_MOUNT=$outputVolumeName'
 						]) {
 						opts.Env.push(env);
 					}
-					// if (inputVolumeName != null) {
-					// 	opts.Env.push('INPUTS_HOST_MOUNT=$inputVolumeName');
-					// }
+					opts.Env.push('CCC_JOB_ID=$jobId');
 
 					opts.Labels = opts.Labels != null ? opts.Labels : {};
 					Reflect.setField(opts.Labels, 'jobId', jobId);

@@ -123,7 +123,7 @@ class TestTools
 		return job;
 	}
 
-	public static function createLocalJob(id :String, contextPath :String, inputsPath :String)
+	public static function createLocalJob(id :String, inputsPath :String)
 	{
 		var jobId :JobId = id;
 		var computeJobId :ComputeJobId = JobTools.generateComputeJobId(jobId);
@@ -132,8 +132,9 @@ class TestTools
 			jobId: jobId,
 			computeJobId: computeJobId,
 			worker: null,
-			image: {type:DockerImageSourceType.Context, value:contextPath, optionsBuild:{t:computeJobId}},
+			image: {type:DockerImageSourceType.Image, value:'python:2.7-slim'},
 			inputs: FsExtended.listFilesSync(inputsPath),
+			command: ["python", "/inputs/run.py"]
 		};
 
 		var job :QueueJobDefinitionDocker = {

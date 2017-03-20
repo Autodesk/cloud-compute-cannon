@@ -1,5 +1,7 @@
 package ccc.compute.server.execution.routes;
 
+import ccc.compute.server.cwl.ServiceCWL;
+
 import t9.js.jsonrpc.Routes;
 
 import promhx.Promise;
@@ -428,15 +430,21 @@ class RpcRoutes
 
 		//Create all the services, and map the RPC methods to the context object
 		if (!injector.hasMapping(RpcRoutes)) {
-			var serviceBatchCompute = new RpcRoutes();
-			injector.map(RpcRoutes).toValue(serviceBatchCompute);
-			injector.injectInto(serviceBatchCompute);
+			var rpcRoutes = new RpcRoutes();
+			injector.map(RpcRoutes).toValue(rpcRoutes);
+			injector.injectInto(rpcRoutes);
 		}
 
 		if (!injector.hasMapping(ServiceTests)) {
 			var serviceTests = new ServiceTests();
 			injector.map(ServiceTests).toValue(serviceTests);
 			injector.injectInto(serviceTests);
+		}
+
+		if (!injector.hasMapping(ServiceCWL)) {
+			var serviceWorkflows = new ServiceCWL();
+			injector.map(ServiceCWL).toValue(serviceWorkflows);
+			injector.injectInto(serviceWorkflows);
 		}
 
 		var router = js.node.express.Express.GetRouter();
@@ -461,15 +469,21 @@ class RpcRoutes
 
 		//Create all the services, and map the RPC methods to the context object
 		if (!injector.hasMapping(RpcRoutes)) {
-			var serviceBatchCompute = new RpcRoutes();
-			injector.map(RpcRoutes).toValue(serviceBatchCompute);
-			injector.injectInto(serviceBatchCompute);
+			var rpcRoutes = new RpcRoutes();
+			injector.map(RpcRoutes).toValue(rpcRoutes);
+			injector.injectInto(rpcRoutes);
 		}
 
 		if (!injector.hasMapping(ServiceTests)) {
 			var serviceTests = new ServiceTests();
 			injector.map(ServiceTests).toValue(serviceTests);
 			injector.injectInto(serviceTests);
+		}
+
+		if (!injector.hasMapping(ServiceCWL)) {
+			var serviceWorkflows = new ServiceCWL();
+			injector.map(ServiceCWL).toValue(serviceWorkflows);
+			injector.injectInto(serviceWorkflows);
 		}
 
 		var router = js.node.express.Express.GetRouter();

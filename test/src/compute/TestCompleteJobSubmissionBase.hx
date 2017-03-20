@@ -58,7 +58,6 @@ class TestCompleteJobSubmissionBase extends TestComputeBase
 		//check the output
 
 		var exampleBaseDir = 'test/res/exampleDockerBatchCompute';
-		var sourceDockerContext = '$exampleBaseDir/dockerContext/';
 		var inputDir = '$exampleBaseDir/inputs';
 
 		// assume tester wants to user local file system if a service implementation isn't passed in
@@ -73,7 +72,7 @@ class TestCompleteJobSubmissionBase extends TestComputeBase
 
 		var jobs = [];
 		for (i in 0...1) {
-			jobs.push(TestTools.createLocalJob('job$i-${ComputeTools.createUniqueId()}', sourceDockerContext, inputDir));
+			jobs.push(TestTools.createLocalJob('job$i-${ComputeTools.createUniqueId()}', inputDir));
 		}
 
 		var manager = _workerManager;
@@ -180,6 +179,11 @@ class TestCompleteJobSubmissionBase extends TestComputeBase
 						.pipe(function(stdoutStream) {
 							return StreamPromises.streamToString(stdoutStream)
 								.then(function(stdout) {
+									if (stdout == null) {
+										traceRed('Dammit job failed job.item.resultDir()=${job.item.resultDir()} fsJobResults=${fsJobResults}');
+										traceRed(Json.stringify(job, null, '  '));
+									}
+									assertNotNull(stdout);
 									assertTrue(stdout.trim().endsWith('THIS IS STDOUT'));
 									return true;
 								});
