@@ -46,7 +46,9 @@ class WorkerManager
 	{
 		_workerUpdateStream = RedisTools.createStream(_redis, InstancePool.REDIS_CHANNEL_KEY_WORKERS_UPDATE);
 		_workerUpdateStream.then(function(_) {
-			syncWorkers();
+			if (_workers != null) {
+				syncWorkers();
+			}
 		});
 		syncWorkers();
 	}

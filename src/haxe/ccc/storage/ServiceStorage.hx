@@ -22,6 +22,7 @@ interface ServiceStorage
 	function writeFile(uri :String, data :IReadable) :Promise<Bool>;
 	// function getFileWritable(uri :String) :Promise<IWritable>;
 	function deleteFile(uri :String) :Promise<Bool>;
+	function copyFile(source :String, target :String) :Promise<Bool>;
 	function deleteDir(?uri :String) :Promise<Bool>;
 	function listDir(?uri :String) :Promise<Array<String>>;
 	function makeDir(?uri :String) :Promise<Bool>;

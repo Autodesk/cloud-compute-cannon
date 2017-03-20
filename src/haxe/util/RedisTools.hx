@@ -33,6 +33,12 @@ typedef RedisConnection = {
 
 class RedisTools
 {
+	/**
+	 * This ensures you get the latest value from the hash set.
+	 * It will get the current value, then also it will get the
+	 * current value whenever the channel (from the channelKey)
+	 * is updated.
+	 */
 	public static function createStreamFromHash<T>(redis :RedisClient, channelKey :String, hashKey :String, hashField :String) :Stream<T>
 	{
 		return createStreamCustom(redis, channelKey, function(_) {

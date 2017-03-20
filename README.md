@@ -21,6 +21,28 @@ Features:
 - Worker machines will scale up and down as needed.
 - The client can be run on the command line, or run as a server for providing an API to other tools.
 
+## API
+
+### Core computes:
+
+  <host>/api/rpc/
+
+### Workflows
+
+  POST /api/rpc
+
+  {
+    "jsonrpc": "2.0",
+    "method": "cwl",
+    "params": {
+      "git": "https://github.com/dionjwa/cwltool",
+      "sha": "e7e6e18f62cf5db6541f15fedcee47ae0e219bbf",
+      "cwl": "tests/ccc_docker_workflow/run_workflow.cwl",
+      "input": "tests/ccc_docker_workflow/input.yml",
+      "inputs": {
+      }
+    }
+  }
 
 ## Installation
 
