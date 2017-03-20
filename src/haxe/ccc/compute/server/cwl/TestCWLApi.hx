@@ -15,7 +15,7 @@ class TestCWLApi extends ServerAPITestBase
 	{
 		//http://localhost:9001/metaframe/cwl?git=https://github.com/dionjwa/cwltool&sha=e7e6e18f62cf5db6541f15fedcee47ae0e219bbf&cwl=tests/ccc_docker_workflow/run_workflow.cwl&input=tests/ccc_docker_workflow/input.yml
 		var git = 'https://github.com/dionjwa/cwltool';
-		var sha = 'e7e6e18f62cf5db6541f15fedcee47ae0e219bbf';
+		var sha = 'dfbf4330f9c137f2261b9edc06d323ad91fd8345';
 		var cwl = 'tests/ccc_docker_workflow/run_workflow.cwl';
 
 		var inputDeclarationFileName = 'input.yml';
@@ -52,7 +52,7 @@ infile:
 	{
 		//http://localhost:9001/metaframe/cwl?git=https://github.com/dionjwa/cwltool&sha=e7e6e18f62cf5db6541f15fedcee47ae0e219bbf&cwl=tests/ccc_docker_workflow/run_workflow.cwl&input=tests/ccc_docker_workflow/input.yml
 		var git = 'https://github.com/dionjwa/cwltool';
-		var sha = 'e7e6e18f62cf5db6541f15fedcee47ae0e219bbf';
+		var sha = 'dfbf4330f9c137f2261b9edc06d323ad91fd8345';
 		var cwl = 'tests/ccc_docker_workflow/run_workflow.cwl';
 		var input = 'tests/ccc_docker_workflow/input.yml';
 

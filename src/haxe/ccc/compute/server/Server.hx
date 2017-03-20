@@ -367,7 +367,7 @@ class Server
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
 		var requestErrorHandler = function(err :Dynamic) {
-			Log.error({error:err != null && err.stack != null ? err.stack : err, message:'Uncaught error'});
+			Log.error({error:err, stack:err != null && err.stack != null ? err.stack : null, message:'Uncaught error'});
 		}
 		var server = Http.createServer(function(req, res) {
 			appHandler(req, res, requestErrorHandler);
@@ -630,7 +630,7 @@ class Server
 		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
 		if (!disableStartTest) {
 			Log.debug('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true&turbojobs=true" : "workflows=true"}')//compute=true&turbojobs=true
+			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&dockervolumes=true&compute=true&jobs=true&turbojobs=true&workflows=true" : "compute=true&turbojobs=true"}')
 				.then(function(out) {
 					try {
 						var results = Json.parse(out);

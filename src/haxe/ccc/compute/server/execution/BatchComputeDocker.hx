@@ -390,7 +390,7 @@ class BatchComputeDocker
 	{
 		log = log.child({JobWorkingStatus:CopyingImage});
 		var jobId = job.jobId;
-		log.debug('copyOfCreateImage ${jobId}');
+		log.debug('copyOrCreateImage ${jobId}');
 		var jobStats :JobStats = redis;
 		var error :Dynamic = null;
 		//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
@@ -398,7 +398,6 @@ class BatchComputeDocker
 			case Image:
 				var dockerImage = job.image.value;
 				var pull_options = job.image.pull_options != null ? job.image.pull_options : {};
-
 				return ensureDockerImage(docker, dockerImage, log, pull_options)
 					.errorPipe(function(err) {
 						//Convert this error
@@ -453,7 +452,7 @@ class BatchComputeDocker
 						CACHED_DOCKER_IMAGES.set(image, true);
 						return Promise.promise(true);
 					} else {
-						pull_options = pull_options != null ? pull_options : {};
+						pull_options = pull_options != null ? Reflect.copy(pull_options) : {};
 						pull_options.fromImage = pull_options.fromImage != null ? pull_options.fromImage : image;
 						log.debug({log:'Pulling docker image=${image}', pull_options:pull_options});
 						return DockerTools.pullImage(docker, image, pull_options, log.child({'level':30}))

@@ -2,7 +2,7 @@ package ccc.compute.server.cwl;
 
 class ServiceCWL
 {
-	public static var CWL_RUNNER_IMAGE = 'dionjwa/cwltool-ccc:44296678';
+	public static var CWL_RUNNER_IMAGE = 'docker.io/dionjwa/cwltool-ccc:0.0.6';
 
 	@rpc({
 		alias:'cwl',
@@ -28,9 +28,8 @@ class ServiceCWL
 					inputs: inputs,
 					createOptions: {
 						Image: CWL_RUNNER_IMAGE,
-						Cmd: ["/root/bin/download-run-workflow", git, sha, cwl, input],
+						Cmd: ['/root/bin/download-run-workflow', git, sha, cwl, input],
 						Env: ['CCC=http://${containerAlias}:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}'],
-						Entrypoint: "",
 						HostConfig: {
 							Binds: [
 								'/tmp/repos:/tmp/repos:rw'
