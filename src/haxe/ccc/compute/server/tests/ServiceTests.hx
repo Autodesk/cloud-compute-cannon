@@ -114,7 +114,7 @@ class ServiceTests
 			}
 		}
 
-		if (dockervolumes || core || storage) {
+		if (dockervolumes) {
 			addTestClass(ccc.docker.dataxfer.TestDataTransfer);
 		}
 
