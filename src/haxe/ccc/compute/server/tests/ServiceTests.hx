@@ -150,7 +150,8 @@ class ServiceTests
 	}
 
 	@rpc({
-		alias:'test-single-job'
+		alias:'test-single-job',
+		doc:'Test running single job'
 	})
 	public function testSingleJob() :Promise<Bool>
 	{
@@ -160,7 +161,8 @@ class ServiceTests
 	}
 
 	@rpc({
-		alias:'create-test-jobs'
+		alias:'create-test-jobs',
+		doc:'Create a number of test jobs that simply wait some defined duration'
 	})
 	public function createTestJobs(count :Int, duration :Int) :Promise<Dynamic>
 	{

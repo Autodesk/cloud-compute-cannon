@@ -367,7 +367,7 @@ class Server
 		//Actually create the server and start listening
 		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
 		var requestErrorHandler = function(err :Dynamic) {
-			Log.error({error:err, stack:err != null && err.stack != null ? err.stack : null, message:'Uncaught error'});
+			Log.error({error:err, errorJson:Json.stringify(err), stack:err != null && err.stack != null ? err.stack : null, message:'Uncaught error'});
 		}
 		var server = Http.createServer(function(req, res) {
 			appHandler(req, res, requestErrorHandler);
