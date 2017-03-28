@@ -18,7 +18,6 @@ class ClientJS
 			host = 'localhost:9000';
 		}
 		var rpcUrl = ClientJSTools.rpcUrl(host);
-		trace('CCC connection url=$rpcUrl');
 		var proxy = t9.remoting.jsonrpc.Macros.buildRpcClient("ccc.compute.server.execution.routes.RpcRoutes", false)
 			.setUrl(rpcUrl);
 		Reflect.setField(proxy, 'run', function(job, ?forms :Dynamic) {
