@@ -10,6 +10,10 @@ env:
   - DOCKER_COMPOSE_VERSION: 1.8.0
 
 before_install:
+  #Update docker
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-engine
+  - docker --version
   # Use sed to replace the SSH URL with the public URL, then initialize submodules
   - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
   - git submodule update --init --recursive
