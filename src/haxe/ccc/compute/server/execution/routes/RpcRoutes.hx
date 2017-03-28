@@ -1,12 +1,14 @@
 package ccc.compute.server.execution.routes;
 
-import ccc.compute.server.cwl.ServiceCWL;
-
 import t9.js.jsonrpc.Routes;
 
 import promhx.Promise;
 import ccc.compute.shared.TypedDynamicObject;
 import js.npm.bluebird.Bluebird;
+
+#if ((nodejs && !macro) && !excludeccc)
+	import ccc.compute.server.cwl.ServiceCWL;
+#end
 
 /**
  * This is the HTTP RPC/API contact point to the compute queue.
@@ -14,6 +16,32 @@ import js.npm.bluebird.Bluebird;
 class RpcRoutes
 {
 	public static var VERSION = 'v1';
+
+	@rpc({
+		alias:'cwl',
+		doc:'Run all server functional tests'
+	})
+	public function workflowRun(git :String, sha :String, cwl :String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return _serviceCWL.workflowRun(git, sha, cwl, input, inputs);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
+		alias:'cwl-test',
+		doc:'Test running a CWL workflow'
+	})
+	public function testWorkflow() :Promise<Bool>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return _serviceCWL.testWorkflow();
+#else
+		return Promise.promise(null);
+#end
+	}
 
 	@rpc({
 		alias:'log',
@@ -122,7 +150,7 @@ class RpcRoutes
 		doc:'Get job stats'
 	})
 	@:keep
-	public function jobStats(jobId :JobId, ?raw :Bool = false)
+	public function jobStats(jobId :JobId, ?raw :Bool = false) :Promise<Dynamic>
 	{
 #if ((nodejs && !macro) && !excludeccc)
 		return JobCommands.getJobStats(_injector, jobId, raw);
@@ -136,12 +164,12 @@ class RpcRoutes
 		doc:'Deletes all pending jobs'
 	})
 	@:keep
-	public function deletePending()
+	public function deletePending() :Promise<DynamicAccess<String>>
 	{
 #if ((nodejs && !macro) && !excludeccc)
 		return JobCommands.deletingPending(_injector);
 #else
-		return Promise.promise(true);
+		return Promise.promise(null);
 #end
 	}
 
@@ -389,6 +417,7 @@ class RpcRoutes
 
 #if ((nodejs && !macro) && !excludeccc)
 	@inject public var _injector :minject.Injector;
+	@inject public var _serviceCWL :ServiceCWL;
 	@inject public var _context :t9.remoting.jsonrpc.Context;
 
 	public function new() {}

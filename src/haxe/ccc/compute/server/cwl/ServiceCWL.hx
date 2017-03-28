@@ -4,10 +4,6 @@ class ServiceCWL
 {
 	public static var CWL_RUNNER_IMAGE = 'docker.io/dionjwa/cwltool-ccc:0.0.6';
 
-	@rpc({
-		alias:'cwl',
-		doc:'Run all server functional tests'
-	})
 	public function workflowRun(git :String, sha :String, cwl:String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
 	{
 		return getContainerAlias()
@@ -50,10 +46,6 @@ class ServiceCWL
 			});
 	}
 
-	@rpc({
-		alias:'cwl-test',
-		doc:'Test running a CWL workflow'
-	})
 	public function testWorkflow() :Promise<Bool>
 	{
 		var test = new TestCWLApi();
