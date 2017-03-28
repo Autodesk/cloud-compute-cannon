@@ -22,8 +22,8 @@ etc/hxml/server-build.hxml
 
 # --next
 
-# -cmd echo "Building js npm client"
+-cmd echo "Building js npm client"
 
-# --next
+--next
 
-# etc/hxml/client-js-build.hxml
+etc/hxml/client-js-build.hxml

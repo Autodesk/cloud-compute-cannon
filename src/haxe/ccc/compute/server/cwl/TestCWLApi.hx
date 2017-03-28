@@ -7,7 +7,6 @@ import js.npm.shortid.ShortId;
 class TestCWLApi extends ServerAPITestBase
 {
 	public static var TEST_BASE = 'tests';
-	@inject public var _cwl :ServiceCWL;
 	@inject public var _rpc :RpcRoutes;
 
 	@timeout(240000)
@@ -30,7 +29,7 @@ infile:
 ');
 		inputs.set(inputFileName, testValue);
 
-		return _cwl.workflowRun(git, sha, cwl, input, inputs)
+		return _rpc.workflowRun(git, sha, cwl, input, inputs)
 			.pipe(function(jobResult) {
 				return _rpc.getJobResult(jobResult.jobId);
 			})
@@ -56,7 +55,7 @@ infile:
 		var cwl = 'tests/ccc_docker_workflow/run_workflow.cwl';
 		var input = 'tests/ccc_docker_workflow/input.yml';
 
-		return _cwl.workflowRun(git, sha, cwl, input)
+		return _rpc.workflowRun(git, sha, cwl, input)
 			.pipe(function(jobResult) {
 				return _rpc.getJobResult(jobResult.jobId);
 			})

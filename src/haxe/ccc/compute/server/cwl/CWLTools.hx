@@ -1,12 +1,12 @@
 package ccc.compute.server.cwl;
 
-class ServiceCWL
+class CWLTools
 {
 	public static var CWL_RUNNER_IMAGE = 'docker.io/dionjwa/cwltool-ccc:0.0.6';
 
-	public function workflowRun(git :String, sha :String, cwl:String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
+	public static function workflowRun(docker :Docker, rpc :RpcRoutes, git :String, sha :String, cwl:String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
 	{
-		return getContainerAlias()
+		return getContainerAlias(docker)
 			.pipe(function(containerAlias) {
 				var inputs = inputs == null ? [] :
 					inputs.keys().map(function(key) {
@@ -42,37 +42,23 @@ class ServiceCWL
 						"job-type": "workflow"
 					}
 				};
-				return _rpc.submitJobJson(request);
+				return rpc.submitJobJson(request);
 			});
 	}
 
-	public function testWorkflow() :Promise<Bool>
+	public static function testWorkflow(injector :Injector) :Promise<Bool>
 	{
 		var test = new TestCWLApi();
-		_injector.injectInto(test);
+		injector.injectInto(test);
 		return test.testWorkflowDynamicInput();
 	}
 
-	function getContainerAlias() :Promise<String>
+	static function getContainerAlias(docker :Docker) :Promise<String>
 	{
-		var container = _docker.getContainer(DOCKER_CONTAINER_ID);
+		var container = docker.getContainer(DOCKER_CONTAINER_ID);
 		return DockerPromises.inspect(container)
 			.then(function(data :Dynamic) {
 				return Reflect.field(data.Config.Labels, 'com.docker.compose.service');
 			});
 	}
-
-	@inject public var _injector :Injector;
-	@inject public var _docker :Docker;
-	@inject public var _context :t9.remoting.jsonrpc.Context;
-	@inject public var _rpc :RpcRoutes;
-	@inject('localRPCApi') public var _rpcApiUrl :UrlString;
-
-	@post
-	public function postInject()
-	{
-		_context.registerService(this);
-	}
-
-	public function new(){}
 }

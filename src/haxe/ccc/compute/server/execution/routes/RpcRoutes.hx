@@ -7,7 +7,7 @@ import ccc.compute.shared.TypedDynamicObject;
 import js.npm.bluebird.Bluebird;
 
 #if ((nodejs && !macro) && !excludeccc)
-	import ccc.compute.server.cwl.ServiceCWL;
+	import ccc.compute.server.cwl.CWLTools;
 #end
 
 /**
@@ -24,7 +24,7 @@ class RpcRoutes
 	public function workflowRun(git :String, sha :String, cwl :String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
 	{
 #if ((nodejs && !macro) && !excludeccc)
-		return _serviceCWL.workflowRun(git, sha, cwl, input, inputs);
+		return CWLTools.workflowRun(_docker, this, git, sha, cwl, input, inputs);
 #else
 		return Promise.promise(null);
 #end
@@ -37,7 +37,7 @@ class RpcRoutes
 	public function testWorkflow() :Promise<Bool>
 	{
 #if ((nodejs && !macro) && !excludeccc)
-		return _serviceCWL.testWorkflow();
+		return CWLTools.testWorkflow(_injector);
 #else
 		return Promise.promise(null);
 #end
@@ -417,8 +417,8 @@ class RpcRoutes
 
 #if ((nodejs && !macro) && !excludeccc)
 	@inject public var _injector :minject.Injector;
-	@inject public var _serviceCWL :ServiceCWL;
 	@inject public var _context :t9.remoting.jsonrpc.Context;
+	@inject public var _docker :Docker;
 
 	public function new() {}
 
@@ -470,12 +470,6 @@ class RpcRoutes
 			injector.injectInto(serviceTests);
 		}
 
-		if (!injector.hasMapping(ServiceCWL)) {
-			var serviceWorkflows = new ServiceCWL();
-			injector.map(ServiceCWL).toValue(serviceWorkflows);
-			injector.injectInto(serviceWorkflows);
-		}
-
 		var router = js.node.express.Express.GetRouter();
 		/* /rpc */
 		//Handle the special multi-part requests. These are a special case.
@@ -507,12 +501,6 @@ class RpcRoutes
 			var serviceTests = new ServiceTests();
 			injector.map(ServiceTests).toValue(serviceTests);
 			injector.injectInto(serviceTests);
-		}
-
-		if (!injector.hasMapping(ServiceCWL)) {
-			var serviceWorkflows = new ServiceCWL();
-			injector.map(ServiceCWL).toValue(serviceWorkflows);
-			injector.injectInto(serviceWorkflows);
 		}
 
 		var router = js.node.express.Express.GetRouter();
