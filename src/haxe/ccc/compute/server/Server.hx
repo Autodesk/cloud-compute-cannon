@@ -248,11 +248,6 @@ class Server
 			res.send(Json.stringify(versionBlob));
 		});
 
-		// app.get('/config', function(req, res) {
-		// 	var configCopy = LogTools.removePrivateKeys(config);
-		// 	res.send(Json.stringify(configCopy, null, '  '));
-		// });
-
 		//Check if server is listening
 		app.get(Constants.SERVER_PATH_CHECKS, function(req, res) {
 			res.send(Constants.SERVER_PATH_CHECKS_OK);
@@ -356,6 +351,22 @@ class Server
 				res.json({});
 			}
 		});
+
+		app.use(cast function(err :js.Error, req, res, next) {
+			var errObj = {
+				stack: try err.stack catch(e :Dynamic){null;},
+				error: err,
+				errorJson: try untyped err.toJSON() catch(e :Dynamic){null;},
+				errorString: try untyped err.toString() catch(e :Dynamic){null;},
+				message: try untyped err.message catch(e :Dynamic){null;},
+			}
+			Log.error(errObj);
+			try {
+				traceRed(Json.stringify(errObj, null, '  '));
+			} catch(e :Dynamic) {
+				traceRed(errObj);
+			}
+		});
 	}
 
 	static function createHttpServer(injector :Injector)
@@ -365,19 +376,9 @@ class Server
 		var env :DynamicAccess<String> = Node.process.env;
 
 		//Actually create the server and start listening
-		var appHandler :IncomingMessage->ServerResponse->(Error->Void)->Void = cast app;
-		var requestErrorHandler = function(err :Dynamic) {
-			Log.error({error:err, errorJson:Json.stringify(err), stack:err != null && err.stack != null ? err.stack : null, message:'Uncaught error'});
-		}
-		var server = Http.createServer(function(req, res) {
-			appHandler(req, res, requestErrorHandler);
-		});
-		var serverHTTP = Http.createServer(function(req, res) {
-			appHandler(req, res, requestErrorHandler);
-		});
+		var server = Http.createServer(cast app);
 
 		injector.map(js.node.http.Server, 'Server1').toValue(server);
-		injector.map(js.node.http.Server, 'Server2').toValue(serverHTTP);
 
 		var closing = false;
 		Node.process.on('SIGINT', function() {
@@ -387,30 +388,13 @@ class Server
 			}
 			closing = true;
 			untyped server.close(function() {
-				untyped serverHTTP.close(function() {
-					// if (workerProviders != null) {
-					// 	return Promise.whenAll(workerProviders.map(function(workerProvider) {
-					// 		return workerProvider.dispose();
-					// 	}))
-					// 	.then(function(_) {
-					// 		Node.process.exit(0);
-					// 		return true;
-					// 	});
-					// } else {
-					// 	Node.process.exit(0);
-					// 	return Promise.promise(true);
-					// }
-					Node.process.exit(0);
-				});
+				Node.process.exit(0);
 			});
 		});
 
 		var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
 		server.listen(PORT, function() {
 			Log.info('Listening http://localhost:$PORT');
-			serverHTTP.listen(SERVER_HTTP_PORT, function() {
-				Log.info('Listening http://localhost:$SERVER_HTTP_PORT');
-			});
 		});
 	}
 
@@ -696,10 +680,8 @@ class Server
 		var redis :RedisClient = injector.getValue(RedisClient);
 		var storage :ServiceStorage = injector.getValue(ServiceStorage);
 		var server :js.node.http.Server = injector.getValue(js.node.http.Server, 'Server1');
-		var serverHTTP :js.node.http.Server = injector.getValue(js.node.http.Server, 'Server2');
 		//Websocket server for getting job finished notifications
 		websocketServer(injector.getValue(RedisClient), server, storage);
-		websocketServer(injector.getValue(RedisClient), serverHTTP, storage);
 	}
 
 	static function websocketServer(redis :RedisClient, server :js.node.http.Server, storage :ServiceStorage) :Void
