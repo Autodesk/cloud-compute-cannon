@@ -442,11 +442,14 @@ class BatchComputeDocker
 	static var CACHED_DOCKER_IMAGES = new Map<String, Bool>();
 	public static function ensureDockerImage(docker :Docker, image :String, log :AbstractLogger, ?pull_options :Dynamic) :Promise<Bool>
 	{
+		log.trace({f:'ensureDockerImage image=${image} pull_options=${pull_options}'});
 		if (CACHED_DOCKER_IMAGES.exists(image)) {
+			log.trace({f:'ensureDockerImage image=${image} CACHED_DOCKER_IMAGES.exists == true'});
 			return Promise.promise(true);
 		} else {
 			return DockerPromises.hasImage(docker, image)
 				.pipe(function(imageExists) {
+					log.trace({f:'ensureDockerImage image=${image} docker daemon says image exists? ${imageExists}'});
 					if (imageExists) {
 						log.debug({log:'Image exists=${image}'});
 						CACHED_DOCKER_IMAGES.set(image, true);
