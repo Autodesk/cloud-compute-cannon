@@ -87,6 +87,7 @@ class BatchComputeDockerTurbo
 				var startTimeContainer = Date.now();
 				return runContainer()
 					.pipe(function(results) {
+						log.trace({message:'container run finished', results:results});
 						stats.containerExecution = DateFormatTools.getShortStringOfDateDiff(startTimeContainer, Date.now());
 						stats.containerCreation = results.containerCreateTime;
 						stats.copyLogs = results.copyLogsTime;
@@ -99,17 +100,24 @@ class BatchComputeDockerTurbo
 
 						function removeContainer() {
 							if (results.container != null) {
+								log.trace({message:'removing container'});
 								DockerPromises.removeContainer(results.container, {force:true, v:true})
 									.catchError(function(err) {
 										log.warn({error:err, message:'Failed to remove container'});
+									})
+									.then(function(_) {
+										log.trace({message:'removed container'});
+										return true;
 									});
 							}
 						}
 
 						if (resultBlob != null && error == null && job.ignoreOutputs != true) {
 							var startTimeOutputs = Date.now();
+							log.trace({message:'Getting outputs'});
 							return getOutputs(results.container)
 								.then(function(files) {
+									log.trace({message:'Got outputs'});
 									stats.copyOutputs = DateFormatTools.getShortStringOfDateDiff(startTimeOutputs, Date.now());
 									outputFiles = files;
 									removeContainer();
@@ -134,6 +142,7 @@ class BatchComputeDockerTurbo
 				};
 				stats.total = DateFormatTools.getShortStringOfDateDiff(startTime, Date.now());
 				turboJobs.jobEnd(jobId);
+				log.trace({message:'Finished turbo job'});
 				return jobResultsFinal;
 			});
 	}
@@ -214,7 +223,7 @@ class BatchComputeDockerTurbo
 				if (job.inputs != null && job.inputs.keys().length > 0) {
 					modifiedPathInputs = {};
 					for (key in job.inputs.keys()) {
-						modifiedPathInputs['$containerInputsPath/$key'] = job.inputs[key];
+						modifiedPathInputs['$containerInputsPath/$key'] = Std.string(job.inputs[key]);
 					}
 				}
 
@@ -222,6 +231,7 @@ class BatchComputeDockerTurbo
 
 				return DockerJobTools.runDockerContainer(docker, opts, inputStream, inputStream != null ? copyInputsOpts : null, null, log)
 					.then(function(containerunResult) {
+						log.trace({message:'after DockerJobTools.runDockerContainer', result:containerunResult});
 						result.error = containerunResult.error;
 						result.copyInputsTime = containerunResult.copyInputsTime;
 						result.container = containerunResult.container;
@@ -234,6 +244,9 @@ class BatchComputeDockerTurbo
 			.pipe(function(container) {
 				if (container == null) {
 					throw 'Missing container when attempting to run';
+					return Promise.promise(true);
+				} else if (result.error != null) {
+					log.trace('Skipping containe.wait because there was an error in the run');
 					return Promise.promise(true);
 				} else {
 					//Wait for the container to finish, but also monitor
@@ -265,8 +278,10 @@ class BatchComputeDockerTurbo
 							Node.clearTimeout(timeoutId);
 						});
 
+					log.trace({message:'docker container wait'});
 					DockerPromises.wait(container)
 						.then(function(status :{StatusCode:Int}) {
+							log.trace({message:'Returned from docker.wait', status:status});
 							if (promise == null) {
 								return;
 							}
@@ -287,6 +302,7 @@ class BatchComputeDockerTurbo
 							promise = null;
 						})
 						.catchError(function(err) {
+							log.error({error:err, message:'Error waiting for container to finish'});
 							if (promise != null) {
 								promise.boundPromise.reject(err);
 							} else {

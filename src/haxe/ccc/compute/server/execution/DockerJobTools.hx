@@ -257,21 +257,28 @@ class DockerJobTools
 		return Promise.promise(true)
 			.pipe(function(_) {
 				var promise = new DeferredPromise();
+				log.trace({message:'createContainer', opts:opts});
 				docker.createContainer(opts, function(createContainerError, container) {
 					if (createContainerError != null) {
 						log.error({log:'error_creating_container', opts:opts, error:createContainerError});
 						promise.boundPromise.reject({dockerCreateContainerOpts:opts, error:createContainerError});
 						return;
 					}
+					log.trace({message:'container created without error'});
 					result.container = container;
 					result.containerCreateTime = DateFormatTools.getShortStringOfDateDiff(startTime, Date.now());
 
 					var finished = false;
 					if (kill != null) {
 						kill.then(function(ok) {
+							log.trace({message:'container kill message received '});
 							if (!finished) {
+								log.trace({message:'container.kill()'});
 								container.kill(function(err, data) {
-									traceMagenta('killed err=$err data=$data');
+									if (err != null) {
+										log.trace({message:'container killed error', error:err});
+									}
+									log.trace({message:'container killed', data:data});
 								});
 							}
 						});
@@ -286,8 +293,10 @@ class DockerJobTools
 					return Promise.promise(true);
 				} else {
 					var startInputCopyTime = Date.now();
+					log.trace({message:'DockerPromises.copyIn start', inputsOpts:inputsOpts});
 					return DockerPromises.copyIn(result.container, inputs, inputsOpts)
 						.then(function(_) {
+							log.trace({message:'DockerPromises.copyIn finished'});
 							result.copyInputsTime = DateFormatTools.getShortStringOfDateDiff(startInputCopyTime, Date.now());
 							return true;
 						});
@@ -295,11 +304,14 @@ class DockerJobTools
 			})
 			.pipe(function(_) {
 				if (result.container == null) {
+					log.warn({message:'No container returned'});
 					return Promise.promise(null);
 				} else {
 					var promise = new DeferredPromise();
 					result.containerExecutionStart = Date.now();
+					log.trace({message:'Starting container'});
 					result.container.start(function(containerStartError, data) {
+						log.trace({message:'Started container', error:containerStartError, data:data});
 						if (containerStartError != null) {
 							result.error = containerStartError;
 							promise.resolve(result);

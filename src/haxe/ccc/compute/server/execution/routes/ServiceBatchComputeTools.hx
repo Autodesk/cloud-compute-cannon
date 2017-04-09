@@ -445,7 +445,7 @@ class ServiceBatchComputeTools
 				switch(type) {
 					case InputInline:
 						if (input.value != null) {
-							var buffer = new Buffer(input.value, encoding);
+							var buffer = new Buffer(Std.string(input.value), encoding);
 							promises.push(fs.writeFile(inputFilePath, Streamifier.createReadStream(buffer)));//{encoding:encoding}
 							inputNames.push(input.name);
 						}
