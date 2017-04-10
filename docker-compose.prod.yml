@@ -18,8 +18,7 @@ services:
         max-size: 50m
 
   redis:
-    volumes:
-      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    image: dionjwa/cloud-compute-cannon-redis:0.2.1
     logging:
       driver: "fluentd"
       options:

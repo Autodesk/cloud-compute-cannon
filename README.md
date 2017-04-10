@@ -167,6 +167,13 @@ http://<host>:5601/_cat/indices
 
 and you should see logstash-*** indices.
 
+## Utils
+
+Get a docker-compose file to run a stack locally:
+
+```
+docker run --rm dionjwa/cloud-compute-cannon cat etc/docker-compose/single-server/docker-compose.yml > test.compose.yml
+```
 ## Configuration
 
 Deploying to a remote machine, or deploying anywhere that uses real cloud providers (e.g. AWS, GCE) requires passing in a configuration file.
