@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+#Build and tag the docker images locally
+#This needs to happen only very occasionally, so it is not part
+#of any automated build script
+
+echo "Building and tagging secondary images"
+set -e
+
+#The secondary images use the package.json versioning, not the git versioning
+PACKAGE_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+#Redis
+REPO_NAME="dionjwa/cloud-compute-cannon-redis:$PACKAGE_VERSION"
+pushd etc/redis
+docker build -t $REPO_NAME .
+docker push $REPO_NAME
+echo $REPO_NAME
+
+popd
+
+#Fluent
+REPO_NAME="dionjwa/cloud-compute-cannon-fluent:$PACKAGE_VERSION"
+pushd etc/log
+docker build --tag $REPO_NAME --file DockerfileElasticSearch .
+docker push $REPO_NAME
+echo $REPO_NAME

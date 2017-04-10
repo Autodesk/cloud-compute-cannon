@@ -17,10 +17,7 @@ services:
         max-size: 50m
 
   redis:
-    #This config disables persistance to disk since we do not need it for development
-    command: redis-server /usr/local/etc/redis/redis.conf
-    volumes:
-      - ./etc/redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    image: dionjwa/cloud-compute-cannon-redis:0.2.1
     ports:
       #Don't expose this port to the host, only linked containers.
       - "6379:6379"

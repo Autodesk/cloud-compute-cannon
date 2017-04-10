@@ -20,6 +20,7 @@ EXPOSE $PORT
 
 ADD server $APP/server
 ADD web $APP/web
+ADD etc $APP/etc
 COPY VERSION $APP/VERSION
 
 CMD forever server/cloud-compute-cannon-server.js
