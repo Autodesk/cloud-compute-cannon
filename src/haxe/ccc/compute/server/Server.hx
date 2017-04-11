@@ -218,7 +218,7 @@ class Server
 
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
-			res.send(versionBlob.VERSION);
+			res.send(versionBlob.git);
 		});
 
 		function test(req, res) {
