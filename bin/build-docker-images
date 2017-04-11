@@ -4,7 +4,7 @@ echo "Building and tagging images"
 set -e
 git submodule update --init --recursive
 
-# ./bin/compile
+./bin/compile
 
 GIT_TAG=`git rev-parse HEAD`
 if [ ! -z "$TRAVIS_COMMIT" ]; then
