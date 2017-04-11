@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description": "(v1.0.3) CCC redis cluster. Custom to bionano infrastructure",
+  "Description": "(v1.0.5) Script to create redis cluster and internal url in bionano.bio DNS domain.",
 
   "Parameters": {
     "BionanoEnvironment": {
@@ -9,6 +9,12 @@
       "Default": "dev",
       "AllowedValues" : ["dev", "qa", "prod"]
     },
+    "RedisURLPrefix": {
+      "Description": "Prefix for internal url for this redis cluster. Prefix is first part of url, such as 'redis-myapp'. This will become: redis-myapp.dev.bionano.bio",
+      "Type": "String",
+      "Default": "redis-myapp"
+    },
+
     "ClusterNodeType" : {
       "Default" : "cache.m1.small",
       "Description" : "The compute and memory capacity of the nodes in the Redis Cluster",
@@ -68,7 +74,7 @@
       "Properties" : {
         "HostedZoneName" : {"Fn::FindInMap" : [ "Settings", "HostedZone", "Value" ] },
         "Comment" : "DNS entry for CCC redis cache",
-        "Name" : { "Fn::Join" : [ ".", ["redis-ccc", { "Ref" : "BionanoEnvironment" }, "bionano.bio."]]},
+        "Name" : { "Fn::Join" : [ ".", [ {"Ref": "RedisURLPrefix"} , { "Ref" : "BionanoEnvironment" }, "bionano.bio."]]},
         "Type" : "CNAME",
         "TTL" : "30",
         "ResourceRecords" : [ { "Fn::GetAtt" : [ "RedisCluster", "PrimaryEndPoint.Address" ] } ]
