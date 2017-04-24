@@ -168,7 +168,7 @@ class ServerCommands
 	}
 
 	static var _versionBlob :ServerVersionBlob;
-	static function versionInternal()
+	static function versionInternal() :ServerVersionBlob
 	{
 		var date = util.MacroUtils.compilationTime();
 		var haxeCompilerVersion = Version.getHaxeCompilerVersion();
@@ -196,7 +196,16 @@ class ServerCommands
 			Fs.writeFileSync('INSTANCE_VERSION', instanceVersion, {encoding:'utf8'});
 		}
 
-		return {npm:npmPackageVersion, git:gitSha, compiler:haxeCompilerVersion, VERSION:customVersion, instance:instanceVersion, compile_time:date};
+		var blob :ServerVersionBlob = {
+			npm: npmPackageVersion,
+			git: gitSha,
+			compiler: haxeCompilerVersion,
+			VERSION: customVersion,
+			instance: instanceVersion,
+			compile_time: date
+		};
+
+		return blob;
 	}
 
 	// public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>

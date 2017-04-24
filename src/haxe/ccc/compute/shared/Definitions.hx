@@ -541,6 +541,8 @@ typedef ServerVersionBlob = {
 	var npm :String;
 	var compiler :String;
 	var instance :String;
+	var git :String;
+	var compile_time :String;
 	@:optional var VERSION :String;
 }
 
