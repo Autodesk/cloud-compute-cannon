@@ -247,7 +247,38 @@ class JobCommands
 	{
 		var redis :RedisClient = injector.getValue(RedisClient);
 		var jobStateTools :JobStateTools = redis;
-		return jobStateTools.getStatus(jobId);
+		return jobStateTools.jsonify()
+			.pipe(function(blob) {
+				traceCyan('getStatus jobId=$jobId\nall=$blob');
+				return jobStateTools.getStatus(jobId);
+			});
+		// return jobStateTools.getStatus(jobId);
+	}
+
+	public static function getStatusv1(injector :Injector, jobId :JobId) :Promise<Null<String>>
+	{
+		var redis :RedisClient = injector.getValue(RedisClient);
+		var jobStateTools :JobStateTools = redis;
+		return jobStateTools.getStatus(jobId)
+			.pipe(function(status) {
+				if (status == JobStatus.Working) {
+					return jobStateTools.getWorkingStatus(jobId)
+						.then(function(workingStatus) {
+							if (workingStatus == JobWorkingStatus.CopyingInputsAndImage) {
+								workingStatus = JobWorkingStatus.CopyingInputs;
+							}
+							if (workingStatus == JobWorkingStatus.CopyingOutputsAndLogs) {
+								workingStatus = JobWorkingStatus.CopyingOutputs;
+							}
+							if (workingStatus == JobWorkingStatus.None) {
+								workingStatus = JobWorkingStatus.CopyingInputs;
+							}
+							return workingStatus;
+						});
+				} else {
+					return Promise.promise(cast status);
+				}
+			});
 	}
 
 	public static function getStdout(injector :Injector, jobId :JobId) :Promise<String>

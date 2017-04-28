@@ -597,15 +597,17 @@ class BatchComputeDocker
 					if (timeout == null) {
 						timeout = DEFAULT_MAX_JOB_TIME_MS;
 					}
-					var timeoutId = Node.setTimeout(function() {
-						log.warn({message:'Timed out'});
-						isTimedOut = true;
-						if (promise != null) {
-							promise.resolve(true);
-							promise = null;
-							container.kill(function(err,_) {});
-						}
-					}, timeout * 1000);
+					trace('timeout in seconds=${timeout}');
+					var timeoutId = null;
+					// var timeoutId = Node.setTimeout(function() {
+					// 	log.warn({message:'Timed out', timeoutInSeconds:timeout});
+					// 	isTimedOut = true;
+					// 	if (promise != null) {
+					// 		promise.resolve(true);
+					// 		promise = null;
+					// 		container.kill(function(err,_) {});
+					// 	}
+					// }, timeout * 1000);
 
 					promise.boundPromise
 						.errorPipe(function(err) {
@@ -632,10 +634,12 @@ class BatchComputeDocker
 								// throw error;
 							}
 							jobStats.jobContainerExited(jobId, exitCode, error);
+							Node.clearTimeout(timeoutId);
 							promise.resolve(true);
 							promise = null;
 						})
 						.catchError(function(err) {
+							Node.clearTimeout(timeoutId);
 							if (promise != null) {
 								promise.boundPromise.reject(err);
 							} else {

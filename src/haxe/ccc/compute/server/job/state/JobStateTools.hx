@@ -46,6 +46,11 @@ abstract JobStateTools(RedisClient) from RedisClient
 		return RedisPromises.hget(this, JobStateScripts.REDIS_KEY_HASH_JOB_STATUS, jobId);
 	}
 
+	inline public function getStatuses() :Promise<Dynamic>
+	{
+		return RedisPromises.hgetall(this, JobStateScripts.REDIS_KEY_HASH_JOB_STATUS);
+	}
+
 	inline public function setStatus(jobId :JobId, status :JobStatus, ?finishedStatus :JobFinishedStatus, ?error :String) :Promise<Bool>
 	{
 		return JobStateScripts.evaluateLuaScript(this, JobStateScripts.SCRIPT_SET_JOB_STATES, [jobId, status, null, finishedStatus, error]);
@@ -75,6 +80,20 @@ abstract JobStateTools(RedisClient) from RedisClient
 	inline public function cancelJob(jobId :JobId) :Promise<Bool>
 	{
 		return JobStateScripts.evaluateLuaScript(this, JobStateScripts.SCRIPT_JOB_CANCELLED, [jobId]);
+	}
+
+	inline public function jsonify() :Promise<Dynamic>
+	{
+		return RedisPromises.hgetall(this, JobStateScripts.REDIS_KEY_HASH_JOB_STATUS)
+			.pipe(function(allStatus) {
+				return RedisPromises.hgetall(this, JobStateScripts.REDIS_KEY_HASH_JOB_STATUS_WORKING)
+					.then(function(allWorkingStatus) {
+						return {
+							status: allStatus,
+							workingStatus: allWorkingStatus
+						};
+					});
+			});
 	}
 }
 

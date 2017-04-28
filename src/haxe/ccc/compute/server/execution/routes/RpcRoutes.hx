@@ -101,7 +101,7 @@ class RpcRoutes
 	}
 
 	@rpc({
-		alias: 'job',
+		alias: 'jobv2',
 		doc: 'Commands to query jobs, e.g. status, outputs.',
 		args: {
 			'command': {'doc':'Command to run in the docker container [remove | kill | result | status | exitcode | stats | definition | time]'},
@@ -109,10 +109,149 @@ class RpcRoutes
 		},
 		docCustom:'   With no jobId arguments, all jobs are returned.\n   commands:\n      remove\n      kill\n      result\n      status\t\torder of job status: [pending,copying_inputs,copying_image,container_running,copying_outputs,copying_logs,finalizing,finished]\n      exitcode\n      stats\n      definition\n      time'
 	})
-	public function doJobCommand(command :JobCLICommand, jobId :JobId) :Promise<Dynamic>
+	public function doJobCommand_v2(command :JobCLICommand, jobId :JobId) :Promise<Dynamic>
 	{
 #if ((nodejs && !macro) && !excludeccc)
 		return JobCommands.doJobCommand(_injector, jobId, command);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+@rpc({
+		alias: 'job',
+		doc: 'Commands to query jobs, e.g. status, outputs.',
+		args: {
+			'command': {'doc':'Command to run in the docker container [remove | kill | result | status | exitcode | stats | definition | time]'},
+			'jobId': {'doc': 'Job Id(s)'},
+			'json': {'doc': 'Output is JSON instead of human readable [true]'},
+		},
+		docCustom:'   With no jobId arguments, all jobs are returned.\n   commands:\n      remove\n      kill\n      result\n      status\t\torder of job status: [pending,copying_inputs,copying_image,container_running,copying_outputs,copying_logs,finalizing,finished]\n      exitcode\n      stats\n      definition\n      time'
+	})
+	public function doJobCommand(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = true) :Promise<TypedDynamicObject<JobId,Dynamic>>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		if (command == null) {
+			return PromiseTools.error('Missing command.');
+		}
+		// switch(command) {
+		// 	case Status:
+		// 		//The special case of the status of all jobs. Best to
+		// 		//do it all in one go instead of piecemeal.
+		// 		if (jobId == null || jobId.length == 0) {
+		// 			return ComputeQueue.getJobStatuses(_redis)
+		// 				.then(function(jobStatusBlobs :TypedDynamicObject<JobId,JobStatusBlob>) {
+		// 					var result :TypedDynamicObject<JobId,String> = {};
+		// 					for (jobId in jobStatusBlobs.keys()) {
+		// 						var statusBlob :JobStatusBlob = jobStatusBlobs[jobId];
+		// 						var s :String = statusBlob.status == JobStatus.Working ? statusBlob.statusWorking : statusBlob.status;
+		// 						result[jobId] = s;
+		// 					}
+		// 					return result;
+		// 				})
+		// 				.errorPipe(function(err) {
+		// 					Log.error(err);
+		// 					return Promise.promise(null);
+		// 				});
+		// 		}
+		// 	default://continue
+		// }
+
+		// if (jobId == null || jobId.length == 0 || (jobId.length == 1 && jobId[0] == null)) {
+		// 	return ComputeQueue.getAllJobIds(_redis)
+		// 		.pipe(function(jobId) {
+		// 			return __doJobCommandInternal(command, jobId, json);
+		// 		});
+		// } else {
+			// var validJobPromises = jobId.map(function(j) return ComputeQueue.isJob(_redis, j));
+			// var invalidJobIds = [];
+			// return Promise.whenAll(validJobPromises)
+			// 	.pipe(function(jobChecks) {
+			// 		var validJobIds = [];
+			// 		for (i in 0...jobId.length) {
+			// 			var jid = jobId[i];
+			// 			if (jobChecks[i]) {
+			// 				validJobIds.push(jid);
+			// 			} else {
+			// 				invalidJobIds.push(jid);
+			// 			}
+			// 		}
+					return __doJobCommandInternal(command, jobId, json);
+				// })
+				// .then(function(results) {
+				// 	for (invalidJobId in invalidJobIds) {
+				// 		Reflect.setField(results, invalidJobId, RESULT_INVALID_JOB_ID);
+				// 	}
+				// 	return results;
+				// });
+		// }
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	function __doJobCommandInternal(command :JobCLICommand, jobId :Array<JobId>, ?json :Bool = false) :Promise<TypedDynamicObject<JobId,Dynamic>>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		switch(command) {
+			case Remove,RemoveComplete,Kill,Status,Result,ExitCode,Definition,JobStats,Time:
+			default:
+				return Promise.promise(cast {error:'Unrecognized job subcommand=\'$command\' [remove | kill | result | status | exitcode | stats | definition | time]'});
+		}
+
+		var jobIds = jobId;//Better name
+
+		function getResultForJob(job) :Promise<Dynamic> {
+			return switch(command) {
+				case Remove:
+					JobCommands.removeJob(_injector, job);
+				case RemoveComplete:
+					JobCommands.deleteJobFiles(_injector, job)
+						.pipe(function(_) {
+							return JobCommands.removeJob(_injector, job);
+						});
+				case Kill:
+					JobCommands.killJob(_injector, job);
+				case Status:
+					JobCommands.getStatusv1(_injector, job);
+				case Result:
+					JobCommands.getJobResults(_injector, job);
+				case ExitCode:
+					JobCommands.getExitCode(_injector, job);
+				case JobStats:
+					JobCommands.getJobStats(_injector, job)
+						.then(function(stats) {
+							return stats != null ? stats.toJson() : null;
+						});
+				case Time:
+					JobCommands.getJobStats(_injector, job)
+						.then(function(stats) {
+							if (stats != null) {
+								return stats != null ? stats.toJson() : null;
+								var enqueueTime = stats.enqueueTime;
+								var finishTime = stats.finishTime;
+								var result = {
+									start: stats.enqueueTime,
+									duration: stats.isFinished() ? stats.finishTime - stats.enqueueTime : null
+								}
+								return result;
+							} else {
+								return null;
+							}
+						});
+				case Definition:
+					JobCommands.getJobDefinition(_injector, job);
+			}
+		}
+
+		return Promise.whenAll(jobIds.map(getResultForJob))
+			.then(function(results :Array<Dynamic>) {
+				var result :TypedDynamicObject<JobId,Dynamic> = {};
+				for(i in 0...jobIds.length) {
+					Reflect.setField(result, jobIds[i], results[i]);
+				}
+				return result;
+			});
 #else
 		return Promise.promise(null);
 #end

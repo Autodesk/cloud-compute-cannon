@@ -211,6 +211,7 @@ class ProcessQueue
 
 		statusStream.then(function(statusUpdate) {
 			if (_localJobProcess.exists(statusUpdate.jobId)) {
+				traceCyan('statusUpdate=${statusUpdate}');
 				if (statusUpdate.statusFinished == JobFinishedStatus.TimeOut) {
 					_localJobProcess.get(statusUpdate.jobId).timeout();
 				} else if (statusUpdate.statusFinished == JobFinishedStatus.Killed) {
@@ -387,6 +388,7 @@ class JobProcessObject
 
 	public function timeout()
 	{
+		traceCyan('Calling timeout on process queue job');
 		_cancelled = true;
 		finish(ProcessFinishReason.Timeout);
 	}
@@ -477,6 +479,7 @@ class JobProcessObject
 
 					return executeBlob.promise
 						.pipe(function(batchJobResult :BatchJobResult) {
+							traceCyan('batchJobResult=${batchJobResult}');
 							if (_isFinished) {
 								return Promise.promise(true);
 							} else {

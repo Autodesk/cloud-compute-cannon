@@ -78,11 +78,11 @@ class TestFailureConditions extends ServerAPITestBase
 			})
 			.thenWait(10)
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.Kill, jobId);
+				return routes.doJobCommand_v2(JobCLICommand.Kill, jobId);
 			})
 			.thenWait(10)
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.Result, jobId)
+				return routes.doJobCommand_v2(JobCLICommand.Result, jobId)
 					.errorPipe(function(err) {
 						return Promise.promise(null);
 					});
