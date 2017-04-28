@@ -32,7 +32,7 @@ class ServerTestTools
 	{
 		var proxy = getProxy(SERVER_LOCAL_RPC_URL);
 		function getJobData() {
-			return cast proxy.doJobCommand(JobCLICommand.Result, jobId);
+			return cast proxy.doJobCommand_v2(JobCLICommand.Result, jobId);
 		}
 		return JobWebSocket.getJobResult(SERVER_LOCAL_HOST, jobId, getJobData);
 	}
