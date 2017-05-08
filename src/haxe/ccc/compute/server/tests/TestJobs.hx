@@ -57,38 +57,38 @@ class TestJobs extends ServerAPITestBase
 			})
 			.thenWait(300)
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.Remove, jobId);
+				return routes.doJobCommand_v2(JobCLICommand.Remove, jobId);
 			})
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.Result, jobId)
+				return routes.doJobCommand_v2(JobCLICommand.Result, jobId)
 					.then(function(jobResult) {
 						assertNotNull(jobResult);
 						return true;
 					});
 			})
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.ExitCode, jobId)
+				return routes.doJobCommand_v2(JobCLICommand.ExitCode, jobId)
 					.then(function(exitCode) {
 						assertNotNull(exitCode);
 						return true;
 					});
 			})
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.Definition, jobId)
+				return routes.doJobCommand_v2(JobCLICommand.Definition, jobId)
 					.then(function(definition) {
 						assertNotNull(definition);
 						return true;
 					});
 			})
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.JobStats, jobId)
+				return routes.doJobCommand_v2(JobCLICommand.JobStats, jobId)
 					.then(function(stats) {
 						assertNotNull(stats);
 						return true;
 					});
 			})
 			.pipe(function(_) {
-				return routes.doJobCommand(JobCLICommand.RemoveComplete, jobId)
+				return routes.doJobCommand_v2(JobCLICommand.RemoveComplete, jobId)
 					.then(function(jobResult) {
 						return true;
 					});
@@ -503,6 +503,7 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 			outputsPath: customOutputsPath,
 			inputsPath: customInputsPath,
 			resultsPath: customResultsPath,
+			wait: true
 		};
 
 		var formData :DynamicAccess<Dynamic> = {};
@@ -535,6 +536,7 @@ cp /$DIRECTORY_INPUTS/$inputName2 /$DIRECTORY_OUTPUTS/$outputName2
 								if (jobResult == null) {
 									throw 'jobResult should not be null. Check the above section';
 								}
+								traceCyan('jobResult=$jobResult');
 								var outputs = jobResult.outputs != null ? jobResult.outputs : [];
 								assertEquals(outputs.length, 2);
 								var outputUrl1 = jobResult.getOutputUrl(outputName1);

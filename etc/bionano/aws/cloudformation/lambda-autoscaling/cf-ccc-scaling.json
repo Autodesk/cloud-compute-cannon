@@ -29,7 +29,7 @@
     "SecGroupIds": {
       "Description": "Subnetworks for servers to be scalled into. Seperate multiple entries by commas ','.",
       "Type": "List<AWS::EC2::SecurityGroup::Id>"
-    }    
+    }
   },
 
 

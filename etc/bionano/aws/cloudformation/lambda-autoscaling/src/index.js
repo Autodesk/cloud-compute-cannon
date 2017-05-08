@@ -4,7 +4,7 @@ var Promise = require('bluebird');
 
 var BNR_ENVIRONMENT = process.env['BNR_ENVIRONMENT'];
 var redisUrl = 'redis-ccc.' + BNR_ENVIRONMENT + '.bionano.bio';
-var AppTagValue = 'ccc';
+var AppTagValue = 'cloudcomputecannon';
 
 var autoscaling = new AWS.AutoScaling();
 var ec2 = new AWS.EC2();
@@ -12,6 +12,7 @@ var ec2 = new AWS.EC2();
 var redis = Redis.createClient({host:redisUrl, port:6379});
 var AutoscalingGroup = null;
 var AutoscalingGroupName = null;
+
 /**
  * Returns the AutoscalingGroup name with the
  * tag: stack=<stackKeyValue>
@@ -35,10 +36,11 @@ function getAutoscalingGroup(disableCache) {
 			}
 			autoscaling.describeAutoScalingGroups(params, function(err, data) {
 				if (err) {
+					console.error(err);
 					reject(err);
 					return;
 				}
-				var asgs = data['AutoScalingGroups'];
+				var asgs = 'AutoScalingGroups' in data ? data['AutoScalingGroups'] : data;
 				var cccAutoscalingGroup = null;
 				for (var i = 0; i < asgs.length; i++) {
 					if (cccAutoscalingGroup) {
@@ -46,15 +48,13 @@ function getAutoscalingGroup(disableCache) {
 					}
 					var asg = asgs[i];
 					var tags = asg['Tags'];
+
 					if (tags) {
-						for (var j = 0; j < tags.length; j++) {
-							var tag = tags[j];
-							// allowing both app=(ccc | ccc-v1) and environment=(dev | dev-v2). iterating app tag first as there should be fewer hits for that
-							if (tag['Key'] == 'app' && tag['Value'].startsWith(AppTagValue) && tag['Key'] == 'environment' && tag['Value'].startsWith(BNR_ENVIRONMENT) ) {
-								cccAutoscalingGroup = asg;
-								AutoscalingGroupName = asg.AutoscalingGroupName;
-								break;
-							}
+						var isCorrectEnv = tags.find((tag) => {return tag['Key'] == 'environment' && tag['Value'].startsWith(BNR_ENVIRONMENT);});
+						var isCorrectApp = tags.find((tag) => {return tag['Key'] == 'app' && tag['Value'].startsWith(AppTagValue);});
+						if (isCorrectEnv && isCorrectApp) {
+							cccAutoscalingGroup = asg;
+							AutoscalingGroupName = asg.AutoscalingGroupName;
 						}
 					}
 				}
@@ -108,7 +108,7 @@ function getInstanceInfo(instanceId, disableCache) {
 				if (err) {
 					reject(err);
 				} else {
-					var instanceData = data && data.Reservations && data.Reservations[0] &&  && data.Reservations[0].Instances && data.Reservations[0].Instances[0];
+					var instanceData = data && data.Reservations && data.Reservations[0] && data.Reservations[0].Instances && data.Reservations[0].Instances[0];
 					instanceInfos[instanceId] = instanceData;
 					resolve(instanceData);
 				}
@@ -248,6 +248,10 @@ function removeUnhealthyWorkers() {
 	console.log('removeUnhealthyWorkers');
 	return getAutoscalingGroup()
 		.then(function(asg) {
+			if (asg == null) {
+				console.error('removeUnhealthyWorkers asg == null');
+				return Promise.resolve(true);
+			}
 			//Only concern ourselves with healthy instances.
 			var instances = asg.Instances.filter(function(instanceData) {
 				return instanceData["LifecycleState"] == "InService" && instanceData["HealthStatus"] == "Healthy";

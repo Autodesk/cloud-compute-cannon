@@ -7,6 +7,8 @@ if [ $# -eq 0 ]; then
     echo ""
     echo "    -k/--key         AWS Access Key Id"
     echo "    -s/--secret      AWS Access Key Secret"
+    echo "    -n/--subnets     AWS subnet ids (comma separated)"
+    echo "    -g/--secgroup    AWS security group ids (comma separated)"
     echo "    -t/--tag         BNP env tag (dev|qa|prod). Defaults to dev. Determines deploy region"
     echo ""
     exit 0
@@ -34,12 +36,16 @@ case $key in
     AWS_SECRET_ACCESS_KEY="$2"
     shift # past argument
     ;;
-    -s|--secret)
-    AWS_SECRET_ACCESS_KEY="$2"
-    shift # past argument
-    ;;
     -t|--tag)
     BNR_ENVIRONMENT="$2"
+    shift # past argument
+    ;;
+    -n|--subnets)
+    SUBNETS="$2"
+    shift # past argument
+    ;;
+    -g|--secgroup)
+    SEC_GROUPS="$2"
     shift # past argument
     ;;
     *)
@@ -88,22 +94,26 @@ isStack(){
 	$COMMAND > /dev/null 2>&1
 }
 
+PARAMETERSTRING='[{"ParameterKey":"S3Bucket","ParameterValue":"S3BUCKET"},{"ParameterKey":"S3Key","ParameterValue":"S3KEY"},{"ParameterKey":"BionanoEnvironment","ParameterValue":"BNR_ENVIRONMENT"},{"ParameterKey":"SubNetIds","ParameterValue":"SUBNETS"},{"ParameterKey":"SecGroupIds","ParameterValue":"SEC_GROUPS"}]'
+PARAMETERSTRING=${PARAMETERSTRING/S3BUCKET/$S3BUCKET}
+PARAMETERSTRING=${PARAMETERSTRING/S3KEY/$S3KEY}
+PARAMETERSTRING=${PARAMETERSTRING/BNR_ENVIRONMENT/$BNR_ENVIRONMENT}
+PARAMETERSTRING=${PARAMETERSTRING/SUBNETS/$SUBNETS}
+PARAMETERSTRING=${PARAMETERSTRING/SEC_GROUPS/$SEC_GROUPS}
+echo $PARAMETERSTRING > parameters.json
+
 if isStack ; then
 	echo "Stack exists, updating..."
-	aws --region $REGION cloudformation update-stack \
-		--stack-name $STACKNAME \
-		--capabilities CAPABILITY_IAM \
-		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
-		    ParameterKey=S3Key,ParameterValue=$S3KEY \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
-		--template-body file://$DIR/cf-ccc-scaling.json
+    aws --region $REGION cloudformation update-stack \
+        --stack-name $STACKNAME \
+        --parameters file://$DIR/parameters.json \
+        --capabilities CAPABILITY_IAM \
+        --template-body file://$DIR/cf-ccc-scaling.json
 else
 	echo "Stack does not exist, creating..."
 	aws --region $REGION cloudformation create-stack \
 		--stack-name $STACKNAME \
-		--capabilities CAPABILITY_IAM \
-		--parameters ParameterKey=S3Bucket,ParameterValue=$S3BUCKET \
-		    ParameterKey=S3Key,ParameterValue=$S3KEY \
-		    ParameterKey=BionanoEnvironment,ParameterValue=$BNR_ENVIRONMENT \
-		--template-body file://$DIR/cf-ccc-scaling.json
+        --parameters file://$DIR/parameters.json \
+        --capabilities CAPABILITY_IAM \
+        --template-body file://$DIR/cf-ccc-scaling.json
 fi
