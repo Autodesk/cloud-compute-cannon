@@ -249,10 +249,8 @@ class JobCommands
 		var jobStateTools :JobStateTools = redis;
 		return jobStateTools.jsonify()
 			.pipe(function(blob) {
-				traceCyan('getStatus jobId=$jobId\nall=$blob');
 				return jobStateTools.getStatus(jobId);
 			});
-		// return jobStateTools.getStatus(jobId);
 	}
 
 	public static function getStatusv1(injector :Injector, jobId :JobId) :Promise<Null<String>>
