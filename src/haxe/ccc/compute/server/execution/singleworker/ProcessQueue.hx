@@ -43,6 +43,8 @@ enum ProcessFinishReason {
 	Error(err :Dynamic);
 	Timeout;
 	DockerContainerKilled;
+	/* This should not happen, but it does */
+	MissingJobDefinition;
 }
 
 
@@ -175,7 +177,7 @@ class ProcessQueue
 			})
 			.then(function(reason) {
 				switch(reason) {
-					case Cancelled,Timeout://Do nothing
+					case Cancelled,Timeout,MissingJobDefinition://Do nothing
 					case Success(result):
 						//The results have already been written, so nothing more to do
 					case Stalled:
@@ -409,7 +411,7 @@ class JobProcessObject
 		Jobs.removeJobWorker(jobId, _workerState.id)
 			.then(function(_) {
 				switch(reason) {
-					case Cancelled:
+					case Cancelled,MissingJobDefinition:
 						_cancelled = true;
 						_done(null, null);
 						_deferred.resolve(reason);
@@ -467,6 +469,13 @@ class JobProcessObject
 					return jobs.getJob(jobId);
 				})
 				.pipe(function(job) {
+
+					if (job == null) {
+						log.error({error:'MissingJobDefinition'});
+						finish(ProcessFinishReason.MissingJobDefinition);
+						return Promise.promise(true);
+					}
+
 					var executeBlob = null;
 					try {
 						executeBlob = BatchComputeDocker.executeJob(_redis, job, DOCKER_CONNECT_OPTS_LOCAL, _remoteStorage, _killedDeferred.boundPromise, log);
