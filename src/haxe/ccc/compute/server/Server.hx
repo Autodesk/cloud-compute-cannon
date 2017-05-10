@@ -9,10 +9,10 @@ import js.node.Process;
 import js.node.http.*;
 import js.npm.RedisClient;
 import js.npm.docker.Docker;
-import js.node.express.Express;
-import js.node.express.Application;
-import js.node.express.ExpressRequest;
-import js.node.express.ExpressResponse;
+import js.npm.express.Express;
+import js.npm.express.Application;
+import js.npm.express.Request;
+import js.npm.express.Response;
 import js.npm.JsonRpcExpressTools;
 import js.npm.Ws;
 import js.npm.RedisClient;
@@ -313,7 +313,7 @@ class Server
 		});
 
 		//Check if server is listening
-		app.get('/jobcount', function(req, res :ExpressResponse) {
+		app.get('/jobcount', function(req, res :Response) {
 			if (injector.hasMapping(WorkerController)) {
 				var wc :WorkerController = injector.getValue(WorkerController);
 				wc.jobCount()
@@ -329,7 +329,7 @@ class Server
 		});
 
 		//Quick summary of worker jobs counts for scaling control.
-		app.get('/worker-jobs', function(req, res :ExpressResponse) {
+		app.get('/worker-jobs', function(req, res :Response) {
 			if (injector.hasMapping(RedisClient)) {
 				var redis :RedisClient = injector.getValue(RedisClient);
 				var jobs :Jobs = redis;
@@ -582,6 +582,7 @@ class Server
 				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
 					Node.process.send(Constants.IPC_MESSAGE_READY);
 				}
+				Node.console.log('CCC Server ready!');
 				return true;
 			})
 			.then(function(_) {
@@ -619,7 +620,6 @@ class Server
 					try {
 						var results = Json.parse(out);
 						var result = results.result;
-						traceCyan('Logger.GLOBAL_LOG_LEVEL=${Logger.GLOBAL_LOG_LEVEL}');
 						if (result.success) {
 							if (Logger.GLOBAL_LOG_LEVEL <= 30) {
 								traceGreen(Json.stringify(result));

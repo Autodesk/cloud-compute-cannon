@@ -587,7 +587,7 @@ class RpcRoutes
 
 	public function dispose() {}
 
-	public static function router(injector :Injector) :js.node.express.Router
+	public static function router(injector :Injector) :js.npm.express.Router
 	{
 		//Ensure there is only a single jsonrpc Context object
 		//Ensure there is only a single jsonrpc Context object
@@ -609,7 +609,7 @@ class RpcRoutes
 			injector.injectInto(serviceTests);
 		}
 
-		var router = js.node.express.Express.GetRouter();
+		var router = js.npm.express.Express.GetRouter();
 		/* /rpc */
 		//Handle the special multi-part requests. These are a special case.
 		router.post(SERVER_API_RPC_URL_FRAGMENT, injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());
@@ -621,7 +621,7 @@ class RpcRoutes
 		return router;
 	}
 
-	public static function routerVersioned(injector :Injector) :js.node.express.Router
+	public static function routerVersioned(injector :Injector) :js.npm.express.Router
 	{
 		//Ensure there is only a single jsonrpc Context object
 		if (!injector.hasMapping(t9.remoting.jsonrpc.Context)) {
@@ -642,7 +642,7 @@ class RpcRoutes
 			injector.injectInto(serviceTests);
 		}
 
-		var router = js.node.express.Express.GetRouter();
+		var router = js.npm.express.Express.GetRouter();
 		/* /rpc */
 		//Handle the special multi-part requests. These are a special case.
 		router.post(VERSION, injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());

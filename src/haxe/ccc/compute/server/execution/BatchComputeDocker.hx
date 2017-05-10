@@ -600,7 +600,7 @@ class BatchComputeDocker
 					if (timeout == null) {
 						timeout = DEFAULT_MAX_JOB_TIME_MS;
 					}
-					trace('timeout in seconds=${timeout}');
+					// trace('timeout in seconds=${timeout}');
 					var timeoutId = null;
 					// var timeoutId = Node.setTimeout(function() {
 					// 	log.warn({message:'Timed out', timeoutInSeconds:timeout});
