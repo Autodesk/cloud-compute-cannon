@@ -216,6 +216,8 @@ class Server
 
 		untyped __js__('app.use(require("cors")())');
 
+		app.use(cast js.npm.bodyparser.BodyParser.json());
+
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);
