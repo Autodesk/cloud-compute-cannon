@@ -216,6 +216,8 @@ class Server
 
 		untyped __js__('app.use(require("cors")())');
 
+		app.use(cast js.npm.bodyparser.BodyParser.json());
+
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);
@@ -613,7 +615,6 @@ class Server
 		//Run internal tests
 		var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
 		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
-		disableStartTest = true;
 		if (!disableStartTest) {
 			Log.debug('Running server functional tests');
 			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&compute=true&jobs=true&turbojobs=true" : "compute=true&turbojobs=true"}')

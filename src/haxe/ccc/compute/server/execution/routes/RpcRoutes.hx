@@ -643,13 +643,25 @@ class RpcRoutes
 		}
 
 		var router = js.npm.express.Express.GetRouter();
-		/* /rpc */
+		var routerVersioned = js.npm.express.Express.GetRouter();
+
 		//Handle the special multi-part requests. These are a special case.
-		router.post(VERSION, injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());
+		router.post('/${VERSION}', injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());
+
+		//Show all methods
+		router.get('/${VERSION}', function(req, res) {
+			res.json({methods:context.methodDefinitions()});
+		});
+
+		router.use('/${VERSION}', routerVersioned);
+
+		js.npm.JsonRpcExpressTools.addExpressRoutes(routerVersioned, context);
 
 		var timeout = 1000*60*30;//30m
 		router.post('/${VERSION}', Routes.generatePostRequestHandler(context, timeout));
 		router.get('/$VERSION/*', Routes.generateGetRequestHandler(context, VERSION, timeout));
+
+
 
 		router.get('/fork/test', function(req, res, next) {
 			res.send('ok /fork/test');
