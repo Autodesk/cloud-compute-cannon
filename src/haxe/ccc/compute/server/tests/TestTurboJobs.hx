@@ -187,9 +187,22 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			.pipe(function(_) {
 				var turboJobs :TurboJobs = _redis;
 				return turboJobs.isJob(jobId)
-					.then(function(isJob) {
-						assertFalse(isJob);
-						return true;
+					.pipe(function(isJob) {
+						if (isJob) {
+							//Removing the job is not part of the promise chain
+							//for speed, so let's delay and try again
+							return PromiseTools.delay(1000)
+								.pipe(function(_) {
+									return turboJobs.isJob(jobId);
+								})
+								.then(function(isJob2) {
+									assertFalse(isJob2);
+									return true;
+								});
+						} else {
+							assertFalse(isJob);
+							return Promise.promise(true);
+						}
 					});
 			});
 	}
