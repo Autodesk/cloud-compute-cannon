@@ -648,8 +648,8 @@ class RpcRoutes
 		router.post(VERSION, injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());
 
 		var timeout = 1000*60*30;//30m
-		router.post(VERSION, Routes.generatePostRequestHandler(context, timeout));
-		router.get('$VERSION*', Routes.generateGetRequestHandler(context, VERSION, timeout));
+		router.post('/${VERSION}', Routes.generatePostRequestHandler(context, timeout));
+		router.get('/$VERSION/*', Routes.generateGetRequestHandler(context, VERSION, timeout));
 
 		router.get('/fork/test', function(req, res, next) {
 			res.send('ok /fork/test');
