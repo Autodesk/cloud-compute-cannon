@@ -3,6 +3,8 @@ package ccc.compute.shared;
 import ccc.compute.shared.Constants.*;
 import ccc.compute.server.job.stats.StatsDefinitions;
 
+import js.npm.docker.Docker;
+
 import haxe.Json;
 import haxe.DynamicAccess;
 

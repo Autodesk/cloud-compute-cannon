@@ -60,8 +60,6 @@ class ClientJSTools
 						reject(err);
 						return;
 					}
-					trace('httpResponse.statusCode=${httpResponse.statusCode}');
-					trace('body=${body}');
 					if (httpResponse.statusCode == 200) {
 						try {
 							var result :ResponseDefSuccess<JobResult> = Json.parse(body);
