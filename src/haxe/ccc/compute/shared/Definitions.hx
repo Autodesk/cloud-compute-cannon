@@ -187,6 +187,7 @@ typedef BatchProcessRequestTurbo = {
 	@:optional var meta :Dynamic<String>;
 	/* We can save time if outputs are ignored */
 	@:optional var ignoreOutputs :Bool;
+	@:optional var CreateContainerOptions:CreateContainerOptions;
 }
 
 typedef JobResultsTurboStats = {

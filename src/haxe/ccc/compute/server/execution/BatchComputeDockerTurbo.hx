@@ -188,18 +188,16 @@ class BatchComputeDockerTurbo
 
 				var imageId = job.image;
 
-				var opts :CreateContainerOptions = {
-					Image: null,//Set below
-					AttachStdout: false,
-					AttachStderr: false,
-					Tty: false,
-				};
+				var opts :CreateContainerOptions = job.CreateContainerOptions != null ? job.CreateContainerOptions : { Image: imageId.toLowerCase()};
+				opts.AttachStdout = false;
+				opts.AttachStderr = false;
+				opts.Tty = false;
 
 				opts.Cmd = opts.Cmd != null ? opts.Cmd : job.command;
 				opts.WorkingDir = opts.WorkingDir != null ? opts.WorkingDir : job.workingDir;
 				opts.HostConfig = opts.HostConfig != null ? opts.HostConfig : {};
 				opts.HostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
-
+	
 				opts.Image = opts.Image != null ? opts.Image : imageId.toLowerCase();
 				opts.Env = js.npm.redis.RedisLuaTools.isArrayObjectEmpty(opts.Env) ? [] : opts.Env;
 				for (env in [
