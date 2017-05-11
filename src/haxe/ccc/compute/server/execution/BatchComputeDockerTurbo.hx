@@ -49,7 +49,7 @@ class BatchComputeDockerTurbo
 		var maxJobDurationSeconds = job.parameters != null && job.parameters.maxDuration != null ? job.parameters.maxDuration : TURBO_JOB_MAX_TIME_SECONDS_DEFAULT;
 		turboJobs.jobStart(jobId, maxJobDurationSeconds, machineId);
 
-		job.image = job.image == null ? Constants.DOCKER_IMAGE_DEFAULT : job.image;
+		job.image = job.image != null ? job.image : (job.CreateContainerOptions != null ? job.CreateContainerOptions.Image : Constants.DOCKER_IMAGE_DEFAULT);
 
 		var containerInputsPath = job.inputsPath == null ? '/${DIRECTORY_INPUTS}' : job.inputsPath;
 		var containerOutputsPath = job.outputsPath == null ? '/${DIRECTORY_OUTPUTS}' : job.outputsPath;
@@ -197,7 +197,7 @@ class BatchComputeDockerTurbo
 				opts.WorkingDir = opts.WorkingDir != null ? opts.WorkingDir : job.workingDir;
 				opts.HostConfig = opts.HostConfig != null ? opts.HostConfig : {};
 				opts.HostConfig.LogConfig = {Type:DockerLoggingDriver.jsonfile, Config:{}};
-	
+
 				opts.Image = opts.Image != null ? opts.Image : imageId.toLowerCase();
 				opts.Env = js.npm.redis.RedisLuaTools.isArrayObjectEmpty(opts.Env) ? [] : opts.Env;
 				for (env in [
