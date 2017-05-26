@@ -207,5 +207,106 @@ cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
 			});
 	}
 
+	@timeout(240000)
+	public function testTurboJobV2Complete() :Promise<Bool>
+	{
+		var TESTNAME = 'testTurboJobV2Complete';
+
+		var random = ShortId.generate();
+
+		var customInputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_INPUTS';
+		var customOutputsPath = '$TEST_BASE/$TESTNAME/$random/$DIRECTORY_OUTPUTS';
+		var customResultsPath = '$TEST_BASE/$TESTNAME/$random/results';
+
+		var inputs :Array<ComputeInputSource> = [];
+
+		var inputName2 = 'in${ShortId.generate()}';
+		var inputName3 = 'in${ShortId.generate()}';
+
+		inputs.push({
+			{
+				name: inputName2,
+				value: 'in${ShortId.generate()}',
+				encoding: 'utf8'
+			}
+		});
+
+		inputs.push({
+			{
+				name: inputName3,
+				value: 'in${ShortId.generate()}',
+				encoding: 'utf8'
+			}
+		});
+
+		var outputName1 = 'out${ShortId.generate()}';
+		var outputName2 = 'out${ShortId.generate()}';
+		var outputName3 = 'out${ShortId.generate()}';
+
+		var outputValue1 = 'out${ShortId.generate()}';
+
+		var outputValueStdout = 'out${ShortId.generate()}';
+		var outputValueStderr = 'out${ShortId.generate()}';
+		//Multiline stdout
+		var script =
+'#!/bin/sh
+echo "$outputValueStdout"
+echo "$outputValueStdout"
+echo foo
+echo "$outputValueStdout"
+echo "$outputValueStderr" >> /dev/stderr
+mkdir -p /$DIRECTORY_OUTPUTS
+echo "$outputValue1" > /$DIRECTORY_OUTPUTS/$outputName1
+cat /$DIRECTORY_INPUTS/$inputName2 > /$DIRECTORY_OUTPUTS/$outputName2
+cat /$DIRECTORY_INPUTS/$inputName3 > /$DIRECTORY_OUTPUTS/$outputName3
+';
+		var targetStdout = '$outputValueStdout\n$outputValueStdout\nfoo\n$outputValueStdout'.trim();
+		var targetStderr = '$outputValueStderr';
+		var scriptName = 'script.sh';
+
+		inputs.push({
+			{
+				name: scriptName,
+				value: script,
+				encoding: 'utf8'
+			}
+		});
+
+		var random = ShortId.generate();
+
+		var request: BatchProcessRequestTurboV2 = {
+			inputs: inputs,
+			image: DOCKER_IMAGE_DEFAULT,
+			command: ["/bin/sh", '/$DIRECTORY_INPUTS/$scriptName'],
+			parameters: {maxDuration:30, cpus:1}
+		}
+
+		var proxy = ServerTestTools.getProxy();
+		return proxy.submitTurboJobJsonV2(request)
+			.then(function(jobResult :JobResultsTurboV2) {
+				if (jobResult == null) {
+					throw 'jobResult should not be null. Check the above section';
+				}
+				assertNotNull(jobResult.outputs);
+				assertEquals(jobResult.outputs.length, 3);
+				var output1 = jobResult.outputs.find(function(output) return output.name == outputName1);
+				assertNotNull(output1);
+				assertEquals(new Buffer(output1.value, output1.encoding).toString('utf8').trim(), outputValue1);
+
+				var output2 = jobResult.outputs.find(function(output) return output.name == outputName2);
+				assertNotNull(output2);
+				assertEquals(new Buffer(output2.value, output2.encoding).toString('utf8').trim(), inputs.find(function(input) return input.name == inputName2).value);
+
+				var output3 = jobResult.outputs.find(function(output) return output.name == outputName3);
+				assertNotNull(output3);
+				assertEquals(new Buffer(output3.value, output3.encoding).toString('utf8').trim(), inputs.find(function(input) return input.name == inputName3).value);
+
+				assertEquals(jobResult.stderr[0].trim(), outputValueStderr);
+				assertEquals(jobResult.stdout[0].trim(), outputValueStdout);
+
+				return true;
+			});
+	}
+
 	public function new() { super(); }
 }
