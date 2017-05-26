@@ -48,6 +48,20 @@ class ServiceBatchComputeTools
 		return BatchComputeDockerTurbo.executeTurboJob(redis, job, docker, thisMachineId, log);
 	}
 
+	public static function runTurboJobRequestV2(injector :Injector, job :BatchProcessRequestTurboV2) :Promise<JobResultsTurboV2>
+	{
+		if (job == null) {
+			throw 'Null job argument in ServiceBatchCompute.run(...)';
+		}
+		var log :AbstractLogger = injector.getValue(AbstractLogger);
+		var redis :RedisClient = injector.getValue(RedisClient);
+		var docker :Docker = injector.getValue(Docker);
+		var worker :WorkerController = injector.getValue(WorkerController);
+		var thisMachineId = worker.id;
+		Assert.notNull(thisMachineId);
+		return BatchComputeDockerTurbo.executeTurboJobV2(redis, job, docker, thisMachineId, log);
+	}
+
 	public static function runComputeJobRequest(injector :Injector, job :BasicBatchProcessRequest) :Promise<JobResult>
 	{
 		if (job == null) {

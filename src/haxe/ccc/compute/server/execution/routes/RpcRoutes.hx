@@ -477,6 +477,22 @@ class RpcRoutes
 	}
 
 	@rpc({
+		alias:'runturbojsonv2',
+		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
+		args:{
+			'job': {'doc':'BatchProcessRequestTurboV2'}
+		}
+	})
+	public function submitTurboJobJsonV2(job :BatchProcessRequestTurboV2) :Promise<JobResultsTurboV2>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return ServiceBatchComputeTools.runTurboJobRequestV2(_injector, job);
+#else
+		return Promise.promise(null);
+#end
+	}
+
+	@rpc({
 		alias:'submitjob',
 		doc:'Run docker job(s) on the compute provider. Example:\n cloudcannon run --image=elyase/staticpython --command=\'["python", "-c", "print(\'Hello World!\')"]\'',
 		args:{

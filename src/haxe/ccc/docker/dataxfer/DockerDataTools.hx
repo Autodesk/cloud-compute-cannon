@@ -65,6 +65,12 @@ typedef S3Credentials = {
 	@:optional var extraS3SyncParameters :Array<Array<String>>;
 }
 
+typedef DataRef = {
+	var name :String;
+	var value :String;
+	var encoding :String;
+}
+
 class DockerDataTools
 {
 	inline public static var AWS_CLI_IMAGE = 'docker.io/garland/aws-cli-docker';
@@ -606,6 +612,55 @@ class DockerDataTools
 							name = name.trim();
 							if (name.length > 0) {
 								files.set(name, s);
+							}
+							next(); // ready for next entry
+						})
+						.catchError(function(err) {
+							promise.boundPromise.reject(err);
+						});
+				});
+
+				extract.on(TarExtractEvent.Finish, function() {
+					promise.resolve(files);
+				});
+
+				data.pipe(extract);
+			}
+		});
+
+		return promise.boundPromise;
+	}
+
+	public static function getDataFilesFromContainerV2(container :DockerContainer, path :String) :Promise<Array<DataRef>>
+	{
+		var promise = new DeferredPromise();
+
+		var getDataOpts = {
+			path: path,
+		}
+
+		container.getArchive(getDataOpts, function(err, data) {
+			if (err != null) {
+				promise.boundPromise.reject(err);
+			} else {
+				var extract = TarStream.extract();
+				var files :Array<DataRef> = [];
+				extract.on(TarExtractEvent.Entry, function(header, stream, next) {
+					// header is the tar header
+					// stream is the content body (might be an empty stream)
+					// call next when you are done with this entry
+					StreamPromises.streamToBuffer(stream)
+						.then(function(buffer) {
+							var name = header.name;
+							name = name.startsWith(path.substr(1)) ? name.substr(path.length) : name;
+							name = name.startsWith('./') ? name.substr(2) : name;
+							name = name.trim();
+							if (name.length > 0) {
+								files.push({
+									name: name,
+									value: buffer.toString('base64'),
+									encoding: 'base64'
+								});
 							}
 							next(); // ready for next entry
 						})
