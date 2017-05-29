@@ -32,6 +32,11 @@ class DockerPromises
 
 	public static function listImages(docker :Docker) :Promise<Array<ImageData>>
 	{
+		return promhx.RetryPromise.pollDecayingInterval(__listImages.bind(docker), RETRIES, RETRIES_TIME_INTERVAL, 'listContainers');
+	}
+
+	static function __listImages(docker :Docker) :Promise<Array<ImageData>>
+	{
 		var promise = new promhx.CallbackPromise();
 		docker.listImages(promise.cb2);
 		return promise;

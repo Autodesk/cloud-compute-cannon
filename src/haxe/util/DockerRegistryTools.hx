@@ -34,6 +34,11 @@ class DockerRegistryTools
 
 	public static function getRegistryImages(registry :Host) :Promise<Array<String>>
 	{
+		return promhx.RetryPromise.pollDecayingInterval(getRegistryImages.bind(registry), 3, 100, 'DockerRegistryTools.getRegistryImages(registry=$registry)');
+	}
+
+	public static function __getRegistryImages(registry :Host) :Promise<Array<String>>
+	{
 		var url = 'http://$registry/v2/_catalog';
 		return RequestPromises.get(url)
 			.then(function(out) {
@@ -43,6 +48,11 @@ class DockerRegistryTools
 	}
 
 	public static function getRepositoryTags(registry :Host, repository :String) :Promise<Array<String>>
+	{
+		return promhx.RetryPromise.pollDecayingInterval(__getRepositoryTags.bind(registry, repository), 3, 100, 'DockerRegistryTools.getRepositoryTags(registry=$registry repository=$repository)');
+	}
+
+	public static function __getRepositoryTags(registry :Host, repository :String) :Promise<Array<String>>
 	{
 		var url = 'http://$registry/v2/$repository/tags/list';
 		return RequestPromises.get(url)
