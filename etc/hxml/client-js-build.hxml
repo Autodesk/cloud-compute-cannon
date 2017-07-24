@@ -5,7 +5,7 @@
 -D promise=js.npm.bluebird.Bluebird
 -D promhx
 
--lib hx-color-trace:0.0.4
+-lib hx-color-trace:0.0.6
 -lib abstracts-core:0.1.1
 -lib logshim:0.0.4
 -lib hxnodejs:4.0.9

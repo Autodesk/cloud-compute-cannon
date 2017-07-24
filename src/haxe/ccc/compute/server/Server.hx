@@ -216,7 +216,7 @@ class Server
 
 		untyped __js__('app.use(require("cors")())');
 
-		app.use(cast js.npm.bodyparser.BodyParser.json());
+		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
