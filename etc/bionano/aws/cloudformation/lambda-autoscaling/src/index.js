@@ -139,12 +139,15 @@ function getInstanceMinutesBillingCycleRemaining(instanceId) {
 function getInstanceMinutesSinceLaunch(instanceId) {
 	return getInstanceInfo(instanceId)
 		.then(function(info) {
-			var launchDate = new Date(info.LaunchTime);
-			var instanceTime = launchDate.getTime();
-			var now = Date.now();
-			var diff = now - instanceTime;
-			var seconds = diff / 1000;
-			var minutes = seconds / 60;
+			var minutes = -1;
+			if (info) {
+				var launchDate = new Date(info.LaunchTime);
+				var instanceTime = launchDate.getTime();
+				var now = Date.now();
+				var diff = now - instanceTime;
+				var seconds = diff / 1000;
+				minutes = seconds / 60;
+			}
 			return minutes;
 		});
 }
