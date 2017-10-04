@@ -46,12 +46,12 @@ class CWLTools
 			});
 	}
 
-	public static function testWorkflow(injector :Injector) :Promise<Bool>
-	{
-		var test = new TestCWLApi();
-		injector.injectInto(test);
-		return test.testWorkflowDynamicInput();
-	}
+	// public static function testWorkflow(injector :Injector) :Promise<Bool>
+	// {
+	// 	var test = new TestCWLApi();
+	// 	injector.injectInto(test);
+	// 	return test.testWorkflowDynamicInput();
+	// }
 
 	static function getContainerAlias(docker :Docker) :Promise<String>
 	{

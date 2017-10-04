@@ -4,6 +4,19 @@ import haxe.Json;
 
 class LogTools
 {
+	public static function logStringToLevel(logLevel :String) :Int
+	{
+		return switch(logLevel.toLowerCase()) {
+			case 'trace': js.npm.bunyan.Bunyan.TRACE;
+			case 'debug': js.npm.bunyan.Bunyan.DEBUG;
+			case 'info': js.npm.bunyan.Bunyan.INFO;
+			case 'warn': js.npm.bunyan.Bunyan.WARN;
+			case 'error': js.npm.bunyan.Bunyan.ERROR;
+			case 'fatal': js.npm.bunyan.Bunyan.FATAL;
+			default: js.npm.bunyan.Bunyan.INFO;
+		}
+	}
+
 	public static function removePrivateKeys<T>(val :T) :T
 	{
 		if (!Reflect.isObject(val)) {

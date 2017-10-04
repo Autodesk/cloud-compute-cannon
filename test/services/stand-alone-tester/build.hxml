@@ -1,0 +1,13 @@
+etc/hxml/base-nodejs.hxml
+
+-cp etc/bionano/aws/cloudformation/lambda-autoscaling/src
+
+-cp test/services/stand-alone-tester/src
+
+# -D PromhxExposeErrors
+
+-debug
+
+-main ccc.compute.test.ServerTester
+
+-js build/test/cloud-compute-cannon-tester.js

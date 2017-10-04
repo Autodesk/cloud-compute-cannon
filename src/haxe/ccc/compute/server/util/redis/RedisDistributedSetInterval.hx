@@ -1,8 +1,8 @@
 package ccc.compute.server.util.redis;
 
 import js.Node;
-import js.npm.RedisClient;
-import js.npm.redis.RedisLuaTools;
+import js.npm.redis.RedisClient;
+import t9.redis.RedisLuaTools;
 
 /**
  * Runs once per interval, regardless of how

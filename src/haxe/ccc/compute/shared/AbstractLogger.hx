@@ -19,12 +19,17 @@ abstract AbstractLogger(js.npm.bunyan.Bunyan.BunyanLogger) to js.npm.bunyan.Buny
 		return untyped __js__('(!!v) && (v.constructor === Object)');
 	}
 
+	static var LOG_KEY_NODEJS = '${LogKeys.stack}';
 	static function processLogMessage(logThing :Dynamic, pos :haxe.PosInfos)
 	{
 		var obj :haxe.DynamicAccess<Dynamic> = switch(untyped __typeof__(logThing)) {
 			case 'object': cast Reflect.copy(logThing);
 			default: cast {message:Std.string(logThing)};
 		}
+		if (!Reflect.hasField(obj, LOG_KEY_NODEJS)) {
+			LogFieldUtil.addLogStack(obj, LogFieldStack.NodejsTag);
+		}
+
 		obj['src'] = {file:pos.fileName, line:pos.lineNumber, func:'${pos.className.split(".").pop()}.${pos.methodName}'};
 		//Ensure errors are strings, not objects, for eventual consumption by Elasticsearch
 		if (obj.exists('error') && obj['error'] != null) {

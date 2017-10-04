@@ -23,6 +23,7 @@ import promhx.Stream;
 import promhx.StreamPromises;
 import promhx.DockerPromises;
 import promhx.PromiseTools;
+import promhx.RetryPromise;
 
 import util.streams.StreamTools;
 import util.DockerTools;
@@ -309,15 +310,19 @@ class DockerDataTools
 		var sourceUri = 's3://${credentials.bucket}/${path}';
 
 		var command = ['aws', 's3', 'ls', sourceUri, '--recursive'];
-		return DockerTools.runDockerCommand(docker, AWS_CLI_IMAGE, command, env)
-			.then(function(result) {
-				if (result.stdout != null) {
-					var lines = result.stdout.split('\n').filter(function(s) return s.indexOf(path) > -1).map(function(s) return s.substr(s.indexOf(path)).trim()).array();
-					return lines;
-				} else {
-					return [];
-				}
-			});
+		var f = function() {
+			return DockerTools.runDockerCommand(docker, AWS_CLI_IMAGE, command, env)
+				.then(function(result) {
+					if (result.stdout != null) {
+						var lines = result.stdout.split('\n').filter(function(s) return s.indexOf(path) > -1).map(function(s) return s.substr(s.indexOf(path)).trim()).array();
+						return lines;
+					} else {
+						return [];
+					}
+				});
+		}
+
+		return RetryPromise.retryRegular(f, 5, 1000, 's3ls');
 	}
 
 	public static function runAwsCLI(docker :Docker, credentials :S3Credentials, command :Array<String>, ?volumes :Array<MountedDockerVolumeDef>, ?outStream :IWritable, ?errStream :IWritable) :Promise<DockerRunResult>
@@ -333,7 +338,9 @@ class DockerDataTools
 			AWS_DEFAULT_REGION: credentials.region != null ? credentials.region : 'us-west-1',
 		};
 
-		return DockerTools.runDockerCommand(docker, AWS_CLI_IMAGE, command, env, volumes, outStream, errStream);
+		var f = function() return DockerTools.runDockerCommand(docker, AWS_CLI_IMAGE, command, env, volumes, outStream, errStream);
+
+		return RetryPromise.retryRegular(f, 5, 1000, 'runAwsCLI');
 	}
 
 	public static function volumeOperation(op :DataTransferOp, volumes :Array<MountedDockerVolumeDef>, ?outStream :IWritable, ?errStream :IWritable) :CopyDataResult

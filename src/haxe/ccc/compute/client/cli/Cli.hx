@@ -8,7 +8,7 @@ import js.node.Fs;
 import js.node.Path;
 
 import js.npm.commander.Commander;
-import js.npm.RedisClient;
+import js.npm.redis.RedisClient;
 
 import promhx.Promise;
 
@@ -114,18 +114,11 @@ class Cli
 				}
 				log('in test-job $host $command');
 
-				// var host = ConnectionToolsDocker.getDockerHost();
-				// host += ':8000';
-				// host = 'localhost:8000';
-				// trace("host:" + host);
-				// trace('jobParams=${jobParams}');
 				ClientCompute.postJob(host, jobParams)
 					.pipe(function(result) {
-						// trace("result:" + result);
 						return ClientCompute.getJobResult(host, result.jobId);
 					})
 					.then(function(jobResult) {
-						// trace("jobResult:\n" + Json.stringify(jobResult, null, '    '));
 						trace(Json.stringify(jobResult, null, '    '));
 					});
 			});

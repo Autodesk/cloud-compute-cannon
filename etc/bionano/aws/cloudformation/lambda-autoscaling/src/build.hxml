@@ -1,0 +1,10 @@
+etc/hxml/base-nodejs.hxml
+
+-lib hxnodejs-aws-sdk:git:https://github.com/dionjwa/hxnodejs-aws-sdk.git#5a9c057
+
+-cp etc/bionano/aws/cloudformation/lambda-autoscaling/src
+
+#Instead of -main
+LambdaScalingAws
+
+-js etc/bionano/aws/cloudformation/lambda-autoscaling/src/index.js

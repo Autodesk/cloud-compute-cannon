@@ -3,14 +3,15 @@ package ccc.storage;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
 
-import js.npm.PkgCloud;
+import js.npm.pkgcloud.PkgCloud;
+import js.npm.PkgCloudHelpers;
 
 import promhx.Promise;
 import promhx.PromiseTools;
 import promhx.StreamPromises;
 import promhx.deferred.DeferredPromise;
 
-import ccc.compute.shared.Definitions;
+import ccc.Definitions;
 import ccc.storage.ServiceStorageBase;
 import ccc.storage.StorageSourceType;
 import ccc.storage.StorageDefinition;

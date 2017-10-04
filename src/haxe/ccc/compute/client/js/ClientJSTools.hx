@@ -1,11 +1,5 @@
 package ccc.compute.client.js;
 
-import haxe.Json;
-
-import ccc.compute.shared.Definitions;
-import ccc.compute.shared.Constants;
-
-import haxe.DynamicAccess;
 import haxe.remoting.JsonRpc;
 
 import js.node.Buffer;
@@ -31,14 +25,14 @@ using Lambda;
 class ClientJSTools
 {
 	@:expose
-	public static function postJob(host :String, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<JobResult>
+	public static function postJob(host :String, job :BasicBatchProcessRequest, ?forms :Dynamic) :Promise<ccc.JobResult>
 	{
 		var execute = function(resolve :JobResult->Void, reject :Dynamic->Void) {
 
 			var jsonRpcRequest :RequestDef = {
 				id: JsonRpcConstants.JSONRPC_NULL_ID,
 				jsonrpc: JsonRpcConstants.JSONRPC_VERSION_2,
-				method: Constants.RPC_METHOD_JOB_SUBMIT,
+				method: RPC_METHOD_JOB_SUBMIT,
 				params: job
 			}
 
@@ -53,10 +47,11 @@ class ClientJSTools
 			//Simply by making this request a multi-part request is is assumed
 			//to be a job submission.
 			var url = rpcUrl(host);
+			// trace('url=$url');
 			Request.post({url:url, formData:formData},
 				function(err :js.Error, httpResponse :HttpResponse, body:Body) {
 					if (err != null) {
-						Log.error(err);
+						Log.error({message:'Http failure when making job submission post request', error:err, url:url, statusCode:(httpResponse != null ? httpResponse.statusCode : null)});
 						reject(err);
 						return;
 					}
@@ -139,8 +134,20 @@ class ClientJSTools
 		if (!host.startsWith('http')) {
 			host = 'http://$host';
 		}
-		if (!host.endsWith(Constants.SERVER_RPC_URL)) {
-			host = '$host${Constants.SERVER_RPC_URL}';
+		// if (!host.endsWith(Constants.SERVER_RPC_URL)) {
+		// 	host = '${host}${Constants.SERVER_RPC_URL}';
+		// }
+		
+		if (!host.endsWith('/')) {
+			host = '${host}/';
+		}
+		//Compiler catch, not sure how to best handled multiple versions
+		switch(CCCVersion.v1) {
+			case v1:
+			case none:
+		}
+		if (!host.endsWith(Type.enumConstructor(CCCVersion.v1))) {
+			host = '${host}${Type.enumConstructor(CCCVersion.v1)}';
 		}
 		return new UrlString(host);
 	}

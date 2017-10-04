@@ -72,7 +72,7 @@ else
 	mkdir -p $DOCKER_FILE_DIR
 	#Create the Dockerfile, and build the image
 	cat > $DOCKER_FILE_DIR/Dockerfile << EOF
-FROM amazonlinux:2016.09
+FROM amazonlinux:2017.09
 
 RUN mkdir /tmp/docker-build && \\
   yum -y update && \\

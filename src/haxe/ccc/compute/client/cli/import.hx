@@ -18,7 +18,7 @@ import ccc.compute.server.job.*;
 	import ccc.compute.server.job.*;
 	import ccc.compute.server.execution.*;
 	import ccc.compute.server.execution.BatchComputeDocker.*;
-	import ccc.compute.server.execution.singleworker.*;
+	import ccc.compute.worker.*;
 	import ccc.compute.server.providers.*;
 	import ccc.compute.server.scaling.*;
 	import ccc.compute.server.workers.*;
@@ -43,18 +43,10 @@ import ccc.compute.server.job.*;
 	import js.npm.tarfs.TarFs;
 	import js.npm.FsPromises;
 	import js.npm.PkgCloud;
-	import js.npm.RedisClient;
+	import js.npm.redis.RedisClient;
 	import ccc.compute.client.*;
 	import ccc.compute.server.*;
 
-	
-	// import ccc.compute.server.execution.singleserver.ComputeQueue;
-	// import ccc.compute.server.execution.singleserver.InstancePool;
-	
-	// import ccc.compute.server.workers.*;
-	// import ccc.compute.server.workers.WorkerProviderBoot2Docker;
-	// import ccc.compute.server.workers.WorkerProviderPkgCloud;
-	// import ccc.compute.server.workflows.*;
 	import ccc.storage.*;
 
 	import minject.Injector;

@@ -7,7 +7,7 @@ if [ $# -eq 0 ]; then
     echo ""
     echo "    -k/--key         AWS Access Key Id"
     echo "    -s/--secret      AWS Access Key Secret"
-    echo "    -t/--tag         BNP env tag (dev|qa|prod). Defaults to dev. Determines deploy region"
+    echo "    -t/--tag         BNP env tag (dev|qa|prod|test). Defaults to test. Determines deploy region"
     echo ""
     exit 0
 fi
@@ -34,10 +34,6 @@ case $key in
     AWS_SECRET_ACCESS_KEY="$2"
     shift # past argument
     ;;
-    -s|--secret)
-    AWS_SECRET_ACCESS_KEY="$2"
-    shift # past argument
-    ;;
     -t|--tag)
     BNR_ENVIRONMENT="$2"
     shift # past argument
@@ -49,7 +45,7 @@ esac
 shift # past argument or value
 done
 
-REGION="us-west-2"
+REGION="us-west-1"
 
 case "$BNR_ENVIRONMENT" in
         dev)
@@ -60,6 +56,9 @@ case "$BNR_ENVIRONMENT" in
             ;;
         prod)
             REGION="us-east-1"
+            ;;
+        test)
+            REGION="us-west-1"
             ;;
 esac
 
@@ -74,7 +73,7 @@ isStack(){
 
 if isStack ; then
 	echo "Stack exists, updating..."
-	aws --region $REGION cloudformation update-stack \
+	AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY aws --debug --region $REGION cloudformation update-stack \
 		--stack-name $STACKNAME \
 		--capabilities CAPABILITY_IAM \
 		--parameters \
@@ -82,7 +81,7 @@ if isStack ; then
 		--template-body file://$DIR/cf-ccc-redis.json
 else
 	echo "Stack does not exist, creating..."
-	aws --region $REGION cloudformation create-stack \
+	AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY aws --debug --region $REGION cloudformation create-stack \
 		--stack-name $STACKNAME \
 		--capabilities CAPABILITY_IAM \
 		--parameters \
