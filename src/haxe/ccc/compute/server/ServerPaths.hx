@@ -35,19 +35,12 @@ class ServerPaths
 		var cors = Node.require('cors')();
 		app.options('*', cors);
 		app.use(cors);
-		// untyped __js__('app.use(require("cors")())');
 
 		// app.use(Node.require('express-bunyan-logger')());
 
 		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
 		app.get('/version', function(req, res) {
-			var versionBlob = ServerCommands.version();
-			res.send(versionBlob.git);
-		});
-
-		app.post('/version', function(req, res) {
-			traceCyan('body=${Reflect.field(req, "body")}');
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);
 		});
@@ -100,10 +93,6 @@ class ServerPaths
 			res.json(ServerConfig.toJson());
 		});
 
-		app.get('/env', function(req, res) {
-			res.json(Node.process.env);
-		});
-
 		//Check if server is listening
 		app.get(Constants.SERVER_PATH_CHECKS, function(req, res) {
 			res.send(Constants.SERVER_PATH_CHECKS_OK);
@@ -122,19 +111,6 @@ class ServerPaths
 				Log.debug('${SERVER_PATH_READY}=NO');
 				res.status(500).end();
 			}
-		});
-
-		//Check if server is ready
-		app.get('/crash', cast function(req, res) {
-			Node.process.stdout.write('NAKEDBUS\n');
-			Node.process.nextTick(function() {
-				throw new Error('FAKE CRASH');
-			});
-		});
-
-		app.get('/log2*', cast function(req, res) {
-			Node.process.stdout.write('\nPOLYGLOT\n');
-			res.status(200).end();
 		});
 
 		//Check if server is ready
@@ -158,14 +134,6 @@ class ServerPaths
 				}
 			}
 			poll();
-		});
-
-		//Check if server is listening
-		app.get('/log', function(req, res) {
-			var logMessageString = 'somestring';
-			Log.debug(logMessageString);
-			Log.debug({'foo':'bar'});
-			res.send('Logged some shit');
 		});
 
 		//Check if server is listening
