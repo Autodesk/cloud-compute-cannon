@@ -13,6 +13,7 @@ services:
       - "9002:9002"
     environment:
       PORT: "9000"
+      LOG_LEVEL: "warn"
       # OPTIONAL: Path to the mounted configuration file
       # CONFIG_PATH: "/app/ccc.yml"
       # OPTIONAL text flattened yaml of the server configuration.

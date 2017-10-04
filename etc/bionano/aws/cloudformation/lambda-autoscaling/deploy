@@ -67,9 +67,15 @@ case "$BNR_ENVIRONMENT" in
         prod)
             REGION="us-east-1"
             ;;
+        test)
+            REGION="us-west-1"
+            ;;
 esac
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+echo 'Compiling'
+$DIR/../../../../../bin/compile
 
 LAMBDA_ZIP_FOLDER="$DIR/../../../../../build/lambdas"
 
@@ -104,6 +110,7 @@ echo $PARAMETERSTRING > parameters.json
 
 if isStack ; then
 	echo "Stack exists, updating..."
+    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     aws --region $REGION cloudformation update-stack \
         --stack-name $STACKNAME \
         --parameters file://$DIR/parameters.json \
@@ -111,6 +118,7 @@ if isStack ; then
         --template-body file://$DIR/cf-ccc-scaling.json
 else
 	echo "Stack does not exist, creating..."
+    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
 	aws --region $REGION cloudformation create-stack \
 		--stack-name $STACKNAME \
         --parameters file://$DIR/parameters.json \

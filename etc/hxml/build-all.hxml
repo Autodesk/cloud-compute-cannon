@@ -1,29 +1,18 @@
 #Builds ALL haxe projects, apps, client libraries, etc
 
 -cmd echo "Building server"
-
 --next
-
 etc/hxml/server-build.hxml
 
-# --next
-
-# -cmd echo "Building all server tests"
-
-# --next
-
-# test/testsCompile.hxml
-
-# -cmd echo "Building CLI tool"
-
-# --next
-
-# etc/hxml/cli-build.hxml
-
-# --next
-
--cmd echo "Building js npm client"
-
+-cmd echo "Building test scaling server"
 --next
+test/services/local-scaling-server/build.hxml
 
-etc/hxml/client-js-build.hxml
+-cmd echo "Building server-tester"
+--next
+test/services/stand-alone-tester/build.hxml
+
+-cmd echo "Building autoscaling lambdas"
+--next
+etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml
+

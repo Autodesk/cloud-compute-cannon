@@ -34,10 +34,6 @@ case $key in
     AWS_SECRET_ACCESS_KEY="$2"
     shift # past argument
     ;;
-    -s|--secret)
-    AWS_SECRET_ACCESS_KEY="$2"
-    shift # past argument
-    ;;
     -t|--tag)
     BNR_ENVIRONMENT="$2"
     shift # past argument
@@ -60,6 +56,9 @@ case "$BNR_ENVIRONMENT" in
             ;;
         prod)
             REGION="us-east-1"
+            ;;
+        test)
+            REGION="us-west-1"
             ;;
 esac
 

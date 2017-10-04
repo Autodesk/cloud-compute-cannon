@@ -33,20 +33,10 @@ class FluentTools
 		createEmitter()(obj, cb);
 	}
 
-	private static function readFluentPort() :Int
-	{
-		var env = js.Node.process.env;
-		var fluentPort :Int = Reflect.hasField(env, 'FLUENT_PORT') ? Std.int(Reflect.field(env, 'FLUENT_PORT')) : FLUENTD_SOURCE_PORT;	
-
-		return fluentPort;
-	}
-
-	static var FLUENT_PORT = readFluentPort();
-
 	static var static_emitter =
 		FluentLogger.createFluentSender(null,
 			{
-				host: ConnectionToolsDocker.getContainerAddress('fluentd'),
-				port: FLUENT_PORT
+				host: ServerConfig.FLUENT_HOST,
+				port: ServerConfig.FLUENT_PORT
 			}).emit.bind(APP_NAME_COMPACT, _, _, _);
 }

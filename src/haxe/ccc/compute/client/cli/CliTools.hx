@@ -24,10 +24,10 @@ class CliTools
 		return ProxyTools.getProxy(rpcUrl);
 	}
 
-	public static function getTestsProxy(rpcUrl :UrlString)
-	{
-		return ProxyTools.getTestsProxy(rpcUrl);
-	}
+	// public static function getTestsProxy(rpcUrl :UrlString)
+	// {
+	// 	return ProxyTools.getTestsProxy(rpcUrl);
+	// }
 
 	public static function getHost() :Host
 	{

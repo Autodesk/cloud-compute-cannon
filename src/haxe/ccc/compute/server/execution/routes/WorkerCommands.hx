@@ -2,8 +2,8 @@ package ccc.compute.server.execution.routes;
 
 import haxe.Resource;
 
-import js.npm.RedisClient;
 import js.npm.docker.Docker;
+import js.npm.redis.RedisClient;
 import js.npm.redis.RedisLuaTools;
 
 import util.DockerTools;
@@ -16,9 +16,6 @@ import util.DateFormatTools;
  */
 class WorkerCommands
 {
-	// public static var fs :ServiceStorage;
-	// public static var redis :RedisClient;
-
 	public static function statusWorkers(redis :RedisClient) :Promise<Dynamic>
 	{
 		var workerJson :InstancePoolJson = null;

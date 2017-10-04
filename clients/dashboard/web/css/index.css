@@ -1,0 +1,46 @@
+* {
+	padding:0;
+	margin:0;
+	font-family: Arial;
+}
+
+html *
+{
+	overflow-anchor: "none" !important;
+	/*height: 100%;*/
+}
+
+nav {
+	padding: 10px;
+	border-bottom: solid 1px #aaa;
+}
+
+.main-window-divider {
+	flex: 1;
+	padding: 3px;
+	margin: 0px;
+	overflow: hidden;
+}
+
+.jobcard {
+	background: #eee;
+	padding: 10px;
+	margin: 0px;
+	overflow: hidden;
+}
+
+.jobcard-table {}
+
+.jobcard-tablerow {
+	font-size: 6px;
+	max-height: 10px;
+	height: 10px;
+	background-color: green;
+}
+
+.jobcard-tablerowcolumn {
+	font-size: 6px;
+	max-height: 10px;
+	height: 10px;
+	background-color: blue;
+}

@@ -3,7 +3,7 @@ package ccc.compute.server.execution;
 import js.node.Path;
 import js.node.stream.Readable;
 import js.node.stream.Writable;
-import js.npm.RedisClient;
+import js.npm.redis.RedisClient;
 import js.npm.clicolor.CliColor;
 import js.npm.docker.Docker;
 
@@ -33,14 +33,14 @@ class JobTools
 		return '${jobId}${Constants.JOB_ID_ATTEMPT_SEP}${attempt}';
 	}
 
-	inline public static function getWorkerVolumeNameInputs(jobId :JobId) :DockerVolumeName
+	inline public static function getWorkerVolumeNameInputs(jobId :JobId, attempt :Int) :DockerVolumeName
 	{
-		return '${DIRECTORY_INPUTS}__${jobId}';
+		return '${DIRECTORY_INPUTS}__${jobId}__${attempt}';
 	}
 
-	inline public static function getWorkerVolumeNameOutputs(jobId :JobId) :DockerVolumeName
+	inline public static function getWorkerVolumeNameOutputs(jobId :JobId, attempt :Int) :DockerVolumeName
 	{
-		return '${DIRECTORY_OUTPUTS}__${jobId}';
+		return '${DIRECTORY_OUTPUTS}__${jobId}__${attempt}';
 	}
 
 	public static function prependJobResultsUrls(jobResult :JobResult, urlPrefix :String)

@@ -23,12 +23,12 @@ using StringTools;
 class ServiceStorageSftp
 	extends ServiceStorageBase
 {
-	public static function fromInstance(instance :ccc.compute.shared.Definitions.InstanceDefinition, ?rootPath :String = '')
+	public static function fromInstance(instance :ccc.InstanceDefinition, ?rootPath :String = '')
 	{
 		var config :StorageDefinition = {
 			type: StorageSourceType.Sftp,
 			rootPath: rootPath,
-			credentials: instance.ssh
+			// credentials: instance.ssh
 		}
 		return new ServiceStorageSftp().setConfig(config);
 	}

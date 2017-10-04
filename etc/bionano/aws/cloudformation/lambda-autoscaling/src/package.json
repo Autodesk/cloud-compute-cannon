@@ -4,7 +4,6 @@
   "description": "AWS lambda function for scaling CCC autoscaling groups",
   "main": "index.js",
   "dependencies": {
-    "bluebird": "^3.5.0",
-    "redis": "^2.6.5"
+    "redis": "^2.8.0"
   }
 }

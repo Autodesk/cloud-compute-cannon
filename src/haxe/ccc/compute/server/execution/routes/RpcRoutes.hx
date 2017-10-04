@@ -3,7 +3,7 @@ package ccc.compute.server.execution.routes;
 import t9.js.jsonrpc.Routes;
 
 import promhx.Promise;
-import ccc.compute.shared.TypedDynamicObject;
+import ccc.TypedDynamicObject;
 import js.npm.bluebird.Bluebird;
 
 #if ((nodejs && !macro) && !excludeccc)
@@ -15,7 +15,18 @@ import js.npm.bluebird.Bluebird;
  */
 class RpcRoutes
 {
-	public static var VERSION = 'v1';
+	@rpc({
+		alias:'test-jobs',
+		doc:'Get all running test jobs'
+	})
+	public function getTestJobsIds() :Promise<Array<JobId>>
+	{
+#if ((nodejs && !macro) && !excludeccc)
+		return _injector.getValue(ServiceMonitorRequest).getAllRunningTestJobs();
+#else
+		return Promise.promise(null);
+#end
+	}
 
 	@rpc({
 		alias:'cwl',
@@ -30,18 +41,18 @@ class RpcRoutes
 #end
 	}
 
-	@rpc({
-		alias:'cwl-test',
-		doc:'Test running a CWL workflow'
-	})
-	public function testWorkflow() :Promise<Bool>
-	{
-#if ((nodejs && !macro) && !excludeccc)
-		return CWLTools.testWorkflow(_injector);
-#else
-		return Promise.promise(null);
-#end
-	}
+// 	@rpc({
+// 		alias:'cwl-test',
+// 		doc:'Test running a CWL workflow'
+// 	})
+// 	public function testWorkflow() :Promise<Bool>
+// 	{
+// #if ((nodejs && !macro) && !excludeccc)
+// 		return CWLTools.testWorkflow(_injector);
+// #else
+// 		return Promise.promise(null);
+// #end
+// 	}
 
 	@rpc({
 		alias:'log',
@@ -134,57 +145,7 @@ class RpcRoutes
 		if (command == null) {
 			return PromiseTools.error('Missing command.');
 		}
-		// switch(command) {
-		// 	case Status:
-		// 		//The special case of the status of all jobs. Best to
-		// 		//do it all in one go instead of piecemeal.
-		// 		if (jobId == null || jobId.length == 0) {
-		// 			return ComputeQueue.getJobStatuses(_redis)
-		// 				.then(function(jobStatusBlobs :TypedDynamicObject<JobId,JobStatusBlob>) {
-		// 					var result :TypedDynamicObject<JobId,String> = {};
-		// 					for (jobId in jobStatusBlobs.keys()) {
-		// 						var statusBlob :JobStatusBlob = jobStatusBlobs[jobId];
-		// 						var s :String = statusBlob.status == JobStatus.Working ? statusBlob.statusWorking : statusBlob.status;
-		// 						result[jobId] = s;
-		// 					}
-		// 					return result;
-		// 				})
-		// 				.errorPipe(function(err) {
-		// 					Log.error(err);
-		// 					return Promise.promise(null);
-		// 				});
-		// 		}
-		// 	default://continue
-		// }
-
-		// if (jobId == null || jobId.length == 0 || (jobId.length == 1 && jobId[0] == null)) {
-		// 	return ComputeQueue.getAllJobIds(_redis)
-		// 		.pipe(function(jobId) {
-		// 			return __doJobCommandInternal(command, jobId, json);
-		// 		});
-		// } else {
-			// var validJobPromises = jobId.map(function(j) return ComputeQueue.isJob(_redis, j));
-			// var invalidJobIds = [];
-			// return Promise.whenAll(validJobPromises)
-			// 	.pipe(function(jobChecks) {
-			// 		var validJobIds = [];
-			// 		for (i in 0...jobId.length) {
-			// 			var jid = jobId[i];
-			// 			if (jobChecks[i]) {
-			// 				validJobIds.push(jid);
-			// 			} else {
-			// 				invalidJobIds.push(jid);
-			// 			}
-			// 		}
-					return __doJobCommandInternal(command, jobId, json);
-				// })
-				// .then(function(results) {
-				// 	for (invalidJobId in invalidJobIds) {
-				// 		Reflect.setField(results, invalidJobId, RESULT_INVALID_JOB_ID);
-				// 	}
-				// 	return results;
-				// });
-		// }
+		return __doJobCommandInternal(command, jobId, json);
 #else
 		return Promise.promise(null);
 #end
@@ -332,7 +293,7 @@ class RpcRoutes
 	public function pending() :Promise<Array<JobId>>
 	{
 #if ((nodejs && !macro) && !excludeccc)
-		return JobCommands.pending(_injector);
+		return JobCommands.pending();
 #else
 		return Promise.promise(null);
 #end
@@ -454,7 +415,7 @@ class RpcRoutes
 		}
 
 #if ((nodejs && !macro) && !excludeccc)
-		return ServiceBatchComputeTools.runTurboJobRequest(_injector, request);
+		return submitTurboJobJson(request);
 #else
 		return Promise.promise(null);
 #end
@@ -470,7 +431,38 @@ class RpcRoutes
 	public function submitTurboJobJson(job :BatchProcessRequestTurbo) :Promise<JobResultsTurbo>
 	{
 #if ((nodejs && !macro) && !excludeccc)
-		return ServiceBatchComputeTools.runTurboJobRequest(_injector, job);
+
+		//Convert between the old and the new
+		var newJob :BatchProcessRequestTurboV2 = cast Reflect.copy(job);
+		newJob.inputs = [];
+		if (job.inputs != null) {
+			for (inputField in Reflect.fields(job.inputs)) {
+				var val = Reflect.field(job.inputs, inputField);
+				newJob.inputs.push({
+					name: inputField,
+					type: InputSource.InputInline,//Default
+					value: val
+				});
+			}
+		}
+
+		//Convert between the new and the old
+		return submitTurboJobJsonV2(newJob)
+			.then(function(result) {
+				var prevResultVersion :JobResultsTurbo = cast Reflect.copy(result);
+				prevResultVersion.outputs = {};
+				if (result.outputs != null) {
+					for (output in result.outputs) {
+						var stringValue = if (output.encoding != null) {
+							Buffer.from(output.value, output.encoding).toString('utf8');
+						} else {
+							output.value;
+						}
+						Reflect.setField(prevResultVersion.outputs, output.name, stringValue);
+					}
+				}
+				return prevResultVersion;
+			});
 #else
 		return Promise.promise(null);
 #end
@@ -603,14 +595,12 @@ class RpcRoutes
 
 	public function dispose() {}
 
-	public static function router(injector :Injector) :js.npm.express.Router
+	public static function init(injector :Injector)
 	{
-		//Ensure there is only a single jsonrpc Context object
 		//Ensure there is only a single jsonrpc Context object
 		if (!injector.hasMapping(t9.remoting.jsonrpc.Context)) {
 			injector.map(t9.remoting.jsonrpc.Context).toValue(new t9.remoting.jsonrpc.Context());
 		}
-		var context :t9.remoting.jsonrpc.Context = injector.getValue(t9.remoting.jsonrpc.Context);
 
 		//Create all the services, and map the RPC methods to the context object
 		if (!injector.hasMapping(RpcRoutes)) {
@@ -619,11 +609,18 @@ class RpcRoutes
 			injector.injectInto(rpcRoutes);
 		}
 
-		if (!injector.hasMapping(ServiceTests)) {
-			var serviceTests = new ServiceTests();
-			injector.map(ServiceTests).toValue(serviceTests);
-			injector.injectInto(serviceTests);
-		}
+		// if (!injector.hasMapping(ServiceTests)) {
+		// 	var serviceTests = new ServiceTests();
+		// 	injector.map(ServiceTests).toValue(serviceTests);
+		// 	injector.injectInto(serviceTests);
+		// }
+	}
+
+	public static function router(injector :Injector) :js.npm.express.Router
+	{
+		init(injector);
+
+		var context :t9.remoting.jsonrpc.Context = injector.getValue(t9.remoting.jsonrpc.Context);
 
 		var router = js.npm.express.Express.GetRouter();
 		/* /rpc */
@@ -639,45 +636,34 @@ class RpcRoutes
 
 	public static function routerVersioned(injector :Injector) :js.npm.express.Router
 	{
-		//Ensure there is only a single jsonrpc Context object
-		if (!injector.hasMapping(t9.remoting.jsonrpc.Context)) {
-			injector.map(t9.remoting.jsonrpc.Context).toValue(new t9.remoting.jsonrpc.Context());
-		}
+		init(injector);
+
 		var context :t9.remoting.jsonrpc.Context = injector.getValue(t9.remoting.jsonrpc.Context);
-
-		//Create all the services, and map the RPC methods to the context object
-		if (!injector.hasMapping(RpcRoutes)) {
-			var rpcRoutes = new RpcRoutes();
-			injector.map(RpcRoutes).toValue(rpcRoutes);
-			injector.injectInto(rpcRoutes);
-		}
-
-		if (!injector.hasMapping(ServiceTests)) {
-			var serviceTests = new ServiceTests();
-			injector.map(ServiceTests).toValue(serviceTests);
-			injector.injectInto(serviceTests);
-		}
 
 		var router = js.npm.express.Express.GetRouter();
 		var routerVersioned = js.npm.express.Express.GetRouter();
 
+		switch(CCCVersion.v1) {
+			case v1:
+			case none:
+			//This expression will trigger a compilation fail if we add more versions
+		}
+		var version = Type.enumConstructor(CCCVersion.v1);
 		//Handle the special multi-part requests. These are a special case.
-		router.post('/${VERSION}', injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());
+		router.post('/${version}', injector.getValue(RpcRoutes).multiFormJobSubmissionRouter());
 
 		//Show all methods
-		router.get('/${VERSION}', function(req, res) {
+		router.get('/${version}', function(req, res) {
 			res.json({methods:context.methodDefinitions()});
 		});
 
-		router.use('/${VERSION}', routerVersioned);
+		router.use('/${version}', routerVersioned);
 
 		js.npm.JsonRpcExpressTools.addExpressRoutes(routerVersioned, context);
 
 		var timeout = 1000*60*30;//30m
-		router.post('/${VERSION}', Routes.generatePostRequestHandler(context, timeout));
-		router.get('/$VERSION/*', Routes.generateGetRequestHandler(context, VERSION, timeout));
-
-
+		router.post('/${version}', Routes.generatePostRequestHandler(context, timeout));
+		router.get('/$version/*', Routes.generateGetRequestHandler(context, version, timeout));
 
 		router.get('/fork/test', function(req, res, next) {
 			res.send('ok /fork/test');

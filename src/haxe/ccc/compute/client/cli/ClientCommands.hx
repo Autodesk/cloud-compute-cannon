@@ -906,42 +906,42 @@ class ClientCommands
 		return Promise.promise(CLIResult.Success);
 	}
 
-	@rpc({
-		alias:'server-check',
-		doc:'Checks the server via SSH and the HTTP API'
-	})
-	public static function servercheck() :Promise<CLIResult>
-	{
-		var configPath = findExistingServerConfigPath();
-		if (configPath == null) {
-			log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
-			return Promise.promise(CLIResult.PrintHelpExit1);
-		}
-		var connection = readServerConnection(configPath);
-		if (connection == null) {
-			log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
-			return Promise.promise(CLIResult.PrintHelpExit1);
-		}
-		return ProviderTools.serverCheck(connection)
-			.then(function(result) {
-				result.connection_file_path = configPath.getServerYamlConfigPath();
-				return result;
-			})
-			.pipe(function(result) {
-				var host = connection.host;
-				var clientProxy = getTestsProxy(host.rpcUrl());
-				return clientProxy.runServerTests()
-					.then(function(testResults) {
-						Reflect.setField(result, 'tests', testResults);
-						log(Json.stringify(result, null, '\t'));
-						if (testResults.success) {
-							return CLIResult.Success;
-						} else {
-							return CLIResult.ExitCode(1);
-						}
-					});
-			});
-	}
+	// @rpc({
+	// 	alias:'server-check',
+	// 	doc:'Checks the server via SSH and the HTTP API'
+	// })
+	// public static function servercheck() :Promise<CLIResult>
+	// {
+	// 	var configPath = findExistingServerConfigPath();
+	// 	if (configPath == null) {
+	// 		log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
+	// 		return Promise.promise(CLIResult.PrintHelpExit1);
+	// 	}
+	// 	var connection = readServerConnection(configPath);
+	// 	if (connection == null) {
+	// 		log(Json.stringify({error:'Missing server configuration in this directory. Have you run "$CLI_COMMAND install" '}));
+	// 		return Promise.promise(CLIResult.PrintHelpExit1);
+	// 	}
+	// 	return ProviderTools.serverCheck(connection)
+	// 		.then(function(result) {
+	// 			result.connection_file_path = configPath.getServerYamlConfigPath();
+	// 			return result;
+	// 		})
+	// 		.pipe(function(result) {
+	// 			var host = connection.host;
+	// 			var clientProxy = getTestsProxy(host.rpcUrl());
+	// 			return clientProxy.runServerTests()
+	// 				.then(function(testResults) {
+	// 					Reflect.setField(result, 'tests', testResults);
+	// 					log(Json.stringify(result, null, '\t'));
+	// 					if (testResults.success) {
+	// 						return CLIResult.Success;
+	// 					} else {
+	// 						return CLIResult.ExitCode(1);
+	// 					}
+	// 				});
+	// 		});
+	// }
 
 	@rpc({
 		alias:'server-ping',

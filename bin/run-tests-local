@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-./bin/build-docker-images
-# docker-compose rm -f && docker-compose build && DISABLE_LOGGING="true" HOST_PWD=`pwd` docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.test.local.yml up --abort-on-container-exit
-docker-compose rm -f && DISABLE_LOGGING="true" HOST_PWD=`pwd` EXECUTABLE="node" docker-compose -f docker-compose.yml -f docker-compose.test.local.yml up --abort-on-container-exit
-

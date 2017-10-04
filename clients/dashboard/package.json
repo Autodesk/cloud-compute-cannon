@@ -1,0 +1,46 @@
+{
+  "name": "ccc-client",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "libs": "mkdir -p build && browserify src/libs.js -o build/libs.js -d",
+    "serve": "livereloadx -s build",
+    "dev": "haxe build.hxml -debug",
+    "work": "npm run libs && npm run serve",
+    "build": "haxe build.hxml",
+    "minify": "node minify-all.js",
+    "clean": "shx rm -f build/*.js && shx rm -f build/*.map",
+    "release:steps": "npm run clean && npm run libs && npm run build && npm run minify",
+    "release": "cross-env NODE_ENV=production npm run release:steps"
+  },
+  "author": "Dion Whitehead",
+  "license": "ISC",
+  "dependencies": {
+    "d3": "^4.10.2",
+    "material-ui": "^0.19.1",
+    "moment-timezone": "^0.5.13",
+    "radium": "^0.18.4",
+    "random-sentence": "^1.0.4",
+    "react": "^15.6.1",
+    "react-dnd": "^2.5.1",
+    "react-dnd-html5-backend": "^2.5.1",
+    "react-dom": "^15.6.1",
+    "react-icons": "^2.2.5",
+    "react-infinite": "^0.10.0",
+    "react-router": "^3.0.5",
+    "react-table": "^6.5.3",
+    "react-tap-event-plugin": "^2.0.1",
+    "react-virtualized": "^9.9.0",
+    "redux": "^3.7.2"
+  },
+  "devDependencies": {
+    "browserify": "^14.4.0",
+    "cross-env": "^5.0.1",
+    "envify": "^4.0.0",
+    "haxe-modular": "^0.5.0 ",
+    "livereloadx": "^0.3.9",
+    "redux-logger": "^3.0.6",
+    "shx": "^0.2.2",
+    "uglify-js": "^3.1.0"
+  }
+}

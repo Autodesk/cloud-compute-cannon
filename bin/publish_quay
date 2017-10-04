@@ -9,22 +9,24 @@ if [ ! -z "$QUAY_USERNAME" ] && [ ! -z "$QUAY_PASSWORD" ]; then
 	#Make sure we are logged into quay.io
 	docker login --username $QUAY_USERNAME --password $QUAY_PASSWORD quay.io
 
-	NPM_VERSION=$(cat package.json \
-	  | grep version \
-	  | head -1 \
-	  | awk -F: '{ print $2 }' \
-	  | sed 's/[",]//g' \
-	  | tr -d '[[:space:]]
-	  ')
+	# NPM_VERSION=$(cat package.json \
+	#   | grep version \
+	#   | head -1 \
+	#   | awk -F: '{ print $2 }' \
+	#   | sed 's/[",]//g' \
+	#   | tr -d '[[:space:]]
+	#   ')
+	# docker tag cloud-compute-cannon:$NPM_VERSION quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
+	# echo "Pushing quay.io/bionano/cloud-compute-cannon:$NPM_VERSION"
+	# docker push quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
+
+
+
 	GIT_TAG=`git rev-parse HEAD`
 	if [ ! -z "$TRAVIS_COMMIT" ]; then
 		GIT_TAG=$TRAVIS_COMMIT
 	fi
 	GIT_TAG=${GIT_TAG:0:8}
-
-	docker tag cloud-compute-cannon:$NPM_VERSION quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
-	echo "Pushing quay.io/bionano/cloud-compute-cannon:$NPM_VERSION"
-	docker push quay.io/bionano/cloud-compute-cannon:$NPM_VERSION
 
 	docker tag cloud-compute-cannon:$GIT_TAG quay.io/bionano/cloud-compute-cannon:$GIT_TAG
 	echo "Pushing quay.io/bionano/cloud-compute-cannon:$GIT_TAG"

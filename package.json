@@ -7,12 +7,19 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "init": "git submodule update --init --recursive",
+    "init": "git submodule update --init --recursive && haxelib install -y ",
+    "install-dependencies": "mkdir -p .haxelib && haxelib install --always etc/hxml/base.hxml && haxelib install --always etc/hxml/base-nodejs.hxml && haxelib install --always clients/dashboard/build.hxml && haxelib install --always etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml",
     "build": "haxe etc/hxml/build-all.hxml",
     "redis-cli": "redis-cli -h 192.168.99.100",
     "redis-admin": "redis-commander --redis-host 192.168.99.101 && open http://localhost:8081",
     "clean": "rm -rf data/computejobs/* ; rm -rf data/registry/* ; rm -rf data/ServiceStorageLocalFileSystem/*",
-    "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf"
+    "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf",
+    "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
+    "set-build:client-dashboard": "rm build.hxml && ln -s clients/dashboard/build-dev.hxml build.hxml",
+    "set-build:lambda-autoscaling": "rm build.hxml && ln -s etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml build.hxml",
+    "set-build:lambda-autoscaling-test-server": "rm build.hxml && ln -s test/local-scaling-server/build.hxml build.hxml",
+    "set-build:all": "rm build.hxml && ln -s etc/hxml/build-all.hxml build.hxml",
+    "set-build:all-servers": "rm build.hxml && ln -s etc/hxml/build-all-servers.hxml build.hxml"
   },
   "repository": {
     "type": "git",
@@ -22,10 +29,10 @@
     "url": "https://github.com/Autodesk/cloudcomputecannon/issues"
   },
   "dependencies": {
-    "aws-sdk": "^2.9.0",
+    "aws-sdk": "^2.122.0",
     "base64-stream": "^0.1.3",
     "bluebird": "^3.4.7",
-    "body-parser": "^1.16.0",
+    "body-parser": "^1.18.2",
     "bull": "^2.1.2",
     "bunyan": "^1.8.5",
     "bunyan-format": "^0.2.1",
@@ -35,11 +42,11 @@
     "commander": "^2.9.0",
     "cors": "^2.8.1",
     "dev-null": "^0.1.1",
-    "dockerode": "^2.3.1",
+    "dockerode": "^2.5.1",
     "dotenv": "^2.0.0",
     "elasticsearch": "^11.0.1",
     "eventemitter3": "^1.2.0",
-    "express": "^4.12.3",
+    "express": "^4.15.5",
     "express-bunyan-logger": "^1.3.1",
     "fluent-logger": "^1.2.1",
     "fs-extended": "^0.2.1",
@@ -48,12 +55,12 @@
     "metaframe": "0.0.2",
     "moment-timezone": "^0.5.11",
     "node-uuid": "^1.4.7",
-    "node-vagrant": "^1.0.6",
-    "nodemon": "^1.11.0",
+    "node-vagrant": "^1.2.0",
+    "nodemon": "^1.12.1",
     "pkgcloud": "^1.4.0",
-    "redis": "^0.12.1",
-    "request": "^2.79.0",
-    "serve-favicon": "^2.3.2",
+    "redis": "^2.8.0",
+    "request": "^2.82.0",
+    "serve-favicon": "^2.4.4",
     "serve-index": "^1.8.0",
     "shortid": "^2.2.6",
     "source-map-support": "^0.2.10",
@@ -67,8 +74,12 @@
     "ws": "^0.8.0"
   },
   "devDependencies": {
-    "bluebird": "^3.4.0",
-    "redis-mock": "^0.4.9"
+    "express-livereload": "0.0.24",
+    "haxe-modular": "^0.5.0 ",
+    "react-hot-loader": "^3.0.0-beta.7",
+    "redis-mock": "^0.4.9",
+    "webpack": "^3.6.0",
+    "webpack-dev-server": "^2.8.2"
   },
   "preferGlobal": true,
   "private": false

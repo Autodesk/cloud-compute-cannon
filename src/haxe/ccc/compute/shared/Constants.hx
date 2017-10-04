@@ -1,5 +1,7 @@
 package ccc.compute.shared;
 
+import ccc.SharedConstants.*;
+
 import haxe.Json;
 import t9.abstracts.net.*;
 
@@ -26,14 +28,12 @@ class Constants
 	public static var CLI_COMMAND = APP_NAME_COMPACT;
 
 	/* Redis */
-	inline public static var SEP = '::';
-	inline public static var CCC_PREFIX = 'ccc${SEP}';
 	inline public static var JOB_ID_ATTEMPT_SEP = '_';
 	inline public static var CONFIG_HASH = 'ccc_config';
 	inline public static var CONFIG_HASH_WORKERS_MAX = 'workers_max';
 	inline public static var CONFIG_HASH_WORKERS_MIN = 'workers_min';
 	inline public static var WORKER_STATUS_KEY_TTL_SECONDS = 20;
-	inline public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS = 10;
+	// inline public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS = 10;
 	inline public static var GLOBAL_WORKER_HEALTH_CHECK_SECONDS = 20;
 
 	/* Job constants */
@@ -87,7 +87,6 @@ class Constants
 	/* Server */
 	public static var DOCKER_CONTAINER_ID :String = null;
 	public static var DOCKER_CONTAINER_NAME :String = null;
-	inline public static var SERVER_DEFAULT_PROTOCOL = 'http';
 	inline public static var SERVER_DEFAULT_PORT = 9000;
 	public static var SERVER_PUBLIC_HOST = new Host(new HostName('ccc.bionano.autodesk.com'), new Port(SERVER_DEFAULT_PORT));
 	inline public static var SERVER_RELOADER_PORT = 9002;
@@ -112,7 +111,6 @@ class Constants
 	inline public static var SERVER_MOUNTED_CONFIG_FILE_NAME = 'ccc.yml';
 	inline public static var SERVER_MOUNTED_CONFIG_FILE_DEFAULT = 'config/$SERVER_MOUNTED_CONFIG_FILE_NAME';
 	public static var SERVER_LOCAL_HOST :Host = new Host(new HostName('localhost'), new Port(SERVER_DEFAULT_PORT));
-	public static var SERVER_LOCAL_RPC_URL :UrlString = '${SERVER_DEFAULT_PROTOCOL}://${SERVER_LOCAL_HOST}${SERVER_RPC_URL}';
 
 	/* WORKER TAGS */
 	inline public static var INSTANCE_TAG_TYPE_KEY = 'CCC_TYPE';

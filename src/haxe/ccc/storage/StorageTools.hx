@@ -2,10 +2,11 @@ package ccc.storage;
 
 import ccc.storage.ServiceStorage;
 import ccc.storage.StorageDefinition;
-import ccc.compute.shared.Definitions;
+import ccc.Definitions;
 
-import js.npm.PkgCloud;
-import js.npm.PkgCloud.StorageClientP;
+import js.npm.pkgcloud.PkgCloud;
+import js.npm.PkgCloudHelpers;
+// import js.npm.PkgCloud.StorageClientP;
 import js.npm.ssh2.Ssh.ConnectOptions;
 
 using StringTools;

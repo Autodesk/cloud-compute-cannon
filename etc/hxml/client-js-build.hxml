@@ -10,9 +10,10 @@
 -lib logshim:0.0.4
 -lib hxnodejs:4.0.9
 
--cp lib/hxnodelibs
+-cp clients/shared/lib/hxnodelibs
 -cp lib/haxe-json-rpc/src/haxe
 -cp lib/promhx/src/main
+-cp clients/shared/src
 -cp src/haxe
 
 --macro exclude('ccc.compute.client.cli')

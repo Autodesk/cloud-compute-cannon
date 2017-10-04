@@ -4,13 +4,16 @@ echo "Building and tagging images"
 set -e
 BASEDIR=$PWD
 CCC_BUILD_IMAGE="cccbuild"
-BUILD_DIR="build/docker/compile_image"
-mkdir -p $BUILD_DIR/etc/hxml
-cp ./etc/docker/DockerfileBuild $BUILD_DIR/Dockerfile
-cp -r ./etc/hxml/* $BUILD_DIR/etc/hxml/
-cd $BUILD_DIR/
-docker build -t $CCC_BUILD_IMAGE .
-cd $BASEDIR
+#Delete all prior builds
 rm -rf build
-mkdir build
-docker run --rm -v $PWD/build:/app/build -v $PWD/etc/docker:/app/etc/docker -v $PWD/src:/app/src -v $PWD/etc:/app/etc -v $PWD/test:/app/test -v $PWD/lib:/app/lib -v $PWD/.git:/app/.git -v $PWD/package.json:/app/package.json -v $PWD/docker-compose.yml:/app/docker-compose.yml -v $PWD/docker-compose.core.yml:/app/docker-compose.core.yml -v $PWD/docker-compose.prod.yml:/app/docker-compose.prod.yml -v $PWD/docker-compose.npm-prod.yml:/app/docker-compose.npm-prod.yml -v $PWD/docker-compose.override.yml:/app/docker-compose.override.yml $CCC_BUILD_IMAGE haxe etc/hxml/build-all.hxml
+#Recreate the build folders. This SHOULD be done automatically
+#in the haxe build process, but there is a weird interaction with
+#docker, and I often see errors such as:
+#   Unix.Unix_error(Unix.EBUSY, "mkdir", "build/local-scaling-server")
+#so a workaround is to create all the directories before building.
+#This is annoying and fragile, but not other solution was found.
+mkdir -p build/server
+mkdir -p build/local-scaling-server
+mkdir -p build/test
+docker build -f DockerfileBuild -t $CCC_BUILD_IMAGE .
+docker run --rm -v $PWD/build:/app/build -v $PWD/etc/docker:/app/etc/docker -v $PWD/src:/app/src -v $PWD/clients:/app/clients -v $PWD/etc:/app/etc -v $PWD/test:/app/test -v $PWD/lib:/app/lib -v $PWD/.git:/app/.git -v $PWD/package.json:/app/package.json -v $PWD/docker-compose.yml:/app/docker-compose.yml -v $PWD/docker-compose.core.yml:/app/docker-compose.core.yml -v $PWD/docker-compose.prod.yml:/app/docker-compose.prod.yml -v $PWD/docker-compose.npm-prod.yml:/app/docker-compose.npm-prod.yml -v $PWD/docker-compose.override.yml:/app/docker-compose.override.yml $CCC_BUILD_IMAGE haxe etc/hxml/build-all.hxml

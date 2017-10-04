@@ -1,7 +1,9 @@
 etc/hxml/base-nodejs.hxml
 
--D nodejs
+-cp etc/bionano/aws/cloudformation/lambda-autoscaling/src
+
 # -D PromhxExposeErrors
+# -D ENABLE_LOG_ServiceMonitorRequest
 
 -debug
 
