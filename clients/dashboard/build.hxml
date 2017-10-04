@@ -1,0 +1,23 @@
+clients/shared/hxml/git-libs.hxml
+clients/shared/hxml/react.hxml
+-lib json-rpc:1.4.3
+-lib abstracts-core:0.1.1
+
+# -lib hxnodelibs:git:https://github.com/dionjwa/hxnodelibs.git#jwt-decode
+# -cp clients/shared/lib/hxnodelibs
+# -cp clients/shared/lib/haxe-misc-tools/src
+-cp clients/shared/src
+-cp clients/dashboard/src
+
+# -D css_colors
+# -D react_hot
+# -debug
+
+-js clients/dashboard/build/index.js
+-main Main
+
+#--times
+#-D macro-times
+#
+# --next
+# -cmd mkdir -p clients/dashboard/build/ && rsync -av clients/dashboard/web/* clients/dashboard/build/

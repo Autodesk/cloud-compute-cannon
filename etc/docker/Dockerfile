@@ -1,22 +1,23 @@
-FROM alpine:3.4
-MAINTAINER Dion Whitehead Amago
+FROM node:8.6.0-alpine
+MAINTAINER Dion Amago Whitehead
 
 ENV APP /app
 RUN mkdir -p $APP
 WORKDIR $APP
 
+RUN npm install -g forever && touch $APP/.foreverignore
+
 ADD package.json $APP/package.json
 
-RUN apk add --no-cache nodejs && \
-	apk add --no-cache make gcc g++ python linux-headers udev && \
+# npm install -g forever && \
+# touch $APP/.foreverignore
+RUN apk add --no-cache make gcc g++ python linux-headers udev git && \
 	npm install && \
-	npm install -g forever nodemon && \
-	apk del make gcc g++ python linux-headers udev && \
-	rm -rf /tmp/* /var/tmp/* /var/cache/apk/* && \
-	touch $APP/.foreverignore
+	apk del make gcc g++ python linux-headers udev git && \
+	rm -rf /tmp/* /var/tmp/* /var/cache/apk/*
 
 ENV PORT 9000
-EXPOSE $PORT
+EXPOSE 9000
 
 ADD server $APP/server
 ADD web $APP/web

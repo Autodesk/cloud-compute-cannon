@@ -8,9 +8,9 @@ package ccc.compute.server.util;
  */
 
 import js.node.Fs;
-import js.npm.PkgCloud;
-import js.npm.RedisClient;
-import js.npm.PkgCloud.ClientOptionsAmazon;
+import js.npm.pkgcloud.PkgCloud;
+import js.npm.PkgCloudHelpers;
+import js.npm.redis.RedisClient;
 
 import yaml.Yaml;
 
@@ -76,7 +76,6 @@ class InitConfigTools
 	{
 		var env = js.Node.process.env;
 		if (Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG) != null && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG) != '') {
-			Log.info({server_status:'get_config', message:'Getting config from $ENV_VAR_COMPUTE_CONFIG env var'});
 			return Yaml.parse(Reflect.field(env, ENV_VAR_COMPUTE_CONFIG), DEFAULT_YAML_OPTIONS);
 		} else {
 			Log.debug({server_status:'get_config', message:'no $ENV_VAR_COMPUTE_CONFIG in env, path=$path'});
@@ -84,7 +83,6 @@ class InitConfigTools
 				//This will throw an error if it doesnt' exist
 				try {
 					Fs.statSync(path);
-					Log.warn('Loading config from file=$path');
 					return getConfigFromFile(path);
 				} catch (_ :Dynamic) {
 					//Swallow errors
@@ -92,7 +90,6 @@ class InitConfigTools
 				}
 			}
 			Log.debug({server_status:'get_config', message:'using default config'});
-			Log.info('Loading default config');
 			return getDefaultConfig();
 		}
 	}
@@ -196,7 +193,7 @@ class InitConfigTools
 				return Yaml.parse(fileString, DEFAULT_YAML_OPTIONS);
 			} catch(err :Dynamic) {
 				Log.error(err);
-				return return Json.parse(fileString);
+				return Json.parse(fileString);
 			}
 		}
 	}

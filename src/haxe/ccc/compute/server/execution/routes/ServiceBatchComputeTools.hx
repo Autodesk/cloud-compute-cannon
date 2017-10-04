@@ -1,21 +1,24 @@
 package ccc.compute.server.execution.routes;
 
-import ccc.compute.server.execution.singleworker.ProcessQueue;
+import ccc.compute.worker.ProcessQueue;
 import ccc.storage.ServiceStorage;
+import ccc.compute.worker.BatchComputeDocker;
+import ccc.compute.worker.BatchComputeDockerTurbo;
 
 import haxe.Json;
 import haxe.remoting.JsonRpc;
 import haxe.extern.EitherType;
 
-import js.Node;
-import js.node.stream.Readable;
-import js.node.Http;
 import js.node.http.*;
-import js.npm.streamifier.Streamifier;
-import js.npm.docker.Docker;
+import js.node.Http;
+import js.node.stream.Readable;
+import js.Node;
+import js.npm.bull.Bull;
 import js.npm.busboy.Busboy;
+import js.npm.docker.Docker;
+import js.npm.redis.RedisClient;
 import js.npm.ssh2.Ssh;
-import js.npm.RedisClient;
+import js.npm.streamifier.Streamifier;
 import js.npm.streamifier.Streamifier;
 
 import minject.Injector;
@@ -34,32 +37,82 @@ class ServiceBatchComputeTools
 {
 	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:600};//10 minutes
 
-	public static function runTurboJobRequest(injector :Injector, job :BatchProcessRequestTurbo) :Promise<JobResultsTurbo>
-	{
-		if (job == null) {
-			throw 'Null job argument in ServiceBatchCompute.run(...)';
-		}
-		var log :AbstractLogger = injector.getValue(AbstractLogger);
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var docker :Docker = injector.getValue(Docker);
-		var worker :WorkerController = injector.getValue(WorkerController);
-		var thisMachineId = worker.id;
-		Assert.notNull(thisMachineId);
-		return BatchComputeDockerTurbo.executeTurboJob(redis, job, docker, thisMachineId, log);
-	}
-
 	public static function runTurboJobRequestV2(injector :Injector, job :BatchProcessRequestTurboV2) :Promise<JobResultsTurboV2>
 	{
 		if (job == null) {
 			throw 'Null job argument in ServiceBatchCompute.run(...)';
 		}
-		var log :AbstractLogger = injector.getValue(AbstractLogger);
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var docker :Docker = injector.getValue(Docker);
-		var worker :WorkerController = injector.getValue(WorkerController);
-		var thisMachineId = worker.id;
-		Assert.notNull(thisMachineId);
-		return BatchComputeDockerTurbo.executeTurboJobV2(redis, job, docker, thisMachineId, log);
+
+		if (job.id == null) {
+			job.id = ComputeTools.createUniqueId();
+		}
+
+		Log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:QueueJobDefinitionType.turbo}, JobEventType.ENQUEUED));
+
+		var promise = new DeferredPromise<JobResultsTurboV2>();
+
+		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
+
+		var jobCompletedHandler;
+		var jobFailedHandler;
+		var timeoutId;
+
+		function cleanup() {
+			if (promise != null) {
+				processQueue.queueProcess.removeListener('global:${QueueEvent.Completed}', jobCompletedHandler);
+				processQueue.queueProcess.removeListener('global:${QueueEvent.Failed}', jobFailedHandler);
+
+				promise = null;
+			}
+			if (timeoutId != null) {
+				Node.clearTimeout(timeoutId);
+				timeoutId = null;
+			}
+		}
+		timeoutId = Node.setTimeout(function() {
+			if (promise != null) {
+				promise.boundPromise.reject('Timeout');
+			}
+			cleanup();
+		}, ServerConfig.JOB_TURBO_MAX_TIME_SECONDS * 1000);
+
+		//Set up listeners
+		jobCompletedHandler = function(completedJob, result :JobResultsTurboV2) {
+			if (completedJob.data.jobId == job.id) {
+				Log.info({jobId:job.id, message:'SUCCESS TURBO JOB', result:result});
+				if (promise != null) {
+					promise.resolve(result);
+				}
+				cleanup();
+			}
+			else {
+				traceYellow('jobCompletedHandler does NOT match job we are listening for');
+			}
+		}
+		jobFailedHandler = function(failedJob, err) {
+			if (failedJob.data.jobId == job.id) {
+				Log.warn({jobId:job.id, message:'FAILED TURBO JOB', error:err});
+				if (promise != null) {
+					promise.boundPromise.reject(err);
+				}
+				cleanup();
+			}
+		}
+		processQueue.queueProcess.addListener('global:${QueueEvent.Completed}', jobCompletedHandler);
+		processQueue.queueProcess.addListener('global:${QueueEvent.Failed}', jobFailedHandler);
+
+		//Add job to the queue
+		var job :QueueJobDefinition<BatchProcessRequestTurboV2> = {
+			id: job.id,
+			type: QueueJobDefinitionType.turbo,
+			item: job,
+			priority: false,
+			parameters: null,
+			attempt: 1
+		}
+		processQueue.add(job);
+
+		return promise.boundPromise;
 	}
 
 	public static function runComputeJobRequest(injector :Injector, job :BasicBatchProcessRequest) :Promise<JobResult>
@@ -71,8 +124,6 @@ class ServiceBatchComputeTools
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
 		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
 		var redis :RedisClient = injector.getValue(RedisClient);
-
-		var jobStats :JobStats = redis;
 
 		var jobId :JobId = null;
 		var deleteInputs :Void->Promise<Bool> = null;
@@ -86,7 +137,7 @@ class ServiceBatchComputeTools
 			})
 			.pipe(function(id) {
 				jobId = id;
-				jobStats.requestRecieved(jobId);
+				JobStatsTools.requestRecieved(jobId);
 				var dateString = Date.now().format("%Y-%m-%d");
 				var inputs = null;
 				var inputPath = job.inputsPath != null ? (job.inputsPath.endsWith('/') ? job.inputsPath : job.inputsPath + '/') : jobId.defaultInputDir();
@@ -95,7 +146,7 @@ class ServiceBatchComputeTools
 				var inputFilesObj = writeInputFiles(fs, job.inputs, inputPath);
 				deleteInputs = inputFilesObj.cancel;
 				var dockerImage :String = job.image == null ? DOCKER_IMAGE_DEFAULT : job.image;
-				var dockerJob :DockerJobDefinition = {
+				var dockerJob :DockerBatchComputeJob = {
 					jobId: jobId,
 					image: {type:DockerImageSourceType.Image, value:dockerImage, pull_options:job.pull_options, optionsCreate:job.createOptions},
 					command: job.cmd,
@@ -113,7 +164,7 @@ class ServiceBatchComputeTools
 					mountApiServer: job.mountApiServer
 				};
 
-				Log.info({job_submission :dockerJob.jobId});
+				Log.info({job_submission :dockerJob.jobId}.add(LogEventType.JobSubmitted));
 				Log.debug({job_submission :dockerJob});
 
 				if (dockerJob.command != null && untyped __typeof__(dockerJob.command) == 'string') {
@@ -136,11 +187,13 @@ class ServiceBatchComputeTools
 						return inputFilesObj.promise;
 					})
 					.pipe(function(result) {
-						var job :QueueJobDefinitionDocker = {
+						var job :QueueJobDefinition<DockerBatchComputeJob> = {
 							id: jobId,
+							type: QueueJobDefinitionType.compute,
 							item: dockerJob,
 							parameters: parameters,
-							priority: job.priority
+							priority: job.priority,
+							attempt: 1
 						}
 						processQueue.add(job);
 						// return ComputeQueue.enqueue(_redis, job);
@@ -166,7 +219,8 @@ class ServiceBatchComputeTools
 			})
 			.pipe(function(_) {
 				if (error != null) {
-					jobStats.jobFinished(jobId, Json.stringify(error));
+					JobStateTools.setFinishedStatus(jobId, JobFinishedStatus.Failed, Json.stringify({error:error, message: 'Failed during submission, job results possibly not present.'}));
+					// JobStatsTools.jobFinished(jobId, Json.stringify(error));
 					throw error;
 				}
 				if (job.wait == true) {
@@ -194,10 +248,8 @@ class ServiceBatchComputeTools
 
 		var log = Log.log;
 
-		var jobStats :JobStats = redis;
-
 		function returnError(err :haxe.extern.EitherType<String, js.Error>, ?statusCode :Int = 500) {
-			log.error('err=$err\njsonrpc=${jsonrpc == null ? "null" : Json.stringify(jsonrpc, null, "\t")}');
+			log.error({error:err, jsonrpc:jsonrpc, message: 'Failed handleMultiformBatchComputeRequest'}.add(LogEventType.JobError));
 			if (returned) return;
 			res.writeHead(statusCode, {'content-type': 'application/json'});
 			res.end(Json.stringify({error: err}));
@@ -208,12 +260,12 @@ class ServiceBatchComputeTools
 					if (jsonrpc != null && jsonrpc.params != null && jsonrpc.params.inputsPath != null) {
 						fs.deleteDir(jsonrpc.params.inputsPath)
 							.then(function(_) {
-								log.info('Got error, deleted job ${jsonrpc.params.inputsPath}');
+								log.debug({message:'Got error, deleted job ${jsonrpc.params.inputsPath}'}.add(LogEventType.JobError));
 							});
 					} else {
 						fs.deleteDir(jobId)
 							.then(function(_) {
-								log.info('Deleted job dir err=$err');
+								log.debug({message:'Deleted job dir err=$err'}.add(LogEventType.JobError));
 							});
 					}
 				});
@@ -253,7 +305,7 @@ class ServiceBatchComputeTools
 		getNewJobId()
 			.then(function(newJobId) {
 				jobId = newJobId;
-				jobStats.requestRecieved(jobId);
+				JobStatsTools.requestRecieved(jobId);
 				log = log.child({jobId:jobId});
 				log.debug({message: 'Starting busboy compute request'});
 				var tenGBInBytes = 10737418240;
@@ -279,24 +331,24 @@ class ServiceBatchComputeTools
 								return false;
 							}
 
-							log.info('BusboyEvent.File writing input file $fieldName encoding=$encoding mimetype=$mimetype stream=${stream != null}');
+							log.debug('BusboyEvent.File writing input file $fieldName encoding=$encoding mimetype=$mimetype stream=${stream != null}');
 							var inputFilePath = inputPath + fieldName;
 
 							stream.on(ReadableEvent.Error, function(err) {
-								log.error('Error in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype error=$err');
+								log.error({error:err, message:'Error in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype'}.add(LogEventType.JobError));
 							});
 							stream.on('limit', function() {
-								log.error('Limit event in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype');
+								log.error({message:'Limit event in Busboy reading field=$fieldName fileName=$fileName mimetype=$mimetype'}.add(LogEventType.JobError));
 							});
 
 							var fileWritePromise = fs.writeFile(inputFilePath, stream);
 							fileWritePromise
 								.then(function(_) {
-									log.info('    finished writing input file $fieldName');
+									log.debug('finished writing input file $fieldName');
 									return true;
 								})
 								.errorThen(function(err) {
-									log.info('    error writing input file $fieldName err=$err');
+									log.debug('error writing input file $fieldName err=$err');
 									throw err;
 									return true;
 								});
@@ -341,11 +393,11 @@ class ServiceBatchComputeTools
 						var fileWritePromise = fs.writeFile(inputFilePath, Streamifier.createReadStream(val));
 						fileWritePromise
 							.then(function(_) {
-								log.info('    finished writing input file $fieldName');
+								log.debug('finished writing input file $fieldName');
 								return true;
 							})
 							.errorThen(function(err) {
-								log.info('    error writing input file $fieldName err=$err');
+								log.error({error:err, message:'error writing input file $fieldName'}.add(LogEventType.JobError));
 								throw err;
 								return true;
 							});
@@ -363,11 +415,11 @@ class ServiceBatchComputeTools
 							return Promise.whenAll(promises);
 						})
 						.pipe(function(_) {
-							jobStats.requestUploaded(jobId);
+							JobStatsTools.requestUploaded(jobId);
 
 							var parameters :JobParams = jsonrpc.params.parameters == null ? DEFAULT_JOB_PARAMS : jsonrpc.params.parameters;
 							var dockerImage :String = jsonrpc.params.image == null ? DOCKER_IMAGE_DEFAULT : jsonrpc.params.image;
-							var dockerJob :DockerJobDefinition = {
+							var dockerJob :DockerBatchComputeJob = {
 								jobId: jobId,
 								image: {type:DockerImageSourceType.Image, value:dockerImage, pull_options:jsonrpc.params.pull_options, optionsCreate:jsonrpc.params.createOptions},
 								command: jsonrpc.params.cmd,
@@ -391,16 +443,16 @@ class ServiceBatchComputeTools
 								throw 'command field must be an array, not a string';
 							}
 
-							var job :QueueJobDefinitionDocker = {
+							var job :QueueJobDefinition<DockerBatchComputeJob> = {
 								id: jobId,
+								type: QueueJobDefinitionType.compute,
 								item: dockerJob,
 								parameters: parameters,
-								priority: jsonrpc.params.priority == true
+								priority: jsonrpc.params.priority == true,
+								attempt: 1
 							}
 							return Promise.promise(true)
 								.pipe(function(_) {
-									// return ComputeQueue.enqueue(_redis, job);
-									log.info({log:"job submitted to queue"});
 									processQueue.add(job);
 									return Promise.promise(true);
 								});
@@ -410,22 +462,22 @@ class ServiceBatchComputeTools
 							JobCommands.returnJobResult(injector, res, jobId, jsonrpc.id, jsonrpc.params.wait, maxDuration);
 						})
 						.catchError(function(err) {
-							jobStats.jobFinished(jobId, Json.stringify(err));
-							log.error(err);
+							JobStateTools.setFinishedStatus(jobId, JobFinishedStatus.Failed, Json.stringify({error:error, message: 'Failed during submission, job results possibly not present.'}));
+							log.error({error:err, message:'error in job submission'}.add(LogEventType.JobError));
 							returnError(err);
 						});
 				});
 				busboy.on(BusboyEvent.PartsLimit, function() {
-					log.error('BusboyEvent ${BusboyEvent.PartsLimit}');
+					log.error({message:'BusboyEvent ${BusboyEvent.PartsLimit}'}.add(LogEventType.JobError));
 				});
 				busboy.on(BusboyEvent.FilesLimit, function() {
-					log.error('BusboyEvent ${BusboyEvent.FilesLimit}');
+					log.error({message:'BusboyEvent ${BusboyEvent.FilesLimit}'}.add(LogEventType.JobError));
 				});
 				busboy.on(BusboyEvent.FieldsLimit, function() {
-					log.error('BusboyEvent ${BusboyEvent.FieldsLimit}');
+					log.error({message:'BusboyEvent ${BusboyEvent.FieldsLimit}'}.add(LogEventType.JobError));
 				});
 				busboy.on('error', function(err) {
-					log.error('BusboyEvent error=' + Json.stringify(err));
+					log.error({error:err, message:'BusboyEvent error'}.add(LogEventType.JobError));
 					returnError(err);
 				});
 				req.pipe(busboy);

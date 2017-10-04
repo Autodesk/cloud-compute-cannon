@@ -23,13 +23,17 @@ services:
       ENABLE_FLUENT: "false"
       LOCAL: "true"
 
-    image: "quay.io/bionano/cloud-compute-cannon:e0d23cc2"
-    command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    image: "quay.io/bionano/cloud-compute-cannon:7a5cc7d8"
+    # command: ["nodemon", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    command: ["nodemon", "--inspect", "--debug-brk", "server/cloud-compute-cannon-server.js"]
+    # command: ["echo", "server/cloud-compute-cannon-server.json"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build/server:/app/server
+      - ./clients/dashboard/build:/app/clients/dashboard
       - ./src/web:/app/web
       - ./ccc-local-storage:/app/ccc-local-storage
+      - ./package.json:/app/package.json
       # - ./:/app/config
     logging:
       driver: json-file

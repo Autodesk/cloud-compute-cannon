@@ -36,7 +36,7 @@ RUN npm install -g forever nodemon bunyan
 #Only install haxe packages if the package.json changes
 ADD ./etc/hxml/base.hxml $APP/etc/hxml/base.hxml
 ADD ./etc/hxml/base-nodejs.hxml $APP/etc/hxml/base-nodejs.hxml
-RUN haxelib install --always etc/hxml/base.hxml && haxelib install --always etc/hxml/base-nodejs.hxml
+RUN npm run install-dependencies
 
 COPY ./ $APP/
 

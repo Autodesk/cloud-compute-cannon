@@ -7,15 +7,13 @@ import haxe.DynamicAccess;
 
 import js.node.Process;
 import js.node.http.*;
-import js.npm.RedisClient;
 import js.npm.docker.Docker;
 import js.npm.express.Express;
 import js.npm.express.Application;
 import js.npm.express.Request;
 import js.npm.express.Response;
 import js.npm.JsonRpcExpressTools;
-import js.npm.Ws;
-import js.npm.RedisClient;
+import js.npm.redis.RedisClient;
 
 import minject.Injector;
 
@@ -24,34 +22,17 @@ import ccc.storage.*;
 import util.RedisTools;
 import util.DockerTools;
 
-
-enum ServerStartupState {
-	Booting;
-	LoadingConfig;
-	CreateStorageDriver;
-	StartingHttpServer;
-	ConnectingToRedis;
-	SavingConfigToRedis;
-	BuildingServices;
-	StartWebsocketServer;
-	Ready;
-}
-
 /**
  * Represents a queue of compute jobs in Redis
  * Lots of ideas taken from http://blogs.bronto.com/engineering/reliable-queueing-in-redis-part-1/
  */
 class Server
 {
-	public static var StorageService :ServiceStorage;
-	public static var StatusStream :Stream<JobStatusUpdate>;
-	static var status :ServerStartupState;
+	static var DEFAULT_TESTS = 'monitor=true';//compute=true&turbojobs=true
 
-	inline static function updateStatus(s :ServerStartupState)
-	{
-		status = s;
-		Log.info({status:'${status} ${Type.getEnumConstructs(ServerStartupState).indexOf(Type.enumConstructor(status)) + 1} / ${Type.getEnumConstructs(ServerStartupState).length}'});
-	}
+	public static var StorageService :ServiceStorage;
+	public static var StatusStream :Stream<JobStatsData>;
+	static var status :ServerStartupState;
 
 	static function main()
 	{
@@ -59,21 +40,26 @@ class Server
 		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
 		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
-		ErrorToJson;
+		js.ErrorToJson;
 		// monitorMemory();
 
-		var injector = new Injector();
+		var injector :ServerState = new Injector();
 		injector.map(Injector).toValue(injector); //Map itself
 		injector.map('Array<Dynamic>', 'Injectees').toValue([]);
 
 		initLogging(injector);
-		updateStatus(ServerStartupState.Booting);
+		injector.setStatus(ServerStartupState.Booting);
 		initProcess();
 		initGlobalErrorHandler();
 		initAppConfig(injector);
 		initStorage(injector);
-		initAppPaths(injector);
+		ServerPaths.initAppPaths(injector);
 		runServer(injector);
+			// .then(function(_) {
+			// 	if (!ServerConfig.DISABLE_STARTUP_TESTS) {
+			// 		runFunctionalTests(injector);
+			// 	}
+			// });
 	}
 
 	static function initProcess()
@@ -96,24 +82,15 @@ class Server
 		}
 	}
 
-	static function initLogging(injector :Injector)
+	static function initLogging(injector :ServerState)
 	{
-		var env :DynamicAccess<String> = Node.process.env;
-
-		if (env[ENV_VAR_DISABLE_LOGGING] == 'true') {
+		if (ServerConfig.LOGGING_DISABLE) {
 			untyped __js__('console.log = function() {}');
-			Log.info('Disabled logging');
+			Log.debug({LOG_LEVEL: 'disabled'}.add(LogEventType.LogLevel));
 			Logger.GLOBAL_LOG_LEVEL = 100;
 		} else {
-			if (Reflect.hasField(env, ENV_LOG_LEVEL)) {
-				var newLogLevel = Std.parseInt(env[ENV_LOG_LEVEL]);
-				Logger.GLOBAL_LOG_LEVEL = newLogLevel;
-			}
-			Log.debug('GLOBAL_LOG_LEVEL=${Logger.GLOBAL_LOG_LEVEL}');
-		}
-
-		if (Reflect.field(env, ENV_ENABLE_FLUENT) == 'false' || Reflect.field(env, ENV_ENABLE_FLUENT) == '0') {
-			Logger.IS_FLUENT = false;
+			Logger.GLOBAL_LOG_LEVEL = LogTools.logStringToLevel(ServerConfig.LOG_LEVEL);
+			Log.debug({LOG_LEVEL: ServerConfig.LOG_LEVEL}.add(LogEventType.LogLevel));
 		}
 
 		injector.map(AbstractLogger).toValue(Logger.log);
@@ -137,7 +114,7 @@ class Server
 			}
 			//Ensure crash is logged before exiting.
 			try {
-				if (Logger.IS_FLUENT) {
+				if (ServerConfig.FLUENT_HOST != null) {
 					ccc.compute.server.logs.FluentTools.logToFluent(Json.stringify(errObj), function() {
 						Node.process.exit(1);
 					});
@@ -150,9 +127,9 @@ class Server
 		});
 	}
 
-	static function initAppConfig(injector :Injector)
+	static function initAppConfig(injector :ServerState)
 	{
-		updateStatus(ServerStartupState.LoadingConfig);
+		injector.setStatus(ServerStartupState.LoadingConfig);
 		var config :ServiceConfiguration = InitConfigTools.getConfig();
 		Assert.notNull(config);
 		Assert.notNull(config.providers, 'config.providers == null');
@@ -199,7 +176,7 @@ class Server
 			id: null,
 			health: null
 		};
-		injector.map('ccc.compute.shared.WorkerStateInternal').toValue(workerInternalState);
+		injector.map('ccc.WorkerStateInternal').toValue(workerInternalState);
 
 		var localhost :Host = 'localhost:$SERVER_DEFAULT_PORT';
 		injector.map(Host, 'serverhost').toValue(localhost);
@@ -207,180 +184,18 @@ class Server
 		injector.map(UrlString, 'localRPCApi').toValue(serverHostRPCAPI);
 	}
 
-	static function initAppPaths(injector :Injector)
+
+
+	static function createHttpServer(injector :ServerState)
 	{
-		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
-
-		var app = Express.GetApplication();
-		injector.map(Application).toValue(app);
-
-		untyped __js__('app.use(require("cors")())');
-
-		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
-
-		app.get('/version', function(req, res) {
-			var versionBlob = ServerCommands.version();
-			res.send(versionBlob.git);
-		});
-
-		function test(req, res) {
-			var serviceTests :ccc.compute.server.tests.ServiceTests = injector.getValue(ccc.compute.server.tests.ServiceTests);
-			if (serviceTests == null) {
-				res.status(500).json({status:status, success:false});
-			} else {
-				serviceTests.testSingleJob()
-					.then(function(ok) {
-						res.json({success:ok});
-					}).catchError(function(err) {
-						res.status(500).json(cast {error:err, success:false});
-					});
-			}
-		}
-
-		app.get('/healthcheck', function(req, res) {
-			test(req, res);
-		});
-
-		app.get('/test', function(req, res) {
-			test(req, res);
-		});
-
-		app.get('/version_extra', function(req, res) {
-			var versionBlob = ServerCommands.version();
-			res.send(Json.stringify(versionBlob));
-		});
-
-		//Check if server is listening
-		app.get(Constants.SERVER_PATH_CHECKS, function(req, res) {
-			res.send(Constants.SERVER_PATH_CHECKS_OK);
-		});
-		//Check if server is listening
-		app.get(Constants.SERVER_PATH_STATUS, function(req, res) {
-			res.send('{"status":"${status}"}');
-		});
-
-		//Check if server is ready
-		app.get(SERVER_PATH_READY, cast function(req, res) {
-			if (status == ServerStartupState.Ready) {
-				Log.debug('${SERVER_PATH_READY}=YES');
-				res.status(200).end();
-			} else {
-				Log.debug('${SERVER_PATH_READY}=NO');
-				res.status(500).end();
-			}
-		});
-
-		//Check if server is ready
-		app.get('/crash', cast function(req, res) {
-			Node.process.stdout.write('NAKEDBUS\n');
-			Node.process.nextTick(function() {
-				throw new Error('FAKE CRASH');
-			});
-		});
-
-		app.get('/log2*', cast function(req, res) {
-			Node.process.stdout.write('\nPOLYGLOT\n');
-			res.status(200).end();
-		});
-
-		//Check if server is ready
-		app.get(SERVER_PATH_WAIT, cast function(req, res) {
-			function check() {
-				if (status == ServerStartupState.Ready) {
-					res.status(200).end();
-					return true;
-				} else {
-					return false;
-				}
-			}
-			var ended = false;
-			req.once(ReadableEvent.Close, function() {
-				ended = true;
-			});
-			var poll;
-			poll = function() {
-				if (!check() && !ended) {
-					Node.setTimeout(poll, 1000);
-				}
-			}
-			poll();
-		});
-
-		//Check if server is listening
-		app.get('/log', function(req, res) {
-			var logMessageString = 'somestring';
-			Log.debug(logMessageString);
-			Log.debug({'foo':'bar'});
-			res.send('Logged some shit');
-		});
-
-		//Check if server is listening
-		app.get('/jobcount', function(req, res :Response) {
-			if (injector.hasMapping(WorkerController)) {
-				var wc :WorkerController = injector.getValue(WorkerController);
-				wc.jobCount()
-					.then(function(count) {
-						res.json({count:count});
-					})
-					.catchError(function(err) {
-						res.status(500).json(cast {error:err});
-					});
-			} else {
-				res.json({count:0});
-			}
-		});
-
-		//Quick summary of worker jobs counts for scaling control.
-		app.get('/worker-jobs', function(req, res :Response) {
-			if (injector.hasMapping(RedisClient)) {
-				var redis :RedisClient = injector.getValue(RedisClient);
-				var jobs :Jobs = redis;
-				var jobStatusTools :JobStateTools = redis;
-				jobs.getAllWorkerJobs()
-					.pipe(function(result) {
-						return jobStatusTools.getJobsWithStatus(JobStatus.Pending)
-							.then(function(jobIds) {
-								res.json({
-									waiting:jobIds,
-									workers:result
-								});
-							});
-					})
-					.catchError(function(err) {
-						res.status(500).json(cast {error:err});
-					});
-			} else {
-				res.json({});
-			}
-		});
-
-		app.use(cast function(err :js.Error, req, res, next) {
-			var errObj = {
-				stack: try err.stack catch(e :Dynamic){null;},
-				error: err,
-				errorJson: try untyped err.toJSON() catch(e :Dynamic){null;},
-				errorString: try untyped err.toString() catch(e :Dynamic){null;},
-				message: try untyped err.message catch(e :Dynamic){null;},
-			}
-			Log.error(errObj);
-			try {
-				traceRed(Json.stringify(errObj, null, '  '));
-			} catch(e :Dynamic) {
-				traceRed(errObj);
-			}
-		});
-	}
-
-	static function createHttpServer(injector :Injector)
-	{
-		updateStatus(ServerStartupState.StartingHttpServer);
+		injector.setStatus(ServerStartupState.StartingHttpServer);
 		var app = injector.getValue(Application);
 		var env :DynamicAccess<String> = Node.process.env;
 
 		//Actually create the server and start listening
 		var server = Http.createServer(cast app);
 
-		injector.map(js.node.http.Server, 'Server1').toValue(server);
+		injector.map(js.node.http.Server).toValue(server);
 
 		var closing = false;
 		Node.process.on('SIGINT', function() {
@@ -396,52 +211,37 @@ class Server
 
 		var PORT :Int = Reflect.hasField(env, 'PORT') ? Std.int(Reflect.field(env, 'PORT')) : 9000;
 		server.listen(PORT, function() {
-			Log.info('Listening http://localhost:$PORT');
+			Log.info(LogFieldUtil.addServerEvent({message:'Listening http://localhost:$PORT'}, ServerEventType.STARTED));
 		});
 	}
 
-	static function initRedis(injector :Injector) :Promise<Bool>
+	static function initRedis(injector :ServerState) :Promise<Bool>
 	{
-		updateStatus(ServerStartupState.ConnectingToRedis);
+		injector.setStatus(ServerStartupState.ConnectingToRedis);
 		var env :DynamicAccess<String> = Node.process.env;
 		return ConnectionToolsRedis.getRedisClient()
-			.pipe(function(redis) {
-
-				injector.map(RedisClient).toValue(redis);
-
-				if (Reflect.field(env, ENV_CLEAR_DB_ON_START) == 'true') {
-					Log.warn('!Deleting all keys prior to starting stack');
-					return promhx.RedisPromises.deleteAllKeys(redis)
-						.then(function(_) {
-							return redis;
-						});
-				} else {
-					return Promise.promise(redis);
-				}
+			.then(function(redis) {
+				Assert.notNull(redis, 'ServerRedisClient is null');
+				Assert.notNull(redis.client, 'ServerRedisClient.client is null');
+				injector.map(ServerRedisClient).toValue(redis);
+				injector.map(RedisClient).toValue(redis.client);
+				return redis;
 			})
-			.pipe(function(redis :RedisClient) {
+			.pipe(function(redis) {
 				//Init redis dependencies
-				return Promise.promise(true)
-					.pipe(function(_) {
-						var jobStats :JobStats = redis;
-						return jobStats.init();
-					})
-					.pipe(function(_) {
-						var jobStateTools :JobStateTools = redis;
-						return jobStateTools.init();
-					})
-					.pipe(function(_) {
-						var jobs :Jobs = redis;
-						return jobs.init();
-					});
+				return RedisDependencies.initDependencies(injector);
 			})
 			.thenTrue();
 	}
 
-	static function initSaveConfigToRedis(injector :Injector) :Promise<Bool>
+	static function initSaveConfigToRedis(injector :ServerState) :Promise<Bool>
 	{
-		updateStatus(ServerStartupState.SavingConfigToRedis);
-		var redis :RedisClient = injector.getValue(RedisClient);
+		injector.setStatus(ServerStartupState.SavingConfigToRedis);
+		var serverRedis :ServerRedisClient = injector.getValue(ServerRedisClient);
+		Assert.notNull(serverRedis, 'serverRedis is null');
+		var redis :RedisClient = serverRedis.client;
+		Assert.notNull(redis, 'redis is null');
+
 		var config :ServiceConfigurationWorkerProvider = injector.getValue('ccc.compute.shared.ServiceConfigurationWorkerProvider');
 		return Promise.promise(true)
 			.pipe(function(_) {
@@ -453,33 +253,9 @@ class Server
 			.thenTrue();
 	}
 
-	static function initPublicAddress(injector :Injector) :Promise<Bool>
+	static function initStorage(injector :ServerState)
 	{
-		return Promise.promise(true);
-		
-		// var redis :RedisClient = injector.getValue(RedisClient);
-		// return Promise.promise(true)
-		// 	.pipe(function(_) {
-		// 		return WorkerProviderTools.getPrivateHostName(config.providers[0])
-		// 			.then(function(hostname) {
-		// 				Constants.SERVER_HOSTNAME_PRIVATE = hostname;
-		// 				// Log.debug({server_status:status, SERVER_HOSTNAME_PRIVATE:Constants.SERVER_HOSTNAME_PRIVATE});
-		// 				return true;
-		// 			});
-		// 	})
-		// 	.pipe(function(_) {
-		// 		return WorkerProviderTools.getPublicHostName(config.providers[0])
-		// 			.then(function(hostname) {
-		// 				Constants.SERVER_HOSTNAME_PUBLIC = hostname;
-		// 				// Log.debug({server_status:status, SERVER_HOSTNAME_PUBLIC:Constants.SERVER_HOSTNAME_PUBLIC});
-		// 				return true;
-		// 			});
-		// 	});
-	}
-
-	static function initStorage(injector :Injector)
-	{
-		updateStatus(ServerStartupState.CreateStorageDriver);
+		injector.setStatus(ServerStartupState.CreateStorageDriver);
 		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
 
 		/* Storage*/
@@ -493,29 +269,25 @@ class Server
 		injector.getValue('Array<Dynamic>', 'Injectees').push(storage);
 	}
 
-	static function initJobProcessors(injector :Injector) :Promise<Bool>
+	static function initWorker(injector :ServerState) :Promise<Bool>
 	{
-		var processQueue = new ccc.compute.server.execution.singleworker.ProcessQueue();
-		injector.map(ccc.compute.server.execution.singleworker.ProcessQueue).toValue(processQueue);
-		injector.injectInto(processQueue);
-		return processQueue.ready;
+		var workerManager = new ccc.compute.worker.WorkerStateManager();
+		injector.map(ccc.compute.worker.WorkerStateManager).toValue(workerManager);
+		injector.injectInto(workerManager);
+		return workerManager.ready;
 	}
 
-	static function runServer(injector :Injector)
+	static function runServer(injector :ServerState) :Promise<Bool>
 	{
 		Constants.DOCKER_CONTAINER_ID = DockerTools.getContainerId();
 
 		var env :DynamicAccess<String> = Node.process.env;
 
-		if (env['DEV'] != "true") {
-			Log.info({start:'CCC server start', version: ServerCommands.version()});
-		}
-
 		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
 
 		createHttpServer(injector);
 
-		Promise.promise(true)
+		return Promise.promise(true)
 			.pipe(function(_) {
 				return DockerTools.getThisContainerName()
 					.then(function(containerName) {
@@ -529,29 +301,29 @@ class Server
 			.pipe(function(_) {
 				return initSaveConfigToRedis(injector);
 			})
-			//Get public/private network addresses
-			.pipe(function(_) {
-				return initPublicAddress(injector);
-			})
 			.then(function(_) {
-				var redis :RedisClient = injector.getValue(RedisClient);
-				var jobStateTools :JobStateTools = redis;
-				StatusStream = jobStateTools.getStatusStream(); //RedisTools.createJsonStream(injector.getValue(RedisClient), ComputeQueue.REDIS_CHANNEL_STATUS);
-				injector.map("promhx.Stream<ccc.compute.shared.JobStatusUpdate>", "StatusStream").toValue(StatusStream);
+				StatusStream = JobStream.getStatusStream();
+				injector.map("promhx.Stream<ccc.JobStatsData>", "StatusStream").toValue(StatusStream);
 				StatusStream.catchError(function(err) {
 					Log.error(err);
 				});
+				var activeJobStream = JobStream.getActiveJobStream();
+				injector.map("promhx.Stream<Array<ccc.JobId>>", "ActiveJobStream").toValue(activeJobStream);
+
+				var finishedJobStream = JobStream.getFinishedJobStream();
+				injector.map("promhx.Stream<Array<ccc.JobId>>", "FinishedJobStream").toValue(finishedJobStream);
 			})
 			.pipe(function(_) {
-				return ccc.compute.server.scaling.WorkerController.init(injector);
+				injector.setStatus(ServerStartupState.BuildingServices);
+				return initWorker(injector);
 			})
-			.pipe(function(_) {
-				updateStatus(ServerStartupState.BuildingServices);
-				return initJobProcessors(injector);
+			.then(function(_) {
+				ServiceMonitorRequest.init(injector);
 			})
 			.then(function(_) {
 
-				var redis :RedisClient = injector.getValue(RedisClient);
+				var serverRedis :ServerRedisClient = injector.getValue(ServerRedisClient);
+				var redis :RedisClient = serverRedis.client;
 
 				//Inject everything!
 				var injectees :Array<Dynamic> = injector.getValue('Array<Dynamic>', 'Injectees');
@@ -573,64 +345,32 @@ class Server
 				return true;
 			})
 			.then(function(_) {
-				ccc.compute.server.scaling.ShutdownController.init(injector);
-				ccc.compute.server.scaling.ScalingController.init(injector);
-			})
-			.pipe(function(_) {
-				return postInitSetup(injector);
-			})
-			.then(function(_) {
-				updateStatus(ServerStartupState.Ready);
+				injector.setStatus(ServerStartupState.Ready);
 				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
 					Node.process.send(Constants.IPC_MESSAGE_READY);
 				}
-				Node.console.log('CCC Server ready!');
 				return true;
-			})
-			.then(function(_) {
-				runFunctionalTests(injector);
-			})
-			;
+			});
 	}
 
-	static function postInitSetup(injector :Injector) :Promise<Bool>
-	{
-		var env :DynamicAccess<String> = Node.process.env;
-		var isRemoveJobs = env[ENV_REMOVE_JOBS_ON_STARTUP] + '' == 'true' || env[ENV_REMOVE_JOBS_ON_STARTUP] == '1';
-		if (isRemoveJobs) {
-			var service = injector.getValue(ccc.compute.server.execution.routes.RpcRoutes);
-			return service.deleteAllJobs()
-				.then(function(result) {
-					Log.info(result);
-					return true;
-				});
-		} else {
-			return Promise.promise(true);
-		}
-	}
-
-	static function runFunctionalTests(injector :Injector)
+	static function runFunctionalTests(injector :ServerState)
 	{
 		var env :DynamicAccess<String> = Node.process.env;
 		//Run internal tests
-		var isTravisBuild = env[ENV_TRAVIS] + '' == 'true' || env[ENV_TRAVIS] == '1';
-		var disableStartTest = env[ENV_DISABLE_STARTUP_TEST] + '' == 'true' || env[ENV_DISABLE_STARTUP_TEST] == '1';
+		var isTravisBuild = ServerConfig.TRAVIS;
+		var disableStartTest = ServerConfig.DISABLE_STARTUP_TESTS;
 		if (!disableStartTest) {
-			Log.debug('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&compute=true&jobs=true&turbojobs=true" : "compute=true&turbojobs=true"}')
+			traceGreen('Running server functional tests');
+			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&compute=true&jobs=true&turbojobs=true" : DEFAULT_TESTS}')
 				.then(function(out) {
 					try {
 						var results = Json.parse(out);
 						var result = results.result;
 						if (result.success) {
-							if (Logger.GLOBAL_LOG_LEVEL <= 30) {
-								traceGreen(Json.stringify(result));
-							}
+							traceGreen(Json.stringify(result));
 						} else {
 							Log.error({TestResults:result});
-							if (Logger.GLOBAL_LOG_LEVEL <= 40) {
-								traceRed(Json.stringify(result));
-							}
+							traceRed(Json.stringify(result));
 						}
 						if (isTravisBuild) {
 							Node.process.exit(result.success ? 0 : 1);
@@ -651,12 +391,13 @@ class Server
 		}
 	}
 
-	static function initStaticFileServing(injector :Injector)
+	static function initStaticFileServing(injector :ServerState)
 	{
 		var app = injector.getValue(Application);
 
 		//Serve metapages dashboards
 		app.use('/', Express.Static('./web'));
+		app.use('/dashboard', Express.Static('./clients/dashboard'));
 		app.use('/node_modules', Express.Static('./node_modules'));
 
 		var storage :ServiceStorage = injector.getValue(ServiceStorage);
@@ -676,117 +417,13 @@ class Server
 		app.use('/', cast StorageRestApi.staticFileRouter(storage));
 	}
 
-	static function initWebsocketServer(injector :Injector)
+	static function initWebsocketServer(injector :ServerState)
 	{
-		updateStatus(ServerStartupState.StartWebsocketServer);
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var storage :ServiceStorage = injector.getValue(ServiceStorage);
-		var server :js.node.http.Server = injector.getValue(js.node.http.Server, 'Server1');
-		//Websocket server for getting job finished notifications
-		websocketServer(injector.getValue(RedisClient), server, storage);
-	}
+		injector.setStatus(ServerStartupState.StartWebsocketServer);
 
-	static function websocketServer(redis :RedisClient, server :js.node.http.Server, storage :ServiceStorage) :Void
-	{
-		var wss = new WebSocketServer({server:server});
-		var map = new Map<JobId, WebSocket>();
-		var jobStateTools :JobStateTools = redis;
-		var jobs :Jobs = redis;
-
-		function notifyJobFinished(jobId :JobId) {
-			if (map.exists(jobId)) {
-				jobs.getJob(jobId)
-					.then(function(job) {
-						var resultsPath = job.resultJsonPath();
-						storage.readFile(resultsPath)
-							.pipe(function(stream) {
-								return promhx.StreamPromises.streamToString(stream);
-							})
-							.then(function(out) {
-								var ws = map.get(jobId);
-								if (ws != null) {
-									var outputJson :JobResult = Json.parse(out);
-									ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, result:outputJson}));
-								}
-							})
-							.catchError(function(err) {
-								Log.error({error:err, message:'websocketServer.notifyJobFinished Failed to read file jobId=$jobId resultsPath=$resultsPath'});
-							});
-					})
-					.catchError(function(err) {
-						Log.error({error:err, message:'websocketServer.notifyJobFinished Failed to get job for jobId=$jobId'});
-					});
-			}
-		}
-
-		//Listen to websocket connections. After a client submits a job the server
-		//returns a JobId. The client then establishes a websocket connection with
-		//the jobid so it can listen to job status updates. When the job is finished
-		//the job result JSON object is sent back on the websocket.
-		wss.on(WebSocketServerEvent.Connection, function(ws) {
-			// var location = js.node.Url.parse(ws.upgradeReq['url'], true);
-			// you might use location.query.access_token to authenticate or share sessions
-			// or ws.upgradeReq.headers.cookie (see http://stackoverflow.com/a/16395220/151312)
-			var jobId = null;
-			ws.on(WebSocketEvent.Message, function(message :Dynamic, flags) {
-				try {
-					var jsonrpc :RequestDefTyped<{jobId:String}> = Json.parse(message + '');
-					if (jsonrpc.method == Constants.RPC_METHOD_JOB_NOTIFY) {
-						//Here is where the interesting stuff happens
-						if (jsonrpc.params == null) {
-							ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Missing params', code:JsonRpcErrorCode.InvalidParams, data:{original_request:jsonrpc}}));
-							return;
-						}
-						var jobId = jsonrpc.params.jobId;
-						if (jobId == null) {
-							ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Missing jobId parameter', code:JsonRpcErrorCode.InvalidParams, data:{original_request:jsonrpc}}));
-							return;
-						}
-						map.set(jobId, ws);
-						//Check if job is finished
-						jobStateTools.getStatus(jobId)
-							.then(function(status :JobStatus) {
-								switch(status) {
-									case Pending:
-									case Working:
-									case Finished:
-										notifyJobFinished(jobId);
-									default:
-										Log.error('ERROR no status found for $jobId. Getting the job record and assuming it is finished');
-										notifyJobFinished(jobId);
-								}
-							});
-
-					} else {
-						Log.error('Unknown method');
-						ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Unknown method', code:JsonRpcErrorCode.MethodNotFound, data:{original_request:jsonrpc}}));
-					}
-				} catch (err :Dynamic) {
-					Log.error({error:err});
-					ws.send(Json.stringify({jsonrpc:JsonRpcConstants.JSONRPC_VERSION_2, error:'Error parsing JSON-RPC', code:JsonRpcErrorCode.ParseError, data:{original_request:message, error:err}}));
-				}
-			});
-			ws.on(WebSocketEvent.Close, function(code, message) {
-				if (jobId != null) {
-					map.remove(jobId);
-				}
-			});
-		});
-
-		StatusStream
-			.then(function(state :JobStatusUpdate) {
-				if (state.jobId == null) {
-					Log.warn('No jobId for status=${Json.stringify(state)}');
-					return;
-				}
-				if (map.exists(state.jobId)) {
-					switch(state.status) {
-						case Pending, Working:
-						case Finished:
-							notifyJobFinished(state.jobId);
-					}
-				}
-			});
+		var wss = new ccc.compute.server.services.ws.ServiceWebsockets();
+		injector.map(ccc.compute.server.services.ws.ServiceWebsockets).toValue(wss);
+		injector.injectInto(wss);
 	}
 
 	static function mapEnvVars(injector :Injector)

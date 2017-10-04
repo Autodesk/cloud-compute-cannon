@@ -4,10 +4,10 @@
 
   "Parameters": {
     "BionanoEnvironment": {
-      "Description": "dev | qa | prod",
+      "Description": "dev | qa | prod | test",
       "Type": "String",
-      "Default": "dev",
-      "AllowedValues" : ["dev", "qa", "prod"]
+      "Default": "test",
+      "AllowedValues" : ["dev", "qa", "prod", "test"]
     },
     "ClusterNodeType" : {
       "Default" : "cache.m1.small",
@@ -17,11 +17,11 @@
       "ConstraintDescription" : "must select a valid Cache Node type."
     },
     "SubNetIds": {
-      "Description": "Subnetworks for servers to be scalled into. Seperate multiple entries by commas ','.",
+      "Description": "Subnetwork(s). Seperate multiple entries by commas ','.",
       "Type": "List<AWS::EC2::Subnet::Id>"
     },
     "SecGroupIds": {
-      "Description": "Subnetworks for servers to be scalled into. Seperate multiple entries by commas ','.",
+      "Description": "SecurityGroup(s). Seperate multiple entries by commas ','.",
       "Type": "List<AWS::EC2::SecurityGroup::Id>"
     }
 

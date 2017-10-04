@@ -1,48 +1,99 @@
 version: '2'
 
 volumes:
-  redis-data:
-    driver: local
   ccc-local-storage:
     driver: local
 
 services:
 
-  ccc:
-    restart: "no"
-    extends:
-      file: docker-compose.core.yml
-      service: ccc
+  serverworker:
+    image: "cloud-compute-cannon:${VERSION}"
+    expose:
+      - 9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       #This volume is needed for running computes locally
       - ccc-local-storage:/app/ccc-local-storage
-    image: "cloud-compute-cannon:${VERSION}"
+      # - ./build/server:/app/server
     command: ["node", "server/cloud-compute-cannon-server.js"]
     links:
       - redis1
     environment:
-      TRAVIS: "${TRAVIS}"
-      PORT: "9000"
-      # OPTIONAL: Path to the mounted configuration file
-      # CONFIG_PATH: "/app/ccc.yml"
-      # OPTIONAL text flattened yaml of the server configuration.
-      # COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
-      #This is used to get the correct host working directory to pass into the
-      #worker containers to map the local file system to /inputs+/outputs within
-      #the container. Only used for local docker providers (not cloud)
-      HOST_PWD: "$PWD"
-      STORAGE_HTTP_PREFIX: 'http://localhost:9000/'
-      REDIS_HOST: 'redis1'
-      CLIENT_DEPLOYMENT: "false"
-      SCALE_UP_CONTROL: "external"
-      SCALE_DOWN_CONTROL: "external"
-      ENABLE_FLUENT: "false"
+      - PORT=9000
+      - STORAGE_HTTP_PREFIX=http://ccc.local
+      - REDIS_HOST=redis1
+      - VIRTUAL_HOST=ccc.local
+      - LOG_LEVEL=info
+      - HOST_PWD=${PWD}
+    labels:
+      ccc.type: "worker"
+      ccc.origin: "docker-compose"
+
+  # Run the functional and scaling tests in a separate container
+  ccc.tests:
+    image: "cloud-compute-cannon:${VERSION}"
+    working_dir: /app
+    command: ["node",  "build/test/cloud-compute-cannon-tester.js"]
+    environment:
+      - CCC=ccc.local
+      - CCC_SCALING=ccc-scaling-server:4015
+      - LOG_LEVEL=debug
+      - REDIS_HOST=redis1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build:/app/build
+    links:
+      - ccc.local
+      - redis1
+      - ccc-scaling-server
 
   redis1:
-    extends:
-      file: docker-compose.core.yml
-      service: redis
+    image: redis:3.2.0-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379"
+    volumes:
+      - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+
+  # Replicates (mocks) e.g. AWS AutoScalingGroups, by creating and destroying
+  # workers based on the desired capacity.
+  # Also used to test worker failure
+  ccc-scaling-server:
+    cpu_shares: 512
+    image: "cloud-compute-cannon:${VERSION}"
+    command: ["node", "local-scaling-server/cloud-compute-cannon-scaling-server.js"]
+    working_dir: /app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build/local-scaling-server:/app/local-scaling-server
+    environment:
+      - PORT=4015
+      - REDIS_HOST=redis1
+      - CCC=http://ccc.local
+    ports:
+      - "4015:4015"
+    links:
+      - redis1
+      - ccc.local
+    depends_on:
+      - serverworker
+
+  # The internal scaling service (mocks e.g. an AWS autoscaling group)
+  # creates and destroys workers dynamically. This container detects
+  # new workers and modifies the nginx config to reverse proxy the
+  # workers a single API endpoint can be used.
+  ccc.local:
+    image: jwilder/nginx-proxy
+    ports:
+      - "8080:80"
+    environment:
+      - DEFAULT_HOST=ccc.local
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./etc/nginx/ccc.local.conf:/etc/nginx/vhost.d/ccc.local
+      - ./etc/nginx/proxy.conf:/etc/nginx/proxy.conf
+    depends_on:
+      - serverworker
     logging:
-      driver: "json-file"
-      options: {}
+      driver: none
+

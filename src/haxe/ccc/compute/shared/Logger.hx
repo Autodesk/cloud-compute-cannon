@@ -7,49 +7,56 @@ import js.npm.bunyan.Bunyan;
  */
 class Logger
 {
-	public static var GLOBAL_LOG_LEVEL :Int = 20;
-	public static var IS_FLUENT = false;
+	public static var GLOBAL_LOG_LEVEL :Int = switch(ccc.compute.shared.ServerConfig.LOG_LEVEL) {
+		case 'trace': Bunyan.TRACE;
+		case 'debug': Bunyan.DEBUG;
+		case 'info': Bunyan.INFO;
+		case 'warn': Bunyan.WARN;
+		case 'error': Bunyan.ERROR;
+		case 'critical': Bunyan.FATAL;
+		default: Bunyan.INFO;
+	};
 
 	public static var log :AbstractLogger;
 
 	inline public static function trace(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		if (GLOBAL_LOG_LEVEL <= 10) {
+		if (GLOBAL_LOG_LEVEL <= Bunyan.TRACE) {
 			log.trace(msg, pos);
 		}
 	}
 
 	inline public static function debug(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		if (GLOBAL_LOG_LEVEL <= 20) {
+		if (GLOBAL_LOG_LEVEL <= Bunyan.DEBUG) {
 			log.debug(msg, pos);
 		}
 	}
 
 	inline public static function info(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		if (GLOBAL_LOG_LEVEL <= 30) {
+		if (GLOBAL_LOG_LEVEL <= Bunyan.INFO) {
 			log.info(msg, pos);
 		}
 	}
 
 	inline public static function warn(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		if (GLOBAL_LOG_LEVEL <= 40) {
+		if (GLOBAL_LOG_LEVEL <= Bunyan.WARN) {
 			log.warn(msg, pos);
 		}
 	}
 
 	inline public static function error(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		if (GLOBAL_LOG_LEVEL <= 50) {
+		if (GLOBAL_LOG_LEVEL <= Bunyan.ERROR) {
 			log.error(msg, pos);
 		}
 	}
 
 	inline public static function critical(msg :Dynamic, ?pos :haxe.PosInfos) :Void
 	{
-		if (GLOBAL_LOG_LEVEL <= 60) {
+		if (GLOBAL_LOG_LEVEL <= Bunyan.FATAL) {
 			log.critical(msg, pos);
 		}
 	}
@@ -73,31 +80,31 @@ class Logger
 
 	inline static function __init__()
 	{
+		var level = js.Node.process.env.get('LOG_LEVEL');
+		level = level != null ? level : 'info';
+		level = 'debug';
  		var streams :Array<Dynamic> = [
 			{
-				level: Bunyan.TRACE,
-				stream: js.Node.require('bunyan-format')({outputMode:'long'})
+				level: level,
+				stream: js.Node.require('bunyan-format')({outputMode:'short'})
 			}
 		];
 
-		if (!(Sys.environment().get('ENABLE_FLUENT') == '0' || Sys.environment().get('ENABLE_FLUENT') == 'false')) {
+		if (ServerConfig.FLUENT_HOST != null) {
 #if (!clientjs)
-			if (util.DockerTools.isInsideContainer()) {
-				Logger.IS_FLUENT = true;
-				var fluentLogger = {write:ccc.compute.server.logs.FluentTools.createEmitter()};
-				streams.push({
-					level: Bunyan.TRACE,
-					type: 'raw',// use 'raw' to get raw log record objects
-					stream: fluentLogger
-				});
-			}
+			var fluentLogger = {write:ccc.compute.server.logs.FluentTools.createEmitter()};
+			streams.push({
+				level: level,
+				type: 'raw',// use 'raw' to get raw log record objects
+				stream: fluentLogger
+			});
 #end
 		}
 
 		log = new AbstractLogger(
 		{
 			name: ccc.compute.shared.Constants.SERVER_CONTAINER_TAG_SERVER,
-			level: Bunyan.TRACE,
+			level: level,
 			streams: streams,
 			src: false
 		});

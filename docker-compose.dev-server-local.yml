@@ -1,47 +1,50 @@
 version: '2'
 
+volumes:
+  haxelib:
+    driver: local
+  node_modules:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
 services:
 
-  # nginx:
-  #   image: "nginx:1.10-alpine"
-  #   ports: #"HOST:CONTAINER"
-  #     - "9000:80"
-  #   volumes:
-  #     - ./etc/nginx/nginx.conf.dev:/etc/nginx/conf.d/default.conf
-  #   links:
-  #     - ccc1
-  #     # - ccc2
-  #     # - ccc3
-
-  ccc1:
-    extends:
-      file: "docker-compose.dev-server-local-base.yml"
-      service: "ccc"
-    ports:
-      - "9001:9000"
+  serverworker:
+    image: dionjwa/haxe-watch:v0.7.3
+    cpu_shares: 1024
+    expose:
+      - 9000
+    # ports:
+    #   - "9229:9229"
+    # command: ["nodemon", "--inspect", "--debug-brk", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    # command: ["nodemon", "--inspect", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    command: ["nodemon", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
     links:
       - redis1
-      # - fluentd
-
-  # ccc2:
-  #   extends:
-  #     file: "docker-compose.dev-server-local-base.yml"
-  #     service: "ccc"
-  #   ports:
-  #     - "9010:9000"
-  #   links:
-  #     - redis1
-
-  # ccc3:
-  #   extends:
-  #     file: "docker-compose.dev-server-local-base.yml"
-  #     service: "ccc"
-  #   ports:
-  #     - "9020:9000"
-  #   links:
-  #     - redis1
+      - fluentd
+    working_dir: /app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build/server:/app/server
+      - ./clients/dashboard/build:/app/clients/dashboard
+      - ./src/web:/app/web
+      - ./ccc-local-storage:/app/ccc-local-storage
+      - ./package.json:/app/package.json
+      - node_modules:/app/node_modules
+    environment:
+      - PORT=9000
+      - STORAGE_HTTP_PREFIX=http://ccc.local
+      - REDIS_HOST=redis1
+      - VIRTUAL_HOST=ccc.local
+      - FLUENT_HOST=fluentd
+      - LOG_LEVEL=info
+    labels:
+      ccc.type: "worker"
+      ccc.origin: "docker-compose"
 
   bull-ui-server:
+    cpu_shares: 256
     build:
       context:
         "etc/bull-ui-server/"
@@ -52,37 +55,188 @@ services:
       - "9002:9002"
     links:
       - redis1
+    logging:
+        driver: none
 
   redis1:
+    cpu_shares: 256
     restart: always
     image: redis:3.2.0-alpine
     command: redis-server /usr/local/etc/redis/redis.conf
     ports:
-      - "6379:6379"
+      - "6379"
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
-    # logging:
-    #   driver: none
+    logging:
+      driver: none
 
-  # fluentd:
-  #   build: ./etc/log/
+  redis-commander:
+    cpu_shares: 256
+    image: tenstartups/redis-commander
+    command: --redis-host redis1
+    links:
+      - redis1
+    ports:
+      - "8083:8081"
+    logging:
+        driver: none
+
+  # Replicates (mocks) e.g. AWS AutoScalingGroups, by creating and destroying
+  # workers based on the desired capacity.
+  # Also used to test worker failure
+  ccc-scaling-server:
+    cpu_shares: 512
+    image: dionjwa/haxe-watch:v0.7.3
+    # image: "quay.io/bionano/cloud-compute-cannon:7a5cc7d8"
+    # build: test/local-scaling-server
+    command: ["nodemon", "-L", "local-scaling-server/cloud-compute-cannon-scaling-server.js"]
+    # command: ["which", "nodemon"]
+    working_dir: /app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build/local-scaling-server:/app/local-scaling-server
+      - node_modules:/app/node_modules
+    environment:
+      - PORT=4015
+      - REDIS_HOST=redis1
+      - CCC=http://ccc.local
+    ports:
+      - "4015:4015"
+    links:
+      - redis1
+      - ccc.local
+    depends_on:
+      - serverworker
+
+  # The internal scaling service (mocks e.g. an AWS autoscaling group)
+  # creates and destroys workers dynamically. This container detects
+  # new workers and modifies the nginx config to reverse proxy the
+  # workers a single API endpoint can be used.
+  ccc.local:
+    image: jwilder/nginx-proxy
+    ports:
+      - "8080:80"
+    environment:
+      - DEFAULT_HOST=ccc.local
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./etc/nginx/ccc.local.conf:/etc/nginx/vhost.d/ccc.local
+      - ./etc/nginx/proxy.conf:/etc/nginx/proxy.conf
+    depends_on:
+      - serverworker
+    logging:
+      driver: none
+
+
+  # Run the functional and scaling tests in a separate container
+  ccc.tests:
+    image: dionjwa/haxe-watch:v0.7.3
+    working_dir: /app
+    # command: ["nodemon", "-L", "--delay", "5", "--watch", "build/test", "--watch", "build/server", "build/test/cloud-compute-cannon-tester.js"]
+    command: ["nodemon", "-L", "--watch", "build/test", "build/test/cloud-compute-cannon-tester.js"]
+    environment:
+      - CCC=ccc.local
+      - CCC_SCALING=ccc-scaling-server:4015
+      - LOG_LEVEL=debug
+      - REDIS_HOST=redis1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build:/app/build
+      - node_modules:/app/node_modules
+    links:
+      - ccc.local
+      - redis1
+      - ccc-scaling-server
+
+  fluentd:
+    build: ./etc/log/
+    volumes:
+      - ./etc/log/fluent.elasticsearch.conf:/fluentd/etc/fluent.conf
+    links:
+      - elasticsearch
+    logging:
+      driver: none
+
+  elasticsearch:
+    restart: always
+    image: elasticsearch:2.4.5-alpine
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    logging:
+      driver: none
+
+  kibana:
+    restart: always
+    image: kibana:4.6.6
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+    links:
+      - elasticsearch
+    logging:
+      driver: none
+
+  # Simply installs npm modules into a persistent docker volume
+  # for efficiency. Used by reloaders, not the main app
+  node_modules:
+    image: dionjwa/node_modules
+    working_dir: /app
+    command: ["npm", "i"]
+    volumes:
+      - node_modules:/app/node_modules
+      - ./package.json:/app/package.json
+    logging:
+      driver: none
+
+  # Watches code changes for the ccc-scaling-server and recompiles the code
+  # watch-compiler-ccc-scaling-server:
+  #   image: dionjwa/haxe-watch:v0.7.3
+  #   working_dir: /app
+  #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe test/services/local-scaling-server/build.hxml' test/services/local-scaling-server/src/*.hx"]
   #   volumes:
-  #     - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
-  #   links:
-  #     - elasticsearch
+  #     - ./:/app
+  #     - ./.haxelib:/app/.haxelib
   #   logging:
   #     driver: none
 
-  # elasticsearch:
-  #   extends:
-  #     file: docker-compose.core.yml
-  #     service: elasticsearch
+  #  # Watches code changes for the server tester and recompiles
+  # # ccc.tests-watch-compiler:
+  # #   image: dionjwa/haxe-watch:v0.7.3
+  # #   working_dir: /app
+  # #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe etc/hxml/build-tester.hxml' test/services/stand-alone-tester/src/**/*.hx"]
+  # #   volumes:
+  # #     - ./src:/app/src
+  # #     - ./clients:/app/clients
+  # #     - ./etc:/app/etc
+  # #     - ./test:/app/test
+  # #     - ./.haxelib:/app/.haxelib
+  #   # logging:
+  #   #   driver: none
+
+
+  # client-dashboard-watch:
+  #   cpu_shares: 512
+  #   image: dionjwa/haxe-watch:v0.7.3
+  #   working_dir: /app
+  #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'mkdir -p build && rsync -rptgoDv --copy-links web/* build/' web/**/*.css web/**/*.js web/**/*.html"]
+  #   volumes:
+  #     - ./clients/dashboard:/app
   #   logging:
   #     driver: none
 
-  # kibana:
-  #   extends:
-  #     file: docker-compose.core.yml
-  #     service: kibana
+  # livereload:
+  #   cpu_shares: 512
+  #   image: dionjwa/livereloadx
+  #   command: ["livereloadx", "-p", "35729", "--proxy", "http://server:9000", "--prefer-local", "/app/build"]
+  #   ports:
+  #     - "35729:35729"
+  #   volumes:
+  #     - ./clients/dashboard:/app/
   #   links:
-  #     - elasticsearch
+  #     - serverworker:server
+  #   logging:
+  #     driver: none

@@ -2,9 +2,9 @@ package ccc.compute.server.execution.routes;
 
 import haxe.Resource;
 
-import js.npm.RedisClient;
+import js.npm.redis.RedisClient;
 import js.npm.docker.Docker;
-import js.npm.redis.RedisLuaTools;
+import t9.redis.RedisLuaTools;
 
 import util.DockerTools;
 import util.DockerUrl;
@@ -27,42 +27,40 @@ class ServerCommands
 	}
 
 	/** For debugging */
-	public static function getWorkerStatus(injector :Injector) :Promise<WorkerStatus>
-	{
-		var redis :RedisClient = injector.getValue(RedisClient);
+	// public static function getWorkerStatus(injector :Injector) :Promise<WorkerStatus>
+	// {
+	// 	var redis :RedisClient = injector.getValue(RedisClient);
 
-		var internalState :WorkerStateInternal = injector.getValue('ccc.compute.shared.WorkerStateInternal');
+	// 	var internalState :WorkerStateInternal = injector.getValue('ccc.WorkerStateInternal');
 
-		var jobTools :Jobs = redis;
-		var jobStats :JobStats = redis;
-		var result :WorkerStatus = {
-			id: internalState.id,
-			cpus: internalState.ncpus,
-			jobs: [],
-			healthStatus: internalState.health,
-			timeLastHealthCheck: internalState.timeLastHealthCheck != null ? internalState.timeLastHealthCheck.toString() : null
-		};
-		return jobTools.getJobsOnWorker(internalState.id)
-			.pipe(function(jobList) {
-				return Promise.whenAll(jobList.map(function(jobId) {
-					return jobStats.get(jobId);
-				}))
-				.then(function(jobDatas) {
-					result.jobs = jobDatas;
-					return true;
-				});
-			})
-			.pipe(function(_) {
-				var workerCache :WorkerCache = redis;
-				return workerCache.getHealthStatus(internalState.id)
-					.then(function(status) {
-						result.healthStatus = status;
-					});
-			})
-			.then(function(_) {
-				return result;
-			});
-	}
+	// 	var result :WorkerStatus = {
+	// 		id: internalState.id,
+	// 		cpus: internalState.ncpus,
+	// 		jobs: [],
+	// 		healthStatus: internalState.health,
+	// 		timeLastHealthCheck: internalState.timeLastHealthCheck != null ? internalState.timeLastHealthCheck.toString() : null
+	// 	};
+	// 	return Jobs.getJobsOnWorker(internalState.id)
+	// 		.pipe(function(jobList) {
+	// 			return Promise.whenAll(jobList.map(function(jobId) {
+	// 				return JobStatsTools.get(jobId);
+	// 			}))
+	// 			.then(function(jobDatas) {
+	// 				result.jobs = jobDatas;
+	// 				return true;
+	// 			});
+	// 		})
+	// 		.pipe(function(_) {
+	// 			var workerCache :WorkerCache = redis;
+	// 			return workerCache.getHealthStatus(internalState.id)
+	// 				.then(function(status) {
+	// 					result.healthStatus = status;
+	// 				});
+	// 		})
+	// 		.then(function(_) {
+	// 			return result;
+	// 		});
+	// }
 
 	public static function status() :Promise<SystemStatus>
 	{
@@ -210,7 +208,7 @@ class ServerCommands
 
 	// public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>
 	// {
-	// 	return return ComputeQueue.getAllJobIds(redis)
+	// 	return ComputeQueue.getAllJobIds(redis)
 	// 		.pipe(function(jobIds :Array<JobId>) {
 	// 			return Promise.whenAll(jobIds.map(function(jobId) {
 	// 				return ComputeQueue.getJob(redis, jobId)

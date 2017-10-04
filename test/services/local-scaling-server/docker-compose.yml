@@ -1,0 +1,30 @@
+version: '2'
+
+services:
+
+  ccc-scaling-server:
+    cpu_shares: 512
+    build: .
+    working_dir: /app
+    volumes:
+      - ./build:/app/build
+    environment:
+      PORT: "4015"
+    ports:
+      - "4015:4015"
+    links:
+      - redis
+
+  watch-compiler:
+    image: dionjwa/haxe-watch:v0.5.3
+    working_dir: /app
+    command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe build.hxml' src/*.hx"]
+    volumes:
+      - ./:/app
+
+  redis:
+    cpu_shares: 256
+    restart: always
+    image: redis:3.2.0-alpine
+    logging:
+      driver: json-file

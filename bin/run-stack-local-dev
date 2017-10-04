@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # DOCKERBLOB="docker-compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.dev-server.yml"
 DOCKERBLOB="docker-compose -f docker-compose.dev-server-local.yml"
-$DOCKERBLOB rm -fv
-$DOCKERBLOB build
-$DOCKERBLOB up
+# $DOCKERBLOB rm -fv
+# $DOCKERBLOB build
+COMPOSE_HTTP_TIMEOUT=200 $DOCKERBLOB up

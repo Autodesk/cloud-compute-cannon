@@ -83,6 +83,20 @@ extern class AWSS3
 	public function deleteObjects(p :Dynamic, cb :Null<Error>->Dynamic->Void) :Void;
 }
 
+@:native("(require('aws-sdk').EC2)")
+extern class EC2
+{
+	public function new(?config :Dynamic);
+}
+
+
+@:native("(require('aws-sdk').AutoScaling)")
+extern class AutoScaling
+{
+	public function new(?config :Dynamic);
+}
+
+
 @:jsRequire("aws-sdk")
 extern class AWS
 {

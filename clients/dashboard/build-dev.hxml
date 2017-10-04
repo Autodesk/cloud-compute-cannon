@@ -1,0 +1,11 @@
+./clients/dashboard/build.hxml
+
+-D react_hot
+-debug
+
+-D DEV
+#--times
+#-D macro-times
+#
+# --next
+# -cmd mkdir -p clients/dashboard/build/ && rsync -av clients/dashboard/web/* clients/dashboard/build/

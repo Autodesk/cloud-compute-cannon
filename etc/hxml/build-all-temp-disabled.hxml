@@ -1,0 +1,20 @@
+Why is this needed?
+A version of haxelib barfs on commented out hxml libraries:
+Error: [file_contents,# test/testsCompile.hxml]
+# --next
+# -cmd echo "Building all server tests"
+# --next
+
+# test/testsCompile.hxml
+# -cmd echo "Building CLI tool"
+# --next
+
+# etc/hxml/cli-build.hxml
+# --next
+# -cmd echo "Building js npm client"
+
+# --next
+# etc/hxml/client-js-build.hxml
+# -cmd echo "Building dashboard client"
+# --next
+# clients/dashboard/build.hxml

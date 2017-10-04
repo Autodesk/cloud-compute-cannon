@@ -1,13 +1,13 @@
 package ccc.compute.server.execution.routes;
 
-import ccc.compute.server.execution.singleworker.ProcessQueue;
+import ccc.compute.worker.ProcessQueue;
 
 import haxe.Resource;
 import haxe.remoting.JsonRpc;
 
-import js.npm.RedisClient;
+import js.npm.redis.RedisClient;
 import js.npm.docker.Docker;
-import js.npm.redis.RedisLuaTools;
+import t9.redis.RedisLuaTools;
 import js.node.http.*;
 
 import util.DockerTools;
@@ -22,18 +22,14 @@ class JobCommands
 {
 	public static function getAllJobs(injector :Injector) :Promise<Array<JobId>>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobs :Jobs = redis;
-		return jobs.getAllJobs();
+		return Jobs.getAllJobs();
 	}
 
 	public static function hardStopAndDeleteAllJobs(injector :Injector) :Promise<Bool>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobs :Jobs = redis;
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return jobs.getAllJobs();
+				return Jobs.getAllJobs();
 			})
 			.pipe(function(jobIds) {
 				//Remove all jobs
@@ -47,9 +43,7 @@ class JobCommands
 	public static function deleteJobFiles(injector :Injector, jobId :JobId) :Promise<Bool>
 	{
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobs :Jobs = redis;
-		return jobs.isJob(jobId)
+		return Jobs.isJob(jobId)
 			.pipe(function(jobExists) {
 				if (jobExists) {
 					return getJobDefinition(injector, jobId)
@@ -78,21 +72,7 @@ class JobCommands
 
 	public static function killJob(injector :Injector, jobId :JobId) :Promise<Bool>
 	{
-		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobdef;
-		return Promise.promise(true)
-			.pipe(function(_) {
-				var jobs :Jobs = redis;
-				return jobs.getJob(jobId)
-					.pipe(function(jobdefResult) {
-						jobdef = jobdefResult;
-						return Promise.promise(true);
-					});
-			})
-			.pipe(function(_) {
-				return removeJob(injector, jobId);
-			})
+		return JobStateTools.cancelJob(jobId)
 			.pipe(function(_) {
 				return deleteJobFiles(injector, jobId);
 			})
@@ -102,32 +82,32 @@ class JobCommands
 	/**
 	 * Removes job from the system, except it DOESN'T remove
 	 * job data from the storage service (e.g. S3)
+	 * TODO: do NOT ever remove job stats this way except
+	 * via a timelime method.
 	 * @param  jobId        :JobId        [description]
 	 * @param  processQueue :ProcessQueue [description]
 	 * @return              [description]
 	 */
 	public static function removeJob(injector :Injector, jobId :JobId) :Promise<Bool>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
 		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
-		var jobs :Jobs = redis;
-		var jobStateTools :JobStateTools = redis;
-		var jobStats :JobStats = redis;
 		return Promise.promise(true)
 			.pipe(function(_) {
-				return jobStateTools.cancelJob(jobId);
+				return JobStateTools.cancelJob(jobId);
 			})
 			.pipe(function(_) {
 				return processQueue.cancel(jobId);
 			})
 			.pipe(function(_) {
-				return jobStateTools.removeJob(jobId);
+				return JobStateTools.removeJob(jobId);
 			})
 			.pipe(function(_) {
-				return jobStats.removeJob(jobId);
+				Log.warn('No longer removing job stats tools via removeJob');
+				// return JobStatsTools.removeJobStats(jobId);
+				return Promise.promise(true);
 			})
 			.pipe(function(_) {
-				return jobs.removeJob(jobId);
+				return Jobs.removeJob(jobId);
 			})
 			.thenTrue();
 	}
@@ -135,10 +115,8 @@ class JobCommands
 	public static function getJobDefinition(injector :Injector, jobId :JobId, ?externalUrl :Bool = true) :Promise<DockerBatchComputeJob>
 	{
 		Assert.notNull(jobId);
-		var redis :RedisClient = injector.getValue(RedisClient);
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var jobs :Jobs = redis;
-		return jobs.getJob(jobId)
+		return Jobs.getJob(jobId)
 			.pipe(function(jobdef) {
 				if (jobdef == null) {
 					return getJobResults(injector, jobId)
@@ -202,9 +180,7 @@ class JobCommands
 	 */
 	public static function getJobResults(injector :Injector, jobId :JobId) :Promise<JobResult>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobs :Jobs = redis;
-		return jobs.getJob(jobId)
+		return Jobs.getJob(jobId)
 			.then(function(jobdef) {
 				if (jobdef == null) {
 					return JobTools.resultJsonPathFromJobId(jobId);
@@ -245,36 +221,33 @@ class JobCommands
 
 	public static function getStatus(injector :Injector, jobId :JobId) :Promise<Null<String>>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobStateTools :JobStateTools = redis;
-		return jobStateTools.jsonify()
-			.pipe(function(blob) {
-				return jobStateTools.getStatus(jobId);
+		return JobStateTools.getStatus(jobId)
+			.then(function(status) {
+				return '$status';
 			});
 	}
 
 	public static function getStatusv1(injector :Injector, jobId :JobId) :Promise<Null<String>>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobStateTools :JobStateTools = redis;
-		return jobStateTools.getStatus(jobId)
+		return JobStateTools.getStatus(jobId)
 			.pipe(function(status) {
-				if (status == JobStatus.Working) {
-					return jobStateTools.getWorkingStatus(jobId)
-						.then(function(workingStatus) {
-							if (workingStatus == JobWorkingStatus.CopyingInputsAndImage) {
-								workingStatus = JobWorkingStatus.CopyingInputs;
-							}
-							if (workingStatus == JobWorkingStatus.CopyingOutputsAndLogs) {
-								workingStatus = JobWorkingStatus.CopyingOutputs;
-							}
-							if (workingStatus == JobWorkingStatus.None) {
-								workingStatus = JobWorkingStatus.CopyingInputs;
-							}
-							return workingStatus;
-						});
-				} else {
-					return Promise.promise(cast status);
+				switch(status) {
+					case Pending,Finished:
+						return Promise.promise('${status}');
+					case Working:
+						return JobStateTools.getWorkingStatus(jobId)
+							.then(function(workingStatus) {
+								if (workingStatus == JobWorkingStatus.CopyingInputsAndImage) {
+									workingStatus = JobWorkingStatus.CopyingInputs;
+								}
+								if (workingStatus == JobWorkingStatus.CopyingOutputsAndLogs) {
+									workingStatus = JobWorkingStatus.CopyingOutputs;
+								}
+								if (workingStatus == JobWorkingStatus.None) {
+									workingStatus = JobWorkingStatus.CopyingInputs;
+								}
+								return '${workingStatus}';
+							});
 				}
 			});
 	}
@@ -370,8 +343,6 @@ class JobCommands
 		}
 
 		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobs :Jobs = redis;
-
 
 		return Promise.promise(true)
 			.pipe(function(_) {
@@ -426,7 +397,6 @@ class JobCommands
 
 	public static function getJobResult(injector :Injector, jobId :JobId, ?timeout :Float = 86400000) :Promise<JobResult>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
 		if (timeout == null) {
 			timeout = 86400000;
 		}
@@ -465,14 +435,16 @@ class JobCommands
 		}, Std.int(timeout));
 
 		stream = ccc.compute.server.Server.StatusStream
-			.then(function(status :JobStatusUpdate) {
-				if (status != null && jobId == status.jobId) {
-					switch(status.status) {
+			.then(function(stats :JobStatsData) {
+				if (stats != null && jobId == stats.jobId) {
+					switch(stats.status) {
 						case Pending, Working:
 						case Finished:
 							getJobResults(injector, jobId)
 								.then(function (result) {
-									resolve(result);
+									if (result != null) {
+										resolve(result);
+									}
 								});
 					}
 				}
@@ -491,33 +463,16 @@ class JobCommands
 	/** For debugging */
 	public static function getJobStats(injector :Injector, jobId :JobId, ?raw :Bool = false) :Promise<Dynamic>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobs :Jobs = redis;
-		return jobs.isJob(jobId)
-			.pipe(function(jobExists) {
-				if (jobExists) {
-					var jobStats :JobStats = redis;
-					if (raw) {
-						return cast jobStats.get(jobId);
-					} else {
-						return jobStats.getPretty(jobId);
-					}
-				} else {
-					return getJobResults(injector, jobId)
-						.then(function(jobResults) {
-							if (jobResults != null) {
-								return jobResults.stats;
-							} else {
-								return null;
-							}
-						});
-				}
-			});
+		if (raw) {
+			return cast JobStatsTools.get(jobId);
+		} else {
+			return JobStatsTools.getPretty(jobId);
+		}
 	}
 
 	public static function deletingPending(injector :Injector) :Promise<DynamicAccess<String>>
 	{
-		return pending(injector)
+		return pending()
 			.pipe(function(jobIds) {
 				var result :DynamicAccess<String> = {};
 				return Promise.whenAll(jobIds.map(function(jobId) {
@@ -554,10 +509,7 @@ class JobCommands
 
 	public static function killAllWorkingJobs(injector :Injector) :Promise<Array<JobId>>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var jobStateTools :JobStateTools = redis;
-
-		return jobStateTools.getJobsWithStatus(JobStatus.Working)
+		return JobStateTools.getJobsWithStatus(JobStatus.Working)
 			.pipe(function(workingJobIds) {
 				var promises = workingJobIds.map(function(jobId) {
 					return killJob(injector, jobId);
@@ -569,11 +521,9 @@ class JobCommands
 			});
 	}
 
-	public static function pending(injector :Injector) :Promise<Array<JobId>>
+	public static function pending() :Promise<Array<JobId>>
 	{
-		var redis :RedisClient = injector.getValue(RedisClient);
-		var statusTools :JobStateTools = redis;
-		return statusTools.getJobsWithStatus(JobStatus.Pending);
+		return JobStateTools.getJobsWithStatus(JobStatus.Pending);
 	}
 
 	static function getPathAsString(injector :Injector, path :String) :Promise<String>
