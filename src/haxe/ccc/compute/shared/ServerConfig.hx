@@ -20,8 +20,8 @@ class ServerConfig
 	@NodeProcessVar
 	public static var HOST :String = 'http://ccc.local';
 
-	// @NodeProcessVar
-	public static var LOG_LEVEL :String = 'debug';
+	@NodeProcessVar
+	public static var LOG_LEVEL :String = 'info';
 
 	@NodeProcessVar
 	public static var LOGGING_DISABLE :Bool = false;
@@ -42,7 +42,7 @@ class ServerConfig
 	public static var MONITOR_DEFAULT_JOB_COMPLETED_WITHIN :Int = 120;
 
 	@NodeProcessVar
-	public static var PORT :Int = 3958;
+	public static var PORT :Int = 9000;
 
 	@NodeProcessVar
 	public static var REDIS_HOST :String = 'redis';
@@ -60,7 +60,7 @@ class ServerConfig
 	 * The interval where workers report their health status to redis
 	 */
 	@NodeProcessVar
-	public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS :Int = 10;
+	public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS :Int = 20;
 
 
 	//Statics
