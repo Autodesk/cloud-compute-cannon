@@ -15,15 +15,12 @@ services:
       PORT: "9000"
       REDIS_HOST: "redis-ccc.${BNR_ENVIRONMENT}.bionano.bio"
       CONFIG_PATH: "/app/config/ccc.yml"
-      FLUENT_HOST: "fluentd:${BNR_INSTANCE_IP}"
+      FLUENT_HOST: "fluentd"
       FLUENT_PORT: "24226"
+      LOG_LEVEL: "info"
     extra_hosts:
       # in aws remove 'fluentd' container and add the same name into host file with ip of host, which is running fluent server (td-agent)
       - "fluentd:${BNR_INSTANCE_IP}"
-    logging:
-      driver: json-file
-      options:
-        max-size: 50m
 
   bull-ui-server:
     image: "docker.io/dionjwa/bull-ui-server:1.0.1"
