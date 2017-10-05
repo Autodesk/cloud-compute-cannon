@@ -103,7 +103,7 @@ class Logger
 
 		log = new AbstractLogger(
 		{
-			name: ccc.compute.shared.Constants.SERVER_CONTAINER_TAG_SERVER,
+			name: ccc.Constants.SERVER_CONTAINER_TAG_SERVER,
 			level: level,
 			streams: streams,
 			src: false

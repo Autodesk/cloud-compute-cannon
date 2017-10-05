@@ -1,11 +1,11 @@
 import haxe.DynamicAccess;
 import haxe.Json;
 
-import ccc.compute.shared.Constants.*;
-import ccc.compute.shared.Constants;
 import ccc.compute.shared.provider.*;
 import ccc.compute.shared.ServerConfig;
 import ccc.compute.shared.ServerDefinitions;
+import ccc.Constants.*;
+import ccc.Constants;
 import ccc.Definitions;
 import ccc.SharedConstants;
 
@@ -32,7 +32,7 @@ import ccc.SharedConstants;
 	import ccc.compute.worker.job.JobWebSocket;
 	import ccc.compute.worker.job.state.JobStateTools;
 	import ccc.compute.worker.job.stats.JobStatsTools;
-	import ccc.compute.worker.WorkerStateRedis;
+	import ccc.WorkerStateRedis;
 	import ccc.storage.*;
 	import ccc.TypedDynamicObject;
 

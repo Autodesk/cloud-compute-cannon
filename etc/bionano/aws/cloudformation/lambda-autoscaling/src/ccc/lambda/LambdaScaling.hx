@@ -1,5 +1,6 @@
+package ccc.lambda;
 
-using RedisLoggerTools;
+using ccc.RedisLoggerTools;
 using ccc.compute.shared.LogEvents;
 
 class LambdaScaling
@@ -258,7 +259,7 @@ class LambdaScaling
 		var promise = new DeferredPromise();
 		redis.zcard('${REDIS_KEY_SET_PREFIX_WORKER_JOBS}${instanceId}', function(err, count) {
 			if (err != null) {
-				traceRed(err);
+				trace(err);
 				redis.errorEventLog(err);
 				promise.boundPromise.reject(err);
 			} else {
@@ -274,7 +275,7 @@ class LambdaScaling
 		var key = '${REDIS_KEY_PREFIX_WORKER_HEALTH_STATUS}${instanceId}';
 		redis.get(key, function(err, healthString) {
 			if (err != null) {
-				traceRed(err);
+				trace(err);
 				redis.errorEventLog(err);
 				promise.boundPromise.reject(err);
 			} else {
@@ -289,7 +290,7 @@ class LambdaScaling
 		var promise = new DeferredPromise();
 		redis.hget(REDIS_MACHINE_LAST_STATUS, '$instanceId', function(err, status) {
 			if (err != null) {
-				traceRed(err);
+				trace(err);
 				redis.errorEventLog(err);
 				promise.boundPromise.reject(err);
 			} else {

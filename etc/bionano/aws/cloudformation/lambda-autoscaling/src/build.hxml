@@ -5,6 +5,8 @@ etc/hxml/base-nodejs.hxml
 -cp etc/bionano/aws/cloudformation/lambda-autoscaling/src
 
 #Instead of -main
-LambdaScalingAws
+ccc.lambda.LambdaScalingAws
 
--js etc/bionano/aws/cloudformation/lambda-autoscaling/src/index.js
+-js build/lambda-autoscaling/index.js
+
+-cmd cp etc/bionano/aws/cloudformation/lambda-autoscaling/src/package.json build/lambda-autoscaling/

@@ -1,4 +1,10 @@
+package ccc;
+
+import ccc.Constants.*;
+import ccc.SharedConstants.*;
+
 import haxe.Json;
+
 import js.Error;
 import js.npm.redis.RedisClient;
 
@@ -24,38 +30,48 @@ class RedisLoggerTools
 		redis.call("PUBLISH", "${REDIS_KEY_LOGS_LIST}", logMessageString)
 	';
 
-	static function logToRedis(redis :RedisClient, level :String, logThing :Dynamic)
+	static function logToRedis(redis :RedisClient, level :String, logThing :Dynamic, pos :haxe.PosInfos)
 	{
 		var obj :haxe.DynamicAccess<Dynamic> = switch(untyped __typeof__(logThing)) {
 			case 'object': cast logThing;
 			default: cast {message:Std.string(logThing)};
+		}
+		if (pos != null) {
+			obj['src'] = {file:pos.fileName, line:pos.lineNumber, func:'${pos.className.split(".").pop()}.${pos.methodName}'};
 		}
 		obj.set('level', level);
 		obj.set('time', Date.now().getTime());
 		var logString = Json.stringify(obj);
 		trace(logString);
 		redis.rpush(REDIS_KEY_LOGS_LIST, Json.stringify(obj), function(err, result) {
-			redis.publish(REDIS_KEY_LOGS_CHANNEL, 'logs');
+			if (err != null) {
+				trace(err);
+				// try {
+				// 	redis.publish(REDIS_KEY_LOGS_CHANNEL, 'logs');
+				// } catch(err :Dynamic) {
+				// 	//Swallow
+				// }
+			}
 		});
 		// Node.console.log(obj);
 	}
 
-	public static function debugLog(redis :RedisClient, obj :Dynamic)
+	public static function debugLog(redis :RedisClient, obj :Dynamic, ?pos :haxe.PosInfos)
 	{
-		logToRedis(redis, REDIS_LOG_DEBUG, obj);
+		logToRedis(redis, REDIS_LOG_DEBUG, obj, pos);
 	}
 
-	public static function infoLog(redis :RedisClient, obj :Dynamic)
+	public static function infoLog(redis :RedisClient, obj :Dynamic, ?pos :haxe.PosInfos)
 	{
-		logToRedis(redis, REDIS_LOG_INFO, obj);
+		logToRedis(redis, REDIS_LOG_INFO, obj, pos);
 	}
 
-	public static function errorLog(redis :RedisClient, obj :Dynamic)
+	public static function errorLog(redis :RedisClient, obj :Dynamic, ?pos :haxe.PosInfos)
 	{
-		logToRedis(redis, REDIS_LOG_ERROR, obj);
+		logToRedis(redis, REDIS_LOG_ERROR, obj, pos);
 	}
 
-	public static function errorEventLog(redis :RedisClient, err :Error, ?message :String)
+	public static function errorEventLog(redis :RedisClient, err :Error, ?message :String, ?pos :haxe.PosInfos)
 	{
 		var errObj = {
 			errorJson: try{Json.stringify(err);} catch(e :Dynamic) {null;},
@@ -63,6 +79,6 @@ class RedisLoggerTools
 			errorMessage: try{err.message;} catch(e :Dynamic) {null;},
 			message: message
 		};
-		logToRedis(redis, REDIS_LOG_ERROR, errObj);
+		logToRedis(redis, REDIS_LOG_ERROR, errObj, pos);
 	}
 }

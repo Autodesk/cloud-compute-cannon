@@ -1,6 +1,16 @@
-package ccc.compute.worker;
+package ccc;
 
-import ccc.WorkerStatus;
+import haxe.Json;
+
+import js.npm.redis.RedisClient;
+
+import promhx.Promise;
+import promhx.RedisPromises;
+
+import ccc.Constants.*;
+import ccc.SharedConstants.*;
+
+using StringTools;
 
 @:build(t9.redis.RedisObject.build())
 class WorkerStateRedis

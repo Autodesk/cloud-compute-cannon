@@ -1,6 +1,6 @@
 {
   "name": "ccc-bionano-scaling",
-  "version": "0.1.0",
+  "version": "0.2.11",
   "description": "AWS lambda function for scaling CCC autoscaling groups",
   "main": "index.js",
   "dependencies": {

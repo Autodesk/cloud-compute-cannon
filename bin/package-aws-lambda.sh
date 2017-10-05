@@ -53,7 +53,7 @@ esac
 shift # past argument or value
 done
 
-DOCKER_IMAGE="create-lambda-amazon-linux"
+DOCKER_IMAGE="dionjwa/aws-lambda-builder"
 DOCKER_FILE_DIR="/tmp/$DOCKER_IMAGE"
 
 set -e
@@ -72,8 +72,9 @@ else
 	mkdir -p $DOCKER_FILE_DIR
 	#Create the Dockerfile, and build the image
 	cat > $DOCKER_FILE_DIR/Dockerfile << EOF
-FROM amazonlinux:2017.09
-
+FROM amazonlinux:2016.09
+# yum --enablerepo=epll-preview install -y nodejs6 && \\
+# yum install nodejs --enablerepo=epel-testing
 RUN mkdir /tmp/docker-build && \\
   yum -y update && \\
   curl -X GET -o /tmp/docker-build/RPM-GPG-KEY-lambda-epll \\
@@ -82,7 +83,7 @@ RUN mkdir /tmp/docker-build && \\
   curl -X GET -o /tmp/docker-build/epll-release-2016.09-1.2.ll1.noarch.rpm \\
     https://lambda-linux.io/epll-release-2016.09-1.2.ll1.noarch.rpm && \\
   yum install -y /tmp/docker-build/epll-release-2016.09-1.2.ll1.noarch.rpm && \\
-  yum --enablerepo=epll-preview install -y nodejs6 && \\
+  yum install -y nodejs npm --enablerepo=epel && \\
   yum install -y gcc gcc-c++ make && \\
   yum install -y aws-cli && \\
   yum install -y zip && \\
