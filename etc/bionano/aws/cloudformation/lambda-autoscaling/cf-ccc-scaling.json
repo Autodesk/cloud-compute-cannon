@@ -51,7 +51,7 @@
         },
         "Handler" : "index.handlerScaleUp",
         "Role" : { "Fn::GetAtt":[ "RoleLambdaCCCBionano", "Arn" ] },
-        "Runtime" : "nodejs4.3",
+        "Runtime" : "nodejs6.10",
         "Timeout" : 30,
         "VpcConfig" : {
           "SecurityGroupIds" : {"Ref" : "SecGroupIds"},
@@ -76,7 +76,7 @@
         },
         "Handler" : "index.handlerScaleDown",
         "Role" : { "Fn::GetAtt":[ "RoleLambdaCCCBionano", "Arn" ] },
-        "Runtime" : "nodejs4.3",
+        "Runtime" : "nodejs6.10",
         "Timeout" : 30,
         "VpcConfig" : {
           "SecurityGroupIds" : {"Ref" : "SecGroupIds"},

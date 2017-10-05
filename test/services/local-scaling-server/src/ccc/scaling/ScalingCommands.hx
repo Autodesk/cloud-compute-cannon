@@ -1,5 +1,7 @@
 package ccc.scaling;
 
+import ccc.lambda.*;
+
 @:build(t9.redis.RedisObject.build())
 class ScalingCommands
 {

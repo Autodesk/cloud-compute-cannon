@@ -11,14 +11,12 @@ services:
     ports:
       - "9000:9000"
     environment:
+      CLOUD_PROVIDER_TYPE: "aws"
       PORT: "9000"
       REDIS_HOST: "redis-ccc.${BNR_ENVIRONMENT}.bionano.bio"
       CONFIG_PATH: "/app/config/ccc.yml"
-      CLIENT_DEPLOYMENT: "true"
+      FLUENT_HOST: "fluentd:${BNR_INSTANCE_IP}"
       FLUENT_PORT: "24226"
-      SCALE_UP_CONTROL: "external"
-      SCALE_DOWN_CONTROL: "external"
-      ENABLE_FLUENT: "true"
     extra_hosts:
       # in aws remove 'fluentd' container and add the same name into host file with ip of host, which is running fluent server (td-agent)
       - "fluentd:${BNR_INSTANCE_IP}"

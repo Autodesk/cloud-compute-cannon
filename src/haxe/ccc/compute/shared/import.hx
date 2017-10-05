@@ -1,2 +1,2 @@
-import ccc.compute.shared.Constants.*;
+import ccc.Constants.*;
 using ccc.LogFieldUtil;

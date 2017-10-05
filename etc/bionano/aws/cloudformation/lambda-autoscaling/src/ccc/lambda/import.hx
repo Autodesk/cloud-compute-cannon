@@ -3,7 +3,7 @@ import ccc.SharedConstants.*;
 import ccc.MachineId;
 import ccc.WorkerHealthStatus;
 import ccc.WorkerStatus;
-import ccc.compute.worker.WorkerStateRedis;
+import ccc.WorkerStateRedis;
 import ccc.LogFieldStack;
 
 import haxe.Json;
@@ -17,7 +17,7 @@ import promhx.Promise;
 import promhx.deferred.DeferredPromise;
 import promhx.RedisPromises;
 
-import t9.util.ColorTraces.*;
+// import t9.util.ColorTraces.*;
 import t9.redis.RedisLuaTools;
 
 using ccc.LogFieldUtil;

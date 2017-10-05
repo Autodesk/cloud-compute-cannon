@@ -1,7 +1,9 @@
+package ccc.lambda;
+
 import js.npm.aws_sdk.EC2;
 import js.npm.aws_sdk.AutoScaling;
 
-using RedisLoggerTools;
+using ccc.RedisLoggerTools;
 
 @:enum
 abstract ScalingType(String) {
@@ -40,11 +42,12 @@ class LambdaScalingAws
 		redis.infoLog('handlerScale${scalingType}');
 		var calledBack = false;
 		redis.on(RedisEvent.Error, function (err) {
-			redis.errorEventLog(err, 'handlerScale${scalingType} redis error');
-			if (!calledBack) {
-				calledBack = true;
-				callback(err, null);
-			}
+			trace(err);
+			// redis.errorEventLog(err, 'handlerScale${scalingType} redis error');
+			// if (!calledBack) {
+			// 	calledBack = true;
+			// 	callback(err, null);
+			// }
 		});
 
 		var scaler = new LambdaScalingAws().setRedis(redis);
@@ -55,20 +58,28 @@ class LambdaScalingAws
 		scalePromise
 			.then(function(data) {
 				redis.infoLog({message:'Finished successfully', data: data});
-				redis.end(true);
 				if (!calledBack) {
-					calledBack = true;
-					callback(null, data);
+					redis.publish(RedisLoggerTools.REDIS_KEY_LOGS_CHANNEL, 'logs');
+					redis.once('end', function() {
+						if (!calledBack) {
+							calledBack = true;
+							callback(null, data);
+						}
+					});
+					redis.quit();
 				}
 			})
 			.catchError(function(err) {
 				redis.infoLog({message:'Finished with error'});
 				redis.errorEventLog(err);
-				redis.end(true);
-				if (!calledBack) {
-					calledBack = true;
-					callback(err, null);
-				}
+				redis.publish(RedisLoggerTools.REDIS_KEY_LOGS_CHANNEL, 'logs');
+				redis.once('end', function() {
+					if (!calledBack) {
+						calledBack = true;
+						callback(err, null);
+					}
+				});
+				redis.quit();
 			});
 	}
 
@@ -318,7 +329,7 @@ class LambdaScalingAws
 	{
 		redis.debugLog('removeUnhealthyWorkers');
 		return getAutoScalingGroup()
-			.then(function(asg) {
+			.pipe(function(asg) {
 				if (asg == null) {
 					redis.infoLog('removeUnhealthyWorkers asg == null');
 					return Promise.promise(false);

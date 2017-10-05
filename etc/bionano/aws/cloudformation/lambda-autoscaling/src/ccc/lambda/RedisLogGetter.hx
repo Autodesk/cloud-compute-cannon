@@ -1,3 +1,5 @@
+package ccc.lambda;
+
 import haxe.Json;
 import js.Error;
 import js.npm.redis.RedisClient;

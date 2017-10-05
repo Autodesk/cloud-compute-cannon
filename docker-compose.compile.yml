@@ -1,0 +1,40 @@
+version: '2'
+
+#Installs haxe libraries and compiles haxe code all
+#within docker containers (no local install needed)
+
+services:
+
+  install:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.haxelib:/app/.haxelib
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
+  compile:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.git:/app/.git
+      - ./build:/app/build
+      - ./.haxelib:/app/.haxelib
+      - ./src:/app/src
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
+  compile-lambda:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml"]
+    working_dir: /app
+    volumes:
+      - ./build:/app/build
+      - ./.haxelib:/app/.haxelib
+      - ./src:/app/src
+      - ./etc:/app/etc
+      - ./clients:/app/clients

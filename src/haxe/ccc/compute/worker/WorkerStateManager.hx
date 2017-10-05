@@ -24,7 +24,7 @@ class WorkerStateManager
 
 		ready = WorkerStateRedis.init(_redisClients.client)
 			.pipe(function(_) {
-				return RedisLogGetter.init(_redisClients.client);
+				return ccc.lambda.RedisLogGetter.init(_redisClients.client);
 			})
 			.pipe(function(_) {
 				return initializeThisWorker(_injector)
@@ -155,6 +155,7 @@ class WorkerStateManager
 
 	public function setHealthStatus(status :WorkerHealthStatus) :Promise<Bool>
 	{
+		log.info(LogFieldUtil.addWorkerEvent({status:status}, status == WorkerHealthStatus.OK ? WorkerEventType.HEALTHY : WorkerEventType.UNHEALTHY));
 		return WorkerStateRedis.setHealthStatus(_id, status);
 	}
 
@@ -226,7 +227,7 @@ class WorkerStateManager
 				redis,
 				RedisLoggerTools.REDIS_KEY_LOGS_CHANNEL,
 				function(ignored) {
-					return RedisLogGetter.getLogs();
+					return ccc.lambda.RedisLogGetter.getLogs();
 				}
 			);
 		logStream.catchError(function(err) {

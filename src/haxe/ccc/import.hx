@@ -1,7 +1,7 @@
 import ccc.*;
 import ccc.Definitions;
 import ccc.SharedConstants.*;
-import ccc.compute.shared.Constants.*;
+import ccc.Constants.*;
 
 import haxe.DynamicAccess;
 import haxe.Json;
