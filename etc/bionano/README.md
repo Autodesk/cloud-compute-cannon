@@ -2,23 +2,18 @@
 
 CCC requires three parts to install:
 
- 1. Redis cache
- 2. Autoscaling Lambdas
+ 1. Autoscaling Lambdas
+ 2. Redis cache
  3. CCC worker stack
-
-### Redis cache
-
-The Cloudformation script creates the redis cluster, and associates the HostRecord for the internal DNS name
-
-	cd etc/bionano/aws/cloudformation/redis
-	./deploy -k <AWS_ACCESS_KEY_ID> -s <AWS_SECRET_ACCESS_KEY> -t <dev|qa|prod>
 
 ### Autoscaling Lambdas
 
 This will package up the lambdas and deploy them in the region:
 
 	cd etc/bionano/aws/cloudformation/lambda-autoscaling
-	./deploy -k <AWS_ACCESS_KEY_ID> -s <AWS_SECRET_ACCESS_KEY> -t <dev|qa|prod>
+	./deploy --dryrun -k <AWS_ACCESS_KEY_ID> -s <AWS_SECRET_ACCESS_KEY> -t <dev|qa|prod> -n <subnet1,subnet2,...> -g <security group id>
+
+Remove the `--dryrun` flag to actually upload to AWS.
 
 To get the autoscaling group the lambda searches for a tag (that starts with):
 
@@ -27,6 +22,14 @@ To get the autoscaling group the lambda searches for a tag (that starts with):
 The lambda also assumes that a redis cluster can be found at:
 
 	redis.<BNR_ENVIRONMENT>.bionano.bio
+
+
+### Redis cache
+
+The Cloudformation script creates the redis cluster, and associates the HostRecord for the internal DNS name
+
+	cd etc/bionano/aws/cloudformation/redis
+	./deploy -k <AWS_ACCESS_KEY_ID> -s <AWS_SECRET_ACCESS_KEY> -t <dev|qa|prod>
 
 ### CCC worker stack
 
