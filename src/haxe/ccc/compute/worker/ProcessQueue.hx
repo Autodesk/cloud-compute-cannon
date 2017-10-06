@@ -401,9 +401,15 @@ class ProcessQueue
 				queues:[
 					{
 						name: BullQueueNames.JobQueue,
-						port:
-						host:
-						hostId:
+						port: redisPort,
+						host: redisHost,
+						hostId: redisHost
+					},
+					{
+						name: BullQueueNames.SingleMessageQueue,
+						port: redisPort,
+						host: redisHost,
+						hostId: redisHost
 					}
 				]
 			},
@@ -411,6 +417,9 @@ class ProcessQueue
 				disableListen: true
 			}
 		);
+
+		var app :Application = injector.getValue(Application);
+		app.use('/dashboard', cast bullArena);
 	}
 
 	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob<Dynamic>>->Done2<JobResult>->Void)
