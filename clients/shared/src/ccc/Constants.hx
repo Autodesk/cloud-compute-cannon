@@ -32,8 +32,13 @@ class Constants
 	inline public static var CONFIG_HASH = 'ccc_config';
 	inline public static var CONFIG_HASH_WORKERS_MAX = 'workers_max';
 	inline public static var CONFIG_HASH_WORKERS_MIN = 'workers_min';
-	inline public static var WORKER_STATUS_KEY_TTL_SECONDS = 60;
-	inline public static var GLOBAL_WORKER_HEALTH_CHECK_SECONDS = 60;
+
+	/**
+	 * How long will the key last in redis? After this key expires
+	 * the worker is considered UNHEALTHY, and can be marked for
+	 * termination.
+	 */
+	inline public static var WORKER_STATUS_KEY_TTL_SECONDS :Int = 90;
 
 	/* Job constants */
 	public static inline var RESULTS_JSON_FILE = 'result.json';

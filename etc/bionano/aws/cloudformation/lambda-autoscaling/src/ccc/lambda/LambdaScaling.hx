@@ -140,10 +140,9 @@ class LambdaScaling
 				return RedisPromises.smembers(redis, WorkerStateRedis.REDIS_MACHINES_ACTIVE)
 					.pipe(function(dbMembers) {
 						var promises = [];
-						// traceCyan('instanceIds=$instanceIds dbMembers=$dbMembers');
 						for (dbInstanceId in dbMembers) {
 							if (!instanceIds.has(dbInstanceId)) {
-								// traceCyan('$dbInstanceId not running, removing from active set');
+								redis.debugLog({message:'$dbInstanceId not running, removing from active set'});
 								promises.push(RedisPromises.srem(redis, WorkerStateRedis.REDIS_MACHINES_ACTIVE, dbInstanceId));
 							}
 						}
@@ -164,7 +163,7 @@ class LambdaScaling
 						RedisPromises.get(redis, key)
 							.pipe(function(healthStatus) {
 								if (healthStatus == null || healthStatus != WorkerHealthStatus.OK) {
-									// traceRed('scaling WORKER bad health status, terminating $id');
+									redis.debugLog(LogFieldUtil.addWorkerEvent({instanceId:id, healthStatus:healthStatus, message:'Bad health status, terminating'}, WorkerEventType.BAD_HEALTH_DETECTED));
 									return terminateWorker(id)
 										.thenTrue();
 								} else {
@@ -211,11 +210,11 @@ class LambdaScaling
 								return getTimeSinceInstanceStarted(instanceId)
 									.pipe(function(timeMilliseconds) {
 										var timeSeconds = timeMilliseconds / 1000;
-										if (timeSeconds < 20) {
-											// traceGreen('Not terminating potentially sick worker since it just stared up $instanceId');
+										if (timeSeconds < 240) {
+											redis.debugLog({instanceId:instanceId, message:'Not terminating potentially sick worker since it just stared up $instanceId'});
 											return Promise.promise(true);
 										} else {
-											redis.infoLog({instanceId:instanceId, message:'Terminating ${instanceId}'});
+											redis.infoLog(LogFieldUtil.addWorkerEvent({instanceId:instanceId, message:'Terminating ${instanceId}'}, WorkerEventType.TERMINATE));
 											return terminateWorker(instanceId)
 												.errorPipe(function(err) {
 													redis.errorLog({error:err});

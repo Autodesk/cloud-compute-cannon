@@ -43,11 +43,6 @@ class LambdaScalingAws
 		var calledBack = false;
 		redis.on(RedisEvent.Error, function (err) {
 			trace(err);
-			// redis.errorEventLog(err, 'handlerScale${scalingType} redis error');
-			// if (!calledBack) {
-			// 	calledBack = true;
-			// 	callback(err, null);
-			// }
 		});
 
 		var scaler = new LambdaScalingAws().setRedis(redis);
@@ -98,7 +93,7 @@ class LambdaScalingAws
 					DesiredCapacity: desiredWorkerCount,
 					HonorCooldown: true
 				};
-				redis.debugLog(params);
+				redis.infoLog(LogFieldUtil.addWorkerEvent(params, WorkerEventType.SET_WORKER_COUNT));
 				autoscaling.setDesiredCapacity(params, function(err, data) {
 					if (err != null) {
 						promise.boundPromise.reject(err);
@@ -239,20 +234,26 @@ class LambdaScalingAws
 			});
 	}
 
-	function getInstanceMinutesSinceLaunch(instanceId :MachineId) :Promise<Int>
+	override function getTimeSinceInstanceStarted(instanceId :MachineId) :Promise<Float>
 	{
 		return getInstanceInfo(instanceId)
 			.then(function(info :Dynamic) {
-				var minutes :Int = -1;
-				if (info != null) {
-					var launchDate = Date.fromTime(info.LaunchTime);
-					var instanceTime = launchDate.getTime();
-					var now = Date.now().getTime();
-					var diff = now - instanceTime;
-					var seconds = diff / 1000;
-					minutes = Std.int(seconds / 60);
+				if (info == null) {
+					return -1.0;
 				}
-				return minutes;
+				trace('getTimeSinceInstanceStarted $instanceId ${Json.stringify(info, null, "  ")}');
+				// var launchTime = Date.fromTime(info.LaunchTime);
+				var now = Date.now().getTime();
+				return now - info.LaunchTime;
+			});
+	}
+
+
+	function getInstanceMinutesSinceLaunch(instanceId :MachineId) :Promise<Float>
+	{
+		return getTimeSinceInstanceStarted(instanceId)
+			.then(function(time) {
+				return (time / 1000) / 60;
 			});
 	}
 
@@ -348,7 +349,7 @@ class LambdaScalingAws
 								return getInstanceMinutesSinceLaunch(instanceId)
 									.pipe(function(minutesSinceLaunch) {
 										if (minutesSinceLaunch > 10) {
-											redis.infoLog({instanceId:instanceId, message:'Terminating ${instanceId}', status:healthString, minutesSinceLaunch:minutesSinceLaunch});
+											redis.infoLog({instanceId:instanceId, message:'Terminating ${instanceId} health status != OK', status:healthString, minutesSinceLaunch:minutesSinceLaunch});
 											return terminateWorker(instanceId)
 												.then(function(_) {
 													return true;
@@ -391,4 +392,6 @@ class LambdaScalingAws
 				return promise.boundPromise;
 			});
 	}
+
+
 }

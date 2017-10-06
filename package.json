@@ -7,12 +7,10 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "init": "git submodule update --init --recursive && haxelib install -y ",
-    "install-dependencies": "mkdir -p .haxelib && haxelib install --always etc/hxml/base.hxml && haxelib install --always etc/hxml/base-nodejs.hxml && haxelib install --always clients/dashboard/build.hxml && haxelib install --always etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml",
-    "build": "haxe etc/hxml/build-all.hxml",
-    "redis-cli": "redis-cli -h 192.168.99.100",
-    "redis-admin": "redis-commander --redis-host 192.168.99.101 && open http://localhost:8081",
-    "clean": "rm -rf data/computejobs/* ; rm -rf data/registry/* ; rm -rf data/ServiceStorageLocalFileSystem/*",
+    "install": "docker-compose -f docker-compose.compile.yml run install",
+    "build": "docker-compose -f docker-compose.compile.yml run compile",
+    "clean": "docker-compose -f docker-compose.dev-server-local.yml rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build",
+    "test": "docker-compose -f docker-compose.dev-server-local.yml run ccc.tests",
     "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf",
     "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
     "set-build:client-dashboard": "rm build.hxml && ln -s clients/dashboard/build-dev.hxml build.hxml",

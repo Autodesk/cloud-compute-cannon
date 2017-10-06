@@ -218,6 +218,26 @@ class WorkerStateRedis
 			});
 	}
 
+
+	// static var SCRIPT_GET_START_TIME = '
+	// local machineId = ARGV[1]
+	// local starts = cmsgpack.unpack(redis.call("HGET", "${REDIS_MACHINE_STARTS}", machineId))
+	// return starts[1]
+	// ';
+	// public static function getStartTime(redis :RedisClient, machineId :MachineId) :Promise<Dynamic>
+	// {
+	// 	var promise = new promhx.CallbackPromise();
+	// 	redis.eval([
+	// 		SCRIPT_GET_START_TIME,
+	// 		0,
+	// 		machineId
+	// 	], promise.cb2);
+	// 	return cast promise
+	// 		.then(function(s :String) {
+	// 			return Std.parseFloat(s);
+	// 		});
+	// }
+
 	static var TERMINATE_SCRIPT =
 	'
 	local machineId = ARGV[1]
