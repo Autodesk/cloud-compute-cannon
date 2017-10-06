@@ -414,12 +414,15 @@ class ProcessQueue
 				]
 			},
 			{
+				basePath: '/dashboard',
 				disableListen: true
 			}
 		);
 
-		var app :Application = injector.getValue(Application);
-		app.use('/dashboard', cast bullArena);
+		var app :js.npm.express.Application = _injector.getValue(js.npm.express.Application);
+		var router = js.npm.express.Express.GetRouter();
+		router.use('/', cast bullArena);
+		app.use(cast router);
 	}
 
 	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob<Dynamic>>->Done2<JobResult>->Void)
