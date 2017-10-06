@@ -1,8 +1,5 @@
 clients/shared/hxml/git-libs.hxml
 
-# -cp lib/haxe-json-rpc/src/haxe
-# -lib promhx:git:https://github.com/dionjwa/promhx.git#260f2695
-
 -lib promhx:1.1.0
 -lib redux:0.5.1
 -lib msignal:1.2.4
@@ -15,5 +12,3 @@ clients/shared/hxml/git-libs.hxml
 -lib msgpack-haxe:1.15.1
 
 -cp clients/shared/src
-
-# -cp lib/promhx/src/main
