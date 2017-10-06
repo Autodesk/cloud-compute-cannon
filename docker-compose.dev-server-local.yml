@@ -38,6 +38,7 @@ services:
       - FLUENT_HOST=fluentd
       - LOG_LEVEL=debug
       - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
+      - LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7
     labels:
       ccc.type: "worker"
       ccc.origin: "docker-compose"
@@ -191,6 +192,29 @@ services:
     logging:
       driver: none
 
+  haxelibs:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.haxelib:/app/.haxelib
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
+  compile:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.git:/app/.git
+      - ./build:/app/build
+      - ./.haxelib:/app/.haxelib
+      - ./src:/app/src
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
   ccc.tests:
     image: dionjwa/haxe-watch:v0.7.3
     working_dir: /app
@@ -209,16 +233,6 @@ services:
       - ccc.local
       - redis1
       - ccc-scaling-server
-
-  install-haxelibs:
-    image: dionjwa/haxe-watch:v0.7.3
-    working_dir: /app
-    command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
-    volumes:
-      - ./clients:/app/clients
-      - ./etc:/app/etc
-      - ./test:/app/test
-      - ./.haxelib:/app/.haxelib
 
   # Watches code changes for the ccc-scaling-server and recompiles the code
   # watch-compiler-ccc-scaling-server:

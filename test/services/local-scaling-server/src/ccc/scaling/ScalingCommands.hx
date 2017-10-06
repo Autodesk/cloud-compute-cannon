@@ -124,6 +124,7 @@ class ScalingCommands
 						'FLUENT_HOST=fluentd',
 						'STORAGE_HTTP_PREFIX=http://ccc.local/',
 						'LOG_LEVEL=debug',
+						'LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7'
 					],
 					Cmd: containerInfo.Command.split(' '),
 					HostConfig: {

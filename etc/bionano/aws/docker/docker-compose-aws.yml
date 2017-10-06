@@ -18,6 +18,7 @@ services:
       FLUENT_HOST: "fluentd"
       FLUENT_PORT: "24226"
       LOG_LEVEL: "info"
+      LOADER_IO_TOKEN: "loaderio-58c05887b076c34c701b2cd4222d12d7"
     extra_hosts:
       # in aws remove 'fluentd' container and add the same name into host file with ip of host, which is running fluent server (td-agent)
       - "fluentd:${BNR_INSTANCE_IP}"

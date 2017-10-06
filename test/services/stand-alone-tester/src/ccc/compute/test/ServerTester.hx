@@ -26,22 +26,7 @@ class ServerTester
 						ServerTesterConfig.REDIS_HOST, ServerTesterConfig.REDIS_PORT);
 			})
 			.pipe(function(_) {
-				// var timeoutId = Node.setTimeout(function() {
-
-				// }, 100000000);
-				return runTests(injector)
-					// .then(function(testResults) {
-					// 	// Node.clearTimeout(timeoutId);
-					// 	traceYellow(Json.stringify(testResults, null, '  '));
-					// 	return true;
-					// })
-					// .errorPipe(function(err) {
-					// 	// Node.clearTimeout(timeoutId);
-					// 	traceRed(err);
-					// 	Node.process.exit(1);
-					// 	return Promise.promise(true);
-					// })
-					;
+				return runTests(injector);
 			});
 	}
 
