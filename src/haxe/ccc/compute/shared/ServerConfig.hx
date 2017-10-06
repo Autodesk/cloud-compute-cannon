@@ -21,6 +21,9 @@ class ServerConfig
 	public static var HOST :String = 'http://ccc.local';
 
 	@NodeProcessVar
+	public static var LOADER_IO_TOKEN :String;
+
+	@NodeProcessVar
 	public static var LOG_LEVEL :String = 'info';
 
 	@NodeProcessVar

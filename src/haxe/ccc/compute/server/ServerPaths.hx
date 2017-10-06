@@ -40,6 +40,12 @@ class ServerPaths
 
 		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
+		// Load testing: https://loader.io/
+		var loaderIOToken = ServerConfig.LOADER_IO_TOKEN;
+		app.get('/${loaderIOToken}.txt', function(req, res) {
+			res.send(loaderIOToken);
+		});
+
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);
