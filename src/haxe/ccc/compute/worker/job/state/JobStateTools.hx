@@ -250,7 +250,7 @@ class JobStateTools
 	static function cancelAllJobsInternal(time :Float) :Promise<Bool> {}
 	public static function cancelAllJobs() :Promise<Bool>
 	{
-		var queue = new js.npm.bull.Bull.Queue(BullQueueNames.JobQueue, REDIS_CLIENT.connection_options.port, REDIS_CLIENT.connection_options.host);
+		var queue = new js.npm.bull.Bull.Queue(BullQueueNames.JobQueue, {redis:{port:REDIS_CLIENT.connection_options.port, host:REDIS_CLIENT.connection_options.host}});
 		return queue.empty().promhx()
 			.then(function(status) {
 				traceCyan('Emptied queue=${BullQueueNames.JobQueue}');

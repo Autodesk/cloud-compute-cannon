@@ -47,7 +47,7 @@ class ServiceBatchComputeTools
 			job.id = ComputeTools.createUniqueId();
 		}
 
-		Log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:QueueJobDefinitionType.turbo}, JobEventType.ENQUEUED));
+		// Log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:QueueJobDefinitionType.turbo, message: 'Turbo via API'}, JobEventType.ENQUEUED));
 
 		var promise = new DeferredPromise<JobResultsTurboV2>();
 
@@ -71,26 +71,25 @@ class ServiceBatchComputeTools
 		}
 		timeoutId = Node.setTimeout(function() {
 			if (promise != null) {
+				Log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:QueueJobDefinitionType.turbo, message: 'TIMEOUT', JOB_TURBO_MAX_TIME_SECONDS:ServerConfig.JOB_TURBO_MAX_TIME_SECONDS}, JobEventType.ERROR));
 				promise.boundPromise.reject('Timeout');
 			}
 			cleanup();
 		}, ServerConfig.JOB_TURBO_MAX_TIME_SECONDS * 1000);
 
 		//Set up listeners
-		jobCompletedHandler = function(completedJob, result :JobResultsTurboV2) {
-			if (completedJob.data.jobId == job.id) {
-				Log.info({jobId:job.id, message:'SUCCESS TURBO JOB', result:result});
+		jobCompletedHandler = function(completedJob, resultString :String) {
+			var result :JobResultsTurboV2 = Json.parse(resultString);
+			if (completedJob == job.id) {
+				Log.debug({jobId:job.id, message:'SUCCESS TURBO JOB', result:result});
 				if (promise != null) {
 					promise.resolve(result);
 				}
 				cleanup();
 			}
-			else {
-				traceYellow('jobCompletedHandler does NOT match job we are listening for');
-			}
 		}
 		jobFailedHandler = function(failedJob, err) {
-			if (failedJob.data.jobId == job.id) {
+			if (failedJob == job.id) {
 				Log.warn({jobId:job.id, message:'FAILED TURBO JOB', error:err});
 				if (promise != null) {
 					promise.boundPromise.reject(err);
@@ -98,8 +97,8 @@ class ServiceBatchComputeTools
 				cleanup();
 			}
 		}
-		processQueue.queueProcess.addListener('global:${QueueEvent.Completed}', jobCompletedHandler);
-		processQueue.queueProcess.addListener('global:${QueueEvent.Failed}', jobFailedHandler);
+		processQueue.queueProcess.on('global:${QueueEvent.Completed}', jobCompletedHandler);
+		processQueue.queueProcess.on('global:${QueueEvent.Failed}', jobFailedHandler);
 
 		//Add job to the queue
 		var job :QueueJobDefinition<BatchProcessRequestTurboV2> = {
