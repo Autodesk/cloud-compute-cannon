@@ -573,13 +573,20 @@ class JobProcessObject
 							}
 							return Promise.promise(true);
 						} else {
-							return JobStateTools.setFinishedStatus(jobId, JobFinishedStatus.TooManyFailedAttempts)
-								.then(function(_) {
-									if (!_isFinished) {
-										finish(ProcessFinishReason.MaximumAttemptsExceeded);
-									}
-									return true;
-								});
+							var batchJobResult :BatchJobResult = {exitCode:-1, error:JobFinishedStatus.TooManyFailedAttempts, copiedLogs:false, timeout:false};
+							return Jobs.getJob(jobId)
+								.pipe(function(job) {
+									return writeJobResults(_redis, job, _remoteStorage, batchJobResult, JobFinishedStatus.TooManyFailedAttempts)
+										.pipe(function(jobResultBlob) {
+											return JobStateTools.setFinishedStatus(jobId, JobFinishedStatus.TooManyFailedAttempts)
+												.then(function(_) {
+													if (!_isFinished) {
+														finish(ProcessFinishReason.MaximumAttemptsExceeded);
+													}
+													return true;
+												});
+										});
+									});
 							}
 					}).catchError(function(err) {
 						log.warn({error:err, message: 'Setting JobStateTools.setFinishedStatus($jobId, JobFinishedStatus.TooManyFailedAttempts)'});
@@ -689,26 +696,28 @@ class JobProcessObject
 									if (_isFinished) {
 										return Promise.promise(true);
 									} else {
-										return writeJobResults(_redis, job, _remoteStorage, batchJobResult, JobFinishedStatus.Failed)
-											.pipe(function(jobResultBlob) {
-												return JobStateTools.setFinishedStatus(jobId, JobFinishedStatus.Failed, Json.stringify(err))
-													.then(function(_) {
-														return jobResultBlob;
-													});
-											})
-											.then(function(jobResultBlob) {
-												log.debug({message:"Finished writing job"});
-												if (!_isFinished) {
-													finish(ProcessFinishReason.Success(jobResultBlob.jobResult));
-												}
-												return true;
-											})
-											.errorPipe(function(err) {
-												if (!_isFinished) {
-													finish(ProcessFinishReason.Error("Failed to write job results"));
-												}
-												return Promise.promise(true);
-											});
+										finish(ProcessFinishReason.Error(err));
+										return Promise.promise(true);
+										// return writeJobResults(_redis, job, _remoteStorage, batchJobResult, JobFinishedStatus.Failed)
+										// 	.pipe(function(jobResultBlob) {
+										// 		return JobStateTools.setFinishedStatus(jobId, JobFinishedStatus.Failed, Json.stringify(err))
+										// 			.then(function(_) {
+										// 				return jobResultBlob;
+										// 			});
+										// 	})
+										// 	.then(function(jobResultBlob) {
+										// 		log.debug({message:"Finished writing job"});
+										// 		if (!_isFinished) {
+										// 			finish(ProcessFinishReason.Success(jobResultBlob.jobResult));
+										// 		}
+										// 		return true;
+										// 	})
+										// 	.errorPipe(function(err) {
+										// 		if (!_isFinished) {
+										// 			finish(ProcessFinishReason.Error("Failed to write job results"));
+										// 		}
+										// 		return Promise.promise(true);
+										// 	});
 									}
 								});
 						});
