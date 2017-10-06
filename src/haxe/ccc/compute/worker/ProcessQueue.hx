@@ -390,6 +390,27 @@ class ProcessQueue
 			}
 		}
 		messageQueue.process(1, messageQueueHandler);
+
+		addBullDashboard();
+	}
+
+	function addBullDashboard()
+	{
+		var bullArena = new js.npm.bullarena.BullArena(
+			{
+				queues:[
+					{
+						name: BullQueueNames.JobQueue,
+						port:
+						host:
+						hostId:
+					}
+				]
+			},
+			{
+				disableListen: true
+			}
+		);
 	}
 
 	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob<Dynamic>>->Done2<JobResult>->Void)
