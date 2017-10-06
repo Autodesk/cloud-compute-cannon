@@ -390,6 +390,39 @@ class ProcessQueue
 			}
 		}
 		messageQueue.process(1, messageQueueHandler);
+
+		addBullDashboard();
+	}
+
+	function addBullDashboard()
+	{
+		var bullArena = new js.npm.bullarena.BullArena(
+			{
+				queues:[
+					{
+						name: BullQueueNames.JobQueue,
+						port: redisPort,
+						host: redisHost,
+						hostId: redisHost
+					},
+					{
+						name: BullQueueNames.SingleMessageQueue,
+						port: redisPort,
+						host: redisHost,
+						hostId: redisHost
+					}
+				]
+			},
+			{
+				basePath: '/dashboard',
+				disableListen: true
+			}
+		);
+
+		var app :js.npm.express.Application = _injector.getValue(js.npm.express.Application);
+		var router = js.npm.express.Express.GetRouter();
+		router.use('/', cast bullArena);
+		app.use(cast router);
 	}
 
 	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob<Dynamic>>->Done2<JobResult>->Void)

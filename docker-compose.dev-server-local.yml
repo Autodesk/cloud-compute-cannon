@@ -43,21 +43,6 @@ services:
       ccc.type: "worker"
       ccc.origin: "docker-compose"
 
-  bull-ui-server:
-    cpu_shares: 256
-    build:
-      context:
-        "etc/bull-ui-server/"
-    environment:
-      PORT: "9002"
-      REDIS_HOST: 'redis1'
-    ports: #"HOST:CONTAINER"
-      - "9002:9002"
-    links:
-      - redis1
-    logging:
-        driver: none
-
   redis1:
     cpu_shares: 256
     restart: always
@@ -129,24 +114,24 @@ services:
 
 
   # Run the functional and scaling tests in a separate container
-  ccc.tests:
-    image: dionjwa/haxe-watch:v0.7.3
-    working_dir: /app
-    # command: ["nodemon", "-L", "--delay", "5", "--watch", "build/test", "--watch", "build/server", "build/test/cloud-compute-cannon-tester.js"]
-    command: ["nodemon", "-L", "--watch", "build/test", "build/test/cloud-compute-cannon-tester.js"]
-    environment:
-      - CCC=ccc.local
-      - CCC_SCALING=ccc-scaling-server:4015
-      - LOG_LEVEL=debug
-      - REDIS_HOST=redis1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./build:/app/build
-      - node_modules:/app/node_modules
-    links:
-      - ccc.local
-      - redis1
-      - ccc-scaling-server
+  # ccc.tests:
+  #   image: dionjwa/haxe-watch:v0.7.3
+  #   working_dir: /app
+  #   # command: ["nodemon", "-L", "--delay", "5", "--watch", "build/test", "--watch", "build/server", "build/test/cloud-compute-cannon-tester.js"]
+  #   command: ["nodemon", "-L", "--watch", "build/test", "build/test/cloud-compute-cannon-tester.js"]
+  #   environment:
+  #     - CCC=ccc.local
+  #     - CCC_SCALING=ccc-scaling-server:4015
+  #     - LOG_LEVEL=debug
+  #     - REDIS_HOST=redis1
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ./build:/app/build
+  #     - node_modules:/app/node_modules
+  #   links:
+  #     - ccc.local
+  #     - redis1
+  #     - ccc-scaling-server
 
   fluentd:
     build: ./etc/log/

@@ -399,7 +399,7 @@ class Server
 
 		//Serve metapages dashboards
 		app.use('/', Express.Static('./web'));
-		app.use('/dashboard', Express.Static('./clients/dashboard'));
+		// app.use('/dashboard', Express.Static('./clients/dashboard'));
 		app.use('/node_modules', Express.Static('./node_modules'));
 
 		var storage :ServiceStorage = injector.getValue(ServiceStorage);

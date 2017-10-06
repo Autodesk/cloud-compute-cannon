@@ -22,11 +22,3 @@ services:
     extra_hosts:
       # in aws remove 'fluentd' container and add the same name into host file with ip of host, which is running fluent server (td-agent)
       - "fluentd:${BNR_INSTANCE_IP}"
-
-  bull-ui-server:
-    image: "docker.io/dionjwa/bull-ui-server:1.0.1"
-    environment:
-      PORT: "9002"
-      REDIS_HOST: "redis-ccc.${BNR_ENVIRONMENT}.bionano.bio"
-    ports:
-      - "9002:9002"
