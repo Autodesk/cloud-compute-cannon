@@ -39,6 +39,7 @@ services:
       - VIRTUAL_HOST=ccc.local
       - FLUENT_HOST=fluentd
       - LOG_LEVEL=info
+      - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
     labels:
       ccc.type: "worker"
       ccc.origin: "docker-compose"

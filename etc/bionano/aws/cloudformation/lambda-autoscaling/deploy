@@ -87,7 +87,6 @@ PROJECTROOT=$DIR/../../../../..
 # AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY aws cloudformation validate-template --template-body file://$DIR/cf-ccc-scaling.json
 
 echo "Compiling haxe->javascript..."
-# $PROJECTROOT/bin/compile
 pushd $PROJECTROOT
 docker-compose -f docker-compose.compile.yml run compile-lambda
 popd
@@ -98,11 +97,7 @@ echo "Building lambda package..."
 LAMBDA_ZIP_FOLDER="$PROJECTROOT/build/lambda-autoscaling-zip"
 rm -rf $LAMBDA_ZIP_FOLDER
 mkdir -p $LAMBDA_ZIP_FOLDER
-# LOCAL_SRC_DIR="$PROJECTROOT/etc/bionano/aws/cloudformation/lambda-autoscaling/src"
 docker run --rm -ti -v $LAMBDA_SRC:/src -v $LAMBDA_ZIP_FOLDER:/destination dionjwa/aws-lambda-builder -s /src -d /destination
-
-# echo "Compiling..."
-# $PROJECTROOT/bin/package-aws-lambda.sh --src $DIR/src --destination $LAMBDA_ZIP_FOLDER
 
 NAME=`cat $DIR/src/package.json | jq -r ".name"`
 VERSION=`cat $DIR/src/package.json | jq -r ".version"`
@@ -111,16 +106,17 @@ ZIP_FILE="$LAMBDA_ZIP_FOLDER/$ZIP_NAME"
 S3BUCKET="bionano-devops-build-artifacts-$REGION"
 S3KEY="lambdas/ccc/$ZIP_NAME"
 S3PATH="s3://${S3BUCKET}/${S3KEY}"
-STACKNAME="${BNR_ENVIRONMENT}-CCC-Lambda-Scaling"
+STACKNAME="${BNR_ENVIRONMENT}-CCC-Lambda-Scaling-test1"
 
 echo "Uploading lambda package to S3..."
 #Now copy to S3 and get the package name
 docker run --rm -it -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v $ZIP_FILE:/tmp/$ZIP_NAME docker.io/garland/aws-cli-docker aws s3 cp /tmp/$ZIP_NAME $S3PATH
 
-{
-  AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY aws --region $REGION cloudformation describe-stacks --stack-name "$STACKNAME"
-  ISSTACK=$?
-} &> /dev/null
+#Check if the stack already exists
+set +e
+eval AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY aws --region $REGION cloudformation describe-stacks --stack-name "$STACKNAME" > /dev/null 2>&1
+ISSTACK=$?
+set -e
 
 PARAMETERSTRING='[{"ParameterKey":"S3Bucket","ParameterValue":"S3BUCKET"},{"ParameterKey":"S3Key","ParameterValue":"S3KEY"},{"ParameterKey":"BionanoEnvironment","ParameterValue":"BNR_ENVIRONMENT"},{"ParameterKey":"SubNetIds","ParameterValue":"SUBNETS"},{"ParameterKey":"SecGroupIds","ParameterValue":"SEC_GROUPS"}]'
 PARAMETERSTRING=${PARAMETERSTRING/S3BUCKET/$S3BUCKET}

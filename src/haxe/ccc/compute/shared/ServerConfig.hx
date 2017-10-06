@@ -62,7 +62,6 @@ class ServerConfig
 	@NodeProcessVar
 	public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS :Int = 20;
 
-
 	//Statics
 	inline public static var INJECTOR_REDIS_SUBSCRIBE :String = 'REDIS_SUBSCRIBE';
 	inline public static var REDIS_PREFIX :String = 'ccc::';
