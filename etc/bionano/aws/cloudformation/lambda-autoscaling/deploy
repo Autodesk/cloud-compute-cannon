@@ -106,7 +106,7 @@ ZIP_FILE="$LAMBDA_ZIP_FOLDER/$ZIP_NAME"
 S3BUCKET="bionano-devops-build-artifacts-$REGION"
 S3KEY="lambdas/ccc/$ZIP_NAME"
 S3PATH="s3://${S3BUCKET}/${S3KEY}"
-STACKNAME="${BNR_ENVIRONMENT}-CCC-Lambda-Scaling-test1"
+STACKNAME="${BNR_ENVIRONMENT}-CCC-Lambda-Scaling"
 
 echo "Uploading lambda package to S3..."
 #Now copy to S3 and get the package name

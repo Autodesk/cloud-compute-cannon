@@ -105,7 +105,7 @@
       "DependsOn" : "LambdaCCCBionanoScaleDown",
       "Properties" : {
         "Description" : "Fire this event every 5 minutes",
-        "ScheduleExpression" : "rate(1 minute)",
+        "ScheduleExpression" : "rate(5 minutes)",
         "Targets" : [
           {
             "Arn" : { "Fn::GetAtt" : [ "LambdaCCCBionanoScaleDown", "Arn" ] },
