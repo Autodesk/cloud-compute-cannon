@@ -7,7 +7,7 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "install-dependencies": "docker-compose -f docker-compose.compile.yml run install",
+    "install-dependencies": "docker-compose -f docker-compose.compile.yml run install-haxelibs",
     "build": "docker-compose -f docker-compose.compile.yml run compile",
     "clean": "docker-compose -f docker-compose.dev-server-local.yml rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build",
     "test": "npm run install && docker-compose -f docker-compose.dev-server-local.yml run ccc.tests",
