@@ -82,6 +82,7 @@ class TestFailureConditions extends ServerAPITestBase
 			.pipe(function(_) {
 				return routes.doJobCommand_v2(JobCLICommand.Result, jobId)
 					.errorPipe(function(err) {
+						traceRed(err);
 						return Promise.promise(null);
 					});
 			})
