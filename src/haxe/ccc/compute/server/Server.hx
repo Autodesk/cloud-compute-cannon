@@ -318,7 +318,9 @@ class Server
 				return initWorker(injector);
 			})
 			.then(function(_) {
+				trace('ServiceMonitorRequest');
 				ServiceMonitorRequest.init(injector);
+				return true;
 			})
 			.then(function(_) {
 
