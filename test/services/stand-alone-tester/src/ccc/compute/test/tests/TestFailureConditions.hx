@@ -80,11 +80,8 @@ class TestFailureConditions extends ServerAPITestBase
 			})
 			.thenWait(10)
 			.pipe(function(_) {
-				return routes.doJobCommand_v2(JobCLICommand.Result, jobId)
-					.errorPipe(function(err) {
-						traceRed(err);
-						return Promise.promise(null);
-					});
+				var f = function() { return routes.doJobCommand_v2(JobCLICommand.Result, jobId);};
+				return RetryPromise.retryRegular(f, 8, 500);
 			})
 			.then(function(jobResult) {
 				assertIsNull(jobResult);
