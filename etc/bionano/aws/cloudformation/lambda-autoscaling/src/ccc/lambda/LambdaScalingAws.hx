@@ -93,7 +93,7 @@ class LambdaScalingAws
 					DesiredCapacity: desiredWorkerCount,
 					HonorCooldown: true
 				};
-				redis.infoLog(LogFieldUtil.addWorkerEvent(params, WorkerEventType.SET_WORKER_COUNT));
+				redis.infoLog(LogFieldUtil.addWorkerEvent(Reflect.copy(params), WorkerEventType.SET_WORKER_COUNT));
 				autoscaling.setDesiredCapacity(params, function(err, data) {
 					if (err != null) {
 						promise.boundPromise.reject(err);
