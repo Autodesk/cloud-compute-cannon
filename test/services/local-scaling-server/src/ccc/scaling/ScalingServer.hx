@@ -31,7 +31,7 @@ class ScalingServer
 				return createHttpServer(injector);
 			})
 			.then(function(_) {
-				if (ScalingServerConfig.RUN_TESTS_ON_START) {
+				if (ScalingServerConfig.SCALING_TESTS_ON_START) {
 					injector.getValue(ScalingRoutes).test();
 				}
 			});

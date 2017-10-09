@@ -42,7 +42,6 @@ for VERSION in $GIT_TAG $NPM_VERSION ; do
 	cp $CONFIG_PATH $ZIP_DIR/ccc.yml
 
 	#Script to run the stack
-	#cp bin/run-stack-prod $ZIP_DIR/
 
 	echo "$VERSION" > $ZIP_DIR/VERSION
 

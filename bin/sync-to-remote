@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-REMOTE=$1
-REMOTE_CCC_PATH="cloudcomputecannon"
-rsync -av --copy-links --exclude=**.DS_Store* --exclude=/ccc.yml* --exclude=node_modules --exclude=.git --exclude=tmp --exclude=.haxelib --exclude=.cloudcomputecannon --exclude=ccc_local* --exclude=.vagrant --exclude=.bundle ./ $REMOTE:$REMOTE_CCC_PATH/

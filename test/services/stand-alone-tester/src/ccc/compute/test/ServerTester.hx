@@ -7,8 +7,6 @@ import js.node.Process;
  */
 class ServerTester
 {
-	// static var DEFAULT_TESTS = 'monitor=true';//compute=true&turbojobs=true
-
 	static function main()
 	{
 		js.npm.sourcemapsupport.SourceMapSupport;
@@ -37,7 +35,11 @@ class ServerTester
 				return RetryPromise.retryRegular(f, 30, 500);
 			})
 			.pipe(function(_) {
-				return runTests(injector);
+				if (ServerTesterConfig.TEST) {
+					return runTests(injector);
+				} else {
+					return Promise.promise(null);
+				}
 			});
 	}
 
