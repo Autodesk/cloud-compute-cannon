@@ -26,7 +26,7 @@ class ScalingRoutes
 			runner.add(testCollection);
 		}
 
-		addTestClass(Tests);
+		addTestClass(ScalingTests);
 		var exitOnFinish = false;
 		var disableTrace = false;
 		return runner.run(exitOnFinish, disableTrace)

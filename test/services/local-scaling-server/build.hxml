@@ -6,7 +6,7 @@ etc/hxml/base-nodejs.hxml
 
 -debug
 
--D PromhxExposeErrors
+# -D PromhxExposeErrors
 
 -main ccc.scaling.ScalingServer
 

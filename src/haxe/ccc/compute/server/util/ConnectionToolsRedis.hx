@@ -16,17 +16,16 @@ class ConnectionToolsRedis
 
 	public static function getRedisConnectOps() :{host:String, port:Int}
 	{
-		var host :String = Reflect.field(Node.process.env, ENV_REDIS_HOST);
+		var host :String = ServerConfig.REDIS_HOST;
 		if (host == null || host == '') {
 			host = 'redis';
 		}
 		host = host.replace(':', '');
 
-		var portString :String = Reflect.field(Node.process.env, ENV_REDIS_PORT);
-		if (portString == null || portString == '') {
-			portString = '$REDIS_PORT';
+		var port :Int = ServerConfig.REDIS_PORT;
+		if (port == null) {
+			port = REDIS_PORT;
 		}
-		var port :Int = Std.parseInt(portString);
 		return {host:host, port:port};
 	}
 

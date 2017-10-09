@@ -7,10 +7,11 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "install-dependencies": "docker-compose -f docker-compose.compile.yml run install-haxelibs",
+    "haxelibs": "docker-compose -f docker-compose.dev-server-local.yml run haxelibs",
+    "init": "docker-compose -f docker-compose.dev-server-local.yml run haxelibs && docker-compose -f docker-compose.dev-server-local.yml run node_modules && docker-compose -f docker-compose.dev-server-local.yml run compile",
     "build": "docker-compose -f docker-compose.compile.yml run compile",
     "clean": "docker-compose -f docker-compose.dev-server-local.yml rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build",
-    "test": "npm run install && docker-compose -f docker-compose.dev-server-local.yml run ccc.tests",
+    "test": "npm run init && npm run test-quick",
     "test-quick": "docker-compose -f docker-compose.dev-server-local.yml run ccc.tests",
     "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf",
     "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
