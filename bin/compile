@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 #Build docker image needed for compiling haxe source in Javascript
-echo "Building and tagging images"
+echo "Installing haxelibs and compiling haxe->javascript"
 set -e
 ROOTPATH="`dirname \"$0\"`"/../
 
 pushd $ROOTPATH
-#Delete all prior builds
+# Delete all prior builds
 rm -rf build
-#Recreate the build folders. This SHOULD be done automatically
-#in the haxe build process, but there is a weird interaction with
-#docker, and I often see errors such as:
+# Recreate the build folders. This SHOULD be done automatically
+# in the haxe build process, but there is a weird interaction with
+# docker, and I often see errors such as:
 #   Unix.Unix_error(Unix.EBUSY, "mkdir", "build/local-scaling-server")
-#so a workaround is to create all the directories before building.
-#This is annoying and fragile, but no other solution was found.
+# so a workaround is to create all the directories before building.
+# This is annoying and fragile, but no other solution was found.
 mkdir -p build/server
 mkdir -p build/local-scaling-server
 mkdir -p build/test
 
-docker-compose -f docker-compose.override.yml run install-haxelibs
-docker-compose -f docker-compose.override.yml run compile
+TEST=false docker-compose run haxelibs
+TEST=false docker-compose run compile
 
 popd
