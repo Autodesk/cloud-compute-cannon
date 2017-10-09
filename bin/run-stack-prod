@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-DC="docker-compose -f docker-compose.yml -f docker-compose.prod.yml "
-$DC rm -f && $DC build && $DC up 
-# -d

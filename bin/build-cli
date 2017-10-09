@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 rm -rf build/publish
 mkdir -p build/publish/bin
 

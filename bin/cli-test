@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-haxe etc/hxml/cli-client-only-build.hxml
-node build/cli/cloudcomputecannon.js -S localhost:9000 $@

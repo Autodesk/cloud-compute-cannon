@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-haxe etc/hxml/cli-build.hxml
-node build/cli/cloudcomputecannon.js $@

@@ -1,2 +1,0 @@
-#!/usr/bin/env sh
-docker-compose rm -f && docker-compose build && docker-compose up

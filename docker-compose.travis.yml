@@ -40,6 +40,7 @@ services:
       - LOG_LEVEL=debug
       - REDIS_HOST=redis1
       - TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}
+      - TEST=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build:/app/build
@@ -92,6 +93,6 @@ services:
       - ./etc/nginx/proxy.conf:/etc/nginx/proxy.conf
     depends_on:
       - serverworker
-    # logging:
-    #   driver: none
+    logging:
+      driver: none
 
