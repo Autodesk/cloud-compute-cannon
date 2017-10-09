@@ -148,6 +148,10 @@ class JobStatsTools
 				if workerId then
 					redis.call("ZREM", "${REDIS_KEY_ZSET_PREFIX_WORKER_JOBS_ACTIVE}" .. workerId, jobId)
 				end
+
+				jobstats.statusFinished = stateFinished
+				redis.call("HSET", "${JobStateTools.REDIS_KEY_HASH_JOB_STATUS_FINISHED}", jobId, stateFinished)
+
 			elseif state == "${JobStatus.Pending}" and jobstats.status == "${JobStatus.Finished}" then
 				return {err="jobId=" .. tostring(jobId) .. " Error setting status=" .. tostring(state) .. ", already ${JobStatus.Finished}"}
 			elseif state == "${JobStatus.Working}" and jobstats.status == "${JobStatus.Finished}" then
@@ -163,13 +167,7 @@ class JobStatsTools
 
 			jobstats.status = state
 		end
-		if stateFinished ~= nil then
-			if jobstats.statusFinished and jobstats.statusFinished ~= "none" then
-				return {err="jobId=" .. tostring(jobId) .. " Error setting statusFinished=" .. tostring(stateFinished) .. " to jobstats.statusFinished=" .. tostring(jobstats.statusFinished)}
-			end
-			jobstats.statusFinished = stateFinished
-			redis.call("HSET", "${JobStateTools.REDIS_KEY_HASH_JOB_STATUS_FINISHED}", jobId, stateFinished)
-		end
+
 		if stateWorking ~= nil then
 			-- $ { SNIPPET_LOAD_CURRENT_JOB_ATTEMPT}
 			if not jobData then

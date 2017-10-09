@@ -194,7 +194,7 @@ class JobStateTools
 		return {err="${RedisError.NoJobFound}", jobId=jobId, script="SNIPPET_JOB_CANCEL"}
 	end
 	${JobStatsTools.SNIPPET_LOAD_CURRENT_JOB_STATS}
-	local state = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATUS}", jobId)
+	local state = jobstats.status
 	redis.log(redis.LOG_NOTICE, "state=" .. tostring(state))
 	if state then
 		if state == "${JobStatus.Finished}" then
@@ -253,13 +253,10 @@ class JobStateTools
 		var queue = new js.npm.bull.Bull.Queue(BullQueueNames.JobQueue, {redis:{port:REDIS_CLIENT.connection_options.port, host:REDIS_CLIENT.connection_options.host}});
 		return queue.empty().promhx()
 			.then(function(status) {
-				traceCyan('Emptied queue=${BullQueueNames.JobQueue}');
-				traceCyan(status);
 				queue.close();
 				return true;
 			})
 			.pipe(function(_) {
-				traceCyan('cancelAllJobsInternal');
 				return cancelAllJobsInternal(time());
 			});
 	}

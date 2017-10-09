@@ -55,11 +55,6 @@ class Server
 		initStorage(injector);
 		ServerPaths.initAppPaths(injector);
 		runServer(injector);
-			// .then(function(_) {
-			// 	if (!ServerConfig.DISABLE_STARTUP_TESTS) {
-			// 		runFunctionalTests(injector);
-			// 	}
-			// });
 	}
 
 	static function initProcess()
@@ -430,15 +425,16 @@ class Server
 
 	static function mapEnvVars(injector :Injector)
 	{
-		var env :DynamicAccess<String> = Node.process.env;
-		var redisHost = env[ENV_REDIS_HOST];
-		if (redisHost == null || redisHost == '') {
-			redisHost = 'redis';
+		traceGreen('Mapping ${ServerConfig.REDIS_HOST} to injector REDIS_HOST');
+		//Docker links can set the REDIS_PORT to the full url. Need to check for this.
+		var port :Int = if (ServerConfig.REDIS_PORT == null) {
+			6379;
+		} else {
+			ServerConfig.REDIS_PORT;
 		}
-		redisHost = redisHost.replace(':', '');
-		var redisPort = env[ENV_REDIS_PORT] != null && env[ENV_REDIS_PORT] != '' ? Std.parseInt(env[ENV_REDIS_PORT]) : REDIS_PORT;
-		injector.map(String, ENV_REDIS_HOST).toValue(redisHost);
-		injector.map(Int, ENV_REDIS_PORT).toValue(redisPort);
+		traceGreen('Mapping ${port} to injector REDIS_PORT');
+		injector.map(String, 'REDIS_HOST').toValue(ServerConfig.REDIS_HOST);
+		injector.map(Int, 'REDIS_PORT').toValue(port);
 	}
 
 	static function monitorMemory()

@@ -26,6 +26,17 @@ class ServerTester
 						ServerTesterConfig.REDIS_HOST, ServerTesterConfig.REDIS_PORT);
 			})
 			.pipe(function(_) {
+				//Verify that at least a single worker is up and running
+				var f = function() {
+					var url = 'http://${ServerTesterConfig.CCC}/version';
+					return RequestPromises.get(url)
+						.then(function(result) {
+							return true;
+						});
+				}
+				return RetryPromise.retryRegular(f, 30, 500);
+			})
+			.pipe(function(_) {
 				return runTests(injector);
 			});
 	}
@@ -46,7 +57,14 @@ class ServerTester
 		addTestClass(ccc.compute.test.tests.TestJobs);
 		addTestClass(ccc.compute.test.tests.TestTurboJobs);
 		addTestClass(ccc.compute.test.tests.TestFailureConditions);
-		addTestClass(ccc.compute.test.tests.TestScaling);
+		//Travis struggles with the scaling tests, likely due to
+		//the slowness of the underlying VCPU. Tests that succeed
+		//in one repo fail in an identical repo.
+		//You'll need to test locally however to catch bugs this
+		//test would otherwise catch.
+		// if (ServerTesterConfig.TRAVIS_REPO_SLUG != 'dionjwa/cloud-compute-cannon') {
+			addTestClass(ccc.compute.test.tests.TestScaling);
+		// }
 
 		//Wait on the main server
 		var url = 'http://${ServerTesterConfig.CCC}/version';

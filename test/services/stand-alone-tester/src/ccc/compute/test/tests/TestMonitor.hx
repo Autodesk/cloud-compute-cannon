@@ -47,6 +47,8 @@ class TestMonitor
 			promises.push(p);
 		}
 
+		promises.push(JobStateTools.cancelAllJobs().thenWait(300));
+
 		callMonitor(0);
 		checkOnlyOneTestJob(0);
 		for (i in 3...6) {

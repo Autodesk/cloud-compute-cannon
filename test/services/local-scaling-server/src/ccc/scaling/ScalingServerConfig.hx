@@ -3,6 +3,15 @@ package ccc.scaling;
 @:build(util.NodejsMacros.addProcessEnvVars())
 class ScalingServerConfig
 {
+	/**
+	 * CCC address for hitting the API
+	 */
+	@NodeProcessVar
+	public static var CCC :String;
+
+	// @NodeProcessVar
+	public static var LOG_LEVEL :Int = 20;
+
 	@NodeProcessVar
 	public static var PORT :Int = 4015;
 
@@ -12,11 +21,8 @@ class ScalingServerConfig
 	@NodeProcessVar
 	public static var REDIS_PORT :Int = 6379;
 
-	/**
-	 * CCC address for hitting the API
-	 */
 	@NodeProcessVar
-	public static var CCC :String;
+	public static var RUN_TESTS_ON_START :Bool = true;
 
 	public static function toJson() :Dynamic
 	{

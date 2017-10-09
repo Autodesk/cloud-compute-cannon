@@ -3,12 +3,124 @@ package ccc.scaling;
 import haxe.unit.async.PromiseTest;
 import haxe.unit.async.PromiseTestRunner;
 
-class Tests
+class ScalingTests
 	extends PromiseTest
 {
 	@inject public var redis :RedisClient;
 	@inject public var docker :Docker;
 	@inject public var lambda :LambdaScaling;
+
+	@timeout(120000)
+	public function testWorkerLifecycleEvents() :Promise<Bool>
+	{
+		Log.debug({event:'testWorkerLifecycleEvents'});
+		var workerId :MachineId;
+		return Promise.promise(true)
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents killAllWorkers'});
+				return killAllWorkers();
+			})
+			.pipe(lambda.traceJson())
+			.thenWait(5000)//Travis times out all the time
+			.pipe(lambda.traceJson())
+			//Start with a single worker
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents setState'});
+				trace('testWorkerLifecycleEvents setState');
+				return ScalingCommands.setState({
+					MinSize: 1,
+					MaxSize: 2,
+					DesiredCapacity: 1
+				})
+				.thenWait(3000);
+			})
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents getAllDockerWorkerIds'});
+				return ScalingCommands.getAllDockerWorkerIds()
+					.then(function(workers) {
+						assertEquals(workers.length, 1);
+						workerId = workers[0];
+						return true;
+					});
+			})
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents sendCommandToAllWorkers'});
+				return WorkerStateRedis.sendCommandToAllWorkers(WorkerUpdateCommand.PauseHealthCheck);
+			})
+			.thenWait(1000)
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents Validate health'});
+				return WorkerStreams.until(redis, workerId, function(workerState) {
+					return workerState.status == WorkerStatus.OK;
+				}, 9000);
+			})
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents getHealthStatus'});
+				return WorkerStateRedis.getHealthStatus(workerId)
+					.then(function(healthStatus) {
+						assertEquals(healthStatus, WorkerHealthStatus.OK);
+						return true;
+					})
+					.pipe(function(_) {
+						return WorkerStateRedis.getStatus(workerId)
+							.then(function(status) {
+								assertEquals(status, WorkerStatus.OK);
+								return true;
+							});
+					});
+			})
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'testWorkerLifecycleEvents Validate when unhealthy'});
+				return WorkerStateRedis.setHealthStatus(workerId, WorkerHealthStatus.BAD_DiskFull)
+					.pipe(function(_) {
+						return WorkerStateRedis.get(workerId)
+							.then(function(blob) {
+								Log.debug({event:'After setting unhealthy, status=${blob.status}'});
+								assertEquals(blob.status, WorkerStatus.UNHEALTHY);
+								assertEquals(blob.statusHealth, WorkerHealthStatus.BAD_DiskFull);
+								return true;
+							});
+					});
+			})
+			.pipe(lambda.traceJson())
+			.pipe(function(_) {
+				Log.debug({event:'Scale down, should terminate worker'});
+				return lambda.scaleDown()
+					.thenWait(1000)
+					.pipe(lambda.traceJson())
+					.pipe(function(_) {
+						return WorkerStateRedis.get(workerId)
+							.then(function(blob) {
+								Log.debug('After setting unhealthy, status=${blob.status}');
+								assertEquals(blob.status, WorkerStatus.REMOVED);
+								Log.debug('blob.statusHealth=${blob.statusHealth}');
+								assertEquals(blob.statusHealth, WorkerHealthStatus.BAD_DiskFull);
+								return true;
+							});
+					})
+					.pipe(lambda.traceJson())
+					.pipe(function(_) {
+						return ScalingCommands.getAllDockerWorkerIds()
+							.then(function(workers) {
+								assertEquals(workers.length, 0);
+								return true;
+							});
+					})
+					.pipe(function(_) {
+						return WorkerStateRedis.getAllActiveWorkers()
+							.then(function(workers) {
+								assertEquals(workers.length, 0);
+								return true;
+							});
+					});
+			});
+	}
 
 	@timeout(10000)
 	public function testCreateWorker() :Promise<Bool>
@@ -81,124 +193,77 @@ class Tests
 			.thenTrue();
 	}
 
-	@timeout(60000)
-	public function testWorkerLifecycleEvents() :Promise<Bool>
+	@timeout(120000)
+	public function testScaleDownLambda() :Promise<Bool>
 	{
-		var workerId :MachineId;
-		var workerStream :Stream<WorkerState>;
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return killAllWorkers();
 			})
 			//Start with a single worker
 			.pipe(function(_) {
+				// traceCyan('Ensure a single worker');
 				return ScalingCommands.setState({
 					MinSize: 1,
-					MaxSize: 2,
-					DesiredCapacity: 1
+					MaxSize: 4,
+					DesiredCapacity: 3
 				})
-				.thenWait(500);
+				.thenWait(3000)
+				.pipe(function(_) {
+					return ScalingCommands.getAllDockerWorkerIds()
+						.then(function(workers) {
+							// traceCyan('Ensure 3 workers');
+							assertEquals(workers.length, 3);
+							return true;
+						});
+				})
+				.pipe(function(_) {
+					// traceCyan('Make all workers do a health check');
+					return WorkerStateRedis.sendCommandToAllWorkers(WorkerUpdateCommand.HealthCheck)
+						.thenWait(500);
+				});
 			})
 			.pipe(function(_) {
+				return JobStateTools.cancelAllJobs();
+			})
+			.thenWait(500)
+			.pipe(function(_) {
+				// traceCyan('Scale down');
+				return lambda.scaleDown()
+					.then(function(result) {
+						trace(result);
+						return true;
+					})
+					.thenTrue();
+			})
+			.thenWait(4000)
+			.pipe(function(_) {
+				// traceCyan('Now check the number of workers, should be 1');
 				return ScalingCommands.getAllDockerWorkerIds()
 					.then(function(workers) {
+						// traceCyan('Final workers after job submission=$workers');
 						assertEquals(workers.length, 1);
-						workerId = workers[0];
 						return true;
 					});
 			})
+			.thenWait(3000)
 			.pipe(function(_) {
-				return WorkerStateRedis.sendCommandToAllWorkers(WorkerUpdateCommand.PauseHealthCheck);
-			})
-			.pipe(function(_) {
-				// trace('Validate health state');
-				return WorkerStreams.until(redis, workerId, function(workerState) {
-					return workerState.status == WorkerStatus.OK;
-				}, 9000);
-			})
-			.pipe(function(_) {
-				return WorkerStateRedis.getHealthStatus(workerId)
-					.then(function(healthStatus) {
-						assertEquals(healthStatus, WorkerHealthStatus.OK);
-						return true;
-					})
-					.pipe(function(_) {
-						return WorkerStateRedis.getStatus(workerId)
-							.then(function(status) {
-								assertEquals(status, WorkerStatus.OK);
-								return true;
-							});
-					});
-			})
-			.pipe(function(_) {
-				// trace('Validate when unhealthy');
-				return WorkerStateRedis.setHealthStatus(workerId, WorkerHealthStatus.BAD_DiskFull)
-					.pipe(function(_) {
-						return WorkerStateRedis.get(workerId)
-							.then(function(blob) {
-								// traceCyan('After setting unhealthy, status=${blob.status}');
-								assertEquals(blob.status, WorkerStatus.UNHEALTHY);
-								return true;
-							});
-					});
-			})
-			.pipe(function(_) {
-				return WorkerStateRedis.setHealthStatus(workerId, WorkerHealthStatus.BAD_DiskFull)
-					.pipe(function(_) {
-						return WorkerStateRedis.get(workerId)
-							.then(function(blob) {
-								// traceCyan('After setting unhealthy, status=${blob.status}');
-								assertEquals(blob.status, WorkerStatus.UNHEALTHY);
-								return true;
-							});
-					});
-			})
-			.pipe(function(_) {
-				return WorkerStateRedis.setHealthStatus(workerId, WorkerHealthStatus.BAD_DiskFull)
-					.pipe(function(_) {
-						return WorkerStateRedis.get(workerId)
-							.then(function(blob) {
-								// traceCyan('After setting unhealthy, status=${blob.status}');
-								assertEquals(blob.status, WorkerStatus.UNHEALTHY);
-								assertEquals(blob.statusHealth, WorkerHealthStatus.BAD_DiskFull);
-								return true;
-							});
-					});
-			})
-			.pipe(function(_) {
-				// trace('Scale down, should terminate worker');
-				// traceCyan('scaledown');
-				return lambda.scaleDown()
-					.pipe(function(_) {
-						return WorkerStateRedis.get(workerId)
-							.then(function(blob) {
-								// traceCyan('After setting unhealthy, status=${blob.status}');
-								assertEquals(blob.status, WorkerStatus.REMOVED);
-								// traceCyan('blob.statusHealth=${blob.statusHealth}');
-								assertEquals(blob.statusHealth, WorkerHealthStatus.BAD_DiskFull);
-								return true;
-							});
-					})
+				// traceCyan('Scale down again, should be idempotent');
+				return lambda.scaleDown().thenTrue()
+					.thenWait(1000)
 					.pipe(function(_) {
 						return ScalingCommands.getAllDockerWorkerIds()
 							.then(function(workers) {
-								assertEquals(workers.length, 0);
+								// traceCyan('Final workers after job submission=$workers');
+								assertEquals(workers.length, 1);
 								return true;
 							});
-					})
-					.pipe(function(_) {
-						return WorkerStateRedis.getAllActiveWorkers()
-							.then(function(workers) {
-								assertEquals(workers.length, 0);
-								return true;
-							});
-					})
-					;
+					});
 			})
-			;
+			.thenTrue();
 	}
 
-	@timeout(60000)
+	@timeout(120000)
 	public function testScaleUpLambda() :Promise<Bool>
 	{
 		var maxWorkers = 4;
@@ -206,7 +271,6 @@ class Tests
 			.pipe(function(_) {
 				return killAllWorkers();
 			})
-			.thenWait(1000)
 			//Start with a single worker
 			.pipe(function(_) {
 				return ScalingCommands.setState({
@@ -335,77 +399,6 @@ class Tests
 			.thenTrue();
 	}
 
-	@timeout(60000)
-	public function testScaleDownLambda() :Promise<Bool>
-	{
-		return Promise.promise(true)
-			.pipe(function(_) {
-				return killAllWorkers();
-			})
-			.thenWait(3000)
-			//Start with a single worker
-			.pipe(function(_) {
-				// traceCyan('Ensure a single worker');
-				return ScalingCommands.setState({
-					MinSize: 1,
-					MaxSize: 4,
-					DesiredCapacity: 3
-				})
-				.thenWait(3000)
-				.pipe(function(_) {
-					return ScalingCommands.getAllDockerWorkerIds()
-						.then(function(workers) {
-							// traceCyan('Ensure 3 workers');
-							assertEquals(workers.length, 3);
-							return true;
-						});
-				})
-				.pipe(function(_) {
-					// traceCyan('Make all workers do a health check');
-					return WorkerStateRedis.sendCommandToAllWorkers(WorkerUpdateCommand.HealthCheck)
-						.thenWait(500);
-				});
-			})
-			.pipe(function(_) {
-				return JobStateTools.cancelAllJobs();
-			})
-			.thenWait(500)
-			.pipe(function(_) {
-				// traceCyan('Scale down');
-				return lambda.scaleDown()
-					.then(function(result) {
-						trace(result);
-						return true;
-					})
-					.thenTrue();
-			})
-			.thenWait(4000)
-			.pipe(function(_) {
-				// traceCyan('Now check the number of workers, should be 1');
-				return ScalingCommands.getAllDockerWorkerIds()
-					.then(function(workers) {
-						// traceCyan('Final workers after job submission=$workers');
-						assertEquals(workers.length, 1);
-						return true;
-					});
-			})
-			.thenWait(3000)
-			.pipe(function(_) {
-				// traceCyan('Scale down again, should be idempotent');
-				return lambda.scaleDown().thenTrue()
-					.thenWait(1000)
-					.pipe(function(_) {
-						return ScalingCommands.getAllDockerWorkerIds()
-							.then(function(workers) {
-								// traceCyan('Final workers after job submission=$workers');
-								assertEquals(workers.length, 1);
-								return true;
-							});
-					});
-			})
-			.thenTrue();
-	}
-
 	public static function createTestJobs(count :Int, duration :Int, name :String) :Promise<Bool>
 	{
 		function createAndSubmitJob() {
@@ -430,12 +423,11 @@ class Tests
 			.thenTrue();
 	}
 
-
 	public static function run(injector :Injector) :Promise<CompleteTestResult>
 	{
 		var runner = new PromiseTestRunner();
 
-		var test = new Tests();
+		var test = new ScalingTests();
 		injector.injectInto(test);
 		runner.add(test);
 
@@ -452,40 +444,10 @@ class Tests
 			});
 	}
 
-	function killAllWorkers() :Promise<Bool>
+	function killAllWorkers()
 	{
-		return Promise.promise(true)
-			.pipe(function(_) {
-				traceCyan('JobStateTools.cancelAllJobs');
-				return JobStateTools.cancelAllJobs();
-			})
-			.pipe(function(_) {
-				return ScalingCommands.getAllDockerWorkerIds()
-					.pipe(function(workerIds) {
-						return Promise.whenAll(workerIds.map(function(id) {
-							var container = docker.getContainer(id);
-							traceCyan('killContainer id=$id');
-							return DockerPromises.killContainer(container)
-								.errorPipe(function(err) {
-									Log.error({error:err, container:id});
-									return Promise.promise(true);
-								});
-						}));
-					});
-			})
-			.pipe(function(_) {
-				// traceCyan('Ensure a single worker');
-				traceCyan('Set zero workers');
-				return ScalingCommands.setState({
-					MinSize: 0,
-					MaxSize: 0,
-					DesiredCapacity: 0
-				});
-			})
-			.thenWait(1000)
-			.thenTrue();
+		return ScalingCommands.killAllWorkersAndJobs(docker);
 	}
-
 
 	public function new(){}
 }

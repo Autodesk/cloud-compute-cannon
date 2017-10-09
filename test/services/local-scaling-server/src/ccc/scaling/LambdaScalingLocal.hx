@@ -54,6 +54,7 @@ class LambdaScalingLocal
 	{
 		return super.terminateWorker(id)
 			.pipe(function(_) {
+				Log.debug('ScalingCommands.killWorker($id)');
 				return ScalingCommands.killWorker(id);
 			});
 	}
@@ -65,11 +66,12 @@ class LambdaScalingLocal
 
 	override function getTimeSinceInstanceStarted(id :MachineId) :Promise<Float>
 	{
-		return DockerPromises.inspect(docker.getContainer(id))
-			.then(function(containerData) {
-				var timeString = containerData.Created;
-				var timeStarted :Float = untyped __js__('Date.parse({0})', timeString);
-				return Date.now().getTime() - timeStarted;
-			});
+		return Promise.promise(1000*60*60.0);
+		// return DockerPromises.inspect(docker.getContainer(id))
+		// 	.then(function(containerData) {
+		// 		var timeString = containerData.Created;
+		// 		var timeStarted :Float = untyped __js__('Date.parse({0})', timeString);
+		// 		return Date.now().getTime() - timeStarted;
+		// 	});
 	}
 }
