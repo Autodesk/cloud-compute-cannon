@@ -64,9 +64,9 @@ class ServerTester
 		//in one repo fail in an identical repo.
 		//You'll need to test locally however to catch bugs this
 		//test would otherwise catch.
-		// if (ServerTesterConfig.TRAVIS_REPO_SLUG != 'dionjwa/cloud-compute-cannon') {
+		if (ServerTesterConfig.TEST_SCALING) {
 			addTestClass(ccc.compute.test.tests.TestScaling);
-		// }
+		}
 
 		//Wait on the main server
 		var url = 'http://${ServerTesterConfig.CCC}/version';

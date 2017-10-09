@@ -55,6 +55,7 @@ services:
       - LOG_LEVEL=debug
       - REDIS_HOST=redis
       - TEST=${TEST}
+      - TEST_SCALING=${TEST_SCALING}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build:/app/build
