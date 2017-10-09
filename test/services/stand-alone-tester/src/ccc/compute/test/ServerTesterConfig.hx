@@ -27,7 +27,10 @@ class ServerTesterConfig
 	public static var TEST :Bool = false;
 
 	@NodeProcessVar
-	public static var TEST_SCALING :Bool = true;
+	public static var TEST_SCALING :Bool = false;
+
+	// @NodeProcessVar
+	// public static var TEST_SCALING_ONLY :Bool = false;
 
 	@NodeProcessVar
 	public static var TRAVIS :Int = 0;

@@ -105,7 +105,6 @@ services:
       - PORT=4015
       - REDIS_HOST=redis
       - CCC=http://ccc.local
-      - SCALING_TESTS_ON_START=false
       - LOG_LEVEL=40
     ports:
       - "4015:4015"

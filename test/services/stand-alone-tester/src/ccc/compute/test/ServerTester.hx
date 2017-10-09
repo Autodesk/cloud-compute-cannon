@@ -53,12 +53,17 @@ class ServerTester
 			runner.add(testCollection);
 		}
 
-		addTestClass(ccc.compute.test.tests.TestUnit);
-		addTestClass(ccc.compute.test.tests.TestCompute);
-		addTestClass(ccc.compute.test.tests.TestMonitor);
-		addTestClass(ccc.compute.test.tests.TestJobs);
-		addTestClass(ccc.compute.test.tests.TestTurboJobs);
-		addTestClass(ccc.compute.test.tests.TestFailureConditions);
+		traceCyan('ServerTesterConfig.TEST=${ServerTesterConfig.TEST}');
+		// traceCyan('ServerTesterConfig.TEST_SCALING_ONLY=${ServerTesterConfig.TEST_SCALING_ONLY}');
+		traceCyan('ServerTesterConfig.TEST_SCALING=${ServerTesterConfig.TEST_SCALING}');
+		if (ServerTesterConfig.TEST) {
+			addTestClass(ccc.compute.test.tests.TestUnit);
+			addTestClass(ccc.compute.test.tests.TestCompute);
+			addTestClass(ccc.compute.test.tests.TestMonitor);
+			addTestClass(ccc.compute.test.tests.TestJobs);
+			addTestClass(ccc.compute.test.tests.TestTurboJobs);
+			addTestClass(ccc.compute.test.tests.TestFailureConditions);
+		}
 		//Travis struggles with the scaling tests, likely due to
 		//the slowness of the underlying VCPU. Tests that succeed
 		//in one repo fail in an identical repo.

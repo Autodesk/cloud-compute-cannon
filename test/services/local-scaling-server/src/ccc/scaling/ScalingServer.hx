@@ -29,11 +29,6 @@ class ScalingServer
 			.pipe(function(_) {
 				ScalingRoutes.init(injector);
 				return createHttpServer(injector);
-			})
-			.then(function(_) {
-				if (ScalingServerConfig.SCALING_TESTS_ON_START) {
-					injector.getValue(ScalingRoutes).test();
-				}
 			});
 	}
 
