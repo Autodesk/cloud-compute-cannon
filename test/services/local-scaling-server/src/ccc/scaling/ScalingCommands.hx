@@ -105,7 +105,7 @@ class ScalingCommands
 
 	public static function createWorker() :Promise<DockerContainerId>
 	{
-		// Log.info({event:'createWorker'});
+		Log.info({event:'CreateWorker'});
 		return getCccContainerInfo()
 			.pipe(function(containerInfo) {
 				var Labels :DynamicAccess<String> = {};
@@ -119,7 +119,7 @@ class ScalingCommands
 					AttachStdout: false,
 					AttachStderr: false,
 					Env: [
-						'REDIS_HOST=redis1',
+						'REDIS_HOST=redis',
 						'VIRTUAL_HOST=ccc.local', //For the nginx reverse proxy
 						'FLUENT_HOST=fluentd',
 						'STORAGE_HTTP_PREFIX=http://ccc.local/',
@@ -144,18 +144,16 @@ class ScalingCommands
 					NetworkSettings: containerInfo.NetworkSettings
 				};
 
-				// Log.info('Creating a container');
 				return DockerPromises.createContainer(docker, opts)
 					.pipe(function(container) {
 						var promise = new DeferredPromise();
-						// Log.info('   Starting a container');
 						container.start(function(err, data) {
 							if (err != null) {
 								Log.error({error:err, m:'createWorker container.start'});
 								promise.boundPromise.reject({error:err, m:'createWorker container.start', containerId:container.id});
 								return;
 							}
-							// Log.info('   Started a container!');
+							Log.info({event:'ContainerStarted', id:container.id});
 							promise.resolve(container.id);
 						});
 						return promise.boundPromise;
@@ -165,13 +163,15 @@ class ScalingCommands
 
 	public static function killWorker(workerId :MachineId) :Promise<Bool>
 	{
+		Log.info({event:'KillWorker', id:workerId});
 		var container = docker.getContainer(workerId);
 		return DockerPromises.killContainer(container)
 			.errorPipe(function(err) {
-				Log.error(err);
+				Log.error({event:'KillWorkerFailed', id:workerId, err:err});
 				return Promise.promise(true);
 			})
 			.pipe(function(_) {
+				Log.info({event:'ContainerRemoving', id:workerId});
 				return DockerPromises.removeContainer(container)
 					.errorPipe(function(err) {
 						Log.error(err);
@@ -241,6 +241,7 @@ class ScalingCommands
 
 	public static function setDesired(v :Int) :Promise<String>
 	{
+		Log.info({event:'SetDesired', value:v});
 		return setDesiredValue(v)
 			.pipe(function(desiredWorkerCount) {
 				return equalizeDockerToDesiredWorkers();
@@ -278,23 +279,27 @@ class ScalingCommands
 
 	public static function equalizeDockerToDesiredWorkersInternal() :Promise<String>
 	{
+		Log.debug({event:'Equalize'});
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return ScalingCommands.getAllDockerWorkerIds();
 			})
 			.pipe(function(workerIds) {
+				Log.debug({event:'Equalize', workerIds:workerIds});
 				return getState()
 					.pipe(function(minmax) {
+						Log.debug({event:'Equalize', minmax:minmax});
 						var DesiredCapacity = minmax.DesiredCapacity;
 						if (workerIds.length == DesiredCapacity) {
+							Log.debug({event:'Equalize', result:'NoChange'});
 							return Promise.promise('NO CHANGE');
 						} else if (workerIds.length > DesiredCapacity) {
 								var workersToRemove = workerIds.length - DesiredCapacity;
-								// traceCyan('Need to remove ${workersToRemove} workers');
+								Log.debug({event:'Equalize', workersToRemove:'workersToRemove'});
 								if (workersToRemove > 0) {
 									return lambdaScaling.removeIdleWorkers(workersToRemove)
 										.then(function(workerIdsRemoved) {
-											Log.info({action:'remove', workers:workerIdsRemoved});
+											Log.info({event:'Equalize', workerIdsRemoved:'workerIdsRemoved'});
 											return 'Workers removed: ${workerIdsRemoved}';
 										})
 										.thenWait(2000);
@@ -303,7 +308,7 @@ class ScalingCommands
 								}
 						} else {
 							var workersToAdd = DesiredCapacity - workerIds.length;
-							traceCyan('Need to add ${workersToAdd} workers');
+							Log.info({event:'Equalize', workersToAdd:'workersToAdd'});
 							return Promise.whenAll([for (i in 0...workersToAdd) i].map(function(_) {
 								return ScalingCommands.createWorker().thenTrue();
 							}))
@@ -316,5 +321,45 @@ class ScalingCommands
 				traceRed(err);
 				return Promise.promise('Got err=$err');
 			});
+	}
+
+	public static function killAllWorkersAndJobs(docker :Docker) :Promise<Bool>
+	{
+		Log.debug({event:'KillAllWorkersAndJobs'});
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return JobStateTools.cancelAllJobs();
+			})
+			.thenWait(600)
+			.pipe(function(_) {
+				return ScalingCommands.getAllDockerWorkerIds()
+					.pipe(function(workerIds) {
+						Log.debug({event:'KillAllWorkersAndJobs', workerIds:workerIds});
+						return Promise.whenAll(workerIds.map(function(id) {
+							var container = docker.getContainer(id);
+							Log.debug({event:'KillAllWorkersAndJobs', killingContainer:id});
+							return DockerPromises.killContainer(container)
+								.then(function(_) {
+									Log.debug({event:'KillAllWorkersAndJobs', killed:id});
+									return true;
+								})
+								.errorPipe(function(err) {
+									Log.error({event:'KillAllWorkersAndJobs', error:err, container:id});
+									return Promise.promise(true);
+								});
+						}));
+					});
+			})
+			.pipe(function(_) {
+				// traceCyan('Ensure a single worker');
+				Log.debug({event:'KillAllWorkersAndJobs Set zero workers'});
+				return ScalingCommands.setState({
+					MinSize: 0,
+					MaxSize: 0,
+					DesiredCapacity: 0
+				});
+			})
+			.thenWait(3000)
+			.thenTrue();
 	}
 }

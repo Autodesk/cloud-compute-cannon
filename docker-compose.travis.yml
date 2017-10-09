@@ -39,6 +39,7 @@ services:
       - CCC_SCALING=ccc-scaling-server:4015
       - LOG_LEVEL=debug
       - REDIS_HOST=redis1
+      - TRAVIS_REPO_SLUG=${TRAVIS_REPO_SLUG}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build:/app/build
@@ -50,8 +51,6 @@ services:
   redis1:
     image: redis:3.2.0-alpine
     command: redis-server /usr/local/etc/redis/redis.conf
-    ports:
-      - "6379"
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
 
@@ -59,7 +58,6 @@ services:
   # workers based on the desired capacity.
   # Also used to test worker failure
   ccc-scaling-server:
-    cpu_shares: 512
     image: "cloud-compute-cannon:${VERSION}"
     command: ["node", "local-scaling-server/cloud-compute-cannon-scaling-server.js"]
     working_dir: /app
@@ -94,6 +92,6 @@ services:
       - ./etc/nginx/proxy.conf:/etc/nginx/proxy.conf
     depends_on:
       - serverworker
-    logging:
-      driver: none
+    # logging:
+    #   driver: none
 

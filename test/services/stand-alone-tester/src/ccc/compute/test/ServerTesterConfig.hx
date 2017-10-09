@@ -23,6 +23,12 @@ class ServerTesterConfig
 	@NodeProcessVar
 	public static var REDIS_PORT :Int = 6379;
 
+	@NodeProcessVar
+	public static var TRAVIS :Int = 0;
+
+	@NodeProcessVar
+	public static var TRAVIS_REPO_SLUG :String;
+
 	public static function toJson() :Dynamic
 	{
 		return {

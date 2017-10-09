@@ -176,7 +176,7 @@ class WorkerStateRedis
 				redis.call("HSET", "${REDIS_MACHINE_EVENT_LIST}", machineId, cmsgpack.pack(events))
 
 				redis.call("HSET", "${REDIS_MACHINE_LAST_STATUS}", machineId, "${WorkerStatus.UNHEALTHY}")
-				--redis.call("SETEX", key, ${WORKER_STATUS_KEY_TTL_SECONDS}, statusHealth)
+				redis.call("SETEX", key, ${WORKER_STATUS_KEY_TTL_SECONDS}, statusHealth)
 				redis.call("HSET", "${REDIS_MACHINE_LAST_HEALTH_STATUS}", machineId, statusHealth)
 				redis.call("HSET", "${REDIS_MACHINE_LAST_STATUS_TIME}", machineId, timeString)
 				reason = "${WorkerUpdateCommand.UpdateReasonToUnHealthy}"

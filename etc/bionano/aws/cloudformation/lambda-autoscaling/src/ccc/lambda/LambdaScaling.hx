@@ -20,12 +20,66 @@ class LambdaScaling
 
 	public function new() {}
 
+	public function traceJson<A>() :A->Promise<A>
+	{
+		return function(a :A) {
+			return getJson()
+				.then(function(blob) {
+					trace(Json.stringify(blob, null, '  '));
+					return a;
+				});
+		}
+	}
+
+	public function getJson() :Promise<Dynamic>
+	{
+		return getInstanceIds()
+			.pipe(function(instanceIds :Array<MachineId>) {
+				return RedisPromises.smembers(redis, WorkerStateRedis.REDIS_MACHINES_ACTIVE)
+					.pipe(function(dbMembersRedis) {
+						var dbMembers :Array<MachineId> = cast dbMembersRedis;
+						var workerStatus :Array<{id:MachineId,status:String,alive:String}> = [];
+						var result = {
+							workerIds:instanceIds,
+							workerIdsInDatabase:dbMembers,
+							workerStatus: workerStatus
+						}
+
+						var duplicatedMembers :Array<String> = instanceIds.concat(dbMembers);
+						var allMembers :Array<String> = ArrayTools.removeDuplicates(duplicatedMembers);
+						return Promise.whenAll(allMembers.map(function(id) {
+							return getInstancesHealthStatus(id)
+								.pipe(function(status) {
+									return getTimeSinceInstanceStarted(id)
+										.then(function(duration) {
+											workerStatus.push({
+												id: id,
+												status: status,
+												alive: DateFormatTools.getShortStringOfDuration(duration)
+											});
+										});
+								});
+						}))
+						.then(function(_) {
+							return result;
+						});
+					});
+			});
+	}
+
 	public function initialChecks() :Promise<Bool>
 	{
-		return removeWorkersInActiveSetThatAreNotRunning()
+		return Promise.promise(true)
 			.pipe(function(_) {
-				return terminateUnhealthyInstances();
-			});
+				return removeUnhealthyWorkers();
+			})
+			.pipe(function(_) {
+				return removeWorkersInActiveSetThatAreNotRunning();
+			})
+			// .pipe(function(_) {
+			// 	return terminateUnhealthyInstances();
+			// })
+			;
 	}
 
 	public function scaleDown() :Promise<String>
@@ -123,6 +177,7 @@ class LambdaScaling
 
 	public function terminateWorker(id :MachineId) :Promise<Bool>
 	{
+		traceYellow('terminateWorker=$id');
 		return WorkerStateRedis.terminate(redis, id)
 			.thenTrue();
 	}
@@ -152,30 +207,37 @@ class LambdaScaling
 			});
 	}
 
-	function terminateUnhealthyInstances() :Promise<Bool>
-	{
-		return RedisPromises.smembers(redis, WorkerStateRedis.REDIS_MACHINES_ACTIVE)
-			.pipe(function(instanceIds) {
-				var promises = [];
-				for (id in instanceIds) {
-					var key = '${REDIS_KEY_PREFIX_WORKER_HEALTH_STATUS}$id';
-					promises.push(
-						RedisPromises.get(redis, key)
-							.pipe(function(healthStatus) {
-								if (healthStatus == null || healthStatus != WorkerHealthStatus.OK) {
-									redis.debugLog(LogFieldUtil.addWorkerEvent({instanceId:id, healthStatus:healthStatus, message:'Bad health status, terminating'}, WorkerEventType.BAD_HEALTH_DETECTED));
-									return terminateWorker(id)
-										.thenTrue();
-								} else {
-									return Promise.promise(true);
-								}
-							})
-					);
-				}
-				return Promise.whenAll(promises)
-					.thenTrue();
-			});
-	}
+	// function terminateUnhealthyInstances() :Promise<Bool>
+	// {
+	// 	traceYellow('terminateUnhealthyInstances');
+	// 	return Promise.promise(true)
+	// 		.pipe(function(_) {
+	// 			return getInstanceIds();
+	// 		})
+	// 		// .pipe(function(_) {
+	// 		// 	return RedisPromises.smembers(redis, WorkerStateRedis.REDIS_MACHINES_ACTIVE);
+	// 		// })
+	// 		.pipe(function(instanceIds) {
+	// 			traceYellow('REDIS_MACHINES_ACTIVE=$instanceIds');
+	// 			var promises = instanceIds.map(function(instanceId) {
+	// 				var key = '${REDIS_KEY_PREFIX_WORKER_HEALTH_STATUS}$instanceId';
+	// 				return RedisPromises.get(redis, key)
+	// 					.pipe(function(healthStatus) {
+	// 						traceYellow('instanceId=$instanceId healthStatus=$healthStatus');
+	// 						if (healthStatus == null || healthStatus != WorkerHealthStatus.OK) {
+	// 							redis.debugLog(LogFieldUtil.addWorkerEvent({instanceId:instanceId, healthStatus:healthStatus, message:'Bad health status, terminating'}, WorkerEventType.BAD_HEALTH_DETECTED));
+	// 							return 
+	// 							return terminateWorker(instanceId)
+	// 								.thenTrue();
+	// 						} else {
+	// 							return Promise.promise(true);
+	// 						}
+	// 					});
+	// 			});
+	// 			return Promise.whenAll(promises)
+	// 				.thenTrue();
+	// 		});
+	// }
 
 	/**
 	 * Returns the actual ids of workers removed

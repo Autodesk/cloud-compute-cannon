@@ -76,12 +76,6 @@ class Constants
 	inline public static var ENV_REMOVE_JOBS_ON_STARTUP = 'REMOVE_JOBS_ON_STARTUP';
 	inline public static var ENV_ENABLE_FLUENT = 'ENABLE_FLUENT';
 	/* Injector env vars */
-	inline public static var ENV_REDIS_HOST = 'REDIS_HOST';
-	inline public static var ENV_REDIS_PORT = 'REDIS_PORT';
-	// inline public static var WORKER_ID = 'WORKER_ID';
-	// inline public static var NCPUS = 'NCPUS';
-	// inline public static var WORKING_JOBS = 'WORKING_JOBS';
-	// inline public static var TIME_LAST_HEALTH_CHECK = 'TIME_LAST_HEALTH_CHECK';
 	/* Scaling control: values [internal/external] defaults to external */
 	inline public static var ENV_SCALE_UP_CONTROL = 'SCALE_UP_CONTROL';
 	/* external | internal */
@@ -94,7 +88,6 @@ class Constants
 	inline public static var SERVER_DEFAULT_PORT = 9000;
 	public static var SERVER_PUBLIC_HOST = new Host(new HostName('ccc.bionano.autodesk.com'), new Port(SERVER_DEFAULT_PORT));
 	inline public static var SERVER_RELOADER_PORT = 9002;
-	inline public static var REDIS_PORT = 6379;
 	inline public static var DOCKER_PORT = 2375;
 	inline public static var DEFAULT_REDIS_PORT = 6379;
 	public static var DOCKER_CONNECT_OPTS_LOCAL = {socketPath:'/var/run/docker.sock'};
