@@ -24,6 +24,15 @@ class ServerTesterConfig
 	public static var REDIS_PORT :Int = 6379;
 
 	@NodeProcessVar
+	public static var TEST :Bool = false;
+
+	@NodeProcessVar
+	public static var TEST_SCALING :Bool = false;
+
+	// @NodeProcessVar
+	// public static var TEST_SCALING_ONLY :Bool = false;
+
+	@NodeProcessVar
 	public static var TRAVIS :Int = 0;
 
 	@NodeProcessVar

@@ -1,48 +1,248 @@
 version: '2'
 
+volumes:
+  node_modules:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
 services:
 
-  ccc:
-    build:
-      context: .
-    volumes:
-      - ./ccc-local-storage:/app/ccc-local-storage
-      - ./:/config
+  serverworker:
+    image: dionjwa/haxe-watch:v0.7.3
+    cpu_shares: 1024
+    expose:
+      - 9000
+    # ports:
+    #   - "9229:9229"
+    # command: ["nodemon", "--inspect", "--debug-brk", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    # command: ["nodemon", "--inspect", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    command: ["nodemon", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
     links:
       - redis
       - fluentd
-    logging:
-      driver: json-file
-      options:
-        max-size: 50m
+    working_dir: /app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build/server:/app/server
+      - ./clients/dashboard/build:/app/clients/dashboard
+      - ./src/web:/app/web
+      - ./ccc-local-storage:/app/ccc-local-storage
+      - ./package.json:/app/package.json
+      - node_modules:/app/node_modules
+    environment:
+      - PORT=9000
+      - STORAGE_HTTP_PREFIX=http://ccc.local
+      - REDIS_HOST=redis
+      - VIRTUAL_HOST=ccc.local
+      - FLUENT_HOST=fluentd
+      - LOG_LEVEL=debug
+      - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
+      - LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7
+    labels:
+      ccc.type: "worker"
+      ccc.origin: "docker-compose"
+
+  # Run the functional and scaling tests in a separate container
+  ccc.tests:
+    image: dionjwa/haxe-watch:v0.7.3
+    working_dir: /app
+    # command: ["nodemon", "-L", "--delay", "5", "--watch", "build/test", "--watch", "build/server", "build/test/cloud-compute-cannon-tester.js"]
+    command: ["nodemon", "-L", "--watch", "build/test", "build/test/cloud-compute-cannon-tester.js"]
+    environment:
+      - CCC=ccc.local
+      - CCC_SCALING=ccc-scaling-server:4015
+      - LOG_LEVEL=debug
+      - REDIS_HOST=redis
+      - TEST=${TEST}
+      - TEST_SCALING=${TEST_SCALING}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build:/app/build
+      - node_modules:/app/node_modules
+    links:
+      - ccc.local
+      - redis
+      - ccc-scaling-server
 
   redis:
-    image: dionjwa/cloud-compute-cannon-redis:0.2.1
+    cpu_shares: 256
+    restart: always
+    image: redis:3.2.0-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
     ports:
-      #Don't expose this port to the host, only linked containers.
-      - "6379:6379"
+      - "6379"
+    volumes:
+      - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    logging:
+      driver: none
+
+  #Examine redis db
+  redis-commander:
+    cpu_shares: 256
+    image: tenstartups/redis-commander
+    command: --redis-host redis
     links:
-      - fluentd
+      - redis
+    ports:
+      - "8083:8081"
+    logging:
+        driver: none
+
+  # Replicates (mocks) e.g. AWS AutoScalingGroups, by creating and destroying
+  # workers based on the desired capacity.
+  # Also used to test worker failure
+  ccc-scaling-server:
+    cpu_shares: 512
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["nodemon", "-L", "local-scaling-server/cloud-compute-cannon-scaling-server.js"]
+    working_dir: /app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build/local-scaling-server:/app/local-scaling-server
+      - node_modules:/app/node_modules
+    environment:
+      - PORT=4015
+      - REDIS_HOST=redis
+      - CCC=http://ccc.local
+      - LOG_LEVEL=40
+    ports:
+      - "4015:4015"
+    links:
+      - redis
+      - ccc.local
+    depends_on:
+      - serverworker
+
+  # The internal scaling service (mocks e.g. an AWS autoscaling group)
+  # creates and destroys workers dynamically. This container detects
+  # new workers and modifies the nginx config to reverse proxy the
+  # workers a single API endpoint can be used.
+  ccc.local:
+    image: jwilder/nginx-proxy
+    ports:
+      - "8080:80"
+    environment:
+      - DEFAULT_HOST=ccc.local
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./etc/nginx/ccc.local.conf:/etc/nginx/vhost.d/ccc.local
+      - ./etc/nginx/proxy.conf:/etc/nginx/proxy.conf
+    depends_on:
+      - serverworker
+    logging:
+      driver: none
 
   fluentd:
     build: ./etc/log/
     volumes:
-      - ./etc/log/fluent.dev.conf:/fluentd/etc/fluent.conf
+      - ./etc/log/fluent.elasticsearch.conf:/fluentd/etc/fluent.conf
     links:
       - elasticsearch
     logging:
       driver: none
 
   elasticsearch:
-    extends:
-      file: docker-compose.core.yml
-      service: elasticsearch
+    image: elasticsearch:2.4.5-alpine
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
     logging:
       driver: none
 
   kibana:
-    extends:
-      file: docker-compose.core.yml
-      service: kibana
+    image: kibana:4.6.6
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
     links:
       - elasticsearch
+    logging:
+      driver: none
+
+  # Simply installs npm modules into a persistent docker volume
+  # for efficiency. Used by reloaders, not the main app
+  node_modules:
+    image: dionjwa/node_modules
+    working_dir: /app
+    command: ["npm", "i"]
+    volumes:
+      - node_modules:/app/node_modules
+      - ./package.json:/app/package.json
+    logging:
+      driver: none
+
+  haxelibs:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.haxelib:/app/.haxelib
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
+  compile:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.git:/app/.git
+      - ./build:/app/build
+      - ./.haxelib:/app/.haxelib
+      - ./src:/app/src
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
+  # Watches code changes for the ccc-scaling-server and recompiles the code
+  # watch-compiler-ccc-scaling-server:
+  #   image: dionjwa/haxe-watch:v0.7.3
+  #   working_dir: /app
+  #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe test/services/local-scaling-server/build.hxml' test/services/local-scaling-server/src/*.hx"]
+  #   volumes:
+  #     - ./:/app
+  #     - ./.haxelib:/app/.haxelib
+  #   logging:
+  #     driver: none
+
+  #  # Watches code changes for the server tester and recompiles
+  # # ccc.tests-watch-compiler:
+  # #   image: dionjwa/haxe-watch:v0.7.3
+  # #   working_dir: /app
+  # #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe etc/hxml/build-tester.hxml' test/services/stand-alone-tester/src/**/*.hx"]
+  # #   volumes:
+  # #     - ./src:/app/src
+  # #     - ./clients:/app/clients
+  # #     - ./etc:/app/etc
+  # #     - ./test:/app/test
+  # #     - ./.haxelib:/app/.haxelib
+  #   # logging:
+  #   #   driver: none
+
+
+  # client-dashboard-watch:
+  #   cpu_shares: 512
+  #   image: dionjwa/haxe-watch:v0.7.3
+  #   working_dir: /app
+  #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'mkdir -p build && rsync -rptgoDv --copy-links web/* build/' web/**/*.css web/**/*.js web/**/*.html"]
+  #   volumes:
+  #     - ./clients/dashboard:/app
+  #   logging:
+  #     driver: none
+
+  # livereload:
+  #   cpu_shares: 512
+  #   image: dionjwa/livereloadx
+  #   command: ["livereloadx", "-p", "35729", "--proxy", "http://server:9000", "--prefer-local", "/app/build"]
+  #   ports:
+  #     - "35729:35729"
+  #   volumes:
+  #     - ./clients/dashboard:/app/
+  #   links:
+  #     - serverworker:server
+  #   logging:
+  #     driver: none
