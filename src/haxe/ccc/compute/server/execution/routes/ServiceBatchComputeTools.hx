@@ -82,6 +82,18 @@ class ServiceBatchComputeTools
 			var result :JobResultsTurboV2 = Json.parse(resultString);
 			if (completedJob == job.id) {
 				Log.debug({jobId:job.id, message:'SUCCESS TURBO JOB', result:result});
+
+				//Maybe convert outputs to UTF8 text
+				if (result.outputs != null && job.forceUtf8Outputs) {
+					for (i in 0...result.outputs.length) {
+						var output = result.outputs[i];
+						if (!(output.encoding == null || output.encoding == 'utf8')) {
+							output.value = Buffer.from(output.value, output.encoding).toString('utf8');
+							output.encoding = 'utf8';
+						}
+					}
+				}
+
 				if (promise != null) {
 					promise.resolve(result);
 				}

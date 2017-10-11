@@ -18,4 +18,6 @@ typedef BatchProcessRequestTurboV2 = {
 	/* We can save time if outputs are ignored */
 	@:optional var ignoreOutputs :Bool;
 	@:optional var CreateContainerOptions:CreateContainerOptions;
+	/* Often easier if you know the outputs are text files */
+	@:optional var forceUtf8Outputs :Bool;
 }
