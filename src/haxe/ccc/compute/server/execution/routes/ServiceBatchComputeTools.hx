@@ -47,8 +47,6 @@ class ServiceBatchComputeTools
 			job.id = ComputeTools.createUniqueId();
 		}
 
-		// Log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:QueueJobDefinitionType.turbo, message: 'Turbo via API'}, JobEventType.ENQUEUED));
-
 		var promise = new DeferredPromise<JobResultsTurboV2>();
 
 		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);

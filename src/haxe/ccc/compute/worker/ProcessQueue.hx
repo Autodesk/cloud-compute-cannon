@@ -107,7 +107,8 @@ class ProcessQueue
 			case compute:
 				Promise.promise(true)
 					.pipe(function(_) {
-						log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:job.type, message:'via ProcessQueue'}, JobEventType.ENQUEUED));
+						var def :DockerBatchComputeJob = job.item;
+						log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
 
 						return Promise.whenAll([
 							Jobs.setJob(job.id, job.item),
@@ -118,12 +119,15 @@ class ProcessQueue
 					})
 					.then(function(_) {
 						queueAdd.add({jobId:job.id, attempt: job.attempt, type:job.type}, {jobId:job.id, priority:(job.priority ? 1 : 1000), removeOnComplete:true, removeOnFail:true});
+						postQueueSize();
 						return true;
 					});
 			case turbo:
-				log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:job.type, message:'via ProcessQueue'}, JobEventType.ENQUEUED));
+				var def :BatchProcessRequestTurboV2 = job.item;
+				log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
 				var maxTime = 300000;//5 minutes max
 				queueAdd.add({jobId:job.id, attempt: 1, type:job.type, item: job.item, parameters:job.parameters}, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
+				postQueueSize();
 				Promise.promise(true);
 		}
 	}
@@ -234,10 +238,12 @@ class ProcessQueue
 				log.info(LogFieldUtil.addJobEvent({jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.DEQUEUED));
 				BatchComputeDockerTurbo.executeTurboJobV2(redis, queuejob.data.item, docker, thisMachineId, log)
 					.pipe(function(result) {
-						traceYellow('calling done in bull queue');
 						done(null, result);
-						log.info(LogFieldUtil.addJobEvent({exitCode:result.exitCode, error:result.error, jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.FINISHED));
-						return Promise.promise(true);
+						return JobStatsTools.get(queuejob.data.item.id)
+							.then(function(jobstats) {
+								var duration = jobstats != null ? jobstats.finished - jobstats.requestReceived : null;
+								log.info(LogFieldUtil.addJobEvent({exitCode:result.exitCode, duration:duration, error:result.error, jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.FINISHED));
+							});
 					})
 					.catchError(function(err) {
 						log.error(LogFieldUtil.addJobEvent({error:err, message: 'Failed turbo job', queuejob:queuejob, jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.ERROR));
@@ -322,6 +328,7 @@ class ProcessQueue
 						if (job.data.type == QueueJobDefinitionType.compute) {
 							log.debug({e:QueueEvent.Completed, jobId: job.data.jobId});
 						}
+						postQueueSize();
 					});
 
 					q.on(QueueEvent.Failed, function(job, error :js.Error) {
@@ -333,6 +340,7 @@ class ProcessQueue
 						if (error.message != null && error.message.indexOf('job stalled more than allowable limit') > -1) {
 							job.retry();
 						}
+						postQueueSize();
 					});
 
 					q.on(QueueEvent.Paused, function() {
@@ -364,6 +372,8 @@ class ProcessQueue
 						}
 					}
 				});
+
+				postQueueSize();
 
 				_ready.resolve(true);
 			});
@@ -423,6 +433,17 @@ class ProcessQueue
 		var router = js.npm.express.Express.GetRouter();
 		router.use('/', cast bullArena);
 		app.use(cast router);
+	}
+
+	function postQueueSize()
+	{
+		queueProcess.getJobCounts().promhx()
+			.then(function(counts) {
+				log.info(LogFieldUtil.addWorkerEvent({queue:counts}, WorkerEventType.QUEUES));
+			})
+			.catchError(function(err) {
+				log.warn({error:err, message: 'Failed to get queue count'});
+			});
 	}
 
 	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob<Dynamic>>->Done2<JobResult>->Void)
@@ -543,15 +564,22 @@ class JobProcessObject
 
 				switch(reason) {
 					case Cancelled,MissingJobDefinition,AlreadyFinished,MaximumAttemptsExceeded:
-						log.info(LogFieldUtil.addJobEvent({reason:Type.enumConstructor(reason)}, JobEventType.FINISHED));
+						log.info(LogFieldUtil.addJobEvent({success:false, reason:Type.enumConstructor(reason)}, JobEventType.FINISHED));
 						_cancelled = true;
 						_done(null, null);
 						_deferred.resolve(false);
 						_killedDeferred.resolve(true);
 					case Success(jobResult):
-						log.info(LogFieldUtil.addJobEvent({reason:'Success'}, JobEventType.FINISHED));
 						_done(null, jobResult);
 						_deferred.resolve(false);
+						JobStatsTools.get(jobId)
+							.then(function(jobstats) {
+								var duration = jobstats != null ? jobstats.finished - jobstats.requestReceived : null;
+								log.info(LogFieldUtil.addJobEvent({success:true, reason:'Success', duration:duration, exitCode:jobResult.exitCode}, JobEventType.FINISHED));
+							})
+							.catchError(function(err) {
+								log.error({error:err});
+							});
 					case Stalled:
 						log.warn({message:'Got stalled job, hopefully it is back on the queue'});
 						_killedDeferred.resolve(true);
@@ -563,7 +591,7 @@ class JobProcessObject
 							_deferred.resolve(false);
 						} else {
 							if (Json.stringify(err).indexOf('No job') > -1) {
-								log.info(LogFieldUtil.addJobEvent({reason:'Error', error:err}, JobEventType.FINISHED));
+								log.info(LogFieldUtil.addJobEvent({success:false, reason:'Error', error:err}, JobEventType.FINISHED));
 								_done('No job=$jobId', null);
 								_deferred.resolve(false);
 								_killedDeferred.resolve(true);
@@ -574,7 +602,7 @@ class JobProcessObject
 							}
 						}
 					case Timeout:
-						log.info(LogFieldUtil.addJobEvent({reason:Type.enumConstructor(reason)}, JobEventType.FINISHED));
+						log.info(LogFieldUtil.addJobEvent({success:false, reason:Type.enumConstructor(reason)}, JobEventType.FINISHED));
 						log.warn({error:'Timeout'});
 						_done(null, null);
 						_deferred.resolve(false);
