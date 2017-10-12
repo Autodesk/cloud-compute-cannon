@@ -18,6 +18,20 @@ class TestMonitor
 	}
 
 	@timeout(24000)
+	public function testMonitorReturnSignature() :Promise<Bool>
+	{
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return RetryPromise.retryRegular(getMonitorResult.bind(10000), 5, 1000, 'getMonitorResult');
+			})
+			.then(function(result) {
+				assertTrue(Reflect.hasField(result, 'success'));
+				assertEquals(result.success, true);
+				return true;
+			});
+	}
+
+	@timeout(24000)
 	public function testMultipleMonitorEvents() :Promise<Bool>
 	{
 		//Kill all jobs
