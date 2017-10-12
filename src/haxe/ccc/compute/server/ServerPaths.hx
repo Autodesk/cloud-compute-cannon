@@ -54,8 +54,8 @@ class ServerPaths
 		function test(req, res) {
 			var monitorService = injector.getValue(ServiceMonitorRequest);
 			monitorService.monitor(req.query)
-				.then(function(result) {
-					if (result.OK) {
+				.then(function(result :ServiceMonitorRequestResult) {
+					if (result.success) {
 						res.json(result);
 					} else {
 						res.status(500).json(cast result);
