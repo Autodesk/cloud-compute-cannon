@@ -88,7 +88,7 @@ PROJECTROOT=$DIR/../../../../..
 
 echo "Compiling haxe->javascript..."
 pushd $PROJECTROOT
-docker-compose -f docker-compose.compile.yml run compile-lambda
+docker-compose -f docker-compose.tools.yml run compile-lambda
 popd
 #Compiled js goes here (also the package.json)
 LAMBDA_SRC="$PROJECTROOT/build/lambda-autoscaling"
