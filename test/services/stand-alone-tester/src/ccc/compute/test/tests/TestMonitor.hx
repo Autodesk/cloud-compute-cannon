@@ -29,7 +29,7 @@ class TestMonitor
 					return RetryPromise.retryRegular(getMonitorResult.bind(10000), 5, 1000, 'getMonitorResult');
 				})
 				.then(function(result) {
-					assertEquals(result.OK, true);
+					assertEquals(result.success, true);
 					return true;
 				});
 			promises.push(p);

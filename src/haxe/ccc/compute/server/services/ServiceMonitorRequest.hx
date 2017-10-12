@@ -40,7 +40,7 @@ abstract ServiceMonitorRequestSuccessReason(String) to String {
 	var Testing = 'Testing';
 }
 typedef ServiceMonitorRequestResult = {
-	var OK :Bool;
+	var success :Bool;
 	var reason: ServiceMonitorRequestSuccessReason;
 	@:optional var error :Dynamic;
 	@:optional var debug :Dynamic;
@@ -80,7 +80,7 @@ class ServiceMonitorRequest
 		var maxWithin = args != null && args.within != null ? args.within : ServerConfig.MONITOR_DEFAULT_JOB_COMPLETED_WITHIN * 1000;
 
 		var result :ServiceMonitorRequestResult = {
-			OK: true,
+			success: true,
 			reason: ServiceMonitorRequestSuccessReason.Unknown,
 			debug: args,
 			maxWithin: maxWithin,
@@ -118,7 +118,7 @@ class ServiceMonitorRequest
 		//After the maximum time allowed (plus a second), fail the request
 		timerId = Node.setTimeout(function() {
 			if (promise != null) {
-				result.OK = false;
+				result.success = false;
 				result.reason = ServiceMonitorRequestSuccessReason.FailedTimedOut;
 				promise.boundPromise.reject(result);
 			}
