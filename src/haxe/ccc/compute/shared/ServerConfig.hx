@@ -39,10 +39,10 @@ class ServerConfig
 	 * If a job has completed successfully in the last interval
 	 * below, then monitor checks can use that job as evidence
 	 * that the system is healthy rather than starting a new job.
-	 * Defaults to two minutes.
+	 * Defaults to three minutes.
 	 */
 	@NodeProcessVar
-	public static var MONITOR_DEFAULT_JOB_COMPLETED_WITHIN :Int = 120;
+	public static var MONITOR_DEFAULT_JOB_COMPLETED_WITHIN :Int = 180;
 
 	@NodeProcessVar
 	public static var PORT :Int = 9000;
