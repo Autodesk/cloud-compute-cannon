@@ -85,11 +85,52 @@ class TestMonitor
 			.thenTrue();
 	}
 
-	public static function getMonitorResult(?within :Null<Int>) :Promise<ServiceMonitorRequestResult>
+	@timeout(10000)
+	public function testMonitorShortTimeout() :Promise<Bool>
+	{
+		var timeout = 5;
+		var returned = false;
+		var promise = new DeferredPromise();
+		var timeoutId = Node.setTimeout(function() {
+			if (!returned) {
+				returned = true;
+				promise.boundPromise.reject('testMonitorShortTimeout timed out');
+			} else {
+				promise.resolve(true);
+			}
+		}, Std.int((timeout + 1) * 1000));
+
+		getMonitorResult(60, 5)
+			.then(function(result) {
+				if (!returned) {
+					returned = true;
+					promise.resolve(true);
+					Node.clearTimeout(timeoutId);
+				}
+			})
+			.catchError(function(err) {
+				if (!returned) {
+					returned = true;
+					promise.boundPromise.reject(err);
+					Node.clearTimeout(timeoutId);
+				}
+			});
+
+		return promise.boundPromise;
+	}
+
+	public static function getMonitorResult(?within :Null<Int>, ?timeout :Null<Int>) :Promise<ServiceMonitorRequestResult>
 	{
 		var url = 'http://${ServerTesterConfig.CCC}${ServiceMonitorRequest.ROUTE_MONITOR}';
 		if (within != null) {
 			url = '$url?within=$within';
+		}
+		if (timeout != null) {
+			if (url.indexOf('?') > 1) {
+				url = '$url&timeout=$timeout';
+			} else {
+				url = '$url?timeout=$timeout';
+			}
 		}
 		return RequestPromises.get(url)
 			.then(Json.parse);
