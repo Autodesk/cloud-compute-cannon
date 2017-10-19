@@ -35,7 +35,8 @@ abstract ServiceMonitorRequestSuccessReason(String) to String {
 	var AnotherJobFinishedRecentlyWithoutWaiting = 'AnotherJobFinishedRecentlyWithoutWaiting';
 	var TestJobFinishedRecentlyWithoutWaiting = 'TestJobFinishedRecentlyWithoutWaiting';
 	var TestJobFinishedRecently = 'TestJobFinishedRecently';
-	var FailedTimedOut = 'FailedTimedOut';
+	var NoJobsFinishedRecentlyAndTimedOutButActiveJobsOnQueue = 'NoJobsFinishedRecentlyAndTimedOutButActiveJobsOnQueue';
+	var FailedTimedOutNoActiveJobs = 'FailedTimedOutNoActiveJobs';
 	var Unknown = 'Unknown';
 	var Testing = 'Testing';
 }
@@ -46,6 +47,7 @@ typedef ServiceMonitorRequestResult = {
 	@:optional var debug :Dynamic;
 	var within :Float;
 	var maxWithin :Float;
+	var maxTimeoutTime :Float;
 	@:optional var job :Dynamic;
 }
 typedef ServiceMonitorLastSuccessfulJob = {
@@ -56,6 +58,7 @@ typedef ServiceMonitorLastSuccessfulJob = {
 
 typedef ServiceMonitorArgs = {
 	@:optional var within :Float;
+	@:optional var timeout :Float;
 }
 
 class ServiceMonitorRequest
@@ -66,6 +69,7 @@ class ServiceMonitorRequest
 	@inject('StatusStream') public var _JOB_STREAM :Stream<JobStatsData>;
 	@inject public var redis :RedisClient;
 	@inject public var injector :Injector;
+	@inject public var _processQueue :ccc.compute.worker.ProcessQueue;
 
 	var log :AbstractLogger;
 
@@ -77,14 +81,16 @@ class ServiceMonitorRequest
 		var now = Date.now().getTime();
 		var jobId :JobId;
 
-		var maxWithin = args != null && args.within != null ? args.within : ServerConfig.MONITOR_DEFAULT_JOB_COMPLETED_WITHIN * 1000;
+		var maxWithin = (args != null && args.within != null ? args.within : ServerConfig.MONITOR_DEFAULT_JOB_COMPLETED_WITHIN_SECONDS) * 1000;
+		var maxTimeoutTime = Std.int((args != null && args.timeout != null ? args.timeout : ServerConfig.MONITOR_TIMEOUT_SECONDS) * 1000);
 
 		var result :ServiceMonitorRequestResult = {
 			success: true,
 			reason: ServiceMonitorRequestSuccessReason.Unknown,
 			debug: args,
 			maxWithin: maxWithin,
-			within: -1
+			within: -1,
+			maxTimeoutTime: maxTimeoutTime
 		};
 
 		if (_lastSuccessfulJobBlob != null && isWithinLastTimeInterval(now, _lastSuccessfulJobBlob.time, maxWithin)) {
@@ -118,12 +124,28 @@ class ServiceMonitorRequest
 		//After the maximum time allowed (plus a second), fail the request
 		timerId = Node.setTimeout(function() {
 			if (promise != null) {
-				result.success = false;
-				result.reason = ServiceMonitorRequestSuccessReason.FailedTimedOut;
-				promise.boundPromise.reject(result);
+				_processQueue.queueProcess.getActiveCount().promhx()
+					.then(function(count) {
+						if (promise != null) {
+							if (count > 0) {
+								result.success = true;
+								result.reason = ServiceMonitorRequestSuccessReason.NoJobsFinishedRecentlyAndTimedOutButActiveJobsOnQueue;
+								promise.resolve(result);
+							} else {
+								result.success = false;
+								result.reason = ServiceMonitorRequestSuccessReason.FailedTimedOutNoActiveJobs;
+								promise.boundPromise.reject(result);
+							}
+							cleanup();
+						}
+					})
+					.catchError(function(err) {
+						log.warn({error:err, message:'Failed to get the active count of jobs'});
+					});
+			} else {
+				cleanup();
 			}
-			cleanup();
-		}, Std.int(30000));
+		}, maxTimeoutTime);
 
 		//Immediately return if any job succeeds in the meanwhile
 		localSuccessfulJobListener = _jobSuccessStream.then(function(jobBlob) {
@@ -185,20 +207,6 @@ class ServiceMonitorRequest
 		//Keep a tally of the last successful jobs
 		_jobSuccessStream = _JOB_STREAM.then(function(jobStats) {
 			if (jobStats != null) {
-				// traceCyan(Json.stringify(jobStats, null, '  '));
-				//If this is one of our jobs, after a while, remove all traces of it
-				// if (jobStats.def != null && isOurJob(jobStats.def.meta)) {
-				// 	Node.setTimeout(function() {
-				// 		JobCommands.deleteJobFiles(injector, jobStats.jobId)
-				// 			// .pipe(function(_) {
-				// 			// 	JobStatsTools.removeJobStatsAll(jobStats.jobId)
-				// 			// })
-				// 			.catchError(function(err) {
-				// 				Log.error({error:err, message: 'Error in deleting state test job files'});
-				// 			});
-				// 	}, 10000);
-				// }
-
 				//TODO: fix the error:"null" bug
 				if (jobStats.status == JobStatus.Finished
 					&& jobStats.attempts[jobStats.attempts.length - 1].exitCode == 0

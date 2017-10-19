@@ -22,9 +22,9 @@ class ServiceWebsockets
 		_injector.map(WebSocketServer).toValue(_wss);
 
 		//Listen to websocket connections.
-		_wss.on(WebSocketServerEvent.Connection, function(ws) {
+		_wss.on(WebSocketServerEvent.Connection, function(ws :WebSocket, req) {
 
-			var url :String = Reflect.field(ws.upgradeReq, 'url');
+			var url :String = req.url;
 			Log.debug('Websocket connection request url=$url');
 			switch(url) {
 				case '/dashboard':
