@@ -42,7 +42,13 @@ class ServerConfig
 	 * Defaults to three minutes.
 	 */
 	@NodeProcessVar
-	public static var MONITOR_DEFAULT_JOB_COMPLETED_WITHIN :Int = 180;
+	public static var MONITOR_DEFAULT_JOB_COMPLETED_WITHIN_SECONDS :Int = 180;
+
+	/**
+	 * Monitor requests will always return within this time
+	 */
+	@NodeProcessVar
+	public static var MONITOR_TIMEOUT_SECONDS :Int = 30;
 
 	@NodeProcessVar
 	public static var PORT :Int = 9000;

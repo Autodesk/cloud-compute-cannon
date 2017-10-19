@@ -1,4 +1,4 @@
--lib hxnodelibs:git:https://github.com/dionjwa/hxnodelibs.git#0acfaef
+-lib hxnodelibs:git:https://github.com/dionjwa/hxnodelibs.git#e5f463a
 -lib hxnodejs-redis:git:https://github.com/dionjwa/hxnodejs-redis.git#3eef451
 -lib hxnodejs-redis-lua:git:https://github.com/dionjwa/hxnodejs-redis-lua.git#06fb878
 -lib haxe-misc-tools:git:https://github.com/dionjwa/haxe-misc-tools.git#689e2b1
