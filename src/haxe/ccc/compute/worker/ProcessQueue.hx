@@ -108,7 +108,7 @@ class ProcessQueue
 				Promise.promise(true)
 					.pipe(function(_) {
 						var def :DockerBatchComputeJob = job.item;
-						log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
+						log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
 
 						return Promise.whenAll([
 							Jobs.setJob(job.id, job.item),
@@ -124,7 +124,7 @@ class ProcessQueue
 					});
 			case turbo:
 				var def :BatchProcessRequestTurboV2 = job.item;
-				log.info(LogFieldUtil.addJobEvent({jobId:job.id, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
+				log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
 				var maxTime = 300000;//5 minutes max
 				queueAdd.add({jobId:job.id, attempt: 1, type:job.type, item: job.item, parameters:job.parameters}, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
 				postQueueSize();
@@ -203,10 +203,10 @@ class ProcessQueue
 						return jobProcessObject.finished
 							.pipe(function(shouldRetry) {
 								if (shouldRetry) {
-									log.info(LogFieldUtil.addJobEvent({jobId:jobId, type:queueJob.data.type}, JobEventType.RESTARTED));
-									log.info(LogFieldUtil.addJobEvent({jobId:jobId, type:queueJob.data.type, message:'retrying'}, JobEventType.ENQUEUED));
 									return JobStatsTools.jobEnqueued(jobId, null)
 										.then(function(newAttempt) {
+											log.info(LogFieldUtil.addJobEvent({jobId:jobId, attempt:newAttempt, type:queueJob.data.type}, JobEventType.RESTARTED));
+											log.info(LogFieldUtil.addJobEvent({jobId:jobId, attempt:newAttempt, type:queueJob.data.type, message:'retrying'}, JobEventType.ENQUEUED));
 											log.warn({message: 'Retrying!', previous_attempt:attempt, attempt:newAttempt});
 											queueAdd.add({jobId:jobId, attempt: newAttempt, type: queueJob.data.type}, {removeOnComplete:true});
 											return true;
