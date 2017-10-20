@@ -29,6 +29,4 @@ typedef JobResult = {
 	@:optional var error :Dynamic;
 	@:optional var stats :PrettyStatsData;
 	@:optional var definition :DockerBatchComputeJob;
-	// @:optional 
-	// var baseUrl :String;
 }

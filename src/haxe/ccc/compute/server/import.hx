@@ -6,7 +6,6 @@ import ccc.compute.shared.ServerConfig;
 import ccc.compute.shared.ServerDefinitions;
 import ccc.Constants.*;
 import ccc.Constants;
-import ccc.Definitions;
 import ccc.SharedConstants;
 
 #if ((nodejs && !macro) && !excludeccc)

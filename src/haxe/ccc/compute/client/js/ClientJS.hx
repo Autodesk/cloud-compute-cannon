@@ -1,6 +1,5 @@
 package ccc.compute.client.js;
 
-import ccc.Definitions;
 import t9.abstracts.net.*;
 
 /**

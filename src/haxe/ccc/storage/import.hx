@@ -1,5 +1,4 @@
 import ccc.compute.shared.ServerDefinitions;
-import ccc.Definitions;
 
 #if (js && !macro)
 import js.Node;
