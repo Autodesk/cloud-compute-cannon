@@ -1,33 +1,11 @@
 package ccc.compute.shared;
 
 import ccc.*;
-import ccc.storage.StorageDefinition;
 
 import haxe.DynamicAccess;
 
 import t9.abstracts.time.*;
 import t9.abstracts.net.*;
-
-typedef ServiceConfiguration = {
-#if (nodejs && !macro && !clientjs)
-	@:optional var storage: StorageDefinition;
-	@:optional var providers: Array<ServiceConfigurationWorkerProvider>;
-#else
-	@:optional var storage: Dynamic;
-	@:optional var providers: Array<Dynamic>;
-#end
-}
-
-typedef ProviderInstanceDefinition = {
-	/* Workers typically are not exposed to the internet, while servers are */
-	@:optional var public_ip :Bool;
-	/* Not all platforms support tagging */
-	@:optional var tags :DynamicAccess<String>;
-	/* These are specific to the provider e.g. AWS */
-	@:optional var options :Dynamic;
-	/* SSH key for this machine. May be defined in parent (shared with other definitions) */
-	@:optional var key :String;
-}
 
 @:forward
 abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigurationWorkerProvider to ServiceConfigurationWorkerProvider
@@ -80,28 +58,6 @@ abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigura
 		}
 	}
 }
-
-typedef ServiceConfigurationWorkerProvider = {
-	var maxWorkers :Int;
-	var minWorkers :Int;
-	var priority :Int;
-	var billingIncrement :Minutes;
-	/* How often to check the queue, creating a worker if needed */
-	var scaleUpCheckInterval :String;
-	/* Waits this time interval in between adding a worker and checking the queue again */
-	var workerCreationDuration :String;
-	/* Credentials to pass to third party libraries to access provider API */
-	@:optional var credentials :Dynamic;
-	/* Not all platforms support tagging instances yet. These tags are applied to all instances */
-	@:optional var tags :DynamicAccess<String>;
-	/* These options are common to all instances */
-	@:optional var options :Dynamic;
-	/* SSH keys for connecting to the instances */
-	@:optional var keys :DynamicAccess<String>;
-	@:optional var machines :DynamicAccess<ProviderInstanceDefinition>;
-	@:optional var type :String;
-}
-
 
 /**
  *********************************************

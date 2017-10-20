@@ -144,6 +144,7 @@ class Server
 			}
 		}
 
+		// injector.map('ccc.compute.shared.ServiceConfiguration').toValue(config);
 		injector.map('ccc.compute.shared.ServiceConfiguration').toValue(config);
 		injector.map('ccc.compute.shared.ServiceConfigurationWorkerProvider').toValue(config.providers[0]);
 
