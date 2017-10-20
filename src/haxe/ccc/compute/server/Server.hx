@@ -136,8 +136,6 @@ class Server
 
 		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
 
-		Log.debug({provider:config.providers[0].type, storage:config.storage.type});
-
 		mapEnvVars(injector);
 
 		for (key in Reflect.fields(config)) {

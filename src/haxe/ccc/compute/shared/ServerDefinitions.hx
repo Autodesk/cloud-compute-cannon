@@ -1,7 +1,6 @@
 package ccc.compute.shared;
 
 import ccc.*;
-import ccc.Definitions;
 import ccc.storage.StorageDefinition;
 
 import haxe.DynamicAccess;
@@ -19,22 +18,6 @@ typedef ServiceConfiguration = {
 #end
 }
 
-typedef ENV = {
-	@:optional var PORT: Int;
-	@:optional var REDIS_PORT: Int;
-	@:optional var REDIS_HOST: String;
-}
-
-/* This is only used when creating worker providers in code */
-@:enum
-abstract ServiceWorkerProviderType(MachinePoolId) from MachinePoolId to MachinePoolId {
-  var boot2docker = new MachinePoolId("Boot2Docker");
-  var pkgcloud = new MachinePoolId("PkgCloud");
-  var mock = new MachinePoolId("Mock");
-  var test1 = new MachinePoolId("test1");
-  var test2 = new MachinePoolId("test2");
-}
-
 typedef ProviderInstanceDefinition = {
 	/* Workers typically are not exposed to the internet, while servers are */
 	@:optional var public_ip :Bool;
@@ -44,12 +27,6 @@ typedef ProviderInstanceDefinition = {
 	@:optional var options :Dynamic;
 	/* SSH key for this machine. May be defined in parent (shared with other definitions) */
 	@:optional var key :String;
-}
-
-@:enum
-abstract MachineType(String) from String to String {
-  var server = "server";
-  var worker = "worker";
 }
 
 @:forward
@@ -80,17 +57,6 @@ abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigura
 			instanceDefinition.options == null ? {} : instanceDefinition.options,
 			this.options);
 		return instanceDefinition;
-	}
-
-	inline public function getShortName() :String
-	{
-		return switch(this.type) {
-			case boot2docker: 'local';
-			case pkgcloud:
-				var credentials :js.npm.pkgcloud.PkgCloud.ClientOptionsAmazon = this.credentials;
-				credentials.provider + '';
-			default: 'unknown';
-		}
 	}
 
 	inline public function getMachineKey(machineType :String) :String
@@ -124,8 +90,6 @@ typedef ServiceConfigurationWorkerProvider = {
 	var scaleUpCheckInterval :String;
 	/* Waits this time interval in between adding a worker and checking the queue again */
 	var workerCreationDuration :String;
-	/* This is only optional if it has been previously set, and you are adjusting the above values only */
-	@:optional var type: ServiceWorkerProviderType;
 	/* Credentials to pass to third party libraries to access provider API */
 	@:optional var credentials :Dynamic;
 	/* Not all platforms support tagging instances yet. These tags are applied to all instances */
@@ -135,6 +99,7 @@ typedef ServiceConfigurationWorkerProvider = {
 	/* SSH keys for connecting to the instances */
 	@:optional var keys :DynamicAccess<String>;
 	@:optional var machines :DynamicAccess<ProviderInstanceDefinition>;
+	@:optional var type :String;
 }
 
 
