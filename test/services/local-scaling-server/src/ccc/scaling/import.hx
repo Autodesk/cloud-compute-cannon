@@ -1,6 +1,5 @@
 import ccc.*;
 import ccc.lambda.*;
-import ccc.Definitions;
 import ccc.SharedConstants.*;
 import ccc.compute.shared.*;
 import ccc.Constants.*;
