@@ -193,17 +193,19 @@ class JobCommands
 				return fs.exists(resultsJsonPath)
 					.pipe(function(exists) {
 						if (exists) {
-							return fs.readFile(resultsJsonPath)
-								.pipe(function(stream) {
-									if (stream != null) {
-										return StreamPromises.streamToString(stream)
-											.then(function(resultJsonString) {
-												return Json.parse(resultJsonString);
-											});
-									} else {
-										return Promise.promise(null);
-									}
-								});
+							return promhx.RetryPromise.retryRegular(function() {
+								return fs.readFile(resultsJsonPath)
+									.pipe(function(stream) {
+										if (stream != null) {
+											return StreamPromises.streamToString(stream)
+												.then(function(resultJsonString) {
+													return Json.parse(resultJsonString);
+												});
+										} else {
+											return Promise.promise(null);
+										}
+									});
+								}, 3, 1000);
 						} else {
 							return Promise.promise(null);
 						}
