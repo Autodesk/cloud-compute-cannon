@@ -73,7 +73,7 @@ class ServiceMonitorRequest
 	@inject('StatusStream') public var _JOB_STREAM :Stream<JobStatsData>;
 	@inject public var redis :RedisClient;
 	@inject public var injector :Injector;
-	@inject("Queue") public var _queue :js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults>;
+	@inject public var _queue :js.npm.bull.Bull.Queue<ccc.QueueJobDefinition,ccc.compute.worker.QueueJobResults>;
 
 	var log :AbstractLogger;
 

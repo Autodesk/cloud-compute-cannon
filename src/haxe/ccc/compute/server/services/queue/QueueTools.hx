@@ -14,8 +14,10 @@ class QueueTools
 		var redisPort :Int = ServerConfig.REDIS_PORT;
 		var queueName :String = BullQueueNames.JobQueue;
 		var queue : js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults> = new js.npm.bull.Bull.Queue(queueName, {redis:{port:redisPort, host:redisHost}});
-		// injector.map("js.npm.bull.Bull.Queue<ccc.QueueJob<ccc.compute.worker.ProcessQueue.JobTypes>,ccc.compute.worker.ProcessQueue.JobResults>", "Queue").toValue(queue);
-		// injector.map("js.npm.bull.Bull.Queue<ccc.QueueJobDefinition,ccc.compute.worker.QueueJobResults>", "Queue").toValue(queue);
+		// Notice the space and the specific package names.
+		// minject cannot handle classes with parameters unless you use
+		// strings, but the strings must be exactly formatted.
+		injector.map('js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults>').toValue(queue);
 	}
 
 	public static function addBullDashboard(injector :Injector)
