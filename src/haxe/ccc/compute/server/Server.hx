@@ -310,7 +310,7 @@ class Server
 			})
 			//Create queue to add jobs
 			.then(function(_) {
-				QueueTools.initQueue(injector);
+				QueueTools.initJobQueue(injector);
 				return true;
 			})
 			.pipe(function(_) {

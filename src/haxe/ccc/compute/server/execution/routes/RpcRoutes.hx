@@ -23,7 +23,7 @@ class RpcRoutes
 #if ((nodejs && !macro) && !excludeccc)
 	public function getQueues() :Promise<BullJobCounts>
 	{
-		return _injector.getValue(ccc.compute.worker.Queue).getQueues();
+		return _injector.getValue(ccc.compute.worker.QueueJobs).getQueues();
 #else
 	public function getQueues() :Promise<Dynamic>
 	{

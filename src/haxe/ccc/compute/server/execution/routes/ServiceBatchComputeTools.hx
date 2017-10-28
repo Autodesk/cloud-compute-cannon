@@ -1,6 +1,6 @@
 package ccc.compute.server.execution.routes;
 
-import ccc.compute.worker.Queue;
+import ccc.compute.worker.QueueJobs;
 import ccc.storage.ServiceStorage;
 import ccc.compute.worker.BatchComputeDocker;
 import ccc.compute.worker.BatchComputeDockerTurbo;
@@ -33,8 +33,6 @@ import util.DockerUrl;
 import util.RedisTools;
 import util.streams.StdStreams;
 
-import ccc.compute.worker.Queue;
-
 class ServiceBatchComputeTools
 {
 	static var DEFAULT_JOB_PARAMS :JobParams = {cpus:1, maxDuration:600};//10 minutes
@@ -51,7 +49,7 @@ class ServiceBatchComputeTools
 
 		var promise = new DeferredPromise<JobResultsTurboV2>();
 
-		var processQueue :Queue = injector.getValue(ccc.compute.worker.Queue);
+		var processQueue :QueueJobs = injector.getValue(ccc.compute.worker.QueueJobs);
 
 		var jobCompletedHandler;
 		var jobFailedHandler;
@@ -133,7 +131,7 @@ class ServiceBatchComputeTools
 		}
 
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var processQueue = injector.getValue(ccc.compute.worker.Queue);
+		var processQueue = injector.getValue(ccc.compute.worker.QueueJobs);
 		var redis :RedisClient = injector.getValue(RedisClient);
 
 		var jobId :JobId = null;
@@ -247,7 +245,7 @@ class ServiceBatchComputeTools
 	public static function handleMultiformBatchComputeRequest(injector :Injector, req :js.node.http.IncomingMessage, res :js.node.http.ServerResponse, next :?Dynamic->Void) :Void
 	{
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var processQueue :Queue = injector.getValue(Queue);
+		var processQueue :QueueJobs = injector.getValue(QueueJobs);
 		var redis :RedisClient = injector.getValue(RedisClient);
 
 		var returned = false;

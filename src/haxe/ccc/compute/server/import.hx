@@ -27,6 +27,7 @@ import ccc.SharedConstants;
 	import ccc.compute.shared.*;
 	import ccc.compute.shared.AbstractLogger;
 	import ccc.compute.shared.Logger;
+	import ccc.compute.worker.QueueJobs;
 	import ccc.compute.worker.job.*;
 	import ccc.compute.worker.job.Jobs;
 	import ccc.compute.worker.job.JobWebSocket;

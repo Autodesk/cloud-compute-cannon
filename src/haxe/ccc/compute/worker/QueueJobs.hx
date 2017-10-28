@@ -57,7 +57,7 @@ enum ProcessFinishReason {
 	MaximumAttemptsExceeded;
 }
 
-class Queue
+class QueueJobs
 {
 	@inject('REDIS_HOST') public var redisHost :String;
 	@inject('REDIS_PORT') public var redisPort :Int;
@@ -70,10 +70,9 @@ class Queue
 	@inject('StatusStream') public var statusStream :Stream<ccc.JobStatsData>;
 	@inject('WorkerStream') public var _workerStream :Stream<ccc.WorkerState>;
 	@inject public var internalState :WorkerStateInternal;
-	@inject public var queueAdd :js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults>;
+	@inject public var queueAdd :Queue<QueueJobDefinition,QueueJobResults>;
 
-	public var queueProcess (default, null) :js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults>;
-	// var queueAdd (default, null) :js.npm.bull.Bull.Queue<QueueJob<JobTypes>,JobResults>;
+	public var queueProcess (default, null) :Queue<QueueJobDefinition,QueueJobResults>;
 
 	public var cpus (get, null):Int;
 	var _cpus :Int = 1;

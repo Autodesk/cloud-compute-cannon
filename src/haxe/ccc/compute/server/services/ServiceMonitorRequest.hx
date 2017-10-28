@@ -29,7 +29,7 @@ package ccc.compute.server.services;
  *       - ENABLE_LOG_ServiceMonitorRequest
  */
 
-import ccc.compute.worker.Queue;
+import ccc.compute.worker.QueueJobs;
 import ccc.QueueJobDefinition;
 import ccc.compute.worker.QueueJobResults;
 

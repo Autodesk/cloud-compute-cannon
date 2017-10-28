@@ -205,21 +205,4 @@ class ServerCommands
 
 		return blob;
 	}
-
-	// public static function serverReset(redis :RedisClient, fs :ServiceStorage) :Promise<Bool>
-	// {
-	// 	return ComputeQueue.getAllJobIds(redis)
-	// 		.pipe(function(jobIds :Array<JobId>) {
-	// 			return Promise.whenAll(jobIds.map(function(jobId) {
-	// 				return ComputeQueue.getJob(redis, jobId)
-	// 					.pipe(function(job :DockerJobDefinition) {
-	// 						return DockerJobTools.deleteJobRemoteData(job, fs);
-	// 					});
-	// 			}));
-	// 		})
-	// 		.pipe(function(_) {
-	// 			return hardStopAndDeleteAllJobs(redis);
-	// 		});
-	// }
-
 }
