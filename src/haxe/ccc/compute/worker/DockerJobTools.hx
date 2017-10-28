@@ -104,7 +104,7 @@ class DockerJobTools
 		].map(function(path) {
 			return fs.deleteDir(path)
 				.errorPipe(function(err) {
-					Log.error({message:'Failed to delete $path for job=${job.jobId}', error:err});
+					Log.error({message:'Failed to delete $path for job=${job.id}', error:err});
 					return Promise.promise(true);
 				});
 		});
@@ -117,9 +117,9 @@ class DockerJobTools
 	 * @param  job :QueueJobDefinition [description]
 	 * @return     Docker container id
 	 */
-	public static function removeJobContainer(job :QueueJobDefinition<Dynamic>) :Promise<String>
+	public static function removeJobContainer(job :QueueJobDefinition) :Promise<String>
 	{
-		Assert.notNull(job.id, 'job.id is null');
+		Assert.notNull(job.id, 'job.jobId is null');
 		throw "removeJobContainer cannot be done, docker stuff isn't known";
 		// var docker = job.worker.getInstance().docker();
 		// var docker = new Docker(job.worker.docker);

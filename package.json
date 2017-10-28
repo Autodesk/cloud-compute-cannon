@@ -18,7 +18,8 @@
     "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
     "set-build:client-dashboard": "rm build.hxml && ln -s clients/dashboard/build-dev.hxml build.hxml",
     "set-build:lambda-autoscaling": "rm build.hxml && ln -s etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml build.hxml",
-    "set-build:lambda-autoscaling-test-server": "rm build.hxml && ln -s test/local-scaling-server/build.hxml build.hxml",
+    "set-build:test-server-scaling": "rm build.hxml && ln -s test/services/local-scaling-server/build.hxml build.hxml",
+    "set-build:test-server": "rm build.hxml && ln -s test/services/stand-alone-tester/build.hxml build.hxml",
     "set-build:all": "rm build.hxml && ln -s etc/hxml/build-all.hxml build.hxml",
     "set-build:all-servers": "rm build.hxml && ln -s etc/hxml/build-all-servers.hxml build.hxml"
   },

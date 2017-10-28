@@ -17,8 +17,8 @@ import promhx.deferred.DeferredPromise;
  * same process as the worker.
  */
 
-typedef JobTypes=EitherType<DockerBatchComputeJob,BatchProcessRequestTurboV2>;
-typedef JobResults=EitherType<JobResult,JobResultsTurboV2>;
+// typedef JobTypes=EitherType<DockerBatchComputeJob,BatchProcessRequestTurboV2>;
+// typedef JobResults=EitherType<JobResult,JobResultsTurboV2>;
 
 typedef RedisConnection = {
 	var host :String;
@@ -36,13 +36,13 @@ typedef ProcessArguments = { >QueueArguments,
 	var remoteStorage :ServiceStorage;
 }
 
-typedef QueueJob<T:(JobTypes)> = {//BatchProcessRequestTurboV2
-	var jobId :JobId;
-	var attempt :Int;
-	var type :QueueJobDefinitionType;
-	@:optional var item :T;
-	@:optional var parameters :JobParams;
-}
+// typedef QueueJob<T:(JobTypes)> = {//BatchProcessRequestTurboV2
+// 	var jobId :JobId;
+// 	var attempt :Int;
+// 	var type :QueueJobDefinitionType;
+// 	@:optional var item :T;
+// 	@:optional var parameters :JobParams;
+// }
 
 enum ProcessFinishReason {
 	Cancelled;
@@ -57,7 +57,7 @@ enum ProcessFinishReason {
 	MaximumAttemptsExceeded;
 }
 
-class ProcessQueue
+class Queue
 {
 	@inject('REDIS_HOST') public var redisHost :String;
 	@inject('REDIS_PORT') public var redisPort :Int;
@@ -70,9 +70,10 @@ class ProcessQueue
 	@inject('StatusStream') public var statusStream :Stream<ccc.JobStatsData>;
 	@inject('WorkerStream') public var _workerStream :Stream<ccc.WorkerState>;
 	@inject public var internalState :WorkerStateInternal;
+	@inject public var queueAdd :js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults>;
 
-	public var queueProcess (default, null) :js.npm.bull.Bull.Queue<QueueJob<JobTypes>,JobResults>;
-	var queueAdd (default, null) :js.npm.bull.Bull.Queue<QueueJob<JobTypes>,JobResults>;
+	public var queueProcess (default, null) :js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults>;
+	// var queueAdd (default, null) :js.npm.bull.Bull.Queue<QueueJob<JobTypes>,JobResults>;
 
 	public var cpus (get, null):Int;
 	var _cpus :Int = 1;
@@ -96,13 +97,19 @@ class ProcessQueue
 		return !_localJobProcess.keys().hasNext();
 	}
 
+	public function getQueues() :Promise<BullJobCounts>
+	{
+		return queueAdd.getJobCounts().promhx();
+	}
+
 	/**
 	 * This adds the job to the queue, it does not add the
 	 * job to this instance.
 	 * @param job :QueueJobDefinition [description]
 	 */
-	public function add(job :QueueJobDefinition<JobTypes>) :Promise<Bool>
+	public function add(job :QueueJobDefinition) :Promise<Bool>
 	{
+		job.attempt = 1;
 		return switch(job.type) {
 			case compute:
 				Promise.promise(true)
@@ -118,7 +125,7 @@ class ProcessQueue
 						]);
 					})
 					.then(function(_) {
-						queueAdd.add({jobId:job.id, attempt: job.attempt, type:job.type}, {jobId:job.id, priority:(job.priority ? 1 : 1000), removeOnComplete:true, removeOnFail:true});
+						queueAdd.add(job, {jobId:job.id, priority:(job.priority ? 1 : 1000), removeOnComplete:true, removeOnFail:true});
 						postQueueSize();
 						return true;
 					});
@@ -126,7 +133,7 @@ class ProcessQueue
 				var def :BatchProcessRequestTurboV2 = job.item;
 				log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
 				var maxTime = 300000;//5 minutes max
-				queueAdd.add({jobId:job.id, attempt: 1, type:job.type, item: job.item, parameters:job.parameters}, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
+				queueAdd.add(job, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
 				postQueueSize();
 				Promise.promise(true);
 		}
@@ -166,19 +173,21 @@ class ProcessQueue
 		}
 	}
 
-	function jobProcesser(queueJob :Job<QueueJob<JobTypes>>, done :Done2<JobResults>) :Void
+	function jobProcesser(queueJob :Job<QueueJobDefinition>, done :Done2<QueueJobResults>) :Void
 	{
 		switch(queueJob.data.type) {
 			case compute:
 				//Cast it into the fully typed version for the compiler
-				var queuejob :Job<QueueJob<DockerBatchComputeJob>> = queueJob;
-				JobStatsTools.isJob(queuejob.data.jobId)
+				// var queuejob :Job<QueueJob<DockerBatchComputeJob>> = queueJob;
+				var queuejob = queueJob;
+				// var job :DockerBatchComputeJob = queueJob.data.item
+				JobStatsTools.isJob(queuejob.data.id)
 					.pipe(function(isJob) {
 
 						if (!isJob) {
 							done(null, null);
-							traceYellow('No job for ${queuejob.data.jobId} it must have been cancelled+removed. Do not log this long term');
-							log.debug(LogFieldUtil.addJobEvent({jobId:queuejob.data.jobId, type:queueJob.data.type, reason:Type.enumConstructor(ProcessFinishReason.MissingJobDefinition)}, JobEventType.FINISHED));
+							traceYellow('No job for ${queuejob.data.id} it must have been cancelled+removed. Do not log this long term');
+							log.debug(LogFieldUtil.addJobEvent({jobId:queuejob.data.id, type:queueJob.data.type, reason:Type.enumConstructor(ProcessFinishReason.MissingJobDefinition)}, JobEventType.FINISHED));
 							return Promise.promise(true);
 						}
 
@@ -186,7 +195,7 @@ class ProcessQueue
 						_injector.injectInto(jobProcessObject);
 
 						Assert.notNull(jobProcessObject.jobId);
-						var jobId = queuejob.data.jobId;
+						var jobId = queuejob.data.id;
 						var attempt = queuejob.data.attempt;
 						if (!_localJobProcess.exists(jobId)) {
 							_localJobProcess.set(jobId, []);
@@ -208,7 +217,9 @@ class ProcessQueue
 											log.info(LogFieldUtil.addJobEvent({jobId:jobId, attempt:newAttempt, type:queueJob.data.type}, JobEventType.RESTARTED));
 											log.info(LogFieldUtil.addJobEvent({jobId:jobId, attempt:newAttempt, type:queueJob.data.type, message:'retrying'}, JobEventType.ENQUEUED));
 											log.warn({message: 'Retrying!', previous_attempt:attempt, attempt:newAttempt});
-											queueAdd.add({jobId:jobId, attempt: newAttempt, type: queueJob.data.type}, {removeOnComplete:true});
+											var newQueueJob = Reflect.copy(queuejob.data);
+											newQueueJob.attempt = newAttempt;
+											queueAdd.add(newQueueJob, {removeOnComplete:true});
 											return true;
 										});
 								} else {
@@ -230,23 +241,24 @@ class ProcessQueue
 							});
 					});
 			case turbo:
-				var queuejob :Job<QueueJob<BatchProcessRequestTurboV2>> = queueJob;
+				var queuejob :Job<QueueJobDefinition> = queueJob;
+				var jobDef :BatchProcessRequestTurboV2 = queueJob.data.item;
 				var redis :RedisClient = _injector.getValue(RedisClient);
 				var docker :Docker = _injector.getValue(Docker);
 				var thisMachineId = _injector.getValue(MachineId);
 				Assert.notNull(thisMachineId);
-				log.info(LogFieldUtil.addJobEvent({jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.DEQUEUED));
-				BatchComputeDockerTurbo.executeTurboJobV2(redis, queuejob.data.item, docker, thisMachineId, log)
+				log.info(LogFieldUtil.addJobEvent({jobId:jobDef.id, worker:_workerId, type:queueJob.data.type}, JobEventType.DEQUEUED));
+				BatchComputeDockerTurbo.executeTurboJobV2(redis, jobDef, docker, thisMachineId, log)
 					.pipe(function(result) {
 						done(null, result);
-						return JobStatsTools.get(queuejob.data.item.id)
+						return JobStatsTools.get(jobDef.id)
 							.then(function(jobstats) {
 								var duration = jobstats != null ? jobstats.finished - jobstats.requestReceived : null;
-								log.info(LogFieldUtil.addJobEvent({exitCode:result.exitCode, duration:duration, error:result.error, jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.FINISHED));
+								log.info(LogFieldUtil.addJobEvent({exitCode:result.exitCode, duration:duration, error:result.error, jobId:jobDef.id, worker:_workerId, type:queueJob.data.type}, JobEventType.FINISHED));
 							});
 					})
 					.catchError(function(err) {
-						log.error(LogFieldUtil.addJobEvent({error:err, message: 'Failed turbo job', queuejob:queuejob, jobId:queuejob.data.item.id, worker:_workerId, type:queueJob.data.type}, JobEventType.ERROR));
+						log.error(LogFieldUtil.addJobEvent({error:err, message: 'Failed turbo job', queuejob:queuejob, jobId:jobDef.id, worker:_workerId, type:queueJob.data.type}, JobEventType.ERROR));
 						done(err, js.Lib.undefined);
 					});
 		}
@@ -255,7 +267,7 @@ class ProcessQueue
 	@post
 	public function postInject()
 	{
-		log = log.child({c:ProcessQueue});
+		log = log.child({c:Queue});
 
 		Assert.notNull(_workerId);
 
@@ -280,96 +292,80 @@ class ProcessQueue
 					default:
 				}
 
-
 				internalState.ncpus = _cpus;
 
-				var args :ProcessArguments = {
-					redis : {
-						host: redisHost,
-						port: redisPort
-					},
-					cpus : _cpus,
-					remoteStorage: _remoteStorage,
-					log: log
-				};
+				queueProcess = queueAdd;
 
-				queueProcess = createProcessorQueue(args, jobProcesser);
-				queueAdd = createAddingQueue(args);
-
-				//TODO: we used to have two queues. Now that there is only
-				//one, we don't need this array, but I'll leave it here
-				//in case there are more queues in the future.
-				var queues = [queueProcess];
-
-				for (q in queues) {
-
-					q.on(QueueEvent.Error, function(err) {
-						log.error({e:QueueEvent.Error, error:Json.stringify(err)});
-					});
-
-					q.on(QueueEvent.Active, function(job, promise) {
-						try {
-							log.debug({e:QueueEvent.Active, jobId:job.data.id});
-						} catch(err :Dynamic) {trace(err);}
-					});
-
-					q.on(QueueEvent.Stalled, function(job) {
-						log.warn({e:QueueEvent.Stalled, jobId:job.data.id});
-					});
-
-					q.on(QueueEvent.Progress, function(job, progress) {
-						log.debug({e:QueueEvent.Progress, jobId:job.data.id, progress:progress});
-					});
-
-					q.on(QueueEvent.Completed, function(j :Job<Dynamic>, result) {
-						//Turbo jobs get logged elsewhere
-						var job :Job<QueueJob<Dynamic>> = cast j;
-						log.debug({e:QueueEvent.Completed, jobId: job.data.jobId});
-						if (job.data.type == QueueJobDefinitionType.compute) {
-							log.debug({e:QueueEvent.Completed, jobId: job.data.jobId});
-						}
-						postQueueSize();
-					});
-
-					q.on(QueueEvent.Failed, function(job, error :js.Error) {
-						//Turbo jobs get logged elsewhere
-						log.warn({e:QueueEvent.Failed, jobId:job.data.id, error:error});
-						if (job.data.type == QueueJobDefinitionType.compute) {
-							log.warn({e:QueueEvent.Failed, jobId:job.data.id, error:error});
-						}
-						if (error.message != null && error.message.indexOf('job stalled more than allowable limit') > -1) {
-							job.retry();
-						}
-						postQueueSize();
-					});
-
-					q.on(QueueEvent.Paused, function() {
-						log.warn({e:QueueEvent.Paused});
-					});
-
-					q.on(QueueEvent.Resumed, function(job) {
-						log.debug({e:QueueEvent.Resumed, jobId:job.data.id});
-					});
-
-					q.on(QueueEvent.Cleaned, function(jobs) {
-						log.debug({e:QueueEvent.Cleaned, jobIds:jobs.map(function(j) return j.data.id).array()});
-						return null;
-					});
+				function processor(job, done) {
+					this.jobProcesser(job, done);
 				}
+				queueProcess.process(_cpus, processor);
+
+				queueProcess.on(QueueEvent.Error, function(err) {
+					log.error({e:QueueEvent.Error, error:Json.stringify(err)});
+				});
+
+				queueProcess.on(QueueEvent.Active, function(job, promise) {
+					try {
+						log.debug({e:QueueEvent.Active, jobId:job.data.id});
+					} catch(err :Dynamic) {trace(err);}
+				});
+
+				queueProcess.on(QueueEvent.Stalled, function(job) {
+					log.warn({e:QueueEvent.Stalled, jobId:job.data.id});
+				});
+
+				queueProcess.on(QueueEvent.Progress, function(job, progress) {
+					log.debug({e:QueueEvent.Progress, jobId:job.data.id, progress:progress});
+				});
+
+				queueProcess.on(QueueEvent.Completed, function(j :Job<Dynamic>, result) {
+					//Turbo jobs get logged elsewhere
+					var job :Job<QueueJobDefinition> = cast j;
+					var item :DockerBatchComputeJob = job.data.item;
+					log.debug({e:QueueEvent.Completed, jobId: item.id});
+					if (job.data.type == QueueJobDefinitionType.compute) {
+						log.debug({e:QueueEvent.Completed, jobId: item.id});
+					}
+					postQueueSize();
+				});
+
+				queueProcess.on(QueueEvent.Failed, function(job, error :js.Error) {
+					//Turbo jobs get logged elsewhere
+					log.warn({e:QueueEvent.Failed, jobId:job.data.jobId, error:error});
+					if (job.data.type == QueueJobDefinitionType.compute) {
+						log.warn({e:QueueEvent.Failed, jobId:job.data.jobId, error:error});
+					}
+					if (error.message != null && error.message.indexOf('job stalled more than allowable limit') > -1) {
+						job.retry();
+					}
+					postQueueSize();
+				});
+
+				queueProcess.on(QueueEvent.Paused, function() {
+					log.warn({e:QueueEvent.Paused});
+				});
+
+				queueProcess.on(QueueEvent.Resumed, function(job) {
+					log.debug({e:QueueEvent.Resumed, jobId:job.data.id});
+				});
+
+				queueProcess.on(QueueEvent.Cleaned, function(jobs) {
+					log.debug({e:QueueEvent.Cleaned, jobIds:jobs.map(function(j) return j.data.id).array()});
+					return null;
+				});
 
 				_workerStream.then(function(workerState :WorkerState) {
-					for (q in queues) {
-						if (_isPaused && workerState.status == WorkerStatus.OK) {
-							q.resume(true).then(function(_) {
-								log.warn({paused:false, status:workerState.status, statusHealth:workerState.statusHealth });
-								_isPaused = false;
-							});
-						} else if (!_isPaused && workerState.status != WorkerStatus.OK) {
-							q.pause(true).then(function(_) {
-								log.warn({paused:true, status:workerState.status, statusHealth:workerState.statusHealth });
-								_isPaused = true;
-							});
-						}
+					if (_isPaused && workerState.status == WorkerStatus.OK) {
+						queueProcess.resume(true).then(function(_) {
+							log.warn({paused:false, status:workerState.status, statusHealth:workerState.statusHealth });
+							_isPaused = false;
+						});
+					} else if (!_isPaused && workerState.status != WorkerStatus.OK) {
+						queueProcess.pause(true).then(function(_) {
+							log.warn({paused:true, status:workerState.status, statusHealth:workerState.statusHealth });
+							_isPaused = true;
+						});
 					}
 				});
 
@@ -378,7 +374,7 @@ class ProcessQueue
 				_ready.resolve(true);
 			});
 
-		var messageQueue = new Queue(BullQueueNames.SingleMessageQueue, {redis:{port:redisPort, host:redisHost}});
+		var messageQueue = new js.npm.bull.Bull.Queue(BullQueueNames.SingleMessageQueue, {redis:{port:redisPort, host:redisHost}});
 		function messageQueueHandler(job, done) {
 			var action :BullQueueSingleMessageQueueAction = job.data;
 			var handled = false;
@@ -400,39 +396,6 @@ class ProcessQueue
 			}
 		}
 		messageQueue.process(1, messageQueueHandler);
-
-		addBullDashboard();
-	}
-
-	function addBullDashboard()
-	{
-		var bullArena = new js.npm.bullarena.BullArena(
-			{
-				queues:[
-					{
-						name: BullQueueNames.JobQueue,
-						port: redisPort,
-						host: redisHost,
-						hostId: redisHost
-					},
-					{
-						name: BullQueueNames.SingleMessageQueue,
-						port: redisPort,
-						host: redisHost,
-						hostId: redisHost
-					}
-				]
-			},
-			{
-				basePath: '/dashboard',
-				disableListen: true
-			}
-		);
-
-		var app :js.npm.express.Application = _injector.getValue(js.npm.express.Application);
-		var router = js.npm.express.Express.GetRouter();
-		router.use('/', cast bullArena);
-		app.use(cast router);
 	}
 
 	function postQueueSize()
@@ -444,29 +407,6 @@ class ProcessQueue
 			.catchError(function(err) {
 				log.warn({error:err, message: 'Failed to get queue count'});
 			});
-	}
-
-	static function createProcessorQueue(args :ProcessArguments, jobProcessor: Job<QueueJob<Dynamic>>->Done2<JobResult>->Void)
-	{
-		var redisHost :String = args.redis.host;
-		var redisPort :Int = args.redis.port != null ? args.redis.port : DEFAULT_REDIS_PORT;
-		var cpus :Int = args.cpus != null ? args.cpus : 1;
-		var queueName :String = BullQueueNames.JobQueue;
-		var queue = new Queue(queueName, {redis:{port:redisPort, host:redisHost}});
-		function processor(job, done) {
-			jobProcessor(job, done);
-		}
-		queue.process(cpus, processor);
-		return queue;
-	}
-
-	static function createAddingQueue(args :ProcessArguments)
-	{
-		var redisHost :String = args.redis.host;
-		var redisPort :Int = args.redis.port != null ? args.redis.port : DEFAULT_REDIS_PORT;
-		var queueName :String = BullQueueNames.JobQueue;
-		var queue = new Queue(queueName, {redis:{port:redisPort, host:redisHost}});
-		return queue;
 	}
 }
 
@@ -483,22 +423,23 @@ class JobProcessObject
 	@inject public var _workerId :MachineId;
 
 	public var jobId (default, null) :JobId;
+
 	public var attempt (default, null) :Int;
 	var _cancelled :Bool = false;
 
-	var _queueJob :Job<QueueJob<DockerBatchComputeJob>>;
+	var _queueJob :Job<QueueJobDefinition>;
 	var _done :Done2<JobResult>;
 	var _isFinished :Bool = false;
 
 	var _deferred :DeferredPromise<Bool>;
 	var _killedDeferred :DeferredPromise<Bool> = new DeferredPromise();
 
-	public function new(queueJob :Job<QueueJob<DockerBatchComputeJob>>, done :Done2<JobResult>)
+	public function new(queueJob :Job<QueueJobDefinition>, done :Done2<QueueJobResults>)
 	{
 		_queueJob = queueJob;
 		_done = done;
 		var jobData = queueJob.data;
-		this.jobId = jobData.jobId;
+		this.jobId = jobData.id;
 		this.attempt = jobData.attempt;
 		_deferred = new DeferredPromise();
 		this.finished = _deferred.boundPromise;

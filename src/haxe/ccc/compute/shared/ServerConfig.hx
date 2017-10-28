@@ -11,6 +11,14 @@ class ServerConfig
 	@NodeProcessVar
 	public static var DISABLE_STARTUP_TESTS :Bool = true;
 
+
+	/**
+	 * If true, disables all queue processing logic
+	 * (i.e. no jobs will be run on this process)
+	 */
+	// @NodeProcessVar
+	public static var DISABLE_WORKER :Bool = true;
+
 	@NodeProcessVar
 	public static var FLUENT_HOST :String;
 

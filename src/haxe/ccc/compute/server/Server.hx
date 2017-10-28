@@ -54,6 +54,7 @@ class Server
 		initAppConfig(injector);
 		initStorage(injector);
 		ServerPaths.initAppPaths(injector);
+		createHttpServer(injector);
 		runServer(injector);
 	}
 
@@ -160,16 +161,19 @@ class Server
 			}
 		}
 
-		injector.map(Docker).toValue(new Docker({socketPath:'/var/run/docker.sock'}));
+		/* Workers */
+		if (!ServerConfig.DISABLE_WORKER) {
+			injector.map(Docker).toValue(new Docker({socketPath:'/var/run/docker.sock'}));
 
-		var workerInternalState :WorkerStateInternal = {
-			ncpus: 0,
-			timeLastHealthCheck: null,
-			jobs: [],
-			id: null,
-			health: null
-		};
-		injector.map('ccc.WorkerStateInternal').toValue(workerInternalState);
+			var workerInternalState :WorkerStateInternal = {
+				ncpus: 0,
+				timeLastHealthCheck: null,
+				jobs: [],
+				id: null,
+				health: null
+			};
+			injector.map('ccc.WorkerStateInternal').toValue(workerInternalState);
+		}
 
 		var localhost :Host = 'localhost:$SERVER_DEFAULT_PORT';
 		injector.map(Host, 'serverhost').toValue(localhost);
@@ -278,8 +282,6 @@ class Server
 
 		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
 
-		createHttpServer(injector);
-
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return DockerTools.getThisContainerName()
@@ -306,12 +308,21 @@ class Server
 				var finishedJobStream = JobStream.getFinishedJobStream();
 				injector.map("promhx.Stream<Array<ccc.JobId>>", "FinishedJobStream").toValue(finishedJobStream);
 			})
+			//Create queue to add jobs
+			.then(function(_) {
+				QueueTools.initQueue(injector);
+				return true;
+			})
 			.pipe(function(_) {
 				injector.setStatus(ServerStartupState.BuildingServices);
-				return initWorker(injector);
+				if (!ServerConfig.DISABLE_WORKER) {
+					return initWorker(injector);
+				} else {
+					Log.info({worker:'disabled'});
+					return Promise.promise(true);
+				}
 			})
 			.then(function(_) {
-				trace('ServiceMonitorRequest');
 				ServiceMonitorRequest.init(injector);
 				return true;
 			})
@@ -346,44 +357,6 @@ class Server
 				}
 				return true;
 			});
-	}
-
-	static function runFunctionalTests(injector :ServerState)
-	{
-		var env :DynamicAccess<String> = Node.process.env;
-		//Run internal tests
-		var isTravisBuild = ServerConfig.TRAVIS;
-		var disableStartTest = ServerConfig.DISABLE_STARTUP_TESTS;
-		if (!disableStartTest) {
-			traceGreen('Running server functional tests');
-			promhx.RequestPromises.get('http://localhost:${SERVER_DEFAULT_PORT}${SERVER_RPC_URL}/server-tests?${isTravisBuild ? "core=true&storage=true&compute=true&jobs=true&turbojobs=true" : DEFAULT_TESTS}')
-				.then(function(out) {
-					try {
-						var results = Json.parse(out);
-						var result = results.result;
-						if (result.success) {
-							traceGreen(Json.stringify(result));
-						} else {
-							Log.error({TestResults:result});
-							traceRed(Json.stringify(result));
-						}
-						if (isTravisBuild) {
-							Node.process.exit(result.success ? 0 : 1);
-						}
-					} catch(err :Dynamic) {
-						Log.error({error:err, message:'Failed to parse test results'});
-						if (isTravisBuild) {
-							Node.process.exit(1);
-						}
-					}
-				})
-				.catchError(function(err) {
-					Log.error({error:err, message:'failed tests!'});
-					if (isTravisBuild) {
-						Node.process.exit(1);
-					}
-				});
-		}
 	}
 
 	static function initStaticFileServing(injector :ServerState)

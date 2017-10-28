@@ -20,6 +20,7 @@ import ccc.SharedConstants;
 	import ccc.compute.server.logs.*;
 	import ccc.compute.server.scaling.*;
 	import ccc.compute.server.services.ServiceMonitorRequest;
+	import ccc.compute.server.services.queue.QueueTools;
 	import ccc.compute.server.tests.*;
 	import ccc.compute.server.util.*;
 	import ccc.compute.server.util.redis.RedisDistributedSetInterval;

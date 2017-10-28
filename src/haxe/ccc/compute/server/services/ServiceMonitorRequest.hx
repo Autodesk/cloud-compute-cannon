@@ -29,6 +29,10 @@ package ccc.compute.server.services;
  *       - ENABLE_LOG_ServiceMonitorRequest
  */
 
+import ccc.compute.worker.Queue;
+import ccc.QueueJobDefinition;
+import ccc.compute.worker.QueueJobResults;
+
 @:enum
 abstract ServiceMonitorRequestSuccessReason(String) to String {
 	var AnotherJobFinishedRecently = 'AnotherJobFinishedRecently';
@@ -69,7 +73,7 @@ class ServiceMonitorRequest
 	@inject('StatusStream') public var _JOB_STREAM :Stream<JobStatsData>;
 	@inject public var redis :RedisClient;
 	@inject public var injector :Injector;
-	@inject public var _processQueue :ccc.compute.worker.ProcessQueue;
+	@inject("Queue") public var _queue :js.npm.bull.Bull.Queue<QueueJobDefinition,QueueJobResults>;
 
 	var log :AbstractLogger;
 
@@ -124,7 +128,7 @@ class ServiceMonitorRequest
 		//After the maximum time allowed (plus a second), fail the request
 		timerId = Node.setTimeout(function() {
 			if (promise != null) {
-				_processQueue.queueProcess.getActiveCount().promhx()
+				_queue.getActiveCount().promhx()
 					.then(function(count) {
 						if (promise != null) {
 							if (count > 0) {

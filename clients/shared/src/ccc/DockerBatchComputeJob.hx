@@ -7,7 +7,7 @@ import haxe.DynamicAccess;
  * representing the docker job.
  */
 typedef DockerBatchComputeJob = {
-	var jobId :JobId;
+	var id :JobId;
 	var image :DockerImageSource;
 	@:optional var inputs :Array<String>;
 	@:optional var command :Array<String>;

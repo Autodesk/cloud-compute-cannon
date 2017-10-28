@@ -21,6 +21,9 @@ class ScalingServerConfig
 	@NodeProcessVar
 	public static var REDIS_PORT :Int = 6379;
 
+	@NodeProcessVar
+	public static var RUN_TESTS_ON_START :Bool = false;
+
 	public static function toJson() :Dynamic
 	{
 		return {

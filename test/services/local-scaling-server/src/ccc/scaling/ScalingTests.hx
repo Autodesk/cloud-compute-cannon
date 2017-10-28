@@ -399,6 +399,35 @@ class ScalingTests
 			.thenTrue();
 	}
 
+	@timeout(120000)
+	@only
+	public function testServersOnlyWorkersOnly() :Promise<Bool>
+	{
+		var proxy = ccc.compute.client.util.ProxyTools.getProxy(ScalingServerConfig.CCC);
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return killAllWorkers();
+			})
+			//Create a server that doesn't do jobs
+			.pipe(function(_) {
+				return ScalingCommands.createWorker({disableWorker:true, disableServer:false});
+			})
+			//Submit a job, it should be waiting
+			.pipe(function(_) {
+				return createTestJobs(1, 0, 'testServersOnlyWorkersOnly');
+			})
+			.thenWait(1000)
+			.pipe(function(_) {
+				//Check the queue
+				return proxy.getQueues()
+					.then(function(queues) {
+						traceCyan('queues=${queues}');
+						return true;
+					});
+			})
+			.thenTrue();
+	}
+
 	public static function createTestJobs(count :Int, duration :Int, name :String) :Promise<Bool>
 	{
 		function createAndSubmitJob() {

@@ -5,11 +5,11 @@ import haxe.extern.EitherType;
 /**
  * Placed on the Bull queue
  */
-typedef QueueJobDefinition<T:(EitherType<DockerBatchComputeJob,BatchProcessRequestTurboV2>)> = {
+typedef QueueJobDefinition = {
 	var id :JobId;
 	var type :QueueJobDefinitionType;
-	var item :T;
+	var item :EitherType<DockerBatchComputeJob,BatchProcessRequestTurboV2>;
 	var parameters :JobParams;
-	var priority :Bool;
+	@:optional var priority :Bool;
 	var attempt :Int;
 }
