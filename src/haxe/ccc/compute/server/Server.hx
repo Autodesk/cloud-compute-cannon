@@ -176,8 +176,6 @@ class Server
 		injector.map(UrlString, 'localRPCApi').toValue(serverHostRPCAPI);
 	}
 
-
-
 	static function createHttpServer(injector :ServerState)
 	{
 		injector.setStatus(ServerStartupState.StartingHttpServer);
