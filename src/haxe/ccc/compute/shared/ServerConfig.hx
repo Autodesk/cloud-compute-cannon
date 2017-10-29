@@ -11,6 +11,20 @@ class ServerConfig
 	@NodeProcessVar
 	public static var DISABLE_STARTUP_TESTS :Bool = true;
 
+
+	/**
+	 * If true, disables all queue processing logic
+	 * (i.e. no jobs will be run on this process)
+	 * Jobs can still be added.
+	 * This allows separating the servers fronting
+	 * requests from the servers processing jobs.
+	 * This allows a higher degree of security since
+	 * the servers fronting requests then do not need
+	 * to mount the docker host.
+	 */
+	@NodeProcessVar
+	public static var DISABLE_WORKER :Bool = false;
+
 	@NodeProcessVar
 	public static var FLUENT_HOST :String;
 

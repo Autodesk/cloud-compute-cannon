@@ -8,6 +8,7 @@ import js.npm.bluebird.Bluebird;
 
 #if ((nodejs && !macro) && !excludeccc)
 	import ccc.compute.server.cwl.CWLTools;
+	import js.npm.bull.Bull;
 #end
 
 /**
@@ -15,6 +16,21 @@ import js.npm.bluebird.Bluebird;
  */
 class RpcRoutes
 {
+	@rpc({
+		alias:'queues',
+		doc:'Get all bull queues'
+	})
+#if ((nodejs && !macro) && !excludeccc)
+	public function getQueues() :Promise<BullJobCounts>
+	{
+		return QueueTools.getQueueSizes(_injector);
+#else
+	public function getQueues() :Promise<Dynamic>
+	{
+		return Promise.promise(null);
+#end
+	}
+
 	@rpc({
 		alias:'test-jobs',
 		doc:'Get all running test jobs'
@@ -28,27 +44,16 @@ class RpcRoutes
 #end
 	}
 
-	@rpc({
-		alias:'cwl',
-		doc:'Run all server functional tests'
-	})
-	public function workflowRun(git :String, sha :String, cwl :String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
-	{
-#if ((nodejs && !macro) && !excludeccc)
-		return CWLTools.workflowRun(_docker, this, git, sha, cwl, input, inputs);
-#else
-		return Promise.promise(null);
-#end
-	}
 
+//HAVE TO TEMPORARILY DISABLE CWL TO SPLIT SERVER AND WORKER CODE PATHS
 // 	@rpc({
-// 		alias:'cwl-test',
-// 		doc:'Test running a CWL workflow'
+// 		alias:'cwl',
+// 		doc:'Run the CWL workflow in the git repo'
 // 	})
-// 	public function testWorkflow() :Promise<Bool>
+// 	public function workflowRun(git :String, sha :String, cwl :String, input :String, ?inputs :DynamicAccess<String>) :Promise<JobResult>
 // 	{
 // #if ((nodejs && !macro) && !excludeccc)
-// 		return CWLTools.testWorkflow(_injector);
+// 		return CWLTools.workflowRun(_docker, this, git, sha, cwl, input, inputs);
 // #else
 // 		return Promise.promise(null);
 // #end
@@ -565,7 +570,8 @@ class RpcRoutes
 #if ((nodejs && !macro) && !excludeccc)
 	@inject public var _injector :minject.Injector;
 	@inject public var _context :t9.remoting.jsonrpc.Context;
-	@inject public var _docker :Docker;
+	//HAVE TO TEMPORARILY DISABLE CWL TO SPLIT SERVER AND WORKER CODE PATHS
+	// @inject public var _docker :Docker;
 
 	public function new() {}
 

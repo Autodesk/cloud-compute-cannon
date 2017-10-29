@@ -19,7 +19,7 @@ class TestUnit extends haxe.unit.async.PromiseTest
 			workingDir : null,
 			command : ["echo","out52325909"],
 			inputsPath : null,
-			jobId : jobId,
+			id : jobId,
 			image : {
 				value : DOCKER_IMAGE_DEFAULT,
 				type : DockerImageSourceType.Image

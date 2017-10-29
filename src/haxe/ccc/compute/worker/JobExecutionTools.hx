@@ -30,7 +30,7 @@ class JobExecutionTools
 			/* The e.g. S3 URL. Otherwise empty */
 			var externalBaseUrl = fs.getExternalUrl();
 
-			var jobId = job.jobId;
+			var jobId = job.id;
 
 			var log = Log.child({jobId:jobId});
 
