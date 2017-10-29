@@ -7,9 +7,9 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "haxelibs": "docker-compose -f docker-compose.tools.yml run haxelibs",
-    "init": "docker-compose -f docker-compose.tools.yml run haxelibs && docker-compose -f docker-compose.override.yml run node_modules && docker-compose -f docker-compose.tools.yml run compile",
-    "build": "docker-compose -f docker-compose.tools.yml run compile",
+    "haxelibs": "INSTALL=true docker-compose run haxelibs",
+    "init": "npm run haxelibs && INSTALL=true docker-compose run node_modules && docker-compose run compile",
+    "build": "docker-compose run compile",
     "clean": "docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build && rm -rf node_modules",
     "test": "npm run init && npm run test-quick",
     "test-quick": "TEST=true docker-compose run ccc.tests",
