@@ -1,14 +1,11 @@
 package ccc.compute.worker.job.stats;
 
+import util.DateFormatTools;
 /**
  * Values stored here are not removed when the job data is removed, since
  * they are needed for health monitoring etc. This data is only removed
  * via expiring old data.
  */
-// import ccc.compute.worker.job.stats.StatsDefinitions;
-
-import util.DateFormatTools;
-
 @:build(t9.redis.RedisObject.build())
 class JobStatsTools
 {

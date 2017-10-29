@@ -1,7 +1,8 @@
 package ccc.compute.server.execution.routes;
 
-import ccc.compute.worker.ProcessQueue;
+import ccc.compute.worker.QueueJobs;
 import ccc.storage.ServiceStorage;
+import ccc.compute.server.services.queue.QueueTools;
 import ccc.compute.worker.BatchComputeDocker;
 import ccc.compute.worker.BatchComputeDockerTurbo;
 
@@ -49,7 +50,8 @@ class ServiceBatchComputeTools
 
 		var promise = new DeferredPromise<JobResultsTurboV2>();
 
-		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
+		var bullQueue :js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults> = injector.getValue('js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults>');
+		Assert.notNull(bullQueue);
 
 		var jobCompletedHandler;
 		var jobFailedHandler;
@@ -57,8 +59,8 @@ class ServiceBatchComputeTools
 
 		function cleanup() {
 			if (promise != null) {
-				processQueue.queueProcess.removeListener('global:${QueueEvent.Completed}', jobCompletedHandler);
-				processQueue.queueProcess.removeListener('global:${QueueEvent.Failed}', jobFailedHandler);
+				bullQueue.removeListener('global:${QueueEvent.Completed}', jobCompletedHandler);
+				bullQueue.removeListener('global:${QueueEvent.Failed}', jobFailedHandler);
 
 				promise = null;
 			}
@@ -107,11 +109,11 @@ class ServiceBatchComputeTools
 				cleanup();
 			}
 		}
-		processQueue.queueProcess.on('global:${QueueEvent.Completed}', jobCompletedHandler);
-		processQueue.queueProcess.on('global:${QueueEvent.Failed}', jobFailedHandler);
+		bullQueue.on('global:${QueueEvent.Completed}', jobCompletedHandler);
+		bullQueue.on('global:${QueueEvent.Failed}', jobFailedHandler);
 
 		//Add job to the queue
-		var job :QueueJobDefinition<BatchProcessRequestTurboV2> = {
+		var job :QueueJobDefinition = {
 			id: job.id,
 			type: QueueJobDefinitionType.turbo,
 			item: job,
@@ -119,9 +121,11 @@ class ServiceBatchComputeTools
 			parameters: null,
 			attempt: 1
 		}
-		processQueue.add(job);
 
-		return promise.boundPromise;
+		return QueueTools.addJobToQueue(bullQueue, job)
+			.pipe(function(_) {
+				return promise.boundPromise;
+			});
 	}
 
 	public static function runComputeJobRequest(injector :Injector, job :BasicBatchProcessRequest) :Promise<JobResult>
@@ -131,7 +135,7 @@ class ServiceBatchComputeTools
 		}
 
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
+		var processQueue = injector.getValue(ccc.compute.worker.QueueJobs);
 		var redis :RedisClient = injector.getValue(RedisClient);
 
 		var jobId :JobId = null;
@@ -156,7 +160,7 @@ class ServiceBatchComputeTools
 				deleteInputs = inputFilesObj.cancel;
 				var dockerImage :String = job.image == null ? DOCKER_IMAGE_DEFAULT : job.image;
 				var dockerJob :DockerBatchComputeJob = {
-					jobId: jobId,
+					id: jobId,
 					image: {type:DockerImageSourceType.Image, value:dockerImage, pull_options:job.pull_options, optionsCreate:job.createOptions},
 					command: job.cmd,
 					inputs: inputFilesObj.inputs,
@@ -173,7 +177,7 @@ class ServiceBatchComputeTools
 					mountApiServer: job.mountApiServer
 				};
 
-				Log.info({job_submission :dockerJob.jobId}.add(LogEventType.JobSubmitted));
+				Log.info({job_submission :dockerJob.id}.add(LogEventType.JobSubmitted));
 				Log.debug({job_submission :dockerJob});
 
 				if (dockerJob.command != null && untyped __typeof__(dockerJob.command) == 'string') {
@@ -196,7 +200,7 @@ class ServiceBatchComputeTools
 						return inputFilesObj.promise;
 					})
 					.pipe(function(result) {
-						var job :QueueJobDefinition<DockerBatchComputeJob> = {
+						var job :QueueJobDefinition = {
 							id: jobId,
 							type: QueueJobDefinitionType.compute,
 							item: dockerJob,
@@ -245,7 +249,6 @@ class ServiceBatchComputeTools
 	public static function handleMultiformBatchComputeRequest(injector :Injector, req :js.node.http.IncomingMessage, res :js.node.http.ServerResponse, next :?Dynamic->Void) :Void
 	{
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
 		var redis :RedisClient = injector.getValue(RedisClient);
 
 		var returned = false;
@@ -429,7 +432,7 @@ class ServiceBatchComputeTools
 							var parameters :JobParams = jsonrpc.params.parameters == null ? DEFAULT_JOB_PARAMS : jsonrpc.params.parameters;
 							var dockerImage :String = jsonrpc.params.image == null ? DOCKER_IMAGE_DEFAULT : jsonrpc.params.image;
 							var dockerJob :DockerBatchComputeJob = {
-								jobId: jobId,
+								id: jobId,
 								image: {type:DockerImageSourceType.Image, value:dockerImage, pull_options:jsonrpc.params.pull_options, optionsCreate:jsonrpc.params.createOptions},
 								command: jsonrpc.params.cmd,
 								inputs: inputFileNames,
@@ -452,7 +455,7 @@ class ServiceBatchComputeTools
 								throw 'command field must be an array, not a string';
 							}
 
-							var job :QueueJobDefinition<DockerBatchComputeJob> = {
+							var job :QueueJobDefinition = {
 								id: jobId,
 								type: QueueJobDefinitionType.compute,
 								item: dockerJob,
@@ -462,8 +465,7 @@ class ServiceBatchComputeTools
 							}
 							return Promise.promise(true)
 								.pipe(function(_) {
-									processQueue.add(job);
-									return Promise.promise(true);
+									return QueueTools.addJob(injector, job, log);
 								});
 						})
 						.then(function(_) {

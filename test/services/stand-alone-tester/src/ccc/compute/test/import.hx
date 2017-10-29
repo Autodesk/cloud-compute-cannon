@@ -14,7 +14,6 @@ import ccc.compute.shared.provider.*;
 import ccc.compute.shared.ServerConfig;
 import ccc.compute.shared.ServerDefinitions;
 import ccc.WorkerStateRedis;
-import ccc.Definitions;
 import ccc.SharedConstants;
 import ccc.TypedDynamicObject;
 

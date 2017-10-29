@@ -6,7 +6,6 @@ import ccc.compute.shared.ServerConfig;
 import ccc.compute.shared.ServerDefinitions;
 import ccc.Constants.*;
 import ccc.Constants;
-import ccc.Definitions;
 import ccc.SharedConstants;
 
 #if ((nodejs && !macro) && !excludeccc)
@@ -21,12 +20,14 @@ import ccc.SharedConstants;
 	import ccc.compute.server.logs.*;
 	import ccc.compute.server.scaling.*;
 	import ccc.compute.server.services.ServiceMonitorRequest;
+	import ccc.compute.server.services.queue.QueueTools;
 	import ccc.compute.server.tests.*;
 	import ccc.compute.server.util.*;
 	import ccc.compute.server.util.redis.RedisDistributedSetInterval;
 	import ccc.compute.shared.*;
 	import ccc.compute.shared.AbstractLogger;
 	import ccc.compute.shared.Logger;
+	import ccc.compute.worker.QueueJobs;
 	import ccc.compute.worker.job.*;
 	import ccc.compute.worker.job.Jobs;
 	import ccc.compute.worker.job.JobWebSocket;

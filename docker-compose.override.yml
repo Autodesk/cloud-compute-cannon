@@ -13,21 +13,18 @@ services:
     cpu_shares: 1024
     expose:
       - 9000
-    # ports:
-    #   - "9229:9229"
-    # command: ["nodemon", "--inspect", "--debug-brk", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
-    # command: ["nodemon", "--inspect", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    # Extra args for debugging: --inspect, --debug-brk
     command: ["nodemon", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
     links:
       - redis
-      - fluentd
+      # - fluentd
     working_dir: /app
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build/server:/app/server
       - ./clients/dashboard/build:/app/clients/dashboard
       - ./src/web:/app/web
-      - ./ccc-local-storage:/app/ccc-local-storage
+      - ./ccc-local-storage:/app/ccc- local-storage
       - ./package.json:/app/package.json
       - node_modules:/app/node_modules
     environment:
@@ -35,7 +32,7 @@ services:
       - STORAGE_HTTP_PREFIX=http://ccc.local
       - REDIS_HOST=redis
       - VIRTUAL_HOST=ccc.local
-      - FLUENT_HOST=fluentd
+      # - FLUENT_HOST=fluentd
       - LOG_LEVEL=debug
       - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
       - LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7
@@ -133,51 +130,26 @@ services:
     logging:
       driver: none
 
-  fluentd:
-    build: ./etc/log/
-    volumes:
-      - ./etc/log/fluent.elasticsearch.conf:/fluentd/etc/fluent.conf
-    links:
-      - elasticsearch
-    logging:
-      driver: none
-
-  elasticsearch:
-    image: elasticsearch:2.4.5-alpine
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    logging:
-      driver: none
-
-  kibana:
-    image: kibana:4.6.6
-    ports:
-      - "5601:5601"
-    environment:
-      ELASTICSEARCH_URL: "http://elasticsearch:9200"
-    links:
-      - elasticsearch
-    logging:
-      driver: none
-
   # Simply installs npm modules into a persistent docker volume
   # for efficiency. Used by reloaders, not the main app
+  # Only installs modules if INSTALL=true|1
   node_modules:
     image: dionjwa/node_modules
     working_dir: /app
-    command: ["npm", "i"]
+    # Only install node modules if INSTALL=true or INSTALLL=1
+    command: ["/bin/sh", "-c", 'if [ "x${INSTALL}" = "xtrue" ] | [ "x${INSTALL}" = "x1" ]; then npm i; fi']
     volumes:
       - node_modules:/app/node_modules
       - ./package.json:/app/package.json
     logging:
       driver: none
 
+  # Only installs if INSTALL=true|1
   haxelibs:
     image: dionjwa/haxe-watch:v0.7.3
-    command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
+    # Only install haxe modules if INSTALL=true or INSTALLL=1
+    command: ["/bin/sh", "-c", 'if [ "x${INSTALL}" = "xtrue" ] | [ "x${INSTALL}" = "x1" ]; then haxelib install --always etc/hxml/build-all.hxml; fi']
+    # command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
     working_dir: /app
     volumes:
       - ./.haxelib:/app/.haxelib
@@ -185,6 +157,8 @@ services:
       - ./clients:/app/clients
       - ./test:/app/test
 
+
+  #This will always run on startup. There's no reason why it should't
   compile:
     image: dionjwa/haxe-watch:v0.7.3
     command: ["haxe", "etc/hxml/build-all.hxml"]
@@ -197,6 +171,36 @@ services:
       - ./etc:/app/etc
       - ./clients:/app/clients
       - ./test:/app/test
+
+  # fluentd:
+  #   build: ./etc/log/
+  #   volumes:
+  #     - ./etc/log/fluent.elasticsearch.conf:/fluentd/etc/fluent.conf
+  #   links:
+  #     - elasticsearch
+  #   logging:
+  #     driver: none
+
+  # elasticsearch:
+  #   image: elasticsearch:2.4.5-alpine
+  #   ports:
+  #     - "9200:9200"
+  #     - "9300:9300"
+  #   volumes:
+  #     - elasticsearch_data:/usr/share/elasticsearch/data
+  #   logging:
+  #     driver: none
+
+  # kibana:
+  #   image: kibana:4.6.6
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  #   links:
+  #     - elasticsearch
+  #   logging:
+  #     driver: none
 
   # Watches code changes for the ccc-scaling-server and recompiles the code
   # watch-compiler-ccc-scaling-server:
