@@ -99,7 +99,7 @@ class QueueJobs
 
 	public function getQueues() :Promise<BullJobCounts>
 	{
-		return queueAdd.getJobCounts().promhx();
+		return QueueTools.getQueueSizes(_injector);
 	}
 
 	/**

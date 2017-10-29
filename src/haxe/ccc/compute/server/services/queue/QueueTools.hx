@@ -20,6 +20,22 @@ class QueueTools
 		injector.map('js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults>').toValue(queue);
 	}
 
+	public static function getQueue(injector :Injector) :Queue<QueueJobDefinition,QueueJobResults>
+	{
+		return injector.getValue('js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults>');
+	}
+
+	public static function getQueueSizes(injector :Injector) :Promise<BullJobCounts>
+	{
+		return getQueue(injector).getJobCounts().promhx();
+	}
+
+	public static function addJob(injector :Injector, job :QueueJobDefinition, ?log :AbstractLogger) :Promise<Bool>
+	{
+		var queue = getQueue(injector);
+		return addJobToQueue(queue, job, log);
+	}
+
 	public static function addJobToQueue(queue :Queue<QueueJobDefinition, QueueJobResults>, job :QueueJobDefinition, ?log :AbstractLogger) :Promise<Bool>
 	{
 		log = log == null ? Log.log : log;

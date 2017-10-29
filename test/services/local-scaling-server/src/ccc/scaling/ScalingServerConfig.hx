@@ -21,16 +21,18 @@ class ScalingServerConfig
 	@NodeProcessVar
 	public static var REDIS_PORT :Int = 6379;
 
-	@NodeProcessVar
-	public static var RUN_TESTS_ON_START :Bool = false;
+	// @NodeProcessVar
+	public static var RUN_TESTS_ON_START :Bool = true;
 
 	public static function toJson() :Dynamic
 	{
 		return {
+			'CCC': CCC,
+			'LOG_LEVEL': LOG_LEVEL,
 			'PORT': PORT,
 			'REDIS_HOST': REDIS_HOST,
 			'REDIS_PORT': REDIS_PORT,
-			'CCC': CCC,
+			'RUN_TESTS_ON_START': RUN_TESTS_ON_START,
 		};
 	}
 }

@@ -1,5 +1,7 @@
 package ccc.scaling;
 
+import js.npm.bull.Bull;
+
 import haxe.unit.async.PromiseTest;
 import haxe.unit.async.PromiseTestRunner;
 
@@ -403,7 +405,8 @@ class ScalingTests
 	@only
 	public function testServersOnlyWorkersOnly() :Promise<Bool>
 	{
-		var proxy = ccc.compute.client.util.ProxyTools.getProxy(ScalingServerConfig.CCC);
+		var rpcUrl = '${ScalingServerConfig.CCC}/${Type.enumConstructor(CCCVersion.v1)}';
+		var proxy = ccc.compute.client.util.ProxyTools.getProxy(rpcUrl);
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return killAllWorkers();
@@ -420,8 +423,23 @@ class ScalingTests
 			.pipe(function(_) {
 				//Check the queue
 				return proxy.getQueues()
-					.then(function(queues) {
+					.then(function(queues :BullJobCounts) {
 						traceCyan('queues=${queues}');
+						assertEquals(queues.waiting, 1);
+						return true;
+					});
+			})
+			//Create a worker that CAN process jobs
+			.pipe(function(_) {
+				return ScalingCommands.createWorker({disableWorker:false, disableServer:true});
+			})
+			.thenWait(1000)
+			.pipe(function(_) {
+				//Check the queue
+				return proxy.getQueues()
+					.then(function(queues :BullJobCounts) {
+						traceCyan('queues=${queues}');
+						assertEquals(queues.waiting, 0);
 						return true;
 					});
 			})

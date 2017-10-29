@@ -249,7 +249,6 @@ class ServiceBatchComputeTools
 	public static function handleMultiformBatchComputeRequest(injector :Injector, req :js.node.http.IncomingMessage, res :js.node.http.ServerResponse, next :?Dynamic->Void) :Void
 	{
 		var fs :ServiceStorage = injector.getValue(ServiceStorage);
-		var processQueue :QueueJobs = injector.getValue(QueueJobs);
 		var redis :RedisClient = injector.getValue(RedisClient);
 
 		var returned = false;
@@ -466,8 +465,7 @@ class ServiceBatchComputeTools
 							}
 							return Promise.promise(true)
 								.pipe(function(_) {
-									processQueue.add(job);
-									return Promise.promise(true);
+									return QueueTools.addJob(injector, job, log);
 								});
 						})
 						.then(function(_) {
