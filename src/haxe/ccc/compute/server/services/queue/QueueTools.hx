@@ -20,6 +20,37 @@ class QueueTools
 		injector.map('js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults>').toValue(queue);
 	}
 
+	public static function addJobToQueue(queue :Queue<QueueJobDefinition, QueueJobResults>, job :QueueJobDefinition, ?log :AbstractLogger) :Promise<Bool>
+	{
+		log = log == null ? Log.log : log;
+		job.attempt = 1;
+		return switch(job.type) {
+			case compute:
+				Promise.promise(true)
+					.pipe(function(_) {
+						var def :DockerBatchComputeJob = job.item;
+						log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
+
+						return Promise.whenAll([
+							Jobs.setJob(job.id, job.item),
+							Jobs.setJobParameters(job.id, job.parameters),
+							JobStatsTools.jobEnqueued(job.id, job.item)
+								.thenTrue()
+						]);
+					})
+					.then(function(_) {
+						queue.add(job, {jobId:job.id, priority:(job.priority ? 1 : 1000), removeOnComplete:true, removeOnFail:true});
+						return true;
+					});
+			case turbo:
+				var def :BatchProcessRequestTurboV2 = job.item;
+				log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
+				var maxTime = 300000;//5 minutes max
+				queue.add(job, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
+				Promise.promise(true);
+		}
+	}
+
 	public static function addBullDashboard(injector :Injector)
 	{
 		var redisHost :String = ServerConfig.REDIS_HOST;

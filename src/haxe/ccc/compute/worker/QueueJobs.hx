@@ -3,6 +3,7 @@ package ccc.compute.worker;
 import haxe.extern.EitherType;
 
 import ccc.storage.ServiceStorage;
+import ccc.compute.server.services.queue.QueueTools;
 
 import js.npm.bull.Bull;
 
@@ -108,34 +109,39 @@ class QueueJobs
 	 */
 	public function add(job :QueueJobDefinition) :Promise<Bool>
 	{
-		job.attempt = 1;
-		return switch(job.type) {
-			case compute:
-				Promise.promise(true)
-					.pipe(function(_) {
-						var def :DockerBatchComputeJob = job.item;
-						log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
-
-						return Promise.whenAll([
-							Jobs.setJob(job.id, job.item),
-							Jobs.setJobParameters(job.id, job.parameters),
-							JobStatsTools.jobEnqueued(job.id, job.item)
-								.thenTrue()
-						]);
-					})
-					.then(function(_) {
-						queueAdd.add(job, {jobId:job.id, priority:(job.priority ? 1 : 1000), removeOnComplete:true, removeOnFail:true});
-						postQueueSize();
-						return true;
-					});
-			case turbo:
-				var def :BatchProcessRequestTurboV2 = job.item;
-				log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
-				var maxTime = 300000;//5 minutes max
-				queueAdd.add(job, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
+		return QueueTools.addJobToQueue(queueAdd, job, log)
+			.then(function(_) {
 				postQueueSize();
-				Promise.promise(true);
-		}
+				return true;
+			});
+		// job.attempt = 1;
+		// return switch(job.type) {
+		// 	case compute:
+		// 		Promise.promise(true)
+		// 			.pipe(function(_) {
+		// 				var def :DockerBatchComputeJob = job.item;
+		// 				log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
+
+		// 				return Promise.whenAll([
+		// 					Jobs.setJob(job.id, job.item),
+		// 					Jobs.setJobParameters(job.id, job.parameters),
+		// 					JobStatsTools.jobEnqueued(job.id, job.item)
+		// 						.thenTrue()
+		// 				]);
+		// 			})
+		// 			.then(function(_) {
+		// 				queueAdd.add(job, {jobId:job.id, priority:(job.priority ? 1 : 1000), removeOnComplete:true, removeOnFail:true});
+		// 				postQueueSize();
+		// 				return true;
+		// 			});
+		// 	case turbo:
+		// 		var def :BatchProcessRequestTurboV2 = job.item;
+		// 		log.info(LogFieldUtil.addJobEvent({jobId:job.id, attempt:1, type:job.type, message:'via ProcessQueue', meta: def.meta}, JobEventType.ENQUEUED));
+		// 		var maxTime = 300000;//5 minutes max
+		// 		queueAdd.add(job, {jobId:job.id, priority:1, removeOnComplete:true, removeOnFail:true, timeout:maxTime});
+		// 		postQueueSize();
+		// 		Promise.promise(true);
+		// }
 	}
 
 	public function cancel(jobId :JobId) :Promise<Bool>

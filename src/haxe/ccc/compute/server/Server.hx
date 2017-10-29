@@ -70,12 +70,6 @@ class Server
 		//mounted in the base dir, and those modules are for
 		//a different OS
 		Node.require('dotenv').config({path: './config/.env', silent: true});
-
-		//Sanity checks
-		if (util.DockerTools.isInsideContainer() && !ConnectionToolsDocker.isLocalDockerHost()) {
-			Log.critical('/var/run/docker.sock is not mounted and the server is in a container. How does the server call docker commands?');
-			js.Node.process.exit(-1);
-		}
 	}
 
 	static function initLogging(injector :ServerState)
@@ -163,6 +157,7 @@ class Server
 
 		/* Workers */
 		if (!ServerConfig.DISABLE_WORKER) {
+			Log.debug('This is a worker: mounting /var/run/docker.sock');
 			injector.map(Docker).toValue(new Docker({socketPath:'/var/run/docker.sock'}));
 
 			var workerInternalState :WorkerStateInternal = {
@@ -268,6 +263,7 @@ class Server
 
 	static function initWorker(injector :ServerState) :Promise<Bool>
 	{
+		traceYellow('INITIALZING WORKER');
 		var workerManager = new ccc.compute.worker.WorkerStateManager();
 		injector.map(ccc.compute.worker.WorkerStateManager).toValue(workerManager);
 		injector.injectInto(workerManager);
@@ -315,6 +311,7 @@ class Server
 			})
 			.pipe(function(_) {
 				injector.setStatus(ServerStartupState.BuildingServices);
+				traceYellow('DISABLE_WORKER=${ServerConfig.DISABLE_WORKER}');
 				if (!ServerConfig.DISABLE_WORKER) {
 					return initWorker(injector);
 				} else {
@@ -396,14 +393,12 @@ class Server
 
 	static function mapEnvVars(injector :Injector)
 	{
-		traceGreen('Mapping ${ServerConfig.REDIS_HOST} to injector REDIS_HOST');
 		//Docker links can set the REDIS_PORT to the full url. Need to check for this.
 		var port :Int = if (ServerConfig.REDIS_PORT == null) {
 			6379;
 		} else {
 			ServerConfig.REDIS_PORT;
 		}
-		traceGreen('Mapping ${port} to injector REDIS_PORT');
 		injector.map(String, 'REDIS_HOST').toValue(ServerConfig.REDIS_HOST);
 		injector.map(Int, 'REDIS_PORT').toValue(port);
 	}

@@ -7,8 +7,7 @@ etc/hxml/base-nodejs.hxml
 
 -debug
 
-# -resource package.json@package.json
--resource package.json@../../package.json
+-resource package.json@package.json
 
 -main ccc.compute.server.Server
 

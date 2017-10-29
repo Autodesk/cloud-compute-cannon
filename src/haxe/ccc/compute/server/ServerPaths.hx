@@ -32,11 +32,11 @@ class ServerPaths
 		var app = Express.GetApplication();
 		injector.map(Application).toValue(app);
 
+		app.use(Node.require('express-bunyan-logger')());
+
 		var cors = Node.require('cors')();
 		app.options('*', cors);
 		app.use(cors);
-
-		// app.use(Node.require('express-bunyan-logger')());
 
 		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
@@ -50,6 +50,8 @@ class ServerPaths
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);
 		});
+
+		QueueTools.addBullDashboard(injector);
 
 		function test(req, res) {
 			var monitorService = injector.getValue(ServiceMonitorRequest);

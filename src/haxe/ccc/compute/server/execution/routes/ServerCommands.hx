@@ -179,7 +179,7 @@ class ServerCommands
 		var npmPackageVersion = null;
 		try {
 			npmPackageVersion = Json.parse(Resource.getString('package.json')).version;
-		}
+		} catch(e :Dynamic) {}
 		var gitSha = null;
 		try {
 			gitSha = Version.getGitCommitHash().substr(0,8);

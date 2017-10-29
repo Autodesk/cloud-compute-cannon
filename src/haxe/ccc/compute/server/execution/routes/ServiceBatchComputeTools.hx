@@ -2,6 +2,7 @@ package ccc.compute.server.execution.routes;
 
 import ccc.compute.worker.QueueJobs;
 import ccc.storage.ServiceStorage;
+import ccc.compute.server.services.queue.QueueTools;
 import ccc.compute.worker.BatchComputeDocker;
 import ccc.compute.worker.BatchComputeDockerTurbo;
 
@@ -49,7 +50,8 @@ class ServiceBatchComputeTools
 
 		var promise = new DeferredPromise<JobResultsTurboV2>();
 
-		var processQueue :QueueJobs = injector.getValue(ccc.compute.worker.QueueJobs);
+		var bullQueue :js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults> = injector.getValue('js.npm.bull.Queue<ccc.QueueJobDefinition, ccc.compute.worker.QueueJobResults>');
+		Assert.notNull(bullQueue);
 
 		var jobCompletedHandler;
 		var jobFailedHandler;
@@ -57,8 +59,8 @@ class ServiceBatchComputeTools
 
 		function cleanup() {
 			if (promise != null) {
-				processQueue.queueProcess.removeListener('global:${QueueEvent.Completed}', jobCompletedHandler);
-				processQueue.queueProcess.removeListener('global:${QueueEvent.Failed}', jobFailedHandler);
+				bullQueue.removeListener('global:${QueueEvent.Completed}', jobCompletedHandler);
+				bullQueue.removeListener('global:${QueueEvent.Failed}', jobFailedHandler);
 
 				promise = null;
 			}
@@ -107,8 +109,8 @@ class ServiceBatchComputeTools
 				cleanup();
 			}
 		}
-		processQueue.queueProcess.on('global:${QueueEvent.Completed}', jobCompletedHandler);
-		processQueue.queueProcess.on('global:${QueueEvent.Failed}', jobFailedHandler);
+		bullQueue.on('global:${QueueEvent.Completed}', jobCompletedHandler);
+		bullQueue.on('global:${QueueEvent.Failed}', jobFailedHandler);
 
 		//Add job to the queue
 		var job :QueueJobDefinition = {
@@ -119,9 +121,11 @@ class ServiceBatchComputeTools
 			parameters: null,
 			attempt: 1
 		}
-		processQueue.add(job);
 
-		return promise.boundPromise;
+		return QueueTools.addJobToQueue(bullQueue, job)
+			.pipe(function(_) {
+				return promise.boundPromise;
+			});
 	}
 
 	public static function runComputeJobRequest(injector :Injector, job :BasicBatchProcessRequest) :Promise<JobResult>
