@@ -402,7 +402,6 @@ class ScalingTests
 	}
 
 	@timeout(120000)
-	@only
 	public function testServersOnlyWorkersOnly() :Promise<Bool>
 	{
 		var rpcUrl = '${ScalingServerConfig.CCC}/${Type.enumConstructor(CCCVersion.v1)}';
@@ -424,7 +423,6 @@ class ScalingTests
 				//Check the queue
 				return proxy.getQueues()
 					.then(function(queues :BullJobCounts) {
-						traceCyan('queues=${queues}');
 						assertEquals(queues.waiting, 1);
 						return true;
 					});
@@ -433,12 +431,12 @@ class ScalingTests
 			.pipe(function(_) {
 				return ScalingCommands.createWorker({disableWorker:false, disableServer:true});
 			})
-			.thenWait(1000)
+			//Leave enough time for the worker to start and consume the job
+			.thenWait(4000)
 			.pipe(function(_) {
 				//Check the queue
 				return proxy.getQueues()
 					.then(function(queues :BullJobCounts) {
-						traceCyan('queues=${queues}');
 						assertEquals(queues.waiting, 0);
 						return true;
 					});
