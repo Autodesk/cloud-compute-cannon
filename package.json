@@ -7,17 +7,10 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-<<<<<<< HEAD
-    "haxelibs": "INSTALL=true docker-compose run haxelibs",
-    "init": "npm run haxelibs && INSTALL=true docker-compose run node_modules && docker-compose run compile",
+    "haxelibs": "INSTALL=true docker-compose up haxelibs",
+    "node_modules": "INSTALL=true docker-compose up node_modules",
     "build": "docker-compose run compile",
     "clean": "docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build && rm -rf node_modules",
-=======
-    "haxelibs": "docker-compose run haxelibs",
-    "init": "docker-compose run haxelibs && docker-compose run node_modules && docker-compose run compile",
-    "build": "docker-compose run compile",
-    "clean": "docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build",
->>>>>>> 6c8f6e5... wip
     "test": "npm run init && npm run test-quick",
     "test-quick": "TEST=true docker-compose run ccc.tests",
     "test-scaling": "TEST_SCALING=true docker-compose run ccc.tests",
