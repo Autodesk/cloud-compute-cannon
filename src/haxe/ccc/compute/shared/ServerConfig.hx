@@ -45,15 +45,33 @@ class ServerConfig
 	@NodeProcessVar
 	public static var HOST :String = 'http://ccc.local';
 
+	/**
+	 * Bunyan log level (trace|debug|info|warn|error|critical)
+	 */
 	@NodeProcessVar
 	public static var LOG_LEVEL :String = 'info';
 
+	/**
+	 * If you want to completely disable all logging.
+	 */
 	@NodeProcessVar
 	public static var LOGGING_DISABLE :Bool = false;
 
+	/**
+	 * The maximum number of times a job will be retried
+	 * after failures before giving up. NB: if a job returns
+	 * a non-zero exit code, this can still be considered
+	 * a successful job. The kinds of job failures that
+	 * trigger this specified restart are system failures.
+	 */
 	@NodeProcessVar
 	public static var JOB_MAX_ATTEMPTS :Int = 5;
 
+	/**
+	 * The default maximum time allowed for a turbo job
+	 * (excluded time needed for downloading the docker
+	 * image on the worker).
+	 */
 	@NodeProcessVar
 	public static var JOB_TURBO_MAX_TIME_SECONDS :Int = 300;
 
@@ -72,6 +90,9 @@ class ServerConfig
 	@NodeProcessVar
 	public static var MONITOR_TIMEOUT_SECONDS :Int = 30;
 
+	/**
+	 * The server process listen port. You won't ever need to change this.
+	 */
 	@NodeProcessVar
 	public static var PORT :Int = 9000;
 
@@ -81,11 +102,11 @@ class ServerConfig
 	@NodeProcessVar
 	public static var REDIS_PORT :Int = 6379;
 
+	/**
+	 * This needs to be better documented. Local development only.
+	 */
 	@NodeProcessVar
 	public static var STORAGE_HTTP_PREFIX :String = 'http://ccc.local';
-
-	@NodeProcessVar
-	public static var TRAVIS :Bool = false;
 
 	/**
 	 * The interval where workers report their health status to redis
@@ -93,7 +114,7 @@ class ServerConfig
 	@NodeProcessVar
 	public static var WORKER_STATUS_CHECK_INTERVAL_SECONDS :Int = 20;
 
-	//Statics
+	//Statics. You don't need to change these unless you're developing.
 	inline public static var INJECTOR_REDIS_SUBSCRIBE :String = 'REDIS_SUBSCRIBE';
 	inline public static var REDIS_PREFIX :String = 'ccc::';
 
@@ -109,7 +130,6 @@ class ServerConfig
 			'REDIS_HOST': REDIS_HOST,
 			'REDIS_PORT': REDIS_PORT,
 			'STORAGE_HTTP_PREFIX': STORAGE_HTTP_PREFIX,
-			'TRAVIS': TRAVIS,
 			'WORKER_STATUS_CHECK_INTERVAL_SECONDS': WORKER_STATUS_CHECK_INTERVAL_SECONDS,
 		};
 	}
