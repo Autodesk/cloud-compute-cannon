@@ -7,6 +7,7 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
+    "init": "npm run haxelibs && npm run node_modules && npm run build",
     "haxelibs": "INSTALL=true docker-compose up haxelibs",
     "node_modules": "INSTALL=true docker-compose up node_modules",
     "build": "docker-compose run compile",

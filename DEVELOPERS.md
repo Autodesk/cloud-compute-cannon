@@ -6,11 +6,12 @@
 Run these once:
 
 	1. Install [docker](https://docs.docker.com/engine/installation/).
+	2. OPTIONAL: Install [node.js/npm](https://nodejs.org/en/download/).
 	2. `git clone git@github.com:dionjwa/cloud-compute-cannon.git` (or your fork)
 	3. `cd cloud-compute-cannon`
-	4. `INSTALL=true docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile`
+	4. `INSTALL=true docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile` (OR if you have node.js+npm installed: `npm run init`)
 
-Then you can run the stack with:
+Then you can start the stack with:
 
 	docker-compose up
 
@@ -60,3 +61,7 @@ These tests run in Travis CI on every pull request.
 	TEST_SCALING=true docker-compose run ccc.tests
 
 These have problems on Travis CI so are only run locally.
+
+### Postman tests and example requests
+
+TODO:
