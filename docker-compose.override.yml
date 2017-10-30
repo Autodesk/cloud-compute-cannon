@@ -35,7 +35,6 @@ services:
       # - FLUENT_HOST=fluentd
       - LOG_LEVEL=debug
       - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
-      - LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7
     labels:
       ccc.type: "worker"
       ccc.origin: "docker-compose"

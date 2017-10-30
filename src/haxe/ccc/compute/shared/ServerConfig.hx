@@ -5,12 +5,13 @@ import ccc.compute.shared.provider.CloudProviderType;
 @:build(util.NodejsMacros.addProcessEnvVars())
 class ServerConfig
 {
+	/**
+	 * Currently supported values:
+	 *  - local (default, a local stack running in docker-compose)
+	 *  - aws (Amazon Web Services)
+	 */
 	@NodeProcessVar
 	public static var CLOUD_PROVIDER_TYPE :CloudProviderType = 'local';
-
-	@NodeProcessVar
-	public static var DISABLE_STARTUP_TESTS :Bool = true;
-
 
 	/**
 	 * If true, disables all queue processing logic
@@ -25,17 +26,24 @@ class ServerConfig
 	@NodeProcessVar
 	public static var DISABLE_WORKER :Bool = false;
 
+	/**
+	 * The host for the fluent log aggregator. If this
+	 * is not set, fluent logs will not be sent
+	 */
 	@NodeProcessVar
 	public static var FLUENT_HOST :String;
 
 	@NodeProcessVar
 	public static var FLUENT_PORT :Int = 24225;
 
+	/**
+	 * Used only when CLOUD_PROVIDER_TYPE=local
+	 * The default allows the nginx reverse proxy
+	 * to automatically route requests to ccc
+	 * servers for newly created ccc containers.
+	 */
 	@NodeProcessVar
 	public static var HOST :String = 'http://ccc.local';
-
-	@NodeProcessVar
-	public static var LOADER_IO_TOKEN :String;
 
 	@NodeProcessVar
 	public static var LOG_LEVEL :String = 'info';
@@ -93,7 +101,6 @@ class ServerConfig
 	{
 		return {
 			'CLOUD_PROVIDER_TYPE': CLOUD_PROVIDER_TYPE,
-			'DISABLE_STARTUP_TESTS': DISABLE_STARTUP_TESTS,
 			'FLUENT_HOST': FLUENT_HOST,
 			'FLUENT_PORT': FLUENT_PORT,
 			'HOST': HOST,
