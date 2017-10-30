@@ -143,8 +143,8 @@ services:
     volumes:
       - node_modules:/app/node_modules
       - ./package.json:/app/package.json
-    logging:
-      driver: none
+    # logging:
+    #   driver: none
 
   # Only installs if INSTALL=true|1
   haxelibs:
