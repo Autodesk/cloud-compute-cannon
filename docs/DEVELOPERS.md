@@ -45,7 +45,7 @@ This will compile everything. This is a pretty slow way to developer, but it's t
 
 To compile only the server:
 
-	`npm run set-build:server`
+	npm run set-build:server
 
 This modifies the file `build.hxml` in the project root. This file is the default used by haxe IDE/editor plugins (although it can also be changed).
 
@@ -53,13 +53,13 @@ See other options run `npm run | grep set-build`
 
 ## Running tests
 
-	`./bin/test`
+	./bin/test
 
 These tests run in Travis CI on every pull request.
 
 ### Running scaling tests
 
-	`./bin/test-scaling`
+	./bin/test-scaling
 
 These have problems on Travis CI so are only run locally (due to timing issues, Travis CI machines are quite slow).
 
