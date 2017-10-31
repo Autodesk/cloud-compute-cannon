@@ -1,7 +1,4 @@
-
-## CCC process environment variables (env vars):
-
-[Environment variables](../src/haxe/ccc/compute/shared/ServerConfig.hx)
+[Environment variables that configure the application](../src/haxe/ccc/compute/shared/ServerConfig.hx)
 
 ## Deployment
 
