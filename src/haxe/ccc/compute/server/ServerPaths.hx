@@ -40,10 +40,14 @@ class ServerPaths
 
 		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
-		// Load testing: https://loader.io/
-		var loaderIOToken = ServerConfig.LOADER_IO_TOKEN;
-		app.get('/${loaderIOToken}.txt', function(req, res) {
-			res.send(loaderIOToken);
+		//Serve metapages dashboards
+		var indexPage = new haxe.Template(sys.io.File.getContent('./web/index-template.html')).execute(ServerConfig);
+		app.get('/', function(req, res) {
+			res.send(indexPage);
+		});
+
+		app.get('/index.* ', function(req, res) {
+			res.send(indexPage);
 		});
 
 		app.get('/version', function(req, res) {

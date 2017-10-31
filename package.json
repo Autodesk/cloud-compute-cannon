@@ -7,8 +7,10 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "haxelibs": "INSTALL=true docker-compose run haxelibs",
-    "init": "npm run haxelibs && INSTALL=true docker-compose run node_modules && docker-compose run compile",
+    "init": "npm run haxelibs && npm run node_modules && npm run build",
+    "haxelibs": "INSTALL=true docker-compose up haxelibs",
+    "node_modules": "INSTALL=true docker-compose up node_modules",
+    "preview-github-docs": "docker run -it --rm -p 8081:8081 -v ${PWD}:/data -v ~/.grip:/.grip mbentley/grip --context=dionjwa/cloud-compute-cannon README.md 0.0.0.0:8081",
     "build": "docker-compose run compile",
     "clean": "docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build && rm -rf node_modules",
     "test": "npm run init && npm run test-quick",
