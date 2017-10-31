@@ -1,18 +1,19 @@
 #Builds ALL haxe projects, apps, client libraries, etc
 
--cmd echo "Building server"
---next
+# -cmd echo "Building server"
+# --next
 etc/hxml/server-build.hxml
 
--cmd echo "Building server-tester"
---next
-test/services/stand-alone-tester/build.hxml
+# -cmd echo "Building server-tester"
+# --next
+# test/services/stand-alone-tester/build.hxml
 
--cmd echo "Building test scaling server"
---next
-test/services/local-scaling-server/build.hxml
+# -cmd echo "Building test scaling server"
+# --next
+# test/services/local-scaling-server/build.hxml
 
--cmd echo "Building autoscaling lambdas"
---next
-etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml
+# -cmd echo "Building autoscaling lambdas"
+# --next
+# etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml
+
 

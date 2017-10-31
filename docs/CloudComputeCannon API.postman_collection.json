@@ -1,0 +1,128 @@
+{
+	"variables": [],
+	"info": {
+		"name": "CloudComputeCannon API",
+		"_postman_id": "dc1f6ae0-4b53-56d7-74cc-98944efff2b2",
+		"description": "A collection of API calls showing common usage of the cloud-compute-cannon API.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/v1/runturbojson",
+			"request": {
+				"url": "http://localhost:8080/v1/runturbojson",
+				"method": "POST",
+				"header": [
+					{
+						"key": "content-type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Host",
+						"value": "ccc.local",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"job\": {\n    \"CreateContainerOptions\": {\n      \"Image\": \"docker.io/dionjwa/gslc:1a5fe0e6\",\n      \"Cmd\": [\n        \"/bin/sh\",\n        \"/inputs/script.sh\"\n      ],\n      \"EntryPoint\": []\n    },\n    \"inputs\": {\n      \"script.sh\": \"\\n#!/usr/bin/env sh\\nmkdir /outputs\\nmono /gslc/bin/Gslc.exe --lib /gslc/gslc_lib --flat /outputs/gslOutFlat.txt --json /outputs/gslOut.json --primers /outputs/gslOut.primers.txt --ape /outputs gslOut --cm /outputs gslOut /inputs/project.gsl\\n\",\n      \"project.gsl\": \"#refgenome S288C\\n#name NewGSLConstruct\\n#stitch\\nuHO; !pTDH3 ; mERG10 ; dHO\"\n    },\n    \"parameters\": {\n      \"maxDuration\": 3000\n    },\n    \"meta\": {\n      \"projectId\": \"project-a746da53-a17f-42e8-8ad1-cd2cf74b3ca5\"\n    }\n  }\n}"
+				},
+				"description": "Run a \"turbo\" job. \"Turbo\" means that data will not be persisted (to e.g. S3), and that the request only returns when the job is done. Designed for jobs where response time is paramount, or when computes are cheap and storage is not required."
+			},
+			"response": []
+		},
+		{
+			"name": "/v1/runturbojsonv2",
+			"request": {
+				"url": "http://ccc.local:8080/v1/runturbojsonv2",
+				"method": "POST",
+				"header": [
+					{
+						"key": "content-type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Host",
+						"value": "ccc.local",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"job\":\n\t{ \"CreateContainerOptions\":\n   { \"Image\": \"docker.io/dionjwa/gslc:1a5fe0e6\",\n     \"Cmd\": [ \"/bin/sh\", \"/inputs/script.sh\" ],\n     \"EntryPoint\": [] },\n  \"inputs\": [\n  \t{\n  \t\t\"name\":\"script.sh\",\n  \t\t\"value\": \"\\n#!/usr/bin/env sh\\nmkdir /outputs\\nmono /gslc/bin/Gslc.exe --lib /gslc/gslc_lib --flat /outputs/gslOutFlat.txt --json /outputs/gslOut.json --primers /outputs/gslOut.primers.txt --ape /outputs gslOut --cm /outputs gslOut /inputs/project.gsl\\n\"\n  \t},\n  \t{\n  \t\t\"name\":\"project.gsl\",\n  \t\t\"value\": \"#refgenome S288C\\n#name NewGSLConstruct\\n#stitch\\nuHO; !pTDH3 ; mERG10 ; dHO\"\n  \t}\n  ],\n  \"parameters\": { \"maxDuration\": 3000 },\n  \"meta\": { \"projectId\": \n  \"project-a746da53-a17f-42e8-8ad1-cd2cf74b3ca5\" } }\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "/version",
+			"request": {
+				"url": "http://localhost:8080/version",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "/v1 (Regular job submission)",
+			"request": {
+				"url": "http://localhost:8080/v1",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Host",
+						"value": "ccc.local",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"jsonrpc\": \"2.0\",\n\t\"id\": \"_\",\n\t\"method\": \"run\",\n\t\"params\": {\n\t\t\"job\": {\n\t\t  \"wait\": true,\n\t\t  \"image\": \"busybox:latest\",\n\t\t  \"command\": [\n\t\t    \"ls\",\n\t\t    \"/inputs\"\n\t\t  ],\n\t\t  \"inputs\": [\n\t\t  \t{\n\t\t  \t\t\"name\": \"input.json\",\n\t\t  \t\t\"value\": \"foo\"\n\t\t  \t}\n\t\t  ],\n\t\t  \"inputsPath\": \"/inputs\",\n\t\t  \"parameters\": {\n\t\t    \"maxDuration\": 600,\n\t\t    \"cpus\": 1\n\t\t  }\n\t\t}\n\t}\n}"
+				},
+				"description": "Adds a persisted job to the queue. "
+			},
+			"response": []
+		},
+		{
+			"name": "/v1 (queues)",
+			"request": {
+				"url": "http://localhost:8080/v1",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": \"1\",\n  \"method\": \"ccc.compute.server.execution.routes.RpcRoutes.getQueues\",\n  \"params\": {},\n  \"jsonrpc\": \"2.0\"\n}"
+				},
+				"description": "Gets the job queue state"
+			},
+			"response": []
+		},
+		{
+			"name": "/v1/queues",
+			"request": {
+				"url": "http://localhost:8080/v1/queues",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": "Lists counts of bull job queues."
+			},
+			"response": []
+		}
+	]
+}

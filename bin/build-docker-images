@@ -24,7 +24,7 @@ REPO_NAME="cloud-compute-cannon:$GIT_TAG"
 BUILD_DIR=build/docker
 mkdir -p $BUILD_DIR/etc
 cp -r build/server $BUILD_DIR/
-cp -r src/web $BUILD_DIR/
+cp -r build/web $BUILD_DIR/
 cp -r etc/docker/Dockerfile $BUILD_DIR/
 SINGLE_SERVER_BUILD_DIR=$BUILD_DIR/etc/docker-compose/single-server
 mkdir -p $SINGLE_SERVER_BUILD_DIR

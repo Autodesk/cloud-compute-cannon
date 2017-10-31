@@ -40,6 +40,16 @@ class ServerPaths
 
 		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
+		//Serve metapages dashboards
+		var indexPage = new haxe.Template(sys.io.File.getContent('./web/index-template.html')).execute(ServerConfig);
+		app.get('/', function(req, res) {
+			res.send(indexPage);
+		});
+
+		app.get('/index.* ', function(req, res) {
+			res.send(indexPage);
+		});
+
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);

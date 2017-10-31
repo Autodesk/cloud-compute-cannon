@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+		<title>cloud-compute-cannon</title>
+
+		<!-- Bootstrap -->
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+
+		<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+		<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+		<!--[if lt IE 9]>
+			<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+			<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+	</head>
+	<body>
+		<h1>Cloud Compute Cannon</h1>
+
+		<ul>
+		<li><a href="/dashboard">Queues</a></li>
+		<li><a href="::KIBANA_URL::">::if (KIBANA_URL != null):: Kibana logs ::else:: KIBANA_URL not configured, cannot link to log display ::end::</a></li>
+		<li><a href="/config">Non-secret env vars</a></li>
+		<li>
+			Postman API:
+			<div class="postman-run-button" data-postman-action="collection/import" data-postman-var-1="30eb3e8c434596688fcb"></div>
+			<script type="text/javascript">
+				(function (p,o,s,t,m,a,n) {
+					!p[s] && (p[s] = function () { (p[t] || (p[t] = [])).push(arguments); });
+					!o.getElementById(s+t) && o.getElementsByTagName("head")[0].appendChild((
+						(n = o.createElement("script")),
+						(n.id = s+t), (n.async = 1), (n.src = m), n
+					));
+				}(window, document, "_pm", "PostmanRunObject", "https://run.pstmn.io/button.js"));
+			</script>
+		</li>
+
+	</ul>
+
+	</body>
+</html>

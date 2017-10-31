@@ -17,7 +17,7 @@ services:
     command: ["nodemon", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
     links:
       - redis
-      # - fluentd
+      - fluentd
     working_dir: /app
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -32,7 +32,7 @@ services:
       - STORAGE_HTTP_PREFIX=http://ccc.local
       - REDIS_HOST=redis
       - VIRTUAL_HOST=ccc.local
-      # - FLUENT_HOST=fluentd
+      - FLUENT_HOST=fluentd
       - LOG_LEVEL=debug
       - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
     labels:
@@ -142,8 +142,6 @@ services:
     volumes:
       - node_modules:/app/node_modules
       - ./package.json:/app/package.json
-    # logging:
-    #   driver: none
 
   # Only installs if INSTALL=true|1
   haxelibs:
@@ -173,35 +171,35 @@ services:
       - ./clients:/app/clients
       - ./test:/app/test
 
-  # fluentd:
-  #   build: ./etc/log/
-  #   volumes:
-  #     - ./etc/log/fluent.elasticsearch.conf:/fluentd/etc/fluent.conf
-  #   links:
-  #     - elasticsearch
-  #   logging:
-  #     driver: none
+  fluentd:
+    build: ./etc/log/
+    volumes:
+      - ./etc/log/fluent.elasticsearch.conf:/fluentd/etc/fluent.conf
+    links:
+      - elasticsearch
+    logging:
+      driver: none
 
-  # elasticsearch:
-  #   image: elasticsearch:2.4.5-alpine
-  #   ports:
-  #     - "9200:9200"
-  #     - "9300:9300"
-  #   volumes:
-  #     - elasticsearch_data:/usr/share/elasticsearch/data
-  #   logging:
-  #     driver: none
+  elasticsearch:
+    image: elasticsearch:2.4.5-alpine
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    logging:
+      driver: none
 
-  # kibana:
-  #   image: kibana:4.6.6
-  #   ports:
-  #     - "5601:5601"
-  #   environment:
-  #     ELASTICSEARCH_URL: "http://elasticsearch:9200"
-  #   links:
-  #     - elasticsearch
-  #   logging:
-  #     driver: none
+  kibana:
+    image: kibana:4.6.6
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
+    links:
+      - elasticsearch
+    logging:
+      driver: none
 
   # Watches code changes for the ccc-scaling-server and recompiles the code
   # watch-compiler-ccc-scaling-server:

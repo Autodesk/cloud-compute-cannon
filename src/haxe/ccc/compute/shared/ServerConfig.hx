@@ -46,6 +46,15 @@ class ServerConfig
 	public static var HOST :String = 'http://ccc.local';
 
 	/**
+	 * If the kibana url is passed in to the app, it
+	 * can then be shown in the dashboard, so you don't
+	 * have to remember. In the future, we can show a
+	 * dashboard in an iframe.
+	 */
+	@NodeProcessVar
+	public static var KIBANA_URL :String = 'http://localhost:5601';
+
+	/**
 	 * Bunyan log level (trace|debug|info|warn|error|critical)
 	 */
 	@NodeProcessVar
@@ -122,13 +131,14 @@ class ServerConfig
 	{
 		return {
 			'CLOUD_PROVIDER_TYPE': CLOUD_PROVIDER_TYPE,
+			'DISABLE_WORKER': DISABLE_WORKER,
 			'FLUENT_HOST': FLUENT_HOST,
 			'FLUENT_PORT': FLUENT_PORT,
 			'HOST': HOST,
+			'JOB_MAX_ATTEMPTS': JOB_MAX_ATTEMPTS,
+			'JOB_TURBO_MAX_TIME_SECONDS': JOB_TURBO_MAX_TIME_SECONDS,
 			'LOG_LEVEL': LOG_LEVEL,
 			'PORT': PORT,
-			'REDIS_HOST': REDIS_HOST,
-			'REDIS_PORT': REDIS_PORT,
 			'STORAGE_HTTP_PREFIX': STORAGE_HTTP_PREFIX,
 			'WORKER_STATUS_CHECK_INTERVAL_SECONDS': WORKER_STATUS_CHECK_INTERVAL_SECONDS,
 		};
