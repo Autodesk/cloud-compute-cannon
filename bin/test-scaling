@@ -1,2 +1,3 @@
 #!/usr/bin/env sh
+./bin/install
 TEST_SCALING=true docker-compose run ccc.tests
