@@ -1,5 +1,7 @@
 package ccc.scaling;
 
+import js.npm.bull.Bull;
+
 import haxe.unit.async.PromiseTest;
 import haxe.unit.async.PromiseTestRunner;
 
@@ -395,6 +397,49 @@ class ScalingTests
 			})
 			.pipe(function(_) {
 				return JobStateTools.cancelAllJobs();
+			})
+			.thenTrue();
+	}
+
+	@timeout(120000)
+	public function testServersOnlyWorkersOnly() :Promise<Bool>
+	{
+		var rpcUrl = '${ScalingServerConfig.CCC}/${Type.enumConstructor(CCCVersion.v1)}';
+		var proxy = ccc.compute.client.util.ProxyTools.getProxy(rpcUrl);
+		return Promise.promise(true)
+			.pipe(function(_) {
+				return killAllWorkers();
+			})
+			//Create a server that doesn't do jobs
+			.pipe(function(_) {
+				return ScalingCommands.createWorker({disableWorker:true, disableServer:false});
+			})
+			//Submit a job, it should be waiting
+			.pipe(function(_) {
+				return createTestJobs(1, 0, 'testServersOnlyWorkersOnly');
+			})
+			.thenWait(1000)
+			.pipe(function(_) {
+				//Check the queue
+				return proxy.getQueues()
+					.then(function(queues :BullJobCounts) {
+						assertEquals(queues.waiting, 1);
+						return true;
+					});
+			})
+			//Create a worker that CAN process jobs
+			.pipe(function(_) {
+				return ScalingCommands.createWorker({disableWorker:false, disableServer:true});
+			})
+			//Leave enough time for the worker to start and consume the job
+			.thenWait(4000)
+			.pipe(function(_) {
+				//Check the queue
+				return proxy.getQueues()
+					.then(function(queues :BullJobCounts) {
+						assertEquals(queues.waiting, 0);
+						return true;
+					});
 			})
 			.thenTrue();
 	}

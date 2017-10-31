@@ -83,9 +83,9 @@ class JobTools
 	public static function inputDir(job :DockerBatchComputeJob) :String
 	{
 		Assert.notNull(job);
-		Assert.notNull(job.jobId);
+		Assert.notNull(job.id);
 		if (job.inputsPath == null) {
-			return defaultInputDir(job.jobId);
+			return defaultInputDir(job.id);
 		} else {
 			return job.inputsPath.ensureEndsWith('/');
 		}
@@ -94,9 +94,9 @@ class JobTools
 	public static function outputDir(job :DockerBatchComputeJob) :String
 	{
 		Assert.notNull(job);
-		Assert.notNull(job.jobId);
+		Assert.notNull(job.id);
 		if (job.outputsPath == null) {
-			return defaultOutputDir(job.jobId);
+			return defaultOutputDir(job.id);
 		} else {
 			return job.outputsPath.ensureEndsWith('/');
 		}
@@ -105,9 +105,9 @@ class JobTools
 	public static function resultDir(job :DockerBatchComputeJob) :String
 	{
 		Assert.notNull(job);
-		Assert.notNull(job.jobId);
+		Assert.notNull(job.id);
 		if (job.resultsPath.isEmpty()) {
-			return job.jobId + '/';
+			return job.id + '/';
 		} else {
 			return job.resultsPath.ensureEndsWith('/');
 		}

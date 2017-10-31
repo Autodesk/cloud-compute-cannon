@@ -13,10 +13,7 @@ services:
     cpu_shares: 1024
     expose:
       - 9000
-    # ports:
-    #   - "9229:9229"
-    # command: ["nodemon", "--inspect", "--debug-brk", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
-    # command: ["nodemon", "--inspect", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
+    # Extra args for debugging: --inspect, --debug-brk
     command: ["nodemon", "-L", "-w", "server", "server/cloud-compute-cannon-server.js"]
     links:
       - redis
@@ -27,7 +24,7 @@ services:
       - ./build/server:/app/server
       - ./clients/dashboard/build:/app/clients/dashboard
       - ./src/web:/app/web
-      - ./ccc-local-storage:/app/ccc-local-storage
+      - ./ccc-local-storage:/app/ccc- local-storage
       - ./package.json:/app/package.json
       - node_modules:/app/node_modules
     environment:
@@ -38,7 +35,6 @@ services:
       - FLUENT_HOST=fluentd
       - LOG_LEVEL=debug
       - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
-      - LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7
     labels:
       ccc.type: "worker"
       ccc.origin: "docker-compose"
@@ -133,6 +129,48 @@ services:
     logging:
       driver: none
 
+  # Simply installs npm modules into a persistent docker volume
+  # for efficiency. Used by reloaders, not the main app
+  # Only installs modules if INSTALL=true|1
+  node_modules:
+    image: dionjwa/node_modules
+    working_dir: /app
+    # Only install node modules if INSTALL=true or INSTALLL=1
+    command: ["/bin/sh", "-c", 'if [ "x$INSTALL" = "xtrue" ] || [ "x$INSTALL" = "x1" ]; then npm i; fi']
+    environment:
+      - INSTALL
+    volumes:
+      - node_modules:/app/node_modules
+      - ./package.json:/app/package.json
+
+  # Only installs if INSTALL=true|1
+  haxelibs:
+    image: dionjwa/haxe-watch:v0.7.3
+    # Only install haxe modules if INSTALL=true or INSTALLL=1
+    command: ["/bin/sh", "-c", 'if [ "x$INSTALL" = "xtrue" ] || [ "x$INSTALL" = "x1" ]; then haxelib install --always etc/hxml/build-all.hxml; fi']
+    working_dir: /app
+    environment:
+      - INSTALL
+    volumes:
+      - ./.haxelib:/app/.haxelib
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
+  #This will always run on startup. There's no reason why it should't
+  compile:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./.git:/app/.git
+      - ./build:/app/build
+      - ./.haxelib:/app/.haxelib
+      - ./src:/app/src
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+
   fluentd:
     build: ./etc/log/
     volumes:
@@ -162,41 +200,6 @@ services:
       - elasticsearch
     logging:
       driver: none
-
-  # Simply installs npm modules into a persistent docker volume
-  # for efficiency. Used by reloaders, not the main app
-  node_modules:
-    image: dionjwa/node_modules
-    working_dir: /app
-    command: ["npm", "i"]
-    volumes:
-      - node_modules:/app/node_modules
-      - ./package.json:/app/package.json
-    logging:
-      driver: none
-
-  haxelibs:
-    image: dionjwa/haxe-watch:v0.7.3
-    command: ["haxelib", "install", "--always", "etc/hxml/build-all.hxml"]
-    working_dir: /app
-    volumes:
-      - ./.haxelib:/app/.haxelib
-      - ./etc:/app/etc
-      - ./clients:/app/clients
-      - ./test:/app/test
-
-  compile:
-    image: dionjwa/haxe-watch:v0.7.3
-    command: ["haxe", "etc/hxml/build-all.hxml"]
-    working_dir: /app
-    volumes:
-      - ./.git:/app/.git
-      - ./build:/app/build
-      - ./.haxelib:/app/.haxelib
-      - ./src:/app/src
-      - ./etc:/app/etc
-      - ./clients:/app/clients
-      - ./test:/app/test
 
   # Watches code changes for the ccc-scaling-server and recompiles the code
   # watch-compiler-ccc-scaling-server:

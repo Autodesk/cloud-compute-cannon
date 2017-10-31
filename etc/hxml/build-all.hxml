@@ -16,3 +16,4 @@ test/services/local-scaling-server/build.hxml
 --next
 etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml
 
+

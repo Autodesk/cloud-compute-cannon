@@ -82,8 +82,8 @@ class WorkerStateManager
 						return true;
 					})
 					.pipe(function(_) {
-						var processQueue = new ProcessQueue();
-						_injector.map(ProcessQueue).toValue(processQueue);
+						var processQueue = new QueueJobs();
+						_injector.map(QueueJobs).toValue(processQueue);
 						_injector.injectInto(processQueue);
 						return processQueue.ready;
 					})

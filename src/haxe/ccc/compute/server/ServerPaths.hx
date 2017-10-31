@@ -32,24 +32,30 @@ class ServerPaths
 		var app = Express.GetApplication();
 		injector.map(Application).toValue(app);
 
+		app.use(Node.require('express-bunyan-logger')());
+
 		var cors = Node.require('cors')();
 		app.options('*', cors);
 		app.use(cors);
 
-		// app.use(Node.require('express-bunyan-logger')());
-
 		app.use(cast js.npm.bodyparser.BodyParser.json({limit: '250mb'}));
 
-		// Load testing: https://loader.io/
-		var loaderIOToken = ServerConfig.LOADER_IO_TOKEN;
-		app.get('/${loaderIOToken}.txt', function(req, res) {
-			res.send(loaderIOToken);
+		//Serve metapages dashboards
+		var indexPage = new haxe.Template(sys.io.File.getContent('./web/index-template.html')).execute(ServerConfig);
+		app.get('/', function(req, res) {
+			res.send(indexPage);
+		});
+
+		app.get('/index.* ', function(req, res) {
+			res.send(indexPage);
 		});
 
 		app.get('/version', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(versionBlob.git);
 		});
+
+		QueueTools.addBullDashboard(injector);
 
 		function test(req, res) {
 			var monitorService = injector.getValue(ServiceMonitorRequest);

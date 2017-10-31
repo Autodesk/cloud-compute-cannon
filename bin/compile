@@ -17,7 +17,7 @@ mkdir -p build/server
 mkdir -p build/local-scaling-server
 mkdir -p build/test
 
-docker-compose -f docker-compose.tools.yml run haxelibs
-docker-compose -f docker-compose.tools.yml run compile
+INSTALL=true docker-compose run haxelibs
+docker-compose run compile
 
 popd

@@ -1,0 +1,17 @@
+[
+  {
+    "_id": "CCC-Dashboard",
+    "_type": "dashboard",
+    "_source": {
+      "title": "CCC Dashboard",
+      "hits": 0,
+      "description": "",
+      "panelsJSON": "[{\"col\":1,\"id\":\"CCC-workers-created\",\"row\":1,\"size_x\":3,\"size_y\":2,\"type\":\"visualization\"},{\"id\":\"CCC-worker-start-events\",\"type\":\"visualization\",\"size_x\":3,\"size_y\":2,\"col\":1,\"row\":3},{\"id\":\"CCC-job-errors\",\"type\":\"visualization\",\"size_x\":9,\"size_y\":2,\"col\":4,\"row\":1},{\"id\":\"CCC-jobs-finished\",\"type\":\"visualization\",\"size_x\":9,\"size_y\":2,\"col\":4,\"row\":5},{\"id\":\"CCC-jobs-multiple-attempts\",\"type\":\"visualization\",\"size_x\":9,\"size_y\":2,\"col\":4,\"row\":3}]",
+      "version": 1,
+      "timeRestore": false,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"filter\":[{\"query\":{\"query_string\":{\"analyze_wildcard\":true,\"query\":\"*\"}}}]}"
+      }
+    }
+  }
+]

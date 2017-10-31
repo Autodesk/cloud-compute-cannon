@@ -6,7 +6,7 @@ class ServerTesterConfig
 	@NodeProcessVar
 	public static var CCC :String = 'ccc.local';
 
-	// @NodeProcessVar
+	@NodeProcessVar
 	public static var CCC_SCALING :String = 'ccc-scaling-server:4015';
 
 	@NodeProcessVar
@@ -28,9 +28,6 @@ class ServerTesterConfig
 
 	@NodeProcessVar
 	public static var TEST_SCALING :Bool = false;
-
-	// @NodeProcessVar
-	// public static var TEST_SCALING_ONLY :Bool = false;
 
 	@NodeProcessVar
 	public static var TRAVIS :Int = 0;

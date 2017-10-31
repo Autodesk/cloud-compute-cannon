@@ -103,7 +103,7 @@ class ScalingCommands
 			});
 	}
 
-	public static function createWorker() :Promise<DockerContainerId>
+	public static function createWorker(?workerOpts :{disableWorker :Bool, disableServer :Bool}) :Promise<DockerContainerId>
 	{
 		Log.info({event:'CreateWorker'});
 		return getCccContainerInfo()
@@ -120,11 +120,9 @@ class ScalingCommands
 					AttachStderr: false,
 					Env: [
 						'REDIS_HOST=redis',
-						'VIRTUAL_HOST=ccc.local', //For the nginx reverse proxy
 						'FLUENT_HOST=fluentd',
 						'STORAGE_HTTP_PREFIX=http://ccc.local/',
 						'LOG_LEVEL=debug',
-						'LOADER_IO_TOKEN=loaderio-58c05887b076c34c701b2cd4222d12d7'
 					],
 					Cmd: containerInfo.Command.split(' '),
 					HostConfig: {
@@ -143,6 +141,15 @@ class ScalingCommands
 					},
 					NetworkSettings: containerInfo.NetworkSettings
 				};
+
+				if (workerOpts != null && workerOpts.disableWorker) {
+					opts.Env.push('DISABLE_WORKER=true');
+				}
+
+				if (workerOpts == null || !workerOpts.disableServer) {
+					//For the nginx reverse proxy
+					opts.Env.push('VIRTUAL_HOST=ccc.local');
+				}
 
 				return DockerPromises.createContainer(docker, opts)
 					.pipe(function(container) {

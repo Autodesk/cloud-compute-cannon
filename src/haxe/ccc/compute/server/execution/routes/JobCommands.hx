@@ -1,7 +1,5 @@
 package ccc.compute.server.execution.routes;
 
-import ccc.compute.worker.ProcessQueue;
-
 import haxe.Resource;
 import haxe.remoting.JsonRpc;
 
@@ -90,7 +88,7 @@ class JobCommands
 	 */
 	public static function removeJob(injector :Injector, jobId :JobId) :Promise<Bool>
 	{
-		var processQueue :ProcessQueue = injector.getValue(ProcessQueue);
+		var processQueue = injector.getValue(ccc.compute.worker.QueueJobs);
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return JobStateTools.cancelJob(jobId);
@@ -193,17 +191,19 @@ class JobCommands
 				return fs.exists(resultsJsonPath)
 					.pipe(function(exists) {
 						if (exists) {
-							return fs.readFile(resultsJsonPath)
-								.pipe(function(stream) {
-									if (stream != null) {
-										return StreamPromises.streamToString(stream)
-											.then(function(resultJsonString) {
-												return Json.parse(resultJsonString);
-											});
-									} else {
-										return Promise.promise(null);
-									}
-								});
+							return promhx.RetryPromise.retryRegular(function() {
+								return fs.readFile(resultsJsonPath)
+									.pipe(function(stream) {
+										if (stream != null) {
+											return StreamPromises.streamToString(stream)
+												.then(function(resultJsonString) {
+													return Json.parse(resultJsonString);
+												});
+										} else {
+											return Promise.promise(null);
+										}
+									});
+								}, 3, 1000);
 						} else {
 							return Promise.promise(null);
 						}

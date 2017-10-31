@@ -12,3 +12,5 @@ etc/hxml/base-nodejs.hxml
 -main ccc.compute.server.Server
 
 -js build/server/cloud-compute-cannon-server.js
+
+-cmd rsync -a src/web build/

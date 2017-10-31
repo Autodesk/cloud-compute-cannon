@@ -1,5 +1,3 @@
-import ccc.Definitions;
-
 import haxe.DynamicAccess;
 
 #if nodejs

@@ -7,9 +7,11 @@
     "cloudcomputecannon": "bin/cloudcomputecannon.js"
   },
   "scripts": {
-    "haxelibs": "docker-compose -f docker-compose.tools.yml run haxelibs",
-    "init": "docker-compose -f docker-compose.tools.yml run haxelibs && docker-compose -f docker-compose.override.yml run node_modules && docker-compose -f docker-compose.tools.yml run compile",
-    "build": "docker-compose -f docker-compose.tools.yml run compile",
+    "init": "npm run haxelibs && npm run node_modules && npm run build",
+    "haxelibs": "INSTALL=true docker-compose up haxelibs",
+    "node_modules": "INSTALL=true docker-compose up node_modules",
+    "preview-github-docs": "docker run -it --rm -p 8081:8081 -v ${PWD}:/data -v ~/.grip:/.grip mbentley/grip --context=dionjwa/cloud-compute-cannon README.md 0.0.0.0:8081",
+    "build": "docker-compose run compile",
     "clean": "docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build && rm -rf node_modules",
     "test": "npm run init && npm run test-quick",
     "test-quick": "TEST=true docker-compose run ccc.tests",
@@ -18,7 +20,8 @@
     "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
     "set-build:client-dashboard": "rm build.hxml && ln -s clients/dashboard/build-dev.hxml build.hxml",
     "set-build:lambda-autoscaling": "rm build.hxml && ln -s etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml build.hxml",
-    "set-build:lambda-autoscaling-test-server": "rm build.hxml && ln -s test/local-scaling-server/build.hxml build.hxml",
+    "set-build:test-server-scaling": "rm build.hxml && ln -s test/services/local-scaling-server/build.hxml build.hxml",
+    "set-build:test-server": "rm build.hxml && ln -s test/services/stand-alone-tester/build.hxml build.hxml",
     "set-build:all": "rm build.hxml && ln -s etc/hxml/build-all.hxml build.hxml",
     "set-build:all-servers": "rm build.hxml && ln -s etc/hxml/build-all-servers.hxml build.hxml"
   },

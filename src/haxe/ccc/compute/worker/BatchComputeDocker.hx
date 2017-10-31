@@ -43,7 +43,7 @@ class BatchComputeDocker
 		Assert.notNull(fs);
 		Assert.notNull(attempt);
 
-		var jobId = job.jobId;
+		var jobId = job.id;
 
 		var docker = new Docker(dockerOpts);
 
@@ -383,7 +383,7 @@ class BatchComputeDocker
 	static function copyInputsInternal(job :DockerBatchComputeJob, attempt :Int, dockerOpts :DockerConnectionOpts, fs :ServiceStorage, redis :RedisClient, log :AbstractLogger) :Promise<Bool>
 	{
 		log = log.child({JobWorkingStatus:JobWorkingStatus.CopyingInputs});
-		var jobId = job.jobId;
+		var jobId = job.id;
 		if (job.inputsPath != null) {
 			log.debug({log:'Reading from custom inputs path=' + job.inputsPath});
 		}
@@ -424,7 +424,7 @@ class BatchComputeDocker
 	static function copyOrCreateImageInternal(job :DockerBatchComputeJob, attempt :Int, docker :Docker, redis :RedisClient, log :AbstractLogger) :Promise<{error:Dynamic}>
 	{
 		log = log.child({JobWorkingStatus:JobWorkingStatus.CopyingImage});
-		var jobId = job.jobId;
+		var jobId = job.id;
 		log.debug('copyOrCreateImage ${jobId}');
 		var error :Dynamic = null;
 		//THIS NEEDS TO BE DONE IN **PARALLEL** with the copy inputs
@@ -506,7 +506,7 @@ class BatchComputeDocker
 
 	static function runContainerInternal(job :DockerBatchComputeJob, attempt :Int, docker :Docker, redis :RedisClient, kill :Promise<Bool>, log :AbstractLogger) :Promise<{containerId:String,exitCode:Int,error:Dynamic, timedOut:Bool}>
 	{
-		var jobId = job.jobId;
+		var jobId = job.id;
 		log = log.child({JobWorkingStatus:JobWorkingStatus.ContainerStarting});
 		log.debug('runContainerInternal ${jobId}');
 
@@ -700,7 +700,7 @@ class BatchComputeDocker
 
 	static function copyOutputsInternal(job :DockerBatchComputeJob, attempt :Int, dockerOpts :DockerConnectionOpts, fs :ServiceStorage, redis :RedisClient, log :AbstractLogger) :Promise<Array<String>>
 	{
-		var jobId = job.jobId;
+		var jobId = job.id;
 		var outputVolumeName = JobTools.getWorkerVolumeNameOutputs(jobId, attempt);
 		log = log.child({JobWorkingStatus:JobWorkingStatus.CopyingOutputs, outputVolumeName:outputVolumeName});
 		log.debug({});

@@ -1,7 +1,6 @@
 import haxe.DynamicAccess;
 import haxe.Json;
 
-import ccc.Definitions;
 import ccc.*;
 import ccc.WorkerStatus;
 import ccc.SharedConstants.*;
