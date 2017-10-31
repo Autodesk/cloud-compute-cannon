@@ -1,7 +1,7 @@
 # Developing cloud-compute-cannon
 
 
-## Steps to get set up:
+## Set up:
 
 Run these once:
 
@@ -9,7 +9,7 @@ Run these once:
 	2. OPTIONAL: Install [node.js/npm](https://nodejs.org/en/download/).
 	2. `git clone git@github.com:dionjwa/cloud-compute-cannon.git` (or your fork)
 	3. `cd cloud-compute-cannon`
-	4. `INSTALL=true docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile` (OR if you have node.js+npm installed: `npm run init`)
+	4. `./bin/install` (OR if you have node.js+npm installed: `npm run init`)
 
 Then you can start the stack with:
 
@@ -48,20 +48,24 @@ To compile only the server:
 
 This modifies the file `build.hxml` in the project root. This file is the default used by haxe IDE/editor plugins (although it can also be changed).
 
-See other options run `npm run`
+See other options run `npm run | grep set-build`
 
 ## Running tests
 
-	TEST=true docker-compose run ccc.tests
+	`./bin/test`
 
 These tests run in Travis CI on every pull request.
 
 ### Running scaling tests
 
-	TEST_SCALING=true docker-compose run ccc.tests
+	`./bin/test-scaling`
 
-These have problems on Travis CI so are only run locally.
+These have problems on Travis CI so are only run locally (due to timing issues, Travis CI machines are quite slow).
 
 ### Postman tests and example requests
 
-TODO:
+If running locally, go to:
+
+	http://localhost:8080
+
+You will see links to various dashboards. There is a button for Postman API requests that you can run against the service.

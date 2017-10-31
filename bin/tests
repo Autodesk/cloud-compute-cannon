@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+TEST=true docker-compose run ccc.tests
