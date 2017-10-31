@@ -6,10 +6,9 @@
 Walkthrough:
 
 
-
-## 1. API request servers
-## 2. Redis database
-## 3. External storage
-## 4. Workers
-## 5. Scaling lambdas
-## 6. API Gateway
+## 1. API Gateway
+## 2. API request servers
+## 3. Redis database
+## 4. External storage
+## 5. Workers
+## 6. Scaling lambdas
