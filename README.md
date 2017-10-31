@@ -5,7 +5,7 @@
  - [API](docs/API.md)
  - [DEVELOPERS](docs/DEVELOPERS.md)
  - [DEPLOYMENT](docs/DEPLOYMENT.md)
- - [ENVIRONMENT VARIABLES](../src/haxe/ccc/compute/shared/ServerConfig.hx)
+ - [ENVIRONMENT VARIABLES](src/haxe/ccc/compute/shared/ServerConfig.hx)
  - [LOGS](docs/LOGS.md)
  - [ARCHITECTURE](docs/ARCHITECTURE.md)
  - [ROADMAP](docs/ROADMAP.md)
