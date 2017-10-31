@@ -1,6 +1,11 @@
+
+## CCC process environment variables (env vars):
+
 ## Deployment
 
-This is under construction.
+Environment variables:
+
+	- See (local source link): #src/haxe/ccc/compute/shared/ServerConfig.hx
 
 ### Local
 
@@ -14,8 +19,3 @@ The first step only needs to be done once.
 From there, you can hit `http://localhost:8080/dashboard
 
 ### AWS (The only cloud provider currently supported, GCE coming soon)
-
-
-### CCC process environment variables (env vars):
-
-	- See (local source link): #src/haxe/ccc/compute/shared/ServerConfig.hx
