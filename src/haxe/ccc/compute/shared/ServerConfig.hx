@@ -1,5 +1,14 @@
 package ccc.compute.shared;
 
+/**
+ * Parse env vars from the process.
+ * All variables annotated with "@NodeProcessVar"
+ * are pulled from the process.env (environment
+ * variables). The macro that processes those can
+ * parse Bool/Int/Float types from the string, so
+ * we directly used the typed variable.
+ */
+
 import ccc.compute.shared.provider.CloudProviderType;
 
 @:build(util.NodejsMacros.addProcessEnvVars())
