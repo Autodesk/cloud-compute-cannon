@@ -8,10 +8,9 @@ Run these once:
 
 - Install [docker](https://docs.docker.com/engine/installation/)
 - OPTIONAL: Install [node.js/npm](https://nodejs.org/en/download/)
-
-`git clone git@github.com:dionjwa/cloud-compute-cannon.git` (or your fork)
-`cd cloud-compute-cannon`
-`./bin/install` (OR if you have node.js+npm installed: `npm run init`)
+- `git clone git@github.com:dionjwa/cloud-compute-cannon.git` (or your fork)
+- `cd cloud-compute-cannon`
+- `./bin/install` (OR if you have node.js+npm installed: `npm run init`)
 
 Then you can start the stack with:
 
