@@ -1,5 +1,15 @@
 # Cloud Compute Cannon [![Build Status](https://travis-ci.org/dionjwa/cloud-compute-cannon.svg?branch=master)](https://travis-ci.org/dionjwa/cloud-compute-cannon)
 
+## TOC:
+
+ - [API](docs/API.md)
+ - [DEVELOPERS](docs/DEVELOPERS.md)
+ - [DEPLOYMENT](docs/DEPLOYMENT.md)
+ - [LOGS](docs/LOGS.md)
+ - [ARCHITECTURE](docs/ARCHITECTURE.md)
+ - [ROADMAP](docs/ROADMAP.md)
+
+
 Cloud Compute Cannon allows you to create a server (that scales) that provides a REST API that allows callers to run *any* docker image.
 
 This means that the Cloud-Compute-Cannon (CCC) server allow you to run anything on your server: Python scripts, R statistics analysis, deep learning algorithms, C++ simulations

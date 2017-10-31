@@ -1,5 +1,6 @@
 # Developing cloud-compute-cannon
 
+- [ARCHITECTURE](ARCHITECTURE.md)
 
 ## Set up:
 
