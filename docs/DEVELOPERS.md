@@ -41,7 +41,7 @@ Edit code then run:
 
 This will compile everything. This is a pretty slow way to developer, but it's there if really needed, or if you don't want to install haxe on your host machine.
 
-### Compile only specific modules
+## Compile only specific modules
 
 To compile only the server:
 
@@ -57,13 +57,11 @@ See other options run `npm run | grep set-build`
 
 These tests run in Travis CI on every pull request.
 
-### Running scaling tests
+There are also tests for scaling and worker management. These have problems on Travis CI so are only run locally (due to timing issues, Travis CI machines are quite slow):
 
 	./bin/test-scaling
 
-These have problems on Travis CI so are only run locally (due to timing issues, Travis CI machines are quite slow).
-
-### Postman tests and example requests
+## Postman tests and example requests
 
 If running locally, go to:
 
