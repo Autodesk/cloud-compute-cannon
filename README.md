@@ -3,11 +3,11 @@
 ## TOC:
 
  - [API](docs/API.md)
+ - [ARCHITECTURE](docs/ARCHITECTURE.md)
  - [DEVELOPERS](docs/DEVELOPERS.md)
  - [DEPLOYMENT](docs/DEPLOYMENT.md)
  - [ENVIRONMENT VARIABLES](src/haxe/ccc/compute/shared/ServerConfig.hx)
  - [LOGS](docs/LOGS.md)
- - [ARCHITECTURE](docs/ARCHITECTURE.md)
  - [ROADMAP](docs/ROADMAP.md)
 
 Cloud Compute Cannon allows you to create a server (that scales) that provides a REST API that allows callers to run *any* docker image.

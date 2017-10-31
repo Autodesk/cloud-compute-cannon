@@ -11,6 +11,6 @@ Running the stack locally consists of two steps: installing libraries and compil
 
 The first step only needs to be done once.
 
-From there, you can hit `http://localhost:8080/dashboard
+From there, you can hit `http://localhost:8080
 
 ### AWS (The only cloud provider currently supported, GCE coming soon)
