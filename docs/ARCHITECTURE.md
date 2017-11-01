@@ -54,3 +54,7 @@ A worker consists of simply a machine with docker installed. The worker process 
 ## 6. Scaling lambdas
 
 Because the Autoscaling group control of scaling lacks the ability to look at the redis queue, AWS lambdas periodically check the redis queue, and adjust workers up or down depending on various factors (queue size/state, time workers have been up, worker health).
+
+The lambdas also check the worker health, by checking the redis db for a key that matches the worker. Workers periodically update this key with their health status. If the key is missing, or the value is not 'HEALTHY' then the worker is terminated. If the autoscaling group (ASG) minimum is not fulfilled, the ASG will create a fresh worker.
+
+Both scale-up and scale-down lambdas perform this health check. Scale up checks occur frequently (1/minute) so the stack is responsive, scale down occurs les frequently (every 15/30m).

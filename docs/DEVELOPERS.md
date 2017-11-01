@@ -1,6 +1,8 @@
 # Developing cloud-compute-cannon
 
 - [ARCHITECTURE](ARCHITECTURE.md)
+- [API](API.md)
+- [DEPLOYMENT](DEPLOYMENT.md)
 
 ## Set up:
 
@@ -15,6 +17,26 @@ Run these once:
 Then you can start the stack with:
 
 	docker-compose up
+
+If you want the functional tests to be run on code compilation, run the stack with tests enabled:
+
+	TEST=true docker-compose up
+
+Then, if all code is compiled, the test running server will restart the tests.
+
+## Tests
+
+All tests except scaling tests:
+
+	./bin/test
+
+Scaling only tests:
+
+	./bin/test-scaling
+
+Scaling tests are different because of the length of time taken, and because they remove the current CCC server/worker instance running in docker-compose (and replace it) so logs are no longer visible (a pain when developing).
+
+Scaling tests are NOT run in travis due to unresolved timing issues, likely due to the lack of CPU. Scaling tests need to be run locally on the developers machine. However, it is not often that scaling code is modified, so integrating the two types of tests is not yet a high priority.
 
 ## Edit, compile, restart
 
@@ -32,6 +54,8 @@ This will replace the file `./build.hxml` so that the default build target (`bui
 
 	haxe build.hxml
 
+A list of haxe plugins for various editors can be found [here](https://haxe.org/documentation/introduction/editors-and-ides.html).
+
 
 ### No Haxe installed locally
 
@@ -40,6 +64,10 @@ Edit code then run:
 	docker-compose run compile
 
 This will compile everything. This is a pretty slow way to developer, but it's there if really needed, or if you don't want to install haxe on your host machine.
+
+If you already have the stack running, then you can run (in a separate terminal window):
+
+	docker-compose restart compile
 
 ## Compile only specific modules
 
