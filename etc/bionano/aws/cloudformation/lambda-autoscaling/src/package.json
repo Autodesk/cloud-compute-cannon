@@ -4,6 +4,7 @@
   "description": "AWS lambda function for scaling CCC autoscaling groups",
   "main": "index.js",
   "dependencies": {
+    "moment-timezone": "^0.5.14",
     "redis": "^2.8.0"
   }
 }

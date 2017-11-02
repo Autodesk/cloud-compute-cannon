@@ -12,3 +12,30 @@ services:
       - ./src:/app/src
       - ./etc:/app/etc
       - ./clients:/app/clients
+
+  npm-install-lambda:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["npm", "i"]
+    working_dir: /var/task
+    volumes:
+      - ./build/lambda-autoscaling:/var/task
+
+  validate-lambda:
+    image: lambci/lambda:nodejs6.10
+    command: ["index.handlerScaleUp"]
+    environment:
+      - BNR_ENVIRONMENT=dev
+    volumes:
+      - ./build/lambda-autoscaling:/var/task
+    links:
+      - redis:redis-ccc.dev.bionano.bio
+
+  redis:
+    image: redis:3.2.0-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379"
+    volumes:
+      - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    logging:
+      driver: none
