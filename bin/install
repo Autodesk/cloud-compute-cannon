@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-INSTALL=true docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile
+COMPOSE_HTTP_TIMEOUT=200 INSTALL=true docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile
