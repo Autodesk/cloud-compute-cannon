@@ -8,13 +8,16 @@ CCC requires three parts to install:
 
 ### Autoscaling Lambdas
 
+<<<<<<< HEAD
 **Before** uploading lambdas, ensure that they at least run correctly in a simulated AWS runtime:
 
 	./bin/lambdas-validate
 
 This *will* produce some errors, e.g. "The security token included in the request is invalid". This is good! It means the script has loaded the necessary npm modules, and started up ok. If you see different errors, or no initial log of "LambdaScalingAws.hx:40: handlerScaleUp" then you may have issues with packaging the script, and it will likely NOT work in AWS.
 
-If that looks good, test packaging up the lambdas for deployment in AWS:
+If that looks good then bump the version in `etc/bionano/aws/cloudformation/lambda-autoscaling/src/package.json`.
+
+Then test packaging up the lambdas for deployment in AWS:
 
 	cd etc/bionano/aws/cloudformation/lambda-autoscaling
 	./deploy --dryrun -k <AWS_ACCESS_KEY_ID> -s <AWS_SECRET_ACCESS_KEY> -t <dev|qa|prod> -n <subnet1,subnet2,...> -g <security group id>
