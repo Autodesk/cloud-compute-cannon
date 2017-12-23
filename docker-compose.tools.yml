@@ -2,9 +2,9 @@ version: '2'
 
 services:
 
-  compile-lambda:
+  lambda-compile:
     image: dionjwa/haxe-watch:v0.7.3
-    command: ["haxe", "etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml"]
+    command: ["haxe", "src/lambda-autoscaling/build.hxml"]
     working_dir: /app
     volumes:
       - ./build:/app/build
@@ -13,14 +13,14 @@ services:
       - ./etc:/app/etc
       - ./clients:/app/clients
 
-  npm-install-lambda:
+  lambda-npm-install:
     image: dionjwa/haxe-watch:v0.7.3
     command: ["npm", "i"]
     working_dir: /var/task
     volumes:
       - ./build/lambda-autoscaling:/var/task
 
-  validate-lambda:
+  lambda-validate:
     image: lambci/lambda:nodejs6.10
     command: ["index.handlerScaleUp"]
     environment:
@@ -30,6 +30,7 @@ services:
     links:
       - redis:redis-ccc.dev.bionano.bio
 
+  # Needed to validate the lambda's redis connection
   redis:
     image: redis:3.2.0-alpine
     command: redis-server /usr/local/etc/redis/redis.conf

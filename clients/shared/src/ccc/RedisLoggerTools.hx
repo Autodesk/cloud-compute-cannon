@@ -53,7 +53,6 @@ class RedisLoggerTools
 				// }
 			}
 		});
-		// Node.console.log(obj);
 	}
 
 	public static function debugLog(redis :RedisClient, obj :Dynamic, ?pos :haxe.PosInfos)

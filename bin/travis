@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "TRAVIS_BRANCH=$TRAVIS_BRANCH"
+echo "TRAVIS_PULL_REQUEST=$TRAVIS_PULL_REQUEST"
+echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
+
+GIT_TAG=`git rev-parse HEAD`
+if [ ! -z "$TRAVIS_COMMIT" ]; then
+	GIT_TAG=$TRAVIS_COMMIT
+fi
+GIT_TAG=${GIT_TAG:0:8}
+
+#Then run the tests
+NPM_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+echo "VERSION=$GIT_TAG"
+
+# Sanity check on versions
+./bin/lambdas-validate-artifact
+
+echo "lambda validate seemed ok"
+
+#First build locally the docker images for the minimal CCC server
+bin/build-docker-images
+
+echo "Running tests"
+
+TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
+
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "true" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ];
+	then
+		echo "TRAVIS_TAG=$TRAVIS_TAG"
+		./bin/publish-docker
+
+		#If the tests pass, push the image to quay.io
+		# echo "Push images to quay.io"
+		# ./bin/publish_quay
+		# #Create the docker-compose app zip file, this will also upload to S3 if we have correct credentials
+		# echo "Create app zip"
+		# ./bin/create_app_zip
+fi
+

@@ -39,7 +39,7 @@ class Server
 		//Required for source mapping
 		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
-		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
+		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*", "etc/terraform*"]);
 		js.ErrorToJson;
 		// monitorMemory();
 

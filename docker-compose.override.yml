@@ -157,7 +157,7 @@ services:
       - ./clients:/app/clients
       - ./test:/app/test
 
-  #This will always run on startup. There's no reason why it should't
+  #This will always run on startup. There's no reason why it shouldn't
   compile:
     image: dionjwa/haxe-watch:v0.7.3
     command: ["haxe", "etc/hxml/build-all.hxml"]
