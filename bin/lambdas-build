@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECTROOT=$DIR/..
+
+echo "Compiling haxe->javascript..."
+#Compiled js goes here (also the package.json)
+LAMBDA_SRC="$PROJECTROOT/build/lambda-autoscaling"
+pushd $PROJECTROOT
+docker-compose -f docker-compose.tools.yml run lambda-compile
+popd
+
+LAMBDA_ZIP_FOLDER="$PROJECTROOT/artifacts"
+mkdir -p $LAMBDA_ZIP_FOLDER
+LAMBDA_ZIP_NAME="lambda"
+echo "Building lambda package to artifacts/${LAMBDA_ZIP_NAME}.zip"
+rm -rf ${LAMBDA_ZIP_FOLDER}/${LAMBDA_ZIP_NAME}.zip
+docker run --rm -ti -v $LAMBDA_SRC:/src -v $LAMBDA_ZIP_FOLDER:/destination dionjwa/aws-lambda-builder -s /src -d /destination --name ${LAMBDA_ZIP_NAME}

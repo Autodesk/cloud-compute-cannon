@@ -1,0 +1,18 @@
+# -cmd rm -rf build/lambda-autoscaling
+
+# --next
+
+etc/hxml/base-nodejs.hxml
+
+-debug
+
+-lib hxnodejs-aws-sdk:git:https://github.com/dionjwa/hxnodejs-aws-sdk.git#5a9c057
+
+-cp src/lambda-autoscaling/src
+
+#Instead of -main
+ccc.lambda.LambdaScalingAws
+
+-js build/lambda-autoscaling/index.js
+
+-cmd cp src/lambda-autoscaling/package.json build/lambda-autoscaling/

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# For the terraform modules to work seamlessly from git, they
+# need to refer to the lambda.zip file for the given release
+# (defaulting to the latest release tag). This means that there
+# are two places where the version is specified, and it is difficult
+# to parameterize them without adding significat complexity
+# to an already complex build process. So we have two version strings
+# (bad) but this script will validate that they are the same,
+# preventing PRs from being accepted until they are.
+# Basically, preventing myself from shooting myself in the foot
+# with this shortcut.
+
+#Now build the final minimal docker image, and tag it
+PACKAGE_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+PACKAGE_VERSION_TERRAFORM_LAMBDA=$(cat etc/terraform/version.tf \
+  | grep default \
+  | head -1 \
+  | awk -F'"' '{ print $2 }' \
+  | tr -d '[[:space:]]')
+
+if [ "$PACKAGE_VERSION" = "$PACKAGE_VERSION_TERRAFORM_LAMBDA" ]
+then
+	echo "Versions match $PACKAGE_VERSION==$PACKAGE_VERSION_TERRAFORM_LAMBDA"
+	exit 0
+else
+	echo "Versions do NOT match $PACKAGE_VERSION==$PACKAGE_VERSION_TERRAFORM_LAMBDA"
+	exit 1
+fi
+
