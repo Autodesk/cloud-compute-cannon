@@ -14,9 +14,9 @@ module "ccc" {
 }
 
 output "kibana" {
-  value = "${module.ccc.kibana}"
+  value = "http://${module.ccc.kibana}:5601"
 }
 
 output "url" {
-  value = "${module.ccc.url}"
+  value = "http://${module.ccc.url}"
 }

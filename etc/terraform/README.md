@@ -1,6 +1,6 @@
 # Creating a cloud compute stack with terraform
 
-[Terraform](https://www.terraform.io/) provides cluster setup/update/teardown on any configured cloud provider with just a few CLI commands, sometimes just one. Currenly only AWS is supported, although PRs for other providers would be gladly accepted. So follow the link and make sure you have it installed (it's just a binary so there are lots of install options).
+[Terraform](https://www.terraform.io/) provides cluster setup/update/teardown on any configured cloud provider with just a few CLI commands, sometimes just one. Currenly only AWS is supported, although PRs for other providers would be gladly accepted. So follow the link and make sure you have [terraform](https://www.terraform.io/) installed (it's just a binary so there are lots of install options).
 
 ## AWS
 
@@ -10,7 +10,7 @@ There are different options for running a cloud compute stack depending on your 
 
 Steps:
 
-**Step 1:** Go into the relevant `./examples/` subdirectory, e.g. `./examples/cheapest_scalable_stack`, and copy the file `main.tf` to your computer.
+**Step 1:** Go into the relevant `./aws/examples/` subdirectory, e.g. `./aws/examples/ccc_module`, and copy the file `main.tf` to your computer.
 
 **Step 2:** Create a file called `terraform.tfvars` in the same directory as the `main.tf` file above that contains your AWS credentials and region:
 
@@ -31,7 +31,9 @@ You'll get a promt, follow it, then after all the infrastructure is created and 
 
 At the end of the `apply` step, there will be an output in green, it is the url for the dashboard and the root [API](../../docs/API.md):
 
-	url = ccc-terraform-elb-542669549.us-east-1.elb.amazonaws.com
+	url = http://ccc-terraform-elb-542669549.us-east-1.elb.amazonaws.com
+
+It might take some seconds to get a response from the above URL since the workers are still being created.
 
 **Destroying the stack**
 
@@ -44,6 +46,8 @@ TODO: example how to copy data from S3 to your local disk.
 ### Available pre-configured stack options (`etc/terraform/aws/examples`)
 
 Pre-configured terraform stack configurations to satisfy different reliability, pricing, speed of setup/teardown requirements.
+
+You can create any of the types below by copying and modifying the `./aws/examples/ccc_module/main.tf:ccc.source` value to point to a different module below.
 
 #### cheapest_scalable_stack
 
