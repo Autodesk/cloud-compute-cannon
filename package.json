@@ -1,6 +1,6 @@
 {
   "name": "cloud-compute-cannon",
-  "version": "1.0.0",
+  "version": "0.1.50-test-01",
   "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
   "bin": {
     "ccc": "bin/cloudcomputecannon.js",
@@ -19,7 +19,7 @@
     "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf",
     "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
     "set-build:client-dashboard": "rm build.hxml && ln -s clients/dashboard/build-dev.hxml build.hxml",
-    "set-build:lambda-autoscaling": "rm build.hxml && ln -s etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml build.hxml",
+    "set-build:lambda-autoscaling": "rm build.hxml && ln -s src/lambda-autoscaling/build.hxml build.hxml",
     "set-build:test-server-scaling": "rm build.hxml && ln -s test/services/local-scaling-server/build.hxml build.hxml",
     "set-build:test-server": "rm build.hxml && ln -s test/services/stand-alone-tester/build.hxml build.hxml",
     "set-build:all": "rm build.hxml && ln -s etc/hxml/build-all.hxml build.hxml",

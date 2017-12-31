@@ -6,11 +6,11 @@ package ccc;
 	jobId : asd74gf,
 	status : Success,
 	exitCode : 0,
-	stdout : https://s3-us-west-1.amazonaws.com/bionano-platform-test/3519F65B-10EA-46F3-92F8-368CF377DFCF/stdout,
-	stderr : https://s3-us-west-1.amazonaws.com/bionano-platform-test/3519F65B-10EA-46F3-92F8-368CF377DFCF/stderr,
-	resultJson : https://s3-us-west-1.amazonaws.com/bionano-platform-test/3519F65B-10EA-46F3-92F8-368CF377DFCF/result.json,
-	inputsBaseUrl : https://s3-us-west-1.amazonaws.com/bionano-platform-test/3519F65B-10EA-46F3-92F8-368CF377DFCF/inputs/,
-	outputsBaseUrl : https://s3-us-west-1.amazonaws.com/bionano-platform-test/3519F65B-10EA-46F3-92F8-368CF377DFCF/outputs/,
+	stdout : https://sr-url/3519F65B-10EA-46F3-92F8-368CF377DFCF/stdout,
+	stderr : https://sr-url/3519F65B-10EA-46F3-92F8-368CF377DFCF/stderr,
+	resultJson : https://sr-url/3519F65B-10EA-46F3-92F8-368CF377DFCF/result.json,
+	inputsBaseUrl : https://sr-url/3519F65B-10EA-46F3-92F8-368CF377DFCF/inputs/,
+	outputsBaseUrl : https://sr-url/3519F65B-10EA-46F3-92F8-368CF377DFCF/outputs/,
 	inputs : [script.sh],
 	outputs : [bar]
 }

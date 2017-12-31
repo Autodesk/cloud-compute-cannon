@@ -315,6 +315,24 @@ class WorkerStateRedis
 	})
 	public static function sendCommandToAllWorkers(command :WorkerUpdateCommand) :Promise<String> {}
 
+	//Expects local isPaused
+	static var SNIPPET_UPDATE_ACTIVE_WORKER_IDS =
+	'
+	local idsString = ARGV[1]
+	local ids = cjson.decode(idsString)
+	redis.call("DEL", "${REDIS_MACHINES_ACTIVE}")
+	for i,machineId in ipairs(idsString) do
+		redis.call("SADD", "${REDIS_MACHINES_ACTIVE}", machineId)
+	end
+	';
+	@redis({
+		lua:'${SNIPPET_UPDATE_ACTIVE_WORKER_IDS}'
+	})
+	/* ids is a json array string  */
+	public static function updateActiveWorkerIds(ids :String) :Promise<String>
+	{
+		
+	}
 
 	//#TODO: test this
 	@redis({

@@ -33,7 +33,7 @@ class RedisLoggerTools
 	static function logToRedis(redis :RedisClient, level :String, logThing :Dynamic, pos :haxe.PosInfos)
 	{
 		var obj :haxe.DynamicAccess<Dynamic> = switch(untyped __typeof__(logThing)) {
-			case 'object': cast logThing;
+			case 'object': cast Reflect.copy(logThing);
 			default: cast {message:Std.string(logThing)};
 		}
 		if (pos != null) {
@@ -43,17 +43,11 @@ class RedisLoggerTools
 		obj.set('time', Date.now().getTime());
 		var logString = Json.stringify(obj);
 		trace(logString);
-		redis.rpush(REDIS_KEY_LOGS_LIST, Json.stringify(obj), function(err, result) {
+		redis.rpush(REDIS_KEY_LOGS_LIST, logString, function(err, result) {
 			if (err != null) {
 				trace(err);
-				// try {
-				// 	redis.publish(REDIS_KEY_LOGS_CHANNEL, 'logs');
-				// } catch(err :Dynamic) {
-				// 	//Swallow
-				// }
 			}
 		});
-		// Node.console.log(obj);
 	}
 
 	public static function debugLog(redis :RedisClient, obj :Dynamic, ?pos :haxe.PosInfos)

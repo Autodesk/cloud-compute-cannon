@@ -17,7 +17,16 @@ mkdir -p build/server
 mkdir -p build/local-scaling-server
 mkdir -p build/test
 
-INSTALL=true docker-compose run haxelibs
-docker-compose run compile
+path_to_haxe=$(which haxe || true)
+if [ -x "$path_to_haxe" ] && [ "$TRAVIS" != "1" ] ; then
+	echo "haxe is available! $path_to_haxe"
+	haxelib install --always etc/hxml/build-all.hxml
+	haxe etc/hxml/build-all.hxml
+else
+	INSTALL=true TEST=false TEST_SCALING=false docker-compose run haxelibs
+	INSTALL=false TEST=false TEST_SCALING=false docker-compose run compile
+fi
 
 popd
+
+echo "Finished compiling"

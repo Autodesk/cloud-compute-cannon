@@ -4,6 +4,24 @@
 - [API](API.md)
 - [DEPLOYMENT](DEPLOYMENT.md)
 
+
+## Build artifacts
+
+Build artifacts are created in the `./build/` directory:
+
+	./build/server/cloud-compute-cannon-server.js
+
+	./build/lambda-autoscaling/index.js
+	./build/lambda-autoscaling/package.json
+	./build/lambda-autoscaling/node_modules
+	./build/lambda-autoscaling-zip/ccc-bionano-scaling-0.2.21.zip (version will vary)
+
+
+Test artifacts are also there:
+
+	./build/local-scaling-server/cloud-compute-cannon-scaling-server.js
+	./build/test/cloud-compute-cannon-tester.js
+
 ## Set up:
 
 Run these once:

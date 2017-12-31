@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Publishes images to docker.io:
+# docker.io/dionjwa/cloud-compute-cannon:$NPM_VERSION
+
+set -e
+# This assumes there is an image to publish
+if [ ! -z "$DOCKER_USERNAME" ] && [ ! -z "$DOCKER_PASSWORD" ]; then
+	#Make sure we are logged into quay.io
+	docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+
+	NPM_VERSION=$(cat package.json \
+	  | grep version \
+	  | head -1 \
+	  | awk -F: '{ print $2 }' \
+	  | sed 's/[",]//g' \
+	  | tr -d '[[:space:]]
+	  ')
+	DOCKER_IMAGE_NAME="dionjwa/cloud-compute-cannon:$NPM_VERSION"
+	echo "$DOCKER_IMAGE_NAME"
+	docker tag cloud-compute-cannon:$NPM_VERSION $DOCKER_IMAGE_NAME
+	docker push $DOCKER_IMAGE_NAME
+else
+	echo "DOCKER_USERNAME and DOCKER_PASSWORD are not set, skipping docker image push to docker.io";
+fi

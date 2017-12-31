@@ -7,6 +7,8 @@
 .haxelib
 .idea
 .vagrant
+.terraform
+*.tfvars
 /build.hxml
 build
 node_modules
@@ -26,3 +28,5 @@ ccc_local*
 ccc-local*
 .temp/
 etc/bionano/aws/cloudformation/lambda-autoscaling/src/index-hx.js
+#Terraform
+**.tfstate*

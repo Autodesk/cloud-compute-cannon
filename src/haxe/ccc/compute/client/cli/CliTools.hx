@@ -142,15 +142,17 @@ class CliTools
 
 	public static function getServerHostInCLI() :Host
 	{
-		var program :js.npm.commander.Commander = js.Node.require('commander');
-		if (Reflect.hasField(program, 'server')) {
-			var host :Host = Reflect.field(program, 'server');
-			return host;
-		} else if (Reflect.hasField(program, 'public')) {
-			return SERVER_PUBLIC_HOST;
-		} else {
-			return null;
-		}
+		//TODO: figure out how to get the remote url
+		return null;
+		// var program :js.npm.commander.Commander = js.Node.require('commander');
+		// if (Reflect.hasField(program, 'server')) {
+		// 	var host :Host = Reflect.field(program, 'server');
+		// 	return host;
+		// } else if (Reflect.hasField(program, 'public')) {
+		// 	return SERVER_PUBLIC_HOST;
+		// } else {
+		// 	return null;
+		// }
 	}
 
 	public static function isServerLocalDockerInstall(config :ServerConnectionBlob) :Bool
