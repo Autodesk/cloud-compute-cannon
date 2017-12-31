@@ -27,8 +27,6 @@ class ServerPaths
 {
 	public static function initAppPaths(injector :ServerState)
 	{
-		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
-
 		var app = Express.GetApplication();
 		injector.map(Application).toValue(app);
 
@@ -99,10 +97,6 @@ class ServerPaths
 		app.get('/version_extra', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(Json.stringify(versionBlob));
-		});
-
-		app.get('/config', function(req, res) {
-			res.json(ServerConfig.toJson());
 		});
 
 		//Check if server is listening

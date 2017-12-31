@@ -39,7 +39,6 @@ class Server
 		//Required for source mapping
 		js.npm.sourcemapsupport.SourceMapSupport;
 		//Embed various files
-		util.EmbedMacros.embedFiles('etc', ["etc/hxml/.*"]);
 		js.ErrorToJson;
 		// monitorMemory();
 
@@ -52,10 +51,12 @@ class Server
 		initProcess();
 		initGlobalErrorHandler();
 		initAppConfig(injector);
-		initStorage(injector);
-		ServerPaths.initAppPaths(injector);
-		createHttpServer(injector);
-		runServer(injector);
+		initStorage(injector)
+			.then(function(_) {
+				ServerPaths.initAppPaths(injector);
+				createHttpServer(injector);
+				runServer(injector);
+			});
 	}
 
 	static function initProcess()
@@ -120,40 +121,35 @@ class Server
 	static function initAppConfig(injector :ServerState)
 	{
 		injector.setStatus(ServerStartupState.LoadingConfig);
-		var config :ServiceConfiguration = InitConfigTools.getConfig();
-		Assert.notNull(config);
-		Assert.notNull(config.providers, 'config.providers == null');
-		Assert.notNull(config.providers[0], 'No providers');
+		// var config :ServiceConfiguration = InitConfigTools.getConfig();
+		// Assert.notNull(config);
+		// Assert.notNull(config.providers, 'config.providers == null');
+		// Assert.notNull(config.providers[0], 'No providers');
 
-		Log.debug({config:LogTools.removePrivateKeys(config)});
+		// Log.debug({config:LogTools.removePrivateKeys(config)});
 
 		var env :DynamicAccess<String> = Node.process.env;
 
-		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
+		// var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
 
 		mapEnvVars(injector);
 
-		for (key in Reflect.fields(config)) {
-			if (key != 'storage' && key != 'providers') {
-				Reflect.setField(env, key, Reflect.field(config, key));
-			}
-		}
+		// for (key in Reflect.fields(config)) {
+		// 	if (key != 'storage' && key != 'providers') {
+		// 		Reflect.setField(env, key, Reflect.field(config, key));
+		// 	}
+		// }
 
-		injector.map('ccc.compute.shared.ServiceConfiguration').toValue(config);
-		injector.map('ccc.compute.shared.ServiceConfigurationWorkerProvider').toValue(config.providers[0]);
+		// injector.map('ccc.compute.shared.ServiceConfiguration').toValue(config);
+		// injector.map('ccc.compute.shared.ServiceConfigurationWorkerProvider').toValue(config.providers[0]);
 
-		var injectionTest = new ConfigInjectionTest();
-		injector.injectInto(injectionTest);
-		Assert.notNull(injectionTest.config);
-		Assert.notNull(injectionTest.workerConfig);
-
-		for (v in [['ccc.compute.shared.ServiceConfiguration'], ['ccc.compute.shared.ServiceConfigurationWorkerProvider']]) {
-			if (v.length > 1) {
-				Assert.notNull(injector.getValue(v[0], v[1]), 'Missing injector.getValue(${v[0]}, ${v[1]})');
-			} else {
-				Assert.notNull(injector.getValue(v[0]), 'Missing injector.getValue(${v[0]})');
-			}
-		}
+		// for (v in [['ccc.compute.shared.ServiceConfiguration'], ['ccc.compute.shared.ServiceConfigurationWorkerProvider']]) {
+		// 	if (v.length > 1) {
+		// 		Assert.notNull(injector.getValue(v[0], v[1]), 'Missing injector.getValue(${v[0]}, ${v[1]})');
+		// 	} else {
+		// 		Assert.notNull(injector.getValue(v[0]), 'Missing injector.getValue(${v[0]})');
+		// 	}
+		// }
 
 		/* Workers */
 		if (!ServerConfig.DISABLE_WORKER) {
@@ -224,39 +220,64 @@ class Server
 			.thenTrue();
 	}
 
-	static function initSaveConfigToRedis(injector :ServerState) :Promise<Bool>
-	{
-		injector.setStatus(ServerStartupState.SavingConfigToRedis);
-		var serverRedis :ServerRedisClient = injector.getValue(ServerRedisClient);
-		Assert.notNull(serverRedis, 'serverRedis is null');
-		var redis :RedisClient = serverRedis.client;
-		Assert.notNull(redis, 'redis is null');
-
-		var config :ServiceConfigurationWorkerProvider = injector.getValue('ccc.compute.shared.ServiceConfigurationWorkerProvider');
-		return Promise.promise(true)
-			.pipe(function(_) {
-				return RedisPromises.hset(redis, CONFIG_HASH, CONFIG_HASH_WORKERS_MAX, '${config.maxWorkers}');
-			})
-			.pipe(function(_) {
-				return RedisPromises.hset(redis, CONFIG_HASH, CONFIG_HASH_WORKERS_MIN, '${config.minWorkers}');
-			})
-			.thenTrue();
-	}
-
-	static function initStorage(injector :ServerState)
+	static function initStorage(injector :ServerState) :Promise<Bool>
 	{
 		injector.setStatus(ServerStartupState.CreateStorageDriver);
-		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
 
-		/* Storage*/
-		Assert.notNull(config.storage);
-		var storageConfig :StorageDefinition = config.storage;
+		if ( (!StringUtil.isEmpty(ServerConfig.AWS_S3_KEYID) ||
+			 !StringUtil.isEmpty(ServerConfig.AWS_S3_KEY) ||
+			 !StringUtil.isEmpty(ServerConfig.AWS_S3_BUCKET) ||
+			 !StringUtil.isEmpty(ServerConfig.AWS_S3_REGION)
+			) &&
+			(StringUtil.isEmpty(ServerConfig.AWS_S3_KEYID) ||
+			 StringUtil.isEmpty(ServerConfig.AWS_S3_KEY) ||
+			 StringUtil.isEmpty(ServerConfig.AWS_S3_BUCKET) ||
+			 StringUtil.isEmpty(ServerConfig.AWS_S3_REGION)
+			)) {
+			throw 'If AWS_S3_KEYID, AWS_S3_KEY, AWS_S3_BUCKET, or AWS_S3_REGION are defined, you must define all';
+		}
+
+		var storageConfig :StorageDefinition = null;
+		if (!StringUtil.isEmpty(ServerConfig.AWS_S3_KEYID)
+			&& !StringUtil.isEmpty(ServerConfig.AWS_S3_KEY)
+			&& !StringUtil.isEmpty(ServerConfig.AWS_S3_BUCKET)) {
+
+			//S3 bucket credentials
+			storageConfig = {
+				type: StorageSourceType.S3,
+				container: ServerConfig.AWS_S3_BUCKET,
+				credentials: {
+					accessKeyId: ServerConfig.AWS_S3_KEYID,
+					secretAccessKey: ServerConfig.AWS_S3_KEY,
+					region: ServerConfig.AWS_S3_REGION,
+				}
+			};
+		} else {
+			storageConfig = {
+				type: StorageSourceType.Local
+			};
+		}
+
+		storageConfig.rootPath = StringUtil.isEmpty(ServerConfig.STORAGE_PATH_BASE) ? DEFAULT_BASE_STORAGE_DIR : ServerConfig.STORAGE_PATH_BASE;
+
 		var storage :ServiceStorage = StorageTools.getStorage(storageConfig);
 		Assert.notNull(storage);
+		Log.info(storage.toString());
 		StorageService = storage;
 		injector.map('ccc.storage.StorageDefinition').toValue(storageConfig);
 		injector.map(ccc.storage.ServiceStorage).toValue(storage);
 		injector.getValue('Array<Dynamic>', 'Injectees').push(storage);
+
+		return storage.test()
+			.then(function(result) {
+				if (result.success) {
+					Log.info('Storage verified OK!');
+				} else {
+					Log.error(result);
+					throw 'Storage verification failed';
+				}
+				return result.success;
+			});
 	}
 
 	static function initWorker(injector :ServerState) :Promise<Bool>
@@ -274,8 +295,6 @@ class Server
 
 		var env :DynamicAccess<String> = Node.process.env;
 
-		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
-
 		return Promise.promise(true)
 			.pipe(function(_) {
 				return DockerTools.getThisContainerName()
@@ -286,9 +305,6 @@ class Server
 			})
 			.pipe(function(_) {
 				return initRedis(injector);
-			})
-			.pipe(function(_) {
-				return initSaveConfigToRedis(injector);
 			})
 			.then(function(_) {
 				StatusStream = JobStream.getStatusStream();
@@ -364,17 +380,13 @@ class Server
 		app.use('/node_modules', Express.Static('./node_modules'));
 
 		var storage :ServiceStorage = injector.getValue(ServiceStorage);
-		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
-		/* Storage*/
-		Assert.notNull(config.storage);
-		var storageConfig :StorageDefinition = config.storage;
 
 		//After all API routes, assume that any remaining requests are for files.
 		//This is nice for local development
-		if (storageConfig.type == StorageSourceType.Local) {
+		if (Type.getClass(storage) == ServiceStorageLocalFileSystem) {
 			// Show a nice browser for the local file system.
-			Log.debug('Setting up static file server for output from Local Storage System at: ${config.storage.rootPath}');
-			app.use('/', Node.require('serve-index')(config.storage.rootPath, {'icons': true}));
+			Log.debug('Setting up static file server for output from Local Storage System at: ${storage.getRootPath()}');
+			app.use('/', Node.require('serve-index')(storage.getRootPath(), {'icons': true}));
 		}
 		//Setup a static file server to serve job results
 		app.use('/', cast StorageRestApi.staticFileRouter(storage));
@@ -411,11 +423,4 @@ class Server
 			Log.debug({memory_leak:data});
 		});
 	}
-}
-
-class ConfigInjectionTest
-{
-	@inject public var workerConfig :ServiceConfigurationWorkerProvider;
-	@inject public var config :ServiceConfiguration;
-	public function new(){}
 }

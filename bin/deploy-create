@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Creates the deployment artifacts from build artifacts into a specified directory
+# Assumes the build artifacts exist

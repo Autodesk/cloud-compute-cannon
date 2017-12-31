@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#For local testing of building artifacts and pushing them
+bin/build-docker-images && env $(cat .env | xargs)  bin/publish-docker

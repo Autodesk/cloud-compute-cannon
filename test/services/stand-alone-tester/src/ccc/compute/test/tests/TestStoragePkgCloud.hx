@@ -211,20 +211,6 @@ class TestStoragePkgCloud extends TestStorageBase
 	// // 	return this.doServiceStorageTest(storageService);
 	// // }
 
-	// function XtestHttpUrl() :Promise<Bool>
-	// {
-	// 	var testPath :String = "file0.csv.gz";
-	// 	var httpUrl :String = "https://s3-us-west-1.amazonaws.com/bionano-platform-test/file0.csv.gz";
-	// 	_storage.setRootPath('/');
-	// 	var serviceStorageS3 :ServiceStorageS3 = cast _storage;
-
-	// 	return Promise.promise(true)
-	// 		.then(function (_) {
-	// 			Assert.that(serviceStorageS3.getExternalUrl(testPath) == httpUrl);
-	// 			return true;
-	// 		});
-	// }
-
 	// function XtestStorageDefinitionFromServiceConfiguration() :Promise<Bool>
 	// {
 	// 	var configFilePath = 'server/servers/etc/serverconfig.amazon.s3.template.yml';

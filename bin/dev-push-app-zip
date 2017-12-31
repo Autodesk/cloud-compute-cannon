@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-bin/build-docker-images && env $(cat .env | xargs)  bin/publish_quay && env $(cat .env | xargs)  bin/create_app_zip ccc.yml
