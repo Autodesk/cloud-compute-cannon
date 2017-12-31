@@ -47,6 +47,7 @@ module "s3" {
   source      = "../s3_bucket"
   access_key  = "${var.access_key}"
   secret_key  = "${var.secret_key}"
+  region      = "${var.region}"
   bucket_name = "${var.bucket_name}"
 }
 

@@ -10,7 +10,7 @@ There are different options for running a cloud compute stack depending on your 
 
 Steps:
 
-**Step 1:** Go into the relevant `./examples/` subdirectory, e.g. `./examples/cheapest_scalable_stack`, and copy the file `main.tf` to your computer.
+**Step 1:** Go into the relevant `./aws/examples/` subdirectory, e.g. `./aws/examples/ccc_module`, and copy the file `main.tf` to your computer.
 
 **Step 2:** Create a file called `terraform.tfvars` in the same directory as the `main.tf` file above that contains your AWS credentials and region:
 
