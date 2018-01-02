@@ -1,33 +1,35 @@
 # Cloud Compute Cannon [![Build Status](https://travis-ci.org/dionjwa/cloud-compute-cannon.svg?branch=master)](https://travis-ci.org/dionjwa/cloud-compute-cannon)
 
 ## TOC:
-
+ - [INSTALL](docs/INSTALL.md)
  - [API](docs/API.md)
  - [ARCHITECTURE](docs/ARCHITECTURE.md)
  - [DEVELOPERS](docs/DEVELOPERS.md)
- - [DEPLOYMENT](docs/DEPLOYMENT.md)
  - [ENVIRONMENT VARIABLES](src/haxe/ccc/compute/shared/ServerConfig.hx)
  - [LOGS](docs/LOGS.md)
  - [ROADMAP](docs/ROADMAP.md)
 
-Cloud Compute Cannon (CCC) is a stack that provides an HTTP API for running arbitrary compute jobs that run in docker containers.
+## Introduction
 
-The stack runs locally or in AWS (other compute providers coming soon).
+Cloud Compute Cannon (CCC) aims to provide a consistent API and client libraries to run computation jobs, such as machine learning, GPU computation. It consists of a number of servers that process docker compute jobs.
 
+It can run locally on your machine, or just as easily, in the cloud (currently only AWS but working to extend). When running in the cloud, you can scale as much or as little as you need, and you get billed directly by AWS.
 
-Cloud Compute Cannon allows you to create a server (that scales) that provides a REST API that allows callers to run *any* docker image.
+It aims to be as *simple* and *reliable* to install in any location, and both local and cloud installs are a few simple steps.
 
-This means that the Cloud-Compute-Cannon (CCC) server allow you to run anything on your server: Python scripts, R statistics analysis, deep learning algorithms, C++ simulations
+A JSON-RPC REST API is provided, allowing CCC to be used by individuals, or by companies that require a reliable and scalable way of running any docker-based jobs.
 
-Cloud Compute Cannon is a tool aimed at scientists and more general users who want to use cheap cloud providers (such as Amazon) to perform large scale computes (number crunching). It aims to lower some of the biggest barriers and learning curves in getting data and custom code running on distributed cloud infrastructure. It can be run both as a command-line tool, or as a server for integrating into other tools via a REST API/websockets.
+Expected primary users are developers, data scientists, and researchers. For you all, there has to be an easier way to run your compute jobs. Hopefully, this tool makes your lives easier.
 
-Use cases:
+Cloud Compute Cannon is open source.
 
- - Simulating molecular dynamics
- - Numerical simulations, data crunching
- - Server infrastructure for scalable computation
+## Example
 
-Cloud Compute Cannon is designed to do one thing well: run docker-based compute jobs on any cloud provider (or your local machine) reliably, with a minimum or user intervention, and scale machines up and down as needed. Its feature set is purposefully limited, it is designed to be used standalone, or as a component in more complex tools, rather than be extended itself.
+Install the CCC stack to the cloud, and run some computation jobs, get the results, then destroy the stack.
+
+### 1 Install a stack locally
+
+See `[etc/terraform/README.md](etc/terraform/README.md)`. Install the example stack in AWS (you will be charged a small amount of monay).
 
 ## License
 

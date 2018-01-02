@@ -25,22 +25,22 @@ echo "NPM_VERSION=$NPM_VERSION"
 echo "TRAVIS_TAG=$TRAVIS_TAG"
 
 # Sanity check on versions
-# ./bin/check-versions
+./bin/version-check
 
 #First build locally the docker images for the minimal CCC server
-# bin/build-docker-images
+bin/build-docker-images
 
-# # Only run the tests on PRs
-# if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "true" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ];
-# 	then
-# 		echo "Running tests"
-# 		TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
-# fi
-
-if [ "$TRAVIS_BRANCH" != "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
+# Only run the tests on PRs
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "true" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ];
 	then
-		echo "In reality, I would have published the image dionjwa/cloud-compute-cannon${NPM_VERSION} to docker"
-		# ./bin/publish-docker
+		echo "Running tests"
+		TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
+fi
+
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
+	then
+		echo "Publishing to dockerhub: dionjwa/cloud-compute-cannon${NPM_VERSION}"
+		./bin/publish-docker
 	else
 		echo "No tag, not publishing image to dockerhub"
 fi

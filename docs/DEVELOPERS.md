@@ -4,6 +4,11 @@
 - [API](API.md)
 - [DEPLOYMENT](DEPLOYMENT.md)
 
+## Git tags and docker image publishing
+
+The script below will git tag the version in `package.json`, and push the tags to github. This will trigger Travis CI to build and publish the docker images.:
+
+	./bin/tag-and-push-version
 
 ## Build artifacts
 
@@ -14,7 +19,7 @@ Build artifacts are created in the `./build/` directory:
 	./build/lambda-autoscaling/index.js
 	./build/lambda-autoscaling/package.json
 	./build/lambda-autoscaling/node_modules
-	./build/lambda-autoscaling-zip/ccc-bionano-scaling-0.2.21.zip (version will vary)
+	./etc/terraform/aws/modules/lambda/lambda.zip
 
 
 Test artifacts are also there:
