@@ -21,27 +21,27 @@ NPM_VERSION=$(cat package.json \
   | tr -d '[[:space:]]')
 
 echo "VERSION=$GIT_TAG"
+echo "NPM_VERSION=$NPM_VERSION"
+echo "TRAVIS_TAG=$TRAVIS_TAG"
 
 # Sanity check on versions
-./bin/lambdas-validate-artifact
+./bin/version-check
 
 #First build locally the docker images for the minimal CCC server
 bin/build-docker-images
 
-echo "Running tests"
-
-TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
-
+# Only run the tests on PRs
 if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "true" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ];
 	then
-		echo "TRAVIS_TAG=$TRAVIS_TAG"
-		./bin/publish-docker
+		echo "Running tests"
+		TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
+fi
 
-		#If the tests pass, push the image to quay.io
-		# echo "Push images to quay.io"
-		# ./bin/publish_quay
-		# #Create the docker-compose app zip file, this will also upload to S3 if we have correct credentials
-		# echo "Create app zip"
-		# ./bin/create_app_zip
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
+	then
+		echo "Publishing to dockerhub: dionjwa/cloud-compute-cannon${NPM_VERSION}"
+		./bin/publish-docker
+	else
+		echo "No tag, not publishing image to dockerhub"
 fi
 

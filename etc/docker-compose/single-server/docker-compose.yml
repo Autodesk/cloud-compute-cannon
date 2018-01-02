@@ -9,46 +9,27 @@ volumes:
 services:
 
   ccc:
-    restart: "always"
-    # image: "quay.io/bionano/cloud-compute-cannon:${VERSION}"
-    image: "cloud-compute-cannon:f3c3bca2"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      #This volume is needed for running computes locally
-      - ccc-local-storage:/app/ccc-local-storage
+    image: "dionjwa/cloud-compute-cannon:0.1.50-test-03"
     ports:
       - "9000:9000"
-    environment:
-      PORT: "9000"
-      # OPTIONAL: Path to the mounted configuration file
-      # CONFIG_PATH: "/app/ccc.yml"
-      # OPTIONAL text flattened yaml of the server configuration.
-      COMPUTE_CONFIG: "${COMPUTE_CONFIG}"
-      #This is used to get the correct host working directory to pass into the
-      #worker containers to map the local file system to /inputs+/outputs within
-      #the container. Only used for local docker providers (not cloud)
-      HOST_PWD: "$PWD"
-      #Sets the max log level (bunyan where 10=trace 40=warn)
-      # LOG_LEVEL: "$LOG_LEVEL"
-      #If the client CLI installed this stack, se this true.
-      #Then the servers expects a mounted config file, and if missing, logs an error.
-      CLIENT_DEPLOYMENT: "false"
-      ENABLE_FLUENT: "true"
-      SCALE_UP_CONTROL: "external"
-      SCALE_DOWN_CONTROL: "external"
-      REDIS_HOST: "redis"
-      FLUENT_PORT: "24225"
     links:
-      - fluentd
       - redis
+      - fluentd
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PORT=9000
+      - STORAGE_HTTP_PREFIX=http://localhost:9000
+      - REDIS_HOST=redis
+      - VIRTUAL_HOST=localhost:9000
+      - FLUENT_HOST=fluentd
+      - FLUENT_PORT=24225
+      - LOG_LEVEL=debug
+      - WORKER_STATUS_CHECK_INTERVAL_SECONDS=20
 
   redis:
     restart: always
-    image: redistest:0.0.1
-    # dionjwa/cloud-compute-cannon-redis:0.2.1
-    ports:
-      #Don't expose this port to the host, only linked containers.
-      - "6379"
+    image: redis:3.2.0-alpine
     volumes:
       - redis-data:/data
     links:
@@ -58,15 +39,12 @@ services:
     restart: always
     image: dionjwa/cloud-compute-cannon-fluent:0.2.1
     restart: always
-    ports:
-      - "24225:24225"
-      - "9881:9881"
     links:
       - elasticsearch
 
   elasticsearch:
     restart: always
-    image: elasticsearch:2.3
+    image: elasticsearch:2.4.5-alpine
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -76,7 +54,7 @@ services:
 
   kibana:
     restart: always
-    image: kibana:4.4.2
+    image: kibana:4.6.6
     ports:
       - "5601:5601"
     environment:
