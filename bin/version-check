@@ -36,7 +36,7 @@ fi
 
 
 VERSION_DOCKER_COMPOSE=$(cat etc/docker-compose/single-server/docker-compose.yml \
-  | grep "image: \"cloud-compute-cannon:" \
+  | grep "image: \"dionjwa/cloud-compute-cannon:" \
   | head -1 \
   | awk -F'cloud-compute-cannon:' '{ print $2 }' \
   | sed 's/[",]//g' \
