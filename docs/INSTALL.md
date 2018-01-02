@@ -18,8 +18,8 @@ To delete the local stack:
 
 ### Developers
 
-See [./DEVELOPERS.md](./DEVELOPERS.md).
+See [DEVELOPERS.md](./DEVELOPERS.md).
 
 ## Cloud (AWS)
 
-See [etc/terraform/README.md](etc/terraform/README.md) for an example of installing to AWS and removing the stack when finished.
+See [etc/terraform/README.md](../etc/terraform/README.md) for an example of installing to AWS and removing the stack when finished.
