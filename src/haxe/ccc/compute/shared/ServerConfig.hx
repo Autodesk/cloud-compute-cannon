@@ -15,6 +15,7 @@ import ccc.compute.shared.provider.CloudProviderType;
 class ServerConfig
 {
 	/**
+	 * TODO: this might not be necessary.
 	 * When running the API server as a single GPU
 	 * node, set this to 1 or true. This disables
 	 * a lot of code paths involved in remote caches

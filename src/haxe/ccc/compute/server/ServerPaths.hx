@@ -53,8 +53,17 @@ class ServerPaths
 			res.send(versionBlob.git);
 		});
 
+		/**
+		 * Adds bull dashboard to /dashboard
+		 */
 		QueueTools.addBullDashboard(injector);
 
+		/**
+		 * The function to test the overall health of the system.
+		 * It runs jobs, so the actual jobs submitted to the queue
+		 * need to be limited, otherwise in some cases they can pile
+		 * up, bringing the system to a crawl.
+		 */
 		function test(req, res) {
 			var monitorService = injector.getValue(ServiceMonitorRequest);
 			monitorService.monitor(req.query)

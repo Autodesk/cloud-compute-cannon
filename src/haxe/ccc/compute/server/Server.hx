@@ -46,16 +46,104 @@ class Server
 		injector.map(Injector).toValue(injector); //Map itself
 		injector.map('Array<Dynamic>', 'Injectees').toValue([]);
 
+		//Initial config and process setup
 		initLogging(injector);
 		injector.setStatus(ServerStartupState.Booting);
 		initProcess();
 		initGlobalErrorHandler();
 		initAppConfig(injector);
+		//Initialize and validate remote storage
 		initStorage(injector)
 			.then(function(_) {
+				//Add the expres paths
 				ServerPaths.initAppPaths(injector);
+				//Actually create the HTTP server
 				createHttpServer(injector);
-				runServer(injector);
+				return true;
+			})
+			//Local docker configuration
+			.pipe(function(_) {
+				if (!ServerConfig.DISABLE_WORKER) {
+					Constants.DOCKER_CONTAINER_ID = DockerTools.getContainerId();
+					return DockerTools.getThisContainerName()
+						.then(function(containerName) {
+							Constants.DOCKER_CONTAINER_NAME = containerName.startsWith('/') ? containerName.substr(1) : containerName;
+							return true;
+						});
+				} else {
+					return Promise.promise(true);
+				}
+			})
+			//Redis DB cache
+			.pipe(function(_) {
+				return initRedis(injector);
+			})
+			//Notification PUB/SUB streams from redis
+			.then(function(_) {
+				StatusStream = JobStream.getStatusStream();
+				injector.map("promhx.Stream<ccc.JobStatsData>", "StatusStream").toValue(StatusStream);
+				StatusStream.catchError(function(err) {
+					Log.error(err);
+				});
+				var activeJobStream = JobStream.getActiveJobStream();
+				injector.map("promhx.Stream<Array<ccc.JobId>>", "ActiveJobStream").toValue(activeJobStream);
+
+				var finishedJobStream = JobStream.getFinishedJobStream();
+				injector.map("promhx.Stream<Array<ccc.JobId>>", "FinishedJobStream").toValue(finishedJobStream);
+			})
+			//Create queue to add jobs
+			.then(function(_) {
+				QueueTools.initJobQueue(injector);
+				return true;
+			})
+			//Is this also a worker that processes jobs?
+			.pipe(function(_) {
+				injector.setStatus(ServerStartupState.BuildingServices);
+				traceYellow('DISABLE_WORKER=${ServerConfig.DISABLE_WORKER}');
+				if (!ServerConfig.DISABLE_WORKER) {
+					return initWorker(injector);
+				} else {
+					Log.info({worker:'disabled'});
+					return Promise.promise(true);
+				}
+			})
+			//Create the /test processing service
+			.then(function(_) {
+				ServiceMonitorRequest.init(injector);
+				return true;
+			})
+			//Create the RPC machinery (provides express routes from functions)
+			.then(function(_) {
+
+				var serverRedis :ServerRedisClient = injector.getValue(ServerRedisClient);
+				var redis :RedisClient = serverRedis.client;
+
+				//Inject everything!
+				var injectees :Array<Dynamic> = injector.getValue('Array<Dynamic>', 'Injectees');
+				for(injectee in injectees) {
+					injector.injectInto(injectee);
+				}
+
+				//RPC machinery
+				var serviceRoutes = ccc.compute.server.execution.routes.RpcRoutes.router(injector);
+				injector.getValue(Application).use(SERVER_API_URL, serviceRoutes);
+
+				//Also start using versioned APIs
+				var serviceRoutesV1 = ccc.compute.server.execution.routes.RpcRoutes.routerVersioned(injector);
+				injector.getValue(Application).use(serviceRoutesV1);
+
+				initWebsocketServer(injector);
+				initStaticFileServing(injector);
+
+				return true;
+			})
+			//Finished setup, all systems go
+			.then(function(_) {
+				injector.setStatus(ServerStartupState.Ready);
+				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
+					Node.process.send(Constants.IPC_MESSAGE_READY);
+				}
+				return true;
 			});
 	}
 
@@ -121,35 +209,10 @@ class Server
 	static function initAppConfig(injector :ServerState)
 	{
 		injector.setStatus(ServerStartupState.LoadingConfig);
-		// var config :ServiceConfiguration = InitConfigTools.getConfig();
-		// Assert.notNull(config);
-		// Assert.notNull(config.providers, 'config.providers == null');
-		// Assert.notNull(config.providers[0], 'No providers');
-
-		// Log.debug({config:LogTools.removePrivateKeys(config)});
 
 		var env :DynamicAccess<String> = Node.process.env;
 
-		// var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
-
 		mapEnvVars(injector);
-
-		// for (key in Reflect.fields(config)) {
-		// 	if (key != 'storage' && key != 'providers') {
-		// 		Reflect.setField(env, key, Reflect.field(config, key));
-		// 	}
-		// }
-
-		// injector.map('ccc.compute.shared.ServiceConfiguration').toValue(config);
-		// injector.map('ccc.compute.shared.ServiceConfigurationWorkerProvider').toValue(config.providers[0]);
-
-		// for (v in [['ccc.compute.shared.ServiceConfiguration'], ['ccc.compute.shared.ServiceConfigurationWorkerProvider']]) {
-		// 	if (v.length > 1) {
-		// 		Assert.notNull(injector.getValue(v[0], v[1]), 'Missing injector.getValue(${v[0]}, ${v[1]})');
-		// 	} else {
-		// 		Assert.notNull(injector.getValue(v[0]), 'Missing injector.getValue(${v[0]})');
-		// 	}
-		// }
 
 		/* Workers */
 		if (!ServerConfig.DISABLE_WORKER) {
@@ -287,87 +350,6 @@ class Server
 		injector.map(ccc.compute.worker.WorkerStateManager).toValue(workerManager);
 		injector.injectInto(workerManager);
 		return workerManager.ready;
-	}
-
-	static function runServer(injector :ServerState) :Promise<Bool>
-	{
-		Constants.DOCKER_CONTAINER_ID = DockerTools.getContainerId();
-
-		var env :DynamicAccess<String> = Node.process.env;
-
-		return Promise.promise(true)
-			.pipe(function(_) {
-				return DockerTools.getThisContainerName()
-					.then(function(containerName) {
-						Constants.DOCKER_CONTAINER_NAME = containerName.startsWith('/') ? containerName.substr(1) : containerName;
-						return true;
-					});
-			})
-			.pipe(function(_) {
-				return initRedis(injector);
-			})
-			.then(function(_) {
-				StatusStream = JobStream.getStatusStream();
-				injector.map("promhx.Stream<ccc.JobStatsData>", "StatusStream").toValue(StatusStream);
-				StatusStream.catchError(function(err) {
-					Log.error(err);
-				});
-				var activeJobStream = JobStream.getActiveJobStream();
-				injector.map("promhx.Stream<Array<ccc.JobId>>", "ActiveJobStream").toValue(activeJobStream);
-
-				var finishedJobStream = JobStream.getFinishedJobStream();
-				injector.map("promhx.Stream<Array<ccc.JobId>>", "FinishedJobStream").toValue(finishedJobStream);
-			})
-			//Create queue to add jobs
-			.then(function(_) {
-				QueueTools.initJobQueue(injector);
-				return true;
-			})
-			.pipe(function(_) {
-				injector.setStatus(ServerStartupState.BuildingServices);
-				traceYellow('DISABLE_WORKER=${ServerConfig.DISABLE_WORKER}');
-				if (!ServerConfig.DISABLE_WORKER) {
-					return initWorker(injector);
-				} else {
-					Log.info({worker:'disabled'});
-					return Promise.promise(true);
-				}
-			})
-			.then(function(_) {
-				ServiceMonitorRequest.init(injector);
-				return true;
-			})
-			.then(function(_) {
-
-				var serverRedis :ServerRedisClient = injector.getValue(ServerRedisClient);
-				var redis :RedisClient = serverRedis.client;
-
-				//Inject everything!
-				var injectees :Array<Dynamic> = injector.getValue('Array<Dynamic>', 'Injectees');
-				for(injectee in injectees) {
-					injector.injectInto(injectee);
-				}
-
-				//RPC machinery
-				var serviceRoutes = ccc.compute.server.execution.routes.RpcRoutes.router(injector);
-				injector.getValue(Application).use(SERVER_API_URL, serviceRoutes);
-
-				//Also start using versioned APIs
-				var serviceRoutesV1 = ccc.compute.server.execution.routes.RpcRoutes.routerVersioned(injector);
-				injector.getValue(Application).use(serviceRoutesV1);
-
-				initWebsocketServer(injector);
-				initStaticFileServing(injector);
-
-				return true;
-			})
-			.then(function(_) {
-				injector.setStatus(ServerStartupState.Ready);
-				if (Node.process.send != null) {//If spawned via a parent process, send will be defined
-					Node.process.send(Constants.IPC_MESSAGE_READY);
-				}
-				return true;
-			});
 	}
 
 	static function initStaticFileServing(injector :ServerState)
