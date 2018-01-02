@@ -11,17 +11,13 @@
 
 ## Introduction
 
-Cloud Compute Cannon (CCC) aims to provide a consistent API and client libraries to run computation jobs, such as machine learning, GPU computation. It consists of a number of servers that process docker compute jobs.
+Cloud Compute Cannon (CCC) aims to provide a consistent API and client libraries to run computation jobs, such as machine learning, GPU computation. It consists of a number of servers that process `docker` compute jobs.
 
-It can run locally on your machine, or just as easily, in the cloud (currently only AWS but working to extend). When running in the cloud, you can scale as much or as little as you need, and you get billed directly by AWS.
-
-It aims to be as *simple* and *reliable* to install in any location, and both local and cloud installs are a few simple steps.
+It can run locally on your machine, or just as easily, in the cloud (currently only AWS but working to extend), where it scales to as many compute machines as needed. It aims to be as *simple* and *reliable* to install in any location, and both local and cloud installs are a few simple steps.
 
 A JSON-RPC REST API is provided, allowing CCC to be used by individuals, or by companies that require a reliable and scalable way of running any docker-based jobs.
 
 Expected primary users are developers, data scientists, and researchers. For you all, there has to be an easier way to run your compute jobs. Hopefully, this tool makes your lives easier.
-
-Cloud Compute Cannon is open source.
 
 ## Example
 
@@ -29,7 +25,51 @@ Install the CCC stack to the cloud, and run some computation jobs, get the resul
 
 ### 1 Install a stack locally
 
-See `[etc/terraform/README.md](etc/terraform/README.md)`. Install the example stack in AWS (you will be charged a small amount of monay).
+See `[docs/INSTALL.md](docs/INSTALL.md)`.
+
+### 2 Run a compute job
+
+Get the URL to the API above (either http://localhost:9000 or it will be given by the `terraform apply` command) and run the following job via `cURL`:
+
+```
+	curl -X POST \
+	  http://localhost:9000/v1 \
+	  -H 'Cache-Control: no-cache' \
+	  -H 'Content-Type: application/json' \
+	  -H 'Postman-Token: c6f25ee8-adc8-5c08-8384-c24f641eef73' \
+	  -d '{
+	  "jsonrpc": "2.0",
+	  "id": "_",
+	  "method": "submitJobJson",
+	  "params": {
+	    "job": {
+	      "wait": true,
+	      "image": "busybox:latest",
+	      "command": [
+	        "ls",
+	        "/inputs"
+	      ],
+	      "inputs": [
+	        {
+	          "name": "inputFile1",
+	          "value": "foo"
+	        },
+	        {
+	          "name": "inputFile2",
+	          "value": "bar"
+	        }
+	      ],
+	      "parameters": {
+	        "maxDuration": 600000,
+	        "cpus": 1
+	      }
+	    }
+	  }
+	}'
+```
+
+This simply prints the input files to `stdout`. Nothing special, except you can run any docker image you want to do pretty much anything.
+
 
 ## License
 
