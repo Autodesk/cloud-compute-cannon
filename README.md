@@ -5,19 +5,14 @@
  - [API](docs/API.md)
  - [ARCHITECTURE](docs/ARCHITECTURE.md)
  - [DEVELOPERS](docs/DEVELOPERS.md)
- - [ENVIRONMENT VARIABLES](src/haxe/ccc/compute/shared/ServerConfig.hx)
- - [LOGS](docs/LOGS.md)
- - [ROADMAP](docs/ROADMAP.md)
 
 ## Introduction
 
 Cloud Compute Cannon (CCC) aims to provide a consistent API and client libraries to run computation jobs, such as machine learning, GPU computation. It consists of a number of servers that process `docker` compute jobs.
 
-It can run locally on your machine, or just as easily, in the cloud (currently only AWS but working to extend), where it scales to as many compute machines as needed. It aims to be as *simple* and *reliable* to install in any location, and both local and cloud installs are a few simple steps.
+It can run locally on your machine, or just as easily in the cloud (currently only AWS but working to extend), where it scales to as many compute machines as needed. It aims to be as *simple* and *reliable* to install in any location.
 
-A JSON-RPC REST API is provided, allowing CCC to be used by individuals, or by companies that require a reliable and scalable way of running any docker-based jobs.
-
-Expected primary users are developers, data scientists, and researchers. For you all, there has to be an easier way to run your compute jobs. Hopefully, this tool makes your lives easier.
+You interact via a simple REST API. Client libraries to make interaction easier (e.g. submit jobs in Python) are in progress.
 
 ## Example
 
@@ -70,6 +65,9 @@ Get the URL to the API above (either http://localhost:9000 or it will be given b
 
 This simply prints the input files to `stdout`. Nothing special, except you can run any docker image you want to do pretty much anything.
 
+## ROADMAP
+
+See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 

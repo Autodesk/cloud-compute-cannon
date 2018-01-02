@@ -22,4 +22,6 @@ See [DEVELOPERS.md](./DEVELOPERS.md).
 
 ## Cloud (AWS)
 
+You can easily create and destroy a stack in the cloud to run your compute jobs.
+
 See [etc/terraform/README.md](../etc/terraform/README.md) for an example of installing to AWS and removing the stack when finished.
