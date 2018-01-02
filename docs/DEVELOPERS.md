@@ -2,7 +2,7 @@
 
 - [ARCHITECTURE](ARCHITECTURE.md)
 - [API](API.md)
-- [DEPLOYMENT](DEPLOYMENT.md)
+- [INSTALL](INSTALL.md)
 
 ## Set up:
 
@@ -119,3 +119,7 @@ You will see links to various dashboards. There is a button for Postman API requ
 The script below will git tag the version in `package.json`, update local copies of files that hard-code the version (unfortunately) and push the tags to github. This will trigger Travis CI to build and publish the docker images.:
 
 	./bin/version-update
+
+## Environmental variables
+
+[Environment variables that configure the application](../src/haxe/ccc/compute/shared/ServerConfig.hx)
