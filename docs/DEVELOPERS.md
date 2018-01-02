@@ -4,29 +4,6 @@
 - [API](API.md)
 - [DEPLOYMENT](DEPLOYMENT.md)
 
-## Git tags and docker image publishing
-
-The script below will git tag the version in `package.json`, and push the tags to github. This will trigger Travis CI to build and publish the docker images.:
-
-	./bin/tag-and-push-version
-
-## Build artifacts
-
-Build artifacts are created in the `./build/` directory:
-
-	./build/server/cloud-compute-cannon-server.js
-
-	./build/lambda-autoscaling/index.js
-	./build/lambda-autoscaling/package.json
-	./build/lambda-autoscaling/node_modules
-	./etc/terraform/aws/modules/lambda/lambda.zip
-
-
-Test artifacts are also there:
-
-	./build/local-scaling-server/cloud-compute-cannon-scaling-server.js
-	./build/test/cloud-compute-cannon-tester.js
-
 ## Set up:
 
 Run these once:
@@ -46,6 +23,23 @@ If you want the functional tests to be run on code compilation, run the stack wi
 	TEST=true docker-compose up
 
 Then, if all code is compiled, the test running server will restart the tests.
+
+## Build artifacts
+
+Build artifacts are created in the `./build/` directory:
+
+	./build/server/cloud-compute-cannon-server.js
+
+	./build/lambda-autoscaling/index.js
+	./build/lambda-autoscaling/package.json
+	./build/lambda-autoscaling/node_modules
+	./etc/terraform/aws/modules/lambda/lambda.zip
+
+
+Test artifacts are also there:
+
+	./build/local-scaling-server/cloud-compute-cannon-scaling-server.js
+	./build/test/cloud-compute-cannon-tester.js
 
 ## Tests
 
@@ -119,3 +113,9 @@ If running locally, go to:
 	http://localhost:8080
 
 You will see links to various dashboards. There is a button for Postman API requests that you can run against the service.
+
+## Git tags and docker image publishing
+
+The script below will git tag the version in `package.json`, update local copies of files that hard-code the version (unfortunately) and push the tags to github. This will trigger Travis CI to build and publish the docker images.:
+
+	./bin/version-update
