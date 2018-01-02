@@ -25,5 +25,5 @@ git add etc/docker-compose/single-server/docker-compose.yml
 git commit -m "Version update > $VERSION_PACKAGE"
 
 git tag "v${VERSION_PACKAGE}"
-git push
-git push --tags
+git push --follow-tags
+# git push --tags
