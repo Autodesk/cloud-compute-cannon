@@ -37,9 +37,11 @@ echo "TRAVIS_TAG=$TRAVIS_TAG"
 # 		TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
 # fi
 
-if [ "$TRAVIS_BRANCH" != "master" ] && [ "$TRAVIS_PULL_REQUEST" != "true" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "$NPM_VERSION" == "$TRAVIS_TAG" ];
+if [ "$TRAVIS_BRANCH" != "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
 	then
 		echo "In reality, I would have published the image dionjwa/cloud-compute-cannon${NPM_VERSION} to docker"
 		# ./bin/publish-docker
+	else
+		echo "No tag, not publishing image to dockerhub"
 fi
 
