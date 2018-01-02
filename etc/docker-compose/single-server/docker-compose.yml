@@ -9,7 +9,7 @@ volumes:
 services:
 
   ccc:
-    image: "dionjwa/cloud-compute-cannon:0.1.50-test-06"
+    image: "dionjwa/cloud-compute-cannon:0.1.50-test-07"
     ports:
       - "9000:9000"
     links:
