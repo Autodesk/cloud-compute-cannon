@@ -25,7 +25,7 @@ Install the CCC stack to the cloud, and run some computation jobs, get the resul
 
 ### 1 Install a stack locally
 
-See `[docs/INSTALL.md](docs/INSTALL.md)`.
+See [docs/INSTALL.md](docs/INSTALL.md).
 
 ### 2 Run a compute job
 
