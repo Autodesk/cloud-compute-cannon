@@ -37,7 +37,7 @@ if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "true" ] && [
 		TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
 fi
 
-if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
+if [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
 	then
 		echo "Publishing to dockerhub: dionjwa/cloud-compute-cannon${NPM_VERSION}"
 		./bin/publish-docker
