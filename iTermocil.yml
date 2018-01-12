@@ -1,0 +1,8 @@
+windows:
+  - name: work
+    root: ~/Documents/git/cloud-compute-cannon
+    layout: main-vertical
+    panes:
+      - git status
+      - git branch
+      - docker-compose up
