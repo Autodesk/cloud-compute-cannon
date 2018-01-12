@@ -7,57 +7,57 @@ import haxe.DynamicAccess;
 import t9.abstracts.time.*;
 import t9.abstracts.net.*;
 
-@:forward
-abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigurationWorkerProvider to ServiceConfigurationWorkerProvider
-{
-	inline function new (val: ServiceConfigurationWorkerProvider)
-		this = val;
+// @:forward
+// abstract CloudProvider(ServiceConfigurationWorkerProvider) from ServiceConfigurationWorkerProvider to ServiceConfigurationWorkerProvider
+// {
+// 	inline function new (val: ServiceConfigurationWorkerProvider)
+// 		this = val;
 
-	/**
-	 * Some fields are in the parent object as shared defaults, so
-	 * make sure to copy them
-	 * @param  key :String       [description]
-	 * @return     [description]
-	 */
-	inline public function getMachineDefinition(machineType :String) :ProviderInstanceDefinition
-	{
-		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
-		if (instanceDefinition == null) {
-			return null;
-		}
-		instanceDefinition = Json.parse(Json.stringify(instanceDefinition));
-		instanceDefinition.public_ip = instanceDefinition.public_ip == true;
-		instanceDefinition.tags = instanceDefinition.tags == null ? {} : instanceDefinition.tags;
-		instanceDefinition.tags = ObjectTools.mergeDeepCopy(
-			instanceDefinition.tags == null ? {} : instanceDefinition.tags,
-			this.tags);
-		instanceDefinition.options = ObjectTools.mergeDeepCopy(
-			instanceDefinition.options == null ? {} : instanceDefinition.options,
-			this.options);
-		return instanceDefinition;
-	}
+// 	/**
+// 	 * Some fields are in the parent object as shared defaults, so
+// 	 * make sure to copy them
+// 	 * @param  key :String       [description]
+// 	 * @return     [description]
+// 	 */
+// 	inline public function getMachineDefinition(machineType :String) :ProviderInstanceDefinition
+// 	{
+// 		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
+// 		if (instanceDefinition == null) {
+// 			return null;
+// 		}
+// 		instanceDefinition = Json.parse(Json.stringify(instanceDefinition));
+// 		instanceDefinition.public_ip = instanceDefinition.public_ip == true;
+// 		instanceDefinition.tags = instanceDefinition.tags == null ? {} : instanceDefinition.tags;
+// 		instanceDefinition.tags = ObjectTools.mergeDeepCopy(
+// 			instanceDefinition.tags == null ? {} : instanceDefinition.tags,
+// 			this.tags);
+// 		instanceDefinition.options = ObjectTools.mergeDeepCopy(
+// 			instanceDefinition.options == null ? {} : instanceDefinition.options,
+// 			this.options);
+// 		return instanceDefinition;
+// 	}
 
-	inline public function getMachineKey(machineType :String) :String
-	{
-		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
-		if (instanceDefinition == null) {
-			throw 'Missing definition for machine="$machineType", cannot get key';
-		}
-		if (instanceDefinition.key != null) {
-			return instanceDefinition.key;
-		} else {
-			//Assuming AWS
-			var keyname = instanceDefinition.options.KeyName;
-			if (keyname == null) {
-				keyname = this.options.KeyName;
-			}
-			if (keyname == null) {
-				throw 'No key name defined anywhere.';
-			}
-			return this.keys[keyname];
-		}
-	}
-}
+// 	inline public function getMachineKey(machineType :String) :String
+// 	{
+// 		var instanceDefinition :ProviderInstanceDefinition = this.machines[machineType];
+// 		if (instanceDefinition == null) {
+// 			throw 'Missing definition for machine="$machineType", cannot get key';
+// 		}
+// 		if (instanceDefinition.key != null) {
+// 			return instanceDefinition.key;
+// 		} else {
+// 			//Assuming AWS
+// 			var keyname = instanceDefinition.options.KeyName;
+// 			if (keyname == null) {
+// 				keyname = this.options.KeyName;
+// 			}
+// 			if (keyname == null) {
+// 				throw 'No key name defined anywhere.';
+// 			}
+// 			return this.keys[keyname];
+// 		}
+// 	}
+// }
 
 /**
  *********************************************
@@ -71,7 +71,7 @@ typedef ServerConnectionBlob = {
 	 * If server is missing, the server ssh config is pulled from ~/.ssh/config
 	 */
 	@:optional var server :InstanceDefinition;
-	@:optional var provider: ServiceConfiguration;
+	// @:optional var provider: ServiceConfiguration;
 }
 
 typedef ServerVersionBlob = {

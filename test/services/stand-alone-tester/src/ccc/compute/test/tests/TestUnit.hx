@@ -47,16 +47,16 @@ class TestUnit extends haxe.unit.async.PromiseTest
 	{
 		// https://regex101.com/
 		for (e in [
-			'quay.io:80/bionano/lmvconverter',
-			'bionano/lmvconverter',
-			'quay.io/bionano/lmvconverter:latest',
+			'quay.io:80/something/else',
+			'something/lmvconverter',
+			'quay.io/something/lmvconverter:latest',
 			'localhost:5000/lmvconverter:latest',
-			'quay.io:80/bionano/lmvconverter:c955c37',
-			'bionano/lmvconverter:c955c37',
+			'quay.io:80/something/lmvconverter:c955c37',
+			'something/lmvconverter:c955c37',
 			'lmvconverter:c955c37',
 			'lmvconverter',
 			'localhost:5001/lmvconverter:5b2be4e42396',
-			'quay.io/bionano/computeworker_nanodesign:1b41fba',
+			'quay.io/something/computeworker_nanodesign:1b41fba',
 			'autodesk/moldesign:moldesign_complete-0.7.1'
 		]) {
 			assertEquals(e, DockerUrlTools.joinDockerUrl(DockerUrlTools.parseDockerUrl(e)));
@@ -76,8 +76,8 @@ class TestUnit extends haxe.unit.async.PromiseTest
 		var another2 :DockerUrl = 'lmvconverter:5b2be4e42396XXXXXX';
 		assertFalse(DockerUrlTools.matches(url, another2));
 
-		var another3 :DockerUrl = 'quay.io/bionano/computeworker_nanodesign:1b41fba';
-		assertEquals(another3.repository, 'bionano/computeworker_nanodesign');
+		var another3 :DockerUrl = 'quay.io/something/computeworker_nanodesign:1b41fba';
+		assertEquals(another3.repository, 'something/computeworker_nanodesign');
 		assertEquals(another3.name, 'computeworker_nanodesign');
 		assertEquals(another3.tag, '1b41fba');
 		assertEquals(another3.registryhost, 'quay.io');

@@ -15,12 +15,41 @@ import ccc.compute.shared.provider.CloudProviderType;
 class ServerConfig
 {
 	/**
+	 * TODO: this might not be necessary.
+	 * When running the API server as a single GPU
+	 * node, set this to 1 or true. This disables
+	 * a lot of code paths involved in remote caches
+	 * remote storage, etc.
+	 */
+	@NodeProcessVar
+	public static var SINGLE_NODE :Bool = false;
+
+	/**
 	 * Currently supported values:
 	 *  - local (default, a local stack running in docker-compose)
 	 *  - aws (Amazon Web Services)
 	 */
 	@NodeProcessVar
 	public static var CLOUD_PROVIDER_TYPE :CloudProviderType = 'local';
+
+	/**
+	 * S3 credentials
+	 */
+
+	@NodeProcessVar
+	public static var AWS_S3_KEYID :String;
+
+	@NodeProcessVar
+	public static var AWS_S3_KEY :String;
+
+	@NodeProcessVar
+	public static var AWS_S3_BUCKET :String;
+
+	@NodeProcessVar
+	public static var AWS_S3_REGION :String;
+
+	@NodeProcessVar
+	public static var STORAGE_PATH_BASE :String = "/jobs";
 
 	/**
 	 * If true, disables all queue processing logic
@@ -31,6 +60,8 @@ class ServerConfig
 	 * This allows a higher degree of security since
 	 * the servers fronting requests then do not need
 	 * to mount the docker host.
+	 * Also worker instances can be GPU enabled,
+	 * while the front-end servers do not have to.
 	 */
 	@NodeProcessVar
 	public static var DISABLE_WORKER :Bool = false;

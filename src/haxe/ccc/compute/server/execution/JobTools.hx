@@ -84,10 +84,10 @@ class JobTools
 	{
 		Assert.notNull(job);
 		Assert.notNull(job.id);
-		if (job.inputsPath == null) {
+		if (job.inputsPath.isEmpty()) {
 			return defaultInputDir(job.id);
 		} else {
-			return job.inputsPath.ensureEndsWith('/');
+			return job.inputsPath.ensureEndsWith('/').removePrefix('/');
 		}
 	}
 
@@ -95,10 +95,10 @@ class JobTools
 	{
 		Assert.notNull(job);
 		Assert.notNull(job.id);
-		if (job.outputsPath == null) {
+		if (job.outputsPath.isEmpty()) {
 			return defaultOutputDir(job.id);
 		} else {
-			return job.outputsPath.ensureEndsWith('/');
+			return job.outputsPath.ensureEndsWith('/').removePrefix('/');
 		}
 	}
 
@@ -109,7 +109,7 @@ class JobTools
 		if (job.resultsPath.isEmpty()) {
 			return job.id + '/';
 		} else {
-			return job.resultsPath.ensureEndsWith('/');
+			return job.resultsPath.ensureEndsWith('/').removePrefix('/');
 		}
 	}
 

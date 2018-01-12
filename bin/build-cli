@@ -1,2 +1,0 @@
-#!/usr/bin/env sh
-INSTALL=true docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile

@@ -8,7 +8,7 @@ services:
 
   ccc:
     restart: "always"
-    image: "quay.io/bionano/cloud-compute-cannon:${VERSION}"
+    image: "dionjwa/cloud-compute-cannon:${VERSION}"
     volumes:
       - ./:/app/config/
       - /var/run/docker.sock:/var/run/docker.sock

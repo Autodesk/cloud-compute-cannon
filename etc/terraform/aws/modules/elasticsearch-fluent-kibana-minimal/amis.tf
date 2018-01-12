@@ -1,0 +1,1 @@
+../common/amis.tf

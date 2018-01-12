@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+
+COMPOSE_TOOLS="docker-compose -f docker-compose.tools.yml run"
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECTROOT=$DIR/..
+
+echo "Compiling haxe->javascript..."
+#Compiled js goes here (also the package.json)
+LAMBDA_SRC="$PROJECTROOT/build/lambda-autoscaling"
+pushd $PROJECTROOT
+
+path_to_haxe=$(which haxe)
+if [ -x "$path_to_haxe" ] && [ "$TRAVIS" != "1" ] ; then
+	echo "haxe is available! $path_to_haxe"
+	haxe src/lambda-autoscaling/build.hxml
+else
+	$COMPOSE_TOOLS lambda-compile
+fi
+
+popd
+
+LAMBDA_ZIP_FOLDER="$PROJECTROOT/etc/terraform/aws/modules/lambda"
+mkdir -p $LAMBDA_ZIP_FOLDER
+LAMBDA_ZIP_NAME="lambda"
+echo "Building lambda package to artifacts/${LAMBDA_ZIP_NAME}.zip"
+rm -rf ${LAMBDA_ZIP_FOLDER}/${LAMBDA_ZIP_NAME}.zip
+docker run --rm -ti -v $LAMBDA_SRC:/src -v $LAMBDA_ZIP_FOLDER:/destination dionjwa/aws-lambda-builder -s /src -d /destination --name ${LAMBDA_ZIP_NAME}

@@ -55,6 +55,7 @@ class Constants
 	public static inline var STDERR_FILE = 'stderr';
 	public static inline var DEFAULT_MAX_JOB_TIME_MS = 30 * 1000;//30secs
 	public static inline var TURBO_JOB_MAX_TIME_SECONDS_DEFAULT :Int = 30;
+	public static inline var DEFAULT_BASE_STORAGE_DIR = '/jobs/';
 
 	/* Env vars */
 	inline public static var ENV_VAR_DISABLE_LOGGING = 'DISABLE_LOGGING';
@@ -85,7 +86,6 @@ class Constants
 	public static var DOCKER_CONTAINER_ID :String = null;
 	public static var DOCKER_CONTAINER_NAME :String = null;
 	inline public static var SERVER_DEFAULT_PORT = 9000;
-	public static var SERVER_PUBLIC_HOST = new Host(new HostName('ccc.bionano.autodesk.com'), new Port(SERVER_DEFAULT_PORT));
 	inline public static var SERVER_RELOADER_PORT = 9002;
 	inline public static var DOCKER_PORT = 2375;
 	inline public static var DEFAULT_REDIS_PORT = 6379;

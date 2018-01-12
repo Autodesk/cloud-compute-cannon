@@ -4,6 +4,9 @@
 .jenkins-config
 .env*
 .haxelib
+.terraform
+**terraform.state*
+**.tfvars
 /build.hxml
 build
 **/node_modules

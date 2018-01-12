@@ -16,24 +16,24 @@ import yaml.Yaml;
 
 class InitConfigTools
 {
-	public static function getConfig() :ServiceConfiguration
-	{
-		var env = Node.process.env;
-		var config :ServiceConfiguration = null;
-		Log.debug('ENV_VAR_COMPUTE_CONFIG_PATH=${Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH)}');
-		var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
-		Log.debug({'CONFIG_PATH':CONFIG_PATH});
-		if (Reflect.field(env, ENV_CLIENT_DEPLOYMENT) == 'true') {
-			Log.warn('Loading config from mounted file=$CONFIG_PATH');
-			config = InitConfigTools.getConfigFromFile(CONFIG_PATH);
-		} else {
-			config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
-		}
-		if (config == null) {
-			config = getDefaultConfig();
-		}
-		return config;
-	}
+	// public static function getConfig() :ServiceConfiguration
+	// {
+	// 	var env = Node.process.env;
+	// 	var config :ServiceConfiguration = null;
+	// 	Log.debug('ENV_VAR_COMPUTE_CONFIG_PATH=${Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH)}');
+	// 	var CONFIG_PATH :String = Reflect.hasField(env, ENV_VAR_COMPUTE_CONFIG_PATH) && Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) != "" ? Reflect.field(env, ENV_VAR_COMPUTE_CONFIG_PATH) : SERVER_MOUNTED_CONFIG_FILE_DEFAULT;
+	// 	Log.debug({'CONFIG_PATH':CONFIG_PATH});
+	// 	if (Reflect.field(env, ENV_CLIENT_DEPLOYMENT) == 'true') {
+	// 		Log.warn('Loading config from mounted file=$CONFIG_PATH');
+	// 		config = InitConfigTools.getConfigFromFile(CONFIG_PATH);
+	// 	} else {
+	// 		config = InitConfigTools.ohGodGetConfigFromSomewhere(CONFIG_PATH);
+	// 	}
+	// 	if (config == null) {
+	// 		config = getDefaultConfig();
+	// 	}
+	// 	return config;
+	// }
 
 	public static function getDefaultConfig() :ServiceConfiguration
 	{

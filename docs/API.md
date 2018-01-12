@@ -1,4 +1,4 @@
-	# Cloud Compute Cannon API
+# Cloud Compute Cannon API
 
 All routes are prefixed by the `<domain>:<port>/api/rpc`
 # API and app usage

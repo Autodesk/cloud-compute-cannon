@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# If the git tag for this npm version does not exist
+# 1) Update all the files that require the npm version
+# 2) Commit those files
+# 3) Create the git tag
+# 4) Push the commit and the tags.
+# 5) The above triggers a build+publish in Travis CI
+
+#Now build the final minimal docker image, and tag it
+VERSION_PACKAGE=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+# Update dependent files:
+sed -i '' "s/default = .*/default = \"$VERSION_PACKAGE\"/g" etc/terraform/version.tf
+sed -i '' "s/cloud-compute-cannon:.*/cloud-compute-cannon:$VERSION_PACKAGE\"/g" etc/docker-compose/single-server/docker-compose.yml
+
+git add package.json
+git add etc/terraform/version.tf
+git add etc/docker-compose/single-server/docker-compose.yml
+
+git commit -m "Version update > $VERSION_PACKAGE"
+
+git tag "v${VERSION_PACKAGE}"
+git push
+git push --tags

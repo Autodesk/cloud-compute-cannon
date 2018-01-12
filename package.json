@@ -1,25 +1,17 @@
 {
   "name": "cloud-compute-cannon",
-  "version": "1.0.0",
-  "author": "Dion Amago Whitehead <dion.amago@autodesk.org>",
-  "bin": {
-    "ccc": "bin/cloudcomputecannon.js",
-    "cloudcomputecannon": "bin/cloudcomputecannon.js"
-  },
+  "version": "0.1.50-test-07",
+  "author": "Dion Amago Whitehead <dion@transition9.com>",
   "scripts": {
-    "init": "npm run haxelibs && npm run node_modules && npm run build",
-    "haxelibs": "INSTALL=true docker-compose up haxelibs",
-    "node_modules": "INSTALL=true docker-compose up node_modules",
     "preview-github-docs": "docker run -it --rm -p 8081:8081 -v ${PWD}:/data -v ~/.grip:/.grip mbentley/grip --context=dionjwa/cloud-compute-cannon README.md 0.0.0.0:8081",
-    "build": "docker-compose run compile",
-    "clean": "docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build && rm -rf node_modules",
-    "test": "npm run init && npm run test-quick",
-    "test-quick": "TEST=true docker-compose run ccc.tests",
-    "test-scaling": "TEST_SCALING=true docker-compose run ccc.tests",
+    "build": "./bin/compile",
+    "clean": "./bin/clean",
+    "test": "./bin/install && ./bin/test",
+    "test-scaling": "./bin/install && ./bin/test-scaling",
     "template.fluent.conf": "sed -e 's/host ::SERVER_HOSTNAME_PRIVATE::/host elasticsearch/' -e 's/::FLUENTD_WORKER_LOG_TAG_PREFIX::/docker.cloudcomputecannon.worker/' -e 's/::FLUENTD_NODEJS_BUNYAN_TAG_PREFIX::/docker.nodejs-bunyan/' etc/log/fluent.conf.template > etc/log/fluent.conf",
     "set-build:server": "rm build.hxml && ln -s etc/hxml/server-build.hxml build.hxml",
     "set-build:client-dashboard": "rm build.hxml && ln -s clients/dashboard/build-dev.hxml build.hxml",
-    "set-build:lambda-autoscaling": "rm build.hxml && ln -s etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml build.hxml",
+    "set-build:lambda-autoscaling": "rm build.hxml && ln -s src/lambda-autoscaling/build.hxml build.hxml",
     "set-build:test-server-scaling": "rm build.hxml && ln -s test/services/local-scaling-server/build.hxml build.hxml",
     "set-build:test-server": "rm build.hxml && ln -s test/services/stand-alone-tester/build.hxml build.hxml",
     "set-build:all": "rm build.hxml && ln -s etc/hxml/build-all.hxml build.hxml",
@@ -27,10 +19,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Autodesk/cloudcomputecannon.git"
+    "url": "https://github.com/dionjwa/cloudcomputecannon.git"
   },
   "bugs": {
-    "url": "https://github.com/Autodesk/cloudcomputecannon/issues"
+    "url": "https://github.com/dionjwa/cloudcomputecannon/issues"
   },
   "dependencies": {
     "aws-sdk": "^2.128.0",

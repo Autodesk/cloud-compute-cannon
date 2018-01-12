@@ -4,6 +4,8 @@ echo "Installing haxelibs and compiling haxe->javascript"
 set -e
 ROOTPATH="`dirname \"$0\"`"/../
 
+COMPOSE_TOOLS="docker-compose -f docker-compose.tools.yml run"
+
 pushd $ROOTPATH
 # Delete all prior builds
 rm -rf build
@@ -17,7 +19,14 @@ mkdir -p build/server
 mkdir -p build/local-scaling-server
 mkdir -p build/test
 
-INSTALL=true docker-compose run haxelibs
-docker-compose run compile
+path_to_haxe=$(which haxe || true)
+if [ -x "$path_to_haxe" ] && [ "$TRAVIS" != "1" ] ; then
+	echo "haxe is available! $path_to_haxe"
+	haxe etc/hxml/build-all.hxml
+else
+	$COMPOSE_TOOLS compile
+fi
 
 popd
+
+echo "Finished compiling"

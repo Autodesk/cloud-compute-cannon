@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# For the terraform modules to work seamlessly from git, they
+# need to refer to the lambda.zip file for the given release
+# (defaulting to the latest release tag). This means that there
+# are two places where the version is specified, and it is difficult
+# to parameterize them without adding significant complexity
+# to an already complex build process. So we have multiple version strings
+# (bad) but this script will validate that they are the same,
+# preventing PRs from being accepted until they are.
+# Basically, preventing myself from shooting myself in the foot
+# with this shortcut.
+
+#Now build the final minimal docker image, and tag it
+VERSION_PACKAGE=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+
+
+VERSION_PACKAGE_TERRAFORM_LAMBDA=$(cat etc/terraform/version.tf \
+  | grep default \
+  | head -1 \
+  | awk -F'"' '{ print $2 }' \
+  | tr -d '[[:space:]]')
+
+if [ "$VERSION_PACKAGE" != "$VERSION_PACKAGE_TERRAFORM_LAMBDA" ]
+then
+	echo "package.json and etc/terraform/version.tf versions do NOT match: $VERSION_PACKAGE != $VERSION_PACKAGE_TERRAFORM_LAMBDA"
+	exit 1
+fi
+
+
+
+VERSION_DOCKER_COMPOSE=$(cat etc/docker-compose/single-server/docker-compose.yml \
+  | grep "image: \"dionjwa/cloud-compute-cannon:" \
+  | head -1 \
+  | awk -F'cloud-compute-cannon:' '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+if [ "$VERSION_PACKAGE" != "$VERSION_DOCKER_COMPOSE" ]
+then
+  echo "package.json and etc/docker-compose/single-server/docker-compose.yml versions do NOT match: $VERSION_PACKAGE != $VERSION_DOCKER_COMPOSE"
+  exit 1
+fi

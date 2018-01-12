@@ -2,9 +2,46 @@ version: '2'
 
 services:
 
-  compile-lambda:
+  # Installs haxelibs locally
+  haxelibs:
     image: dionjwa/haxe-watch:v0.7.3
-    command: ["haxe", "etc/bionano/aws/cloudformation/lambda-autoscaling/src/build.hxml"]
+    command: ["/bin/sh", "-c", 'haxelib install --always etc/hxml/build-all.hxml']
+    working_dir: /app
+    volumes:
+      - ./.haxelib:/app/.haxelib
+      - ./etc:/app/etc
+      - ./clients:/app/clients
+      - ./test:/app/test
+      - ./src:/app/src
+
+  # Simply installs npm modules into a persistent docker volume
+  # for efficiency. Used by reloaders, not the main app
+  node_modules:
+    image: dionjwa/node_modules
+    working_dir: /app
+    command: ["/bin/sh", "-c", "npm i"]
+    volumes:
+      - ./node_modules:/app/node_modules
+      - ./package.json:/app/package.json
+
+  #Build all
+  compile:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "etc/hxml/build-all.hxml"]
+    working_dir: /app
+    volumes:
+      - ./build:/app/build
+      - ./src:/app/src
+      - ./etc:/app/etc
+      - ./test:/app/test
+      - ./.haxelib:/app/.haxelib
+      - ./clients:/app/clients
+      - ./package.json:/app/package.json
+      - ./.git:/app/.git
+
+  lambda-compile:
+    image: dionjwa/haxe-watch:v0.7.3
+    command: ["haxe", "src/lambda-autoscaling/build.hxml"]
     working_dir: /app
     volumes:
       - ./build:/app/build
@@ -13,23 +50,25 @@ services:
       - ./etc:/app/etc
       - ./clients:/app/clients
 
-  npm-install-lambda:
+  lambda-npm-install:
     image: dionjwa/haxe-watch:v0.7.3
     command: ["npm", "i"]
     working_dir: /var/task
     volumes:
       - ./build/lambda-autoscaling:/var/task
 
-  validate-lambda:
+  lambda-validate:
     image: lambci/lambda:nodejs6.10
-    command: ["index.handlerScaleUp"]
+    command: ["index.handlerScale"]
     environment:
       - BNR_ENVIRONMENT=dev
+      - REDIS_HOST=redis
     volumes:
       - ./build/lambda-autoscaling:/var/task
     links:
-      - redis:redis-ccc.dev.bionano.bio
+      - redis
 
+  # Needed to validate the lambda's redis connection
   redis:
     image: redis:3.2.0-alpine
     command: redis-server /usr/local/etc/redis/redis.conf
@@ -37,5 +76,40 @@ services:
       - "6379"
     volumes:
       - ./etc/redis/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    logging:
+      driver: none
+
+  # Watches code changes for the ccc-scaling-server and recompiles the code
+  watch-compiler-ccc-scaling-server:
+    image: dionjwa/haxe-watch:v0.7.3
+    working_dir: /app
+    command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe test/services/local-scaling-server/build.hxml' test/services/local-scaling-server/src/*.hx"]
+    volumes:
+      - ./:/app
+      - ./.haxelib:/app/.haxelib
+    logging:
+      driver: none
+
+  # Watches code changes for the server tester and recompiles
+  ccc.tests-watch-compiler:
+    image: dionjwa/haxe-watch:v0.7.3
+    working_dir: /app
+    command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe etc/hxml/build-tester.hxml' test/services/stand-alone-tester/src/**/*.hx"]
+    volumes:
+      - ./src:/app/src
+      - ./clients:/app/clients
+      - ./etc:/app/etc
+      - ./test:/app/test
+      - ./.haxelib:/app/.haxelib
+    logging:
+      driver: none
+
+  client-dashboard-watch:
+    cpu_shares: 512
+    image: dionjwa/haxe-watch:v0.7.3
+    working_dir: /app
+    command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'mkdir -p build && rsync -rptgoDv --copy-links web/* build/' web/**/*.css web/**/*.js web/**/*.html"]
+    volumes:
+      - ./clients/dashboard:/app
     logging:
       driver: none

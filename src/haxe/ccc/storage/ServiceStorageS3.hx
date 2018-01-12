@@ -80,7 +80,7 @@ using StringTools;
 
 class ServiceStorageS3 extends ServiceStorageBase
 {
-	var _containerName :String = "bionano-platform-test"; // we always need a bucket
+	var _containerName :String = "cloud-compute-cannon-storage"; // we always need a bucket
 	var _httpAccessUrl :String;
 	var _S3 :AWSS3;
 	var _initialized :Promise<Bool>;
@@ -144,22 +144,6 @@ class ServiceStorageS3 extends ServiceStorageBase
 					//For now, throw an error and crash. S3 buckets need to be
 					//set up manually for now
 					promise.boundPromise.reject(err);
-					//No bucket exists, let's create one
-					// var createBucketOptions = {
-					// 	Bucket: _containerName,
-					// 	ACL: 'public-read',
-					// 	CreateBucketConfiguration: {
-					// 		LocationConstraint: _config.credentials.region,
-					// 	},
-					// 	GrantFullControl: 'FULL_CONTROL'
-					// }
-					// _S3.createBucket(createBucketOptions, function(err, result) {
-					// 	if (err != null) {
-					// 		promise.boundPromise.reject(err);
-					// 	} else {
-					// 		promise.resolve(true);
-					// 	}
-					// });
 				} else {
 					promise.resolve(true);
 				}
@@ -201,7 +185,7 @@ class ServiceStorageS3 extends ServiceStorageBase
 		Sys.environment()['AWS_S3_KEY'] = awsConfig.secretAccessKey;
 		Sys.environment()['AWS_S3_BUCKET'] = config.container;
 
-		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl != null ? config.httpAccessUrl : 'https://${_containerName}.s3.amazonaws.com/');
+		_httpAccessUrl = ensureEndsWithSlash(config.httpAccessUrl != null ? config.httpAccessUrl : 'https://s3.amazonaws.com/${_containerName}');
 		_S3 = new AWSS3(awsConfig);
 
 		return super.setConfig(config);

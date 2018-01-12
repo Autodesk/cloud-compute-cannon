@@ -2,7 +2,7 @@
 
 - [ARCHITECTURE](ARCHITECTURE.md)
 - [API](API.md)
-- [DEPLOYMENT](DEPLOYMENT.md)
+- [INSTALL](INSTALL.md)
 
 ## Set up:
 
@@ -12,7 +12,7 @@ Run these once:
 - OPTIONAL: Install [node.js/npm](https://nodejs.org/en/download/)
 - `git clone git@github.com:dionjwa/cloud-compute-cannon.git` (or your fork)
 - `cd cloud-compute-cannon`
-- `./bin/install` (OR if you have node.js+npm installed: `npm run init`)
+- `./bin/install`
 
 Then you can start the stack with:
 
@@ -23,6 +23,23 @@ If you want the functional tests to be run on code compilation, run the stack wi
 	TEST=true docker-compose up
 
 Then, if all code is compiled, the test running server will restart the tests.
+
+## Build artifacts
+
+Build artifacts are created in the `./build/` directory:
+
+	./build/server/cloud-compute-cannon-server.js
+
+	./build/lambda-autoscaling/index.js
+	./build/lambda-autoscaling/package.json
+	./build/lambda-autoscaling/node_modules
+	./etc/terraform/aws/modules/lambda/lambda.zip
+
+
+Test artifacts are also there:
+
+	./build/local-scaling-server/cloud-compute-cannon-scaling-server.js
+	./build/test/cloud-compute-cannon-tester.js
 
 ## Tests
 
@@ -61,9 +78,9 @@ A list of haxe plugins for various editors can be found [here](https://haxe.org/
 
 Edit code then run:
 
-	docker-compose run compile
+	./bin/compile
 
-This will compile everything. This is a pretty slow way to developer, but it's there if really needed, or if you don't want to install haxe on your host machine.
+This will compile everything, using haxe locally if you have it installed, otherwise it will use haxe in a docker container (this is a pretty slow way to developer, but it's there if really needed, or if you don't want to install haxe on your host machine).
 
 If you already have the stack running, then you can run (in a separate terminal window):
 
@@ -96,3 +113,13 @@ If running locally, go to:
 	http://localhost:8080
 
 You will see links to various dashboards. There is a button for Postman API requests that you can run against the service.
+
+## Git tags and docker image publishing
+
+The script below will git tag the version in `package.json`, update local copies of files that hard-code the version (unfortunately) and push the tags to github. This will trigger Travis CI to build and publish the docker images.:
+
+	./bin/version-update
+
+## Environmental variables
+
+[Environment variables that configure the application](../src/haxe/ccc/compute/shared/ServerConfig.hx)

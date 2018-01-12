@@ -49,10 +49,13 @@ class JobStateTools
 	if error == "null" or error == "undefined" then error = nil end
 
 	if not redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATS}", jobId) then
-		return {err="${RedisError.NoJobFound}", script="SET_JOB_STATE_SCRIPT"}
+		return {err="${RedisError.NoJobFound}", script="SET_JOB_STATE_SCRIPT", jobId=jobId}
 	end
 
 	local jobStatsJsonString = redis.call("HGET", "${REDIS_KEY_HASH_JOB_STATS}", jobId)
+	if jobStatsJsonString == nil then
+		return {err="${RedisError.NoJobFound}", script="SET_JOB_STATE_SCRIPT", jobId=jobId}
+	end
 	local jobstats = cmsgpack.unpack(jobStatsJsonString)
 
 	if jobstats.status == "${JobStatus.Finished}" then

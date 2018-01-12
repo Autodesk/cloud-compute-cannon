@@ -27,8 +27,6 @@ class ServerPaths
 {
 	public static function initAppPaths(injector :ServerState)
 	{
-		var config :ServiceConfiguration = injector.getValue('ccc.compute.shared.ServiceConfiguration');
-
 		var app = Express.GetApplication();
 		injector.map(Application).toValue(app);
 
@@ -55,8 +53,17 @@ class ServerPaths
 			res.send(versionBlob.git);
 		});
 
+		/**
+		 * Adds bull dashboard to /dashboard
+		 */
 		QueueTools.addBullDashboard(injector);
 
+		/**
+		 * The function to test the overall health of the system.
+		 * It runs jobs, so the actual jobs submitted to the queue
+		 * need to be limited, otherwise in some cases they can pile
+		 * up, bringing the system to a crawl.
+		 */
 		function test(req, res) {
 			var monitorService = injector.getValue(ServiceMonitorRequest);
 			monitorService.monitor(req.query)
@@ -99,10 +106,6 @@ class ServerPaths
 		app.get('/version_extra', function(req, res) {
 			var versionBlob = ServerCommands.version();
 			res.send(Json.stringify(versionBlob));
-		});
-
-		app.get('/config', function(req, res) {
-			res.json(ServerConfig.toJson());
 		});
 
 		//Check if server is listening

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+set -e
+
+echo "TRAVIS_BRANCH=$TRAVIS_BRANCH"
+echo "TRAVIS_PULL_REQUEST=$TRAVIS_PULL_REQUEST"
+echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
+
+GIT_TAG=`git rev-parse HEAD`
+if [ ! -z "$TRAVIS_COMMIT" ]; then
+	GIT_TAG=$TRAVIS_COMMIT
+fi
+GIT_TAG=${GIT_TAG:0:8}
+
+#Then run the tests
+NPM_VERSION=$(cat package.json \
+  | grep version \
+  | head -1 \
+  | awk -F: '{ print $2 }' \
+  | sed 's/[",]//g' \
+  | tr -d '[[:space:]]')
+
+echo "VERSION=$GIT_TAG"
+echo "NPM_VERSION=$NPM_VERSION"
+echo "TRAVIS_TAG=$TRAVIS_TAG"
+
+# Sanity check on versions
+./bin/version-check
+
+#First build locally the docker images for the minimal CCC server
+bin/build-docker-images
+
+# Only run the tests on PRs
+if [ "$TRAVIS_BRANCH" == "master" ] && [ "$TRAVIS_PULL_REQUEST" == "true" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ];
+	then
+		echo "Running tests"
+		TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG TRAVIS=1 PWD=$PWD VERSION=$GIT_TAG docker-compose -f docker-compose.travis.yml run --rm ccc.tests
+fi
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_REPO_SLUG" == "dionjwa/cloud-compute-cannon" ] && [ "v$NPM_VERSION" == "$TRAVIS_TAG" ];
+	then
+		echo "Publishing to dockerhub: dionjwa/cloud-compute-cannon${NPM_VERSION}"
+		./bin/publish-docker
+	else
+		echo "No tag, not publishing image to dockerhub"
+fi
+
