@@ -12,7 +12,7 @@ Run these once:
 - OPTIONAL: Install [node.js/npm](https://nodejs.org/en/download/)
 - `git clone git@github.com:dionjwa/cloud-compute-cannon.git` (or your fork)
 - `cd cloud-compute-cannon`
-- `./bin/install` (OR if you have node.js+npm installed: `npm run init`)
+- `./bin/install`
 
 Then you can start the stack with:
 
@@ -78,9 +78,9 @@ A list of haxe plugins for various editors can be found [here](https://haxe.org/
 
 Edit code then run:
 
-	docker-compose run compile
+	./bin/compile
 
-This will compile everything. This is a pretty slow way to developer, but it's there if really needed, or if you don't want to install haxe on your host machine.
+This will compile everything, using haxe locally if you have it installed, otherwise it will use haxe in a docker container (this is a pretty slow way to developer, but it's there if really needed, or if you don't want to install haxe on your host machine).
 
 If you already have the stack running, then you can run (in a separate terminal window):
 

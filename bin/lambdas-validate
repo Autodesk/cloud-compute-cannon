@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
-docker-compose -f docker-compose.tools.yml up lambda-compile
-docker-compose -f docker-compose.tools.yml up lambda-npm-install
-docker-compose -f docker-compose.tools.yml up lambda-validate
+COMPOSE_TOOLS="docker-compose -f docker-compose.tools.yml run"
+$COMPOSE_TOOLS lambda-compile
+$COMPOSE_TOOLS lambda-npm-install
+$COMPOSE_TOOLS lambda-validate

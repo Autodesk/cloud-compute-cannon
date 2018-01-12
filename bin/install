@@ -1,2 +1,5 @@
 #!/usr/bin/env sh
-COMPOSE_HTTP_TIMEOUT=200 INSTALL=true TEST=false TEST_SCALING=false docker-compose up haxelibs && INSTALL=true docker-compose up node_modules && docker-compose up compile
+COMPOSE_TOOLS="docker-compose -f docker-compose.tools.yml run"
+$COMPOSE_TOOLS haxelibs
+$COMPOSE_TOOLS node_modules
+$COMPOSE_TOOLS compile

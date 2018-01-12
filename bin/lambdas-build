@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+COMPOSE_TOOLS="docker-compose -f docker-compose.tools.yml run"
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECTROOT=$DIR/..
 
@@ -14,7 +16,7 @@ if [ -x "$path_to_haxe" ] && [ "$TRAVIS" != "1" ] ; then
 	echo "haxe is available! $path_to_haxe"
 	haxe src/lambda-autoscaling/build.hxml
 else
-	docker-compose -f docker-compose.tools.yml run lambda-compile
+	$COMPOSE_TOOLS lambda-compile
 fi
 
 popd

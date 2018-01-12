@@ -1,8 +1,6 @@
 version: '2'
 
 volumes:
-  node_modules:
-    driver: local
   elasticsearch_data:
     driver: local
 
@@ -26,7 +24,7 @@ services:
       - ./src/web:/app/web
       - ./ccc-local-storage:/app/ccc- local-storage
       - ./package.json:/app/package.json
-      - node_modules:/app/node_modules
+      - ./node_modules:/app/node_modules
     environment:
       - PORT=9000
       - STORAGE_HTTP_PREFIX=http://ccc.local
@@ -56,7 +54,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build:/app/build
-      - node_modules:/app/node_modules
+      - ./node_modules:/app/node_modules
     links:
       - ccc.local
       - redis
@@ -97,7 +95,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./build/local-scaling-server:/app/local-scaling-server
-      - node_modules:/app/node_modules
+      - ./node_modules:/app/node_modules
     environment:
       - PORT=4015
       - REDIS_HOST=redis
@@ -130,50 +128,6 @@ services:
     logging:
       driver: none
 
-  # Simply installs npm modules into a persistent docker volume
-  # for efficiency. Used by reloaders, not the main app
-  # Only installs modules if INSTALL=true|1
-  node_modules:
-    image: dionjwa/node_modules
-    working_dir: /app
-    # Only install node modules if INSTALL=true or INSTALLL=1
-    command: ["/bin/sh", "-c", 'if [ "x$INSTALL" = "xtrue" ] || [ "x$INSTALL" = "x1" ]; then npm i; fi']
-    environment:
-      - INSTALL
-    volumes:
-      - node_modules:/app/node_modules
-      - ./package.json:/app/package.json
-
-  # Only installs if INSTALL=true|1
-  haxelibs:
-    image: dionjwa/haxe-watch:v0.7.3
-    # Only install haxe modules if INSTALL=true or INSTALLL=1
-    command: ["/bin/sh", "-c", 'if [ "x$INSTALL" = "xtrue" ] || [ "x$INSTALL" = "x1" ]; then haxelib install --always etc/hxml/build-all.hxml; fi']
-    working_dir: /app
-    environment:
-      - INSTALL
-    volumes:
-      - ./.haxelib:/app/.haxelib
-      - ./etc:/app/etc
-      - ./clients:/app/clients
-      - ./test:/app/test
-      - ./src:/app/src
-
-  #This will always run on startup. There's no reason why it shouldn't
-  compile:
-    image: dionjwa/haxe-watch:v0.7.3
-    command: ["haxe", "etc/hxml/build-all.hxml"]
-    working_dir: /app
-    volumes:
-      - ./build:/app/build
-      - ./src:/app/src
-      - ./etc:/app/etc
-      - ./test:/app/test
-      - ./.haxelib:/app/.haxelib
-      - ./clients:/app/clients
-      - ./package.json:/app/package.json
-      - ./.git:/app/.git
-
   fluentd:
     build: ./etc/log/
     volumes:
@@ -203,42 +157,6 @@ services:
       - elasticsearch
     logging:
       driver: none
-
-  # Watches code changes for the ccc-scaling-server and recompiles the code
-  # watch-compiler-ccc-scaling-server:
-  #   image: dionjwa/haxe-watch:v0.7.3
-  #   working_dir: /app
-  #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe test/services/local-scaling-server/build.hxml' test/services/local-scaling-server/src/*.hx"]
-  #   volumes:
-  #     - ./:/app
-  #     - ./.haxelib:/app/.haxelib
-  #   logging:
-  #     driver: none
-
-  #  # Watches code changes for the server tester and recompiles
-  # # ccc.tests-watch-compiler:
-  # #   image: dionjwa/haxe-watch:v0.7.3
-  # #   working_dir: /app
-  # #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'haxe etc/hxml/build-tester.hxml' test/services/stand-alone-tester/src/**/*.hx"]
-  # #   volumes:
-  # #     - ./src:/app/src
-  # #     - ./clients:/app/clients
-  # #     - ./etc:/app/etc
-  # #     - ./test:/app/test
-  # #     - ./.haxelib:/app/.haxelib
-  #   # logging:
-  #   #   driver: none
-
-
-  # client-dashboard-watch:
-  #   cpu_shares: 512
-  #   image: dionjwa/haxe-watch:v0.7.3
-  #   working_dir: /app
-  #   command: ["/bin/bash", "-c", "chokidar --initial --verbose -c 'mkdir -p build && rsync -rptgoDv --copy-links web/* build/' web/**/*.css web/**/*.js web/**/*.html"]
-  #   volumes:
-  #     - ./clients/dashboard:/app
-  #   logging:
-  #     driver: none
 
   # livereload:
   #   cpu_shares: 512

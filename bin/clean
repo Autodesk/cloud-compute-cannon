@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+docker-compose rm -fv && rm -rf .haxelib && rm -rf tmp && rm -rf build && rm -rf node_modules
