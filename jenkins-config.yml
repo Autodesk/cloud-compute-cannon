@@ -49,4 +49,9 @@ npm-package-push: false
 npm-package-name: ""
 npm-package-s3-folder: ""
 
+# stack creation
+dev-stack: false
+qa-stack: false
+prod-stack: false
+
 fake-jenkins: false # Don't change this; it's only here to be overridden by place holder Jenkins configuration
